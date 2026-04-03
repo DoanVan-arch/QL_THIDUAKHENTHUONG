@@ -3,7 +3,7 @@ import os
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'sqct-thidua-khenthuong-secret-2025')
-    SQLALCHEMY_DATABASE_URI = 'mysql://root:jSeoBzPcgCwPFEVbsozvKjwtavpAfkdj@junction.proxy.rlwy.net:33521/railway'
+    SQLALCHEMY_DATABASE_URI = 'mysql://root:jSeoBzPcgCwPFEVbsozvKjwtavpAfkdj@junction.proxy.rlwy.net:33521/quanly_thidua_khenthuong'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_recycle': 3600,
