@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ - Đơn vị{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-house-door me-2"></i>Trang chủ</h4>
+        {% if don_vi %}
+        <small class="text-muted">{{ don_vi.ten_don_vi }}</small>
+        {% endif %}
+    </div>
+</div>
+
+{% if not don_vi %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Tài khoản của bạn chưa được gán đơn vị. Vui lòng liên hệ quản trị viên.
+</div>
+{% else %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_personnel }}</div>
+                    <div class="stat-label">Quân nhân</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(27,42,74,0.1); color: var(--navy-primary);">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_nominations }}</div>
+                    <div class="stat-label">Tổng đề xuất</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(13,110,253,0.1); color: #0D6EFD;">
+                    <i class="bi bi-file-earmark-text"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-value">{{ pending_nominations }}</div>
+                    <div class="stat-label">Chờ duyệt</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(255,193,7,0.1); color: #FFC107;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-value">{{ approved_nominations }}</div>
+                    <div class="stat-label">Đã phê duyệt</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(25,135,84,0.1); color: #198754;">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-lightning me-2"></i>Thao tác nhanh</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('personnel.create_personnel') }}" class="btn btn-navy btn-sm">
+                        <i class="bi bi-person-plus me-1"></i> Thêm quân nhân
+                    </a>
+                    <a href="{{ url_for('nomination.create_nomination') }}" class="btn btn-gold btn-sm">
+                        <i class="bi bi-award me-1"></i> Tạo đề xuất khen thưởng
+                    </a>
+                    <a href="{{ url_for('personnel.list_personnel') }}" class="btn btn-outline-navy btn-sm">
+                        <i class="bi bi-list me-1"></i> Xem danh sách quân nhân
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-clock-history me-2"></i>Đề xuất gần đây</h5>
+            </div>
+            <div class="card-body-custom">
+                {% if recent_nominations %}
+                <div class="list-group list-group-flush">
+                    {% for dx in recent_nominations %}
+                    <a href="{{ url_for('nomination.detail_nomination', id=dx.id) }}"
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-0 border-0">
+                        <div>
+                            <small class="text-muted">{{ dx.nam_hoc }}</small>
+                            <span class="ms-2">{{ dx.chi_tiets|length }} cá nhân</span>
+                        </div>
+                        {% set status_class = {
+                            'Nháp': 'badge-draft',
+                            'Chờ duyệt': 'badge-pending',
+                            'Đang duyệt': 'badge-reviewing',
+                            'Đã duyệt': 'badge-approved',
+                            'Phê duyệt cuối': 'badge-final',
+                            'Từ chối': 'badge-rejected'
+                        } %}
+                        <span class="badge-status {{ status_class.get(dx.trang_thai, 'badge-draft') }}">
+                            {{ dx.trang_thai }}
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state py-3">
+                    <i class="bi bi-inbox d-block"></i>
+                    <small>Chưa có đề xuất nào</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

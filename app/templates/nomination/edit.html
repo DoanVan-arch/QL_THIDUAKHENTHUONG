@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Chỉnh sửa đề xuất - {{ de_xuat.nam_hoc }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-pencil me-2"></i>Chỉnh sửa đề xuất khen thưởng</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('nomination.list_nominations') }}">Đề xuất</a></li>
+                <li class="breadcrumb-item active">{{ de_xuat.nam_hoc }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="d-flex gap-2">
+        {% if de_xuat.chi_tiets|length > 0 %}
+        <form method="POST" action="{{ url_for('nomination.submit_nomination', id=de_xuat.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-gold" onclick="return confirm('Gửi đề xuất lên cấp trên? Sau khi gửi sẽ không thể chỉnh sửa.')">
+                <i class="bi bi-send me-1"></i> Gửi duyệt
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Basic Info -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-info-circle me-2"></i>Thông tin đề xuất</h5>
+    </div>
+    <div class="card-body-custom">
+        <form method="POST" action="{{ url_for('nomination.edit_nomination', id=de_xuat.id) }}" class="row g-3 align-items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3">
+                <label class="form-label">Năm học</label>
+                <input type="text" class="form-control" name="nam_hoc" value="{{ de_xuat.nam_hoc }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ghi chú</label>
+                <input type="text" class="form-control" name="ghi_chu" value="{{ de_xuat.ghi_chu or '' }}">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-navy w-100"><i class="bi bi-check me-1"></i>Cập nhật</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Current Items -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-people me-2"></i>Danh sách cá nhân/đơn vị đề xuất ({{ de_xuat.chi_tiets|length }})</h5>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if de_xuat.chi_tiets %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ tên / Đơn vị</th>
+                        <th>Cấp bậc</th>
+                        <th>Đối tượng</th>
+                        <th>Danh hiệu đề xuất</th>
+                        <th>Minh chứng</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ct in de_xuat.chi_tiets %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-semibold">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}</td>
+                        <td>{{ ct.quan_nhan.cap_bac if ct.quan_nhan else '-' }}</td>
+                        <td>{{ ct.doi_tuong or '-' }}</td>
+                        <td><span class="badge bg-navy">{{ ct.loai_danh_hieu }}</span></td>
+                        <td>
+                            {% if ct.minh_chungs %}
+                            <span class="badge bg-success">{{ ct.minh_chungs|length }} file</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form id="delItem{{ ct.id }}" method="POST"
+                                  action="{{ url_for('nomination.delete_nomination_item', id=ct.id) }}" style="display:inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="confirmDelete('delItem{{ ct.id }}', 'mục này')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-3">
+            <i class="bi bi-person-plus d-block"></i>
+            <small>Chưa có cá nhân/đơn vị nào. Thêm bên dưới.</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add New Item Form -->
+<div class="card-section">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-plus-circle me-2"></i>Thêm cá nhân đề xuất khen thưởng</h5>
+    </div>
+    <div class="card-body-custom">
+        <form method="POST" action="{{ url_for('nomination.add_nomination_item', id=de_xuat.id) }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Basic Selection -->
+            <div class="form-section">
+                <div class="form-section-title">Thông tin cơ bản</div>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Chọn cá nhân <span class="text-danger">*</span></label>
+                        <select class="form-select" name="quan_nhan_id" id="quan_nhan_select" onchange="onPersonnelSelect(this)" required>
+                            <option value="">-- Chọn quân nhân --</option>
+                            {% for p in personnel %}
+                            {% set is_nominated = p.id in already_nominated_ids %}
+                            <option value="{{ p.id }}"
+                                    data-doituong="{{ p.doi_tuong or '' }}"
+                                    data-hocvi="{{ p.hoc_vi or '' }}"
+                                    data-capbac="{{ p.cap_bac or '' }}"
+                                    data-chucvu="{{ p.chuc_vu or '' }}"
+                                    {% if is_nominated %}disabled{% endif %}>
+                                {{ p.ho_ten }} - {{ p.cap_bac or '' }} - {{ p.chuc_vu or '' }}{% if is_nominated %} (Đã đề xuất){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Danh hiệu đề xuất <span class="text-danger">*</span></label>
+                        <select class="form-select" name="loai_danh_hieu" id="loai_danh_hieu_select" onchange="onDanhHieuChange()" required>
+                            <option value="">-- Chọn --</option>
+                            {% for dh in danh_hieu_list %}
+                            <option value="{{ dh }}">{{ dh }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Đối tượng <span class="text-danger">*</span></label>
+                        <select class="form-select" name="doi_tuong" id="doi_tuong_select" onchange="onDoiTuongSelectChange()" required>
+                            <option value="">-- Chọn đối tượng --</option>
+                            {% for dt in doi_tuong_list %}
+                            <option value="{{ dt }}">{{ dt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Common fields - always visible -->
+            <div class="form-section">
+                <div class="form-section-title">Tiêu chí chung</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
+                        <select class="form-select" name="muc_do_hoan_thanh">
+                            <option value="">-- Chọn --</option>
+                            {% for mdht in muc_do_list %}
+                            <option value="{{ mdht }}">{{ mdht }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Số phiếu tín nhiệm</label>
+                        <input type="text" class="form-control" name="phieu_tin_nhiem">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kết quả kiểm tra điều lệnh</label>
+                        <input type="text" class="form-control" name="kiem_tra_dieu_lenh">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kết quả kiểm tra bắn súng</label>
+                        <input type="text" class="form-control" name="ban_sung">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kết quả kiểm tra thể lực</label>
+                        <input type="text" class="form-control" name="the_luc">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kết quả kiểm tra chính trị</label>
+                        <input type="text" class="form-control" name="kiem_tra_chinh_tri">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kết quả thi đánh giá kiến thức, kỹ năng số</label>
+                        <input type="text" class="form-control" name="kiem_tra_tin_hoc">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kết quả kiểm tra địa hình quân sự</label>
+                        <input type="text" class="form-control" name="dia_ly_quan_su">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Hoàn thành nhiệm vụ, khen thưởng của tổ chức quần chúng</label>
+                        <input type="text" class="form-control" name="ket_qua_doan_the" placeholder="Nếu còn trong độ tuổi sinh hoạt đoàn">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Chủ trì đơn vị đạt danh hiệu thi đua</label>
+                        <input type="text" class="form-control" name="chu_tri_don_vi_danh_hieu" placeholder="Nếu là chỉ huy/bí thư">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lecturer-specific fields -->
+            <div class="form-section field-group hidden" id="group-gv">
+                <div class="form-section-title" style="color: #0D6EFD;">
+                    <i class="bi bi-mortarboard me-1"></i>Tiêu chí dành cho Giảng viên
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6" id="group-danh-hieu-gv">
+                        <label class="form-label">Danh hiệu Giảng viên giỏi</label>
+                        <input type="text" class="form-control" name="danh_hieu_gv_gioi">
+                    </div>
+                    <div class="col-md-6" id="group-dinh-muc">
+                        <label class="form-label">Định mức giảng dạy</label>
+                        <input type="text" class="form-control" name="dinh_muc_giang_day">
+                    </div>
+                    <div class="col-md-6" id="group-lao-dong-kh">
+                        <label class="form-label">Thời gian lao động khoa học sau quy đổi</label>
+                        <input type="text" class="form-control" name="thoi_gian_lao_dong_kh">
+                    </div>
+                    <div class="col-md-6" id="group-kiem-tra-giang">
+                        <label class="form-label">Kết quả kiểm tra giảng năm học</label>
+                        <input type="text" class="form-control" name="ket_qua_kiem_tra_giang">
+                    </div>
+                </div>
+            </div>
+
+            <!-- PGS progress - only for Tien si -->
+            <div class="form-section field-group hidden" id="group-tien-do-pgs">
+                <div class="form-section-title" style="color: #6F42C1;">
+                    <i class="bi bi-graph-up me-1"></i>Tiến độ chức danh PGS (Dành cho Tiến sĩ)
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Thực hiện tiến độ chức danh PGS</label>
+                        <input type="text" class="form-control" name="tien_do_pgs">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student-specific fields -->
+            <div class="form-section field-group hidden" id="group-hv">
+                <div class="form-section-title" style="color: #198754;">
+                    <i class="bi bi-book me-1"></i>Tiêu chí dành cho Học viên
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4" id="group-danh-hieu-hv">
+                        <label class="form-label">Danh hiệu học viên giỏi</label>
+                        <input type="text" class="form-control" name="danh_hieu_hv_gioi">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Điểm tổng kết</label>
+                        <input type="text" class="form-control" name="diem_tong_ket">
+                    </div>
+                    <div class="col-md-4" id="group-thuc-hanh">
+                        <label class="form-label">Kết quả kiểm tra đánh giá năng lực thực hành</label>
+                        <input type="text" class="form-control" name="ket_qua_thuc_hanh">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scientific Research - CSTĐ full form -->
+            <div class="form-section" id="nckh-section-cstd">
+                <div class="form-section-title" style="color: #DC3545;">
+                    <i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted fst-italic" id="nckh-criteria-label">
+                        Chọn cá nhân để xem tiêu chí NCKH phù hợp
+                    </small>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Nội dung kết quả NCKH</label>
+                        <textarea class="form-control" name="nckh_noi_dung" rows="3"
+                                  placeholder="Mô tả kết quả nghiên cứu khoa học..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ảnh minh chứng NCKH</label>
+                        <input type="file" class="form-control" name="nckh_minh_chung" accept="image/*,.pdf">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Minh chứng bổ sung (nhiều file)</label>
+                        <input type="file" class="form-control" name="minh_chung_files" accept="image/*,.pdf" multiple>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scientific Research - CSTT simplified form -->
+            <div class="form-section hidden" id="nckh-section-cstt">
+                <div class="form-section-title" style="color: #DC3545;">
+                    <i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học (CSTT)
+                </div>
+                <div class="mb-2">
+                    <small class="text-info fst-italic">
+                        <i class="bi bi-info-circle me-1"></i>Hoàn thành tốt nhiệm vụ NCKH theo đúng mức quy định của từng đối tượng
+                    </small>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Điểm khoa học</label>
+                        <input type="number" step="0.01" class="form-control" name="diem_nckh"
+                               placeholder="Nhập điểm khoa học">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Minh chứng bổ sung (nhiều file)</label>
+                        <input type="file" class="form-control" name="minh_chung_files_cstt" accept="image/*,.pdf" multiple>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-3">
+                <label class="form-label">Ghi chú thêm</label>
+                <textarea class="form-control" name="ghi_chu_item" rows="2"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-navy">
+                <i class="bi bi-plus-lg me-1"></i> Thêm vào đề xuất
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ - {{ phong_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-house-door me-2"></i>Trang chủ</h4>
+        <small class="text-muted">{{ phong_name }}</small>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-value text-warning">{{ pending_count }}</div>
+                    <div class="stat-label">Chờ duyệt</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(255,193,7,0.1); color: #FFC107;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-value text-success">{{ approved_count }}</div>
+                    <div class="stat-label">Đã đồng ý</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(25,135,84,0.1); color: #198754;">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-value text-danger">{{ rejected_count }}</div>
+                    <div class="stat-label">Từ chối</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(220,53,69,0.1); color: #DC3545;">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-clipboard-check me-2"></i>Đề xuất chờ duyệt</h5>
+        <a href="{{ url_for('approval.pending_list') }}" class="btn btn-navy btn-sm">Xem tất cả</a>
+    </div>
+    <div class="card-body-custom">
+        {% if recent_pending %}
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr>
+                        <th>Đơn vị</th>
+                        <th>Năm học</th>
+                        <th>Số cá nhân</th>
+                        <th>Ngày gửi</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pd in recent_pending %}
+                    <tr>
+                        <td>{{ pd.de_xuat.don_vi.ten_don_vi }}</td>
+                        <td>{{ pd.de_xuat.nam_hoc }}</td>
+                        <td>{{ pd.de_xuat.chi_tiets|length }}</td>
+                        <td>{{ pd.de_xuat.ngay_gui.strftime('%d/%m/%Y') if pd.de_xuat.ngay_gui else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('approval.review_nomination', id=pd.de_xuat_id) }}"
+                               class="btn btn-sm btn-outline-navy">
+                                <i class="bi bi-eye me-1"></i>Xem & Duyệt
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-clipboard-check d-block"></i>
+            <p>Không có đề xuất nào chờ duyệt</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

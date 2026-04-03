@@ -1,0 +1,822 @@
+{% extends "base.html" %}
+{% block title %}Phê duyệt khen thưởng{% endblock %}
+
+{% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-clipboard-check me-2"></i>Phê duyệt khen thưởng</h4>
+        <small class="text-muted">{{ phong_name }}</small>
+    </div>
+    {% if pending_reviews %}
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <!-- Search by name -->
+        <div class="input-group input-group-sm" style="width:200px;">
+            <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+        </div>
+        <!-- Scope filter -->
+        <select class="form-select form-select-sm" id="scopeFilter" style="width:160px;">
+            <option value="">Tất cả diện QL</option>
+            <option value="quan_luc">Diện Quân lực</option>
+            <option value="can_bo">Diện Cán bộ</option>
+        </select>
+        <!-- Danh hieu filter -->
+        <select class="form-select form-select-sm" id="danhHieuFilter" style="width:180px;">
+            <option value="">Tất cả danh hiệu</option>
+            <option value="Chiến sĩ thi đua">CSTD</option>
+            <option value="Chiến sĩ tiên tiến">CSTT</option>
+            <option value="Đơn vị quyết thắng">DVQT</option>
+            <option value="Đơn vị tiên tiến">DVTT</option>
+        </select>
+        <!-- Unit filter dropdown -->
+        <select class="form-select form-select-sm" id="unitFilter" style="width:220px;">
+            <option value="">Tất cả đơn vị ({{ pending_reviews|length }})</option>
+            {% for name in unit_names %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+        <!-- Batch approve all button -->
+        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Nhất trí tất cả chưa duyệt">
+            <i class="bi bi-check-all me-1"></i>Nhất trí toàn bộ
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+{% set display_fields = allowed_fields|reject('equalto', 'nckh_minh_chung')|list %}
+{% set show_evidence = 'nckh_minh_chung' in allowed_fields %}
+
+{% if pending_reviews %}
+
+<!-- Summary stats -->
+{% set ns = namespace(total=0, approved=0, rejected=0, pending=0) %}
+{% for pd in pending_reviews %}
+    {% set results = all_item_results[pd.id] if pd.id in all_item_results else {} %}
+    {% for ct in pd.de_xuat.chi_tiets %}
+        {% if ct.id not in out_of_scope_ct_ids %}
+        {% set kq = results[ct.id] if ct.id in results else None %}
+        {% set ns.total = ns.total + 1 %}
+        {% if kq and kq.ket_qua == 'Đồng ý' %}{% set ns.approved = ns.approved + 1 %}
+        {% elif kq and kq.ket_qua == 'Từ chối' %}{% set ns.rejected = ns.rejected + 1 %}
+        {% else %}{% set ns.pending = ns.pending + 1 %}{% endif %}
+        {% endif %}
+    {% endfor %}
+{% endfor %}
+<div class="d-flex gap-3 mb-3 flex-wrap" id="globalStats">
+    <div class="stat-mini">
+        <i class="bi bi-people-fill text-primary"></i>
+        <span>Tổng: <strong id="gs-total">{{ ns.total }}</strong></span>
+    </div>
+    <div class="stat-mini">
+        <i class="bi bi-hourglass-split text-warning"></i>
+        <span>Chờ duyệt: <strong id="gs-pending">{{ ns.pending }}</strong></span>
+    </div>
+    <div class="stat-mini">
+        <i class="bi bi-check-circle-fill text-success"></i>
+        <span>Nhất trí: <strong id="gs-approved">{{ ns.approved }}</strong></span>
+    </div>
+    {% if ns.rejected > 0 %}
+    <div class="stat-mini">
+        <i class="bi bi-x-circle-fill text-danger"></i>
+        <span>Không NT: <strong id="gs-rejected">{{ ns.rejected }}</strong></span>
+    </div>
+    {% endif %}
+</div>
+
+<div class="accordion" id="approvalAccordion">
+    {% for pd in pending_reviews %}
+    {% set results = all_item_results[pd.id] if pd.id in all_item_results else {} %}
+    {% set ns_unit = namespace(total=0, approved_count=0, rejected_count=0) %}
+    {% for ct_s in pd.de_xuat.chi_tiets %}
+        {% if ct_s.id not in out_of_scope_ct_ids %}
+            {% set ns_unit.total = ns_unit.total + 1 %}
+            {% set kq_s = results[ct_s.id] if ct_s.id in results else None %}
+            {% if kq_s and kq_s.ket_qua == 'Đồng ý' %}{% set ns_unit.approved_count = ns_unit.approved_count + 1 %}{% endif %}
+            {% if kq_s and kq_s.ket_qua == 'Từ chối' %}{% set ns_unit.rejected_count = ns_unit.rejected_count + 1 %}{% endif %}
+        {% endif %}
+    {% endfor %}
+    {% set total = ns_unit.total %}
+    {% set approved_count = ns_unit.approved_count %}
+    {% set rejected_count = ns_unit.rejected_count %}
+    {% set reviewed = approved_count + rejected_count %}
+    {% set pending_count = total - reviewed %}
+
+    <div class="card-section mb-3 unit-card" id="unit-card-{{ pd.id }}"
+         data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi }}" data-pd-id="{{ pd.id }}">
+        <div class="card-header-custom d-flex justify-content-between align-items-center"
+             data-bs-toggle="collapse" data-bs-target="#unit-{{ pd.id }}" style="cursor:pointer;">
+            <h6 class="mb-0">
+                <i class="bi bi-building me-2"></i>{{ pd.de_xuat.don_vi.ten_don_vi }}
+                <small class="text-muted ms-2">{{ pd.de_xuat.nam_hoc }}</small>
+            </h6>
+            <div class="d-flex align-items-center gap-2">
+                <!-- Batch approve this unit -->
+                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 btn-approve-unit"
+                        data-pd-id="{{ pd.id }}" title="Nhất trí tất cả trong đơn vị này"
+                        onclick="event.stopPropagation();">
+                    <i class="bi bi-check-all me-1"></i><small>Nhất trí ĐV</small>
+                </button>
+                <span class="badge bg-success" id="stat-approved-{{ pd.id }}" title="Nhất trí">{{ approved_count }}</span>
+                <span class="badge bg-danger {% if rejected_count == 0 %}d-none{% endif %}"
+                      id="stat-rejected-{{ pd.id }}" title="Không nhất trí">{{ rejected_count }}</span>
+                <span class="badge bg-secondary" id="stat-progress-{{ pd.id }}">{{ reviewed }}/{{ total }}</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+        </div>
+        <div id="unit-{{ pd.id }}" class="collapse show">
+            <div class="p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
+                        <thead>
+                            <tr>
+                                <th style="width:35px;">STT</th>
+                                <th style="min-width:130px;">Họ tên</th>
+                                <th>Cấp bậc / Chức vụ</th>
+                                <th>Đối tượng</th>
+                                <th>Danh hiệu</th>
+                                {% for field in display_fields %}
+                                <th><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
+                                {% endfor %}
+                                {% if show_evidence %}
+                                <th style="width:60px;">MC</th>
+                                {% endif %}
+                                <th style="width:100px;" class="text-center">Nhất trí</th>
+                                <th style="width:40px;" class="text-center">CT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ct in pd.de_xuat.chi_tiets %}
+                            {% set kq = results[ct.id] if ct.id in results else None %}
+                            {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
+                            {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
+                            {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
+                            <tr id="row-{{ pd.id }}-{{ ct.id }}"
+                                class="{% if is_out_of_scope %}table-light text-muted{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
+                                data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
+                                data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
+                                data-ho-ten="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else pd.de_xuat.don_vi.ten_don_vi)|lower }}"
+                                data-doi-tuong="{{ ct.doi_tuong or '' }}"
+                                data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi }}">
+                                <td>{{ loop.index }}</td>
+                                <td class="fw-semibold">
+                                    {{ ct.quan_nhan.ho_ten if ct.quan_nhan else pd.de_xuat.don_vi.ten_don_vi }}
+                                </td>
+                                <td>
+                                    {% if ct.quan_nhan %}
+                                    <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ ct.doi_tuong or '-' }}</small></td>
+                                <td>
+                                    {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
+                                    <span class="badge bg-warning text-dark">CSTĐ</span>
+                                    {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
+                                    <span class="badge bg-info text-dark">CSTT</span>
+                                    {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}
+                                    <span class="badge bg-navy">ĐVQT</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">ĐVTT</span>
+                                    {% endif %}
+                                </td>
+                                {% for field in display_fields %}
+                                <td>
+                                    {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}
+                                        <small class="text-muted">-</small>
+                                    {% elif field == 'nckh_noi_dung' %}
+                                        {% set val = ct|attr(field) %}
+                                        {% if val %}
+                                        <small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>
+                                        {% else %}<small class="text-muted">-</small>{% endif %}
+                                    {% elif field == 'diem_nckh' %}
+                                        {% set val = ct|attr(field) %}
+                                        {% if val is not none %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                                    {% else %}
+                                        {% set val = ct|attr(field) %}
+                                        {% if val %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                {% if show_evidence %}
+                                <td class="text-center">
+                                    {% if ct.minh_chungs %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                            data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}"
+                                            title="{{ ct.minh_chungs|length }} minh chứng">
+                                        <i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small>
+                                    </button>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                                <td class="text-center">
+                                    {% if is_out_of_scope %}
+                                    <div class="form-check form-switch d-flex justify-content-center mb-0">
+                                        <input class="form-check-input" type="checkbox"
+                                               checked disabled
+                                               style="width:2.5em; height:1.3em; opacity:0.5;">
+                                    </div>
+                                    <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
+                                    {% else %}
+                                    <div class="form-check form-switch d-flex justify-content-center mb-0">
+                                        <input class="form-check-input toggle-approval" type="checkbox"
+                                               id="switch-{{ pd.id }}-{{ ct.id }}"
+                                               data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                               {% if is_approved %}checked{% endif %}
+                                               style="cursor:pointer; width:2.5em; height:1.3em;">
+                                    </div>
+                                    {% if not is_approved %}
+                                    <a href="javascript:void(0)" class="reject-link text-danger"
+                                       data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                       style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>
+                                    {% endif %}
+                                    {% if is_rejected %}
+                                    <small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}"
+                                           style="font-size:0.72rem;" title="{{ kq.ly_do }}">
+                                        {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
+                                    </small>
+                                    {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}"
+                                       class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <!-- Reject reason row (hidden) -->
+                            {% if not is_out_of_scope %}
+                            <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row"
+                                data-danh-hieu="{{ ct.loai_danh_hieu or '' }}">
+                                <td colspan="20">
+                                    <div class="d-flex gap-2 align-items-center py-1 ps-3">
+                                        <small class="text-danger fw-semibold text-nowrap"><i class="bi bi-x-circle me-1"></i>Lý do:</small>
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="reason-input-{{ pd.id }}-{{ ct.id }}"
+                                               placeholder="Nhập lý do không nhất trí..."
+                                               value="{{ kq.ly_do if kq and kq.ly_do else '' }}"
+                                               style="max-width:400px;">
+                                        <button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn"
+                                                data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
+                                            <i class="bi bi-check me-1"></i>Lưu
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn"
+                                                data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
+                                            Hủy
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Evidence Modals -->
+{% if show_evidence %}
+{% for pd in pending_reviews %}
+{% for ct in pd.de_xuat.chi_tiets %}
+{% if ct.minh_chungs %}
+<div class="modal fade" id="mcModal{{ ct.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-header-navy">
+                <h6 class="modal-title">Minh chứng: {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for mc in ct.minh_chungs %}
+                    <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}"
+                         class="evidence-thumb" alt="{{ mc.ten_file_goc }}"
+                         onclick="showImageModal(this.src)" style="max-width:150px;">
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+<!-- Batch approve confirmation modal -->
+<div class="modal fade" id="batchApproveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-header-navy">
+                <h6 class="modal-title" id="batchApproveTitle">Xác nhận nhất trí</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="batchApproveMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" id="batchApproveConfirm">
+                    <i class="bi bi-check-all me-1"></i>Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="card-section">
+    <div class="empty-state">
+        <i class="bi bi-check-circle d-block" style="font-size:2rem; color:var(--navy-primary);"></i>
+        <p>Không có đề xuất nào chờ duyệt</p>
+        <a href="{{ url_for('approval.history') }}" class="btn btn-sm btn-outline-navy">
+            <i class="bi bi-clock-history me-1"></i>Xem lịch sử
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .toggle-approval:checked { background-color: #198754; border-color: #198754; }
+    .toggle-approval { background-color: #adb5bd; border-color: #adb5bd; }
+    .table-custom th { white-space: nowrap; }
+    .reject-link:hover { text-decoration: underline !important; }
+    .stat-mini {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.82rem;
+    }
+    .stat-mini i { font-size: 1rem; }
+    .unit-card.filtered-out { display: none !important; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    // ===================== UNIT FILTER =====================
+    const unitFilter = document.getElementById('unitFilter');
+    if (unitFilter) {
+        unitFilter.addEventListener('change', function () {
+            applyFilters();
+        });
+    }
+
+    // ===================== DANH HIEU FILTER =====================
+    const danhHieuFilter = document.getElementById('danhHieuFilter');
+    if (danhHieuFilter) {
+        danhHieuFilter.addEventListener('change', function () {
+            applyFilters();
+        });
+    }
+
+    // ===================== SEARCH FILTER =====================
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            applyFilters();
+        });
+    }
+
+    // ===================== SCOPE FILTER =====================
+    const scopeFilter = document.getElementById('scopeFilter');
+    if (scopeFilter) {
+        scopeFilter.addEventListener('change', function () {
+            applyFilters();
+        });
+    }
+
+    const BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Công chức quốc phòng'];
+
+    function applyFilters() {
+        const selectedUnit = unitFilter ? unitFilter.value : '';
+        const selectedDH = danhHieuFilter ? danhHieuFilter.value : '';
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const selectedScope = scopeFilter ? scopeFilter.value : '';
+
+        // Unit-level filtering
+        document.querySelectorAll('.unit-card').forEach(card => {
+            if (!selectedUnit || card.dataset.unitName === selectedUnit) {
+                card.classList.remove('filtered-out');
+            } else {
+                card.classList.add('filtered-out');
+            }
+        });
+
+        // Row-level filtering (danh_hieu + search + scope)
+        document.querySelectorAll('.ct-row').forEach(row => {
+            let visible = true;
+
+            // Danh hieu filter
+            if (selectedDH && row.dataset.danhHieu !== selectedDH) {
+                visible = false;
+            }
+
+            // Search filter
+            if (visible && searchTerm && !row.dataset.hoTen.includes(searchTerm)) {
+                visible = false;
+            }
+
+            // Scope filter
+            if (visible && selectedScope) {
+                const doiTuong = row.dataset.doiTuong || '';
+                const isQuanLuc = BAN_QUANLUC_DOI_TUONG.includes(doiTuong);
+                if (selectedScope === 'quan_luc' && !isQuanLuc) visible = false;
+                if (selectedScope === 'can_bo' && isQuanLuc) visible = false;
+            }
+
+            row.style.display = visible ? '' : 'none';
+            // Also hide its reject reason row
+            if (!visible) {
+                const pdId = row.dataset.pdId;
+                const ctId = row.dataset.ctId;
+                const rejectRow = document.getElementById(`reject-row-${pdId}-${ctId}`);
+                if (rejectRow) rejectRow.style.display = 'none';
+            }
+        });
+
+        // Hide unit cards that have no visible rows after row-level filtering
+        if (selectedDH || searchTerm || selectedScope) {
+            document.querySelectorAll('.unit-card:not(.filtered-out)').forEach(card => {
+                let count = 0;
+                card.querySelectorAll('.ct-row').forEach(r => {
+                    if (r.style.display !== 'none') count++;
+                });
+                if (count === 0) {
+                    card.classList.add('filtered-out');
+                }
+            });
+        }
+    }
+
+    // ===================== TOGGLE SWITCHES =====================
+    document.querySelectorAll('.toggle-approval').forEach(sw => {
+        sw.addEventListener('change', function () {
+            const pdId = this.dataset.pdId;
+            const ctId = this.dataset.ctId;
+
+            if (this.checked) {
+                saveToggle(pdId, ctId, true, '');
+            } else {
+                showRejectRow(pdId, ctId);
+            }
+        });
+    });
+
+    // "Từ chối" link for pending items
+    document.querySelectorAll('.reject-link').forEach(link => {
+        link.addEventListener('click', function () {
+            showRejectRow(this.dataset.pdId, this.dataset.ctId);
+        });
+    });
+
+    // Save reject
+    document.querySelectorAll('.save-reject-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const pdId = this.dataset.pdId;
+            const ctId = this.dataset.ctId;
+            const reason = document.getElementById(`reason-input-${pdId}-${ctId}`).value.trim();
+            if (!reason) {
+                document.getElementById(`reason-input-${pdId}-${ctId}`).classList.add('is-invalid');
+                return;
+            }
+            saveToggle(pdId, ctId, false, reason);
+        });
+    });
+
+    // Cancel reject
+    document.querySelectorAll('.cancel-reject-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const pdId = this.dataset.pdId;
+            const ctId = this.dataset.ctId;
+            hideRejectRow(pdId, ctId);
+        });
+    });
+
+    // Enter key in reason input
+    document.querySelectorAll('[id^="reason-input-"]').forEach(input => {
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('tr').querySelector('.save-reject-btn').click();
+            }
+        });
+    });
+
+    // ===================== BATCH APPROVE =====================
+    let batchPendingData = null;
+
+    // Approve by unit
+    document.querySelectorAll('.btn-approve-unit').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const pdId = this.dataset.pdId;
+            const card = document.getElementById(`unit-card-${pdId}`);
+            const unitName = card.dataset.unitName;
+            const pendingCtIds = getPendingCtIds(pdId);
+
+            if (pendingCtIds.length === 0) {
+                showToast('Đơn vị này đã được duyệt hết.', 'info');
+                return;
+            }
+
+            batchPendingData = { pdId: pdId, ctIds: pendingCtIds };
+            document.getElementById('batchApproveTitle').textContent = `Nhất trí đơn vị: ${unitName}`;
+            document.getElementById('batchApproveMessage').textContent =
+                `Bạn có chắc muốn nhất trí ${pendingCtIds.length} cá nhân chưa duyệt trong đơn vị "${unitName}"?`;
+            new bootstrap.Modal(document.getElementById('batchApproveModal')).show();
+        });
+    });
+
+    // Approve all
+    const btnApproveAll = document.getElementById('btnApproveAll');
+    if (btnApproveAll) {
+        btnApproveAll.addEventListener('click', function () {
+            // Collect all pending items across all visible units
+            const allPending = [];
+            document.querySelectorAll('.unit-card:not(.filtered-out)').forEach(card => {
+                const pdId = card.dataset.pdId;
+                const pendingCtIds = getPendingCtIds(pdId);
+                if (pendingCtIds.length > 0) {
+                    allPending.push({ pdId: pdId, ctIds: pendingCtIds });
+                }
+            });
+
+            const totalPending = allPending.reduce((sum, item) => sum + item.ctIds.length, 0);
+            if (totalPending === 0) {
+                showToast('Tất cả đã được duyệt.', 'info');
+                return;
+            }
+
+            batchPendingData = allPending; // Array of {pdId, ctIds}
+            document.getElementById('batchApproveTitle').textContent = 'Nhất trí toàn bộ';
+            document.getElementById('batchApproveMessage').textContent =
+                `Bạn có chắc muốn nhất trí ${totalPending} cá nhân chưa duyệt?`;
+            new bootstrap.Modal(document.getElementById('batchApproveModal')).show();
+        });
+    }
+
+    // Confirm batch approve
+    document.getElementById('batchApproveConfirm').addEventListener('click', async function () {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+
+        try {
+            if (Array.isArray(batchPendingData)) {
+                // Multiple units
+                for (const item of batchPendingData) {
+                    await doBatchApprove(item.pdId, item.ctIds);
+                }
+            } else {
+                // Single unit
+                await doBatchApprove(batchPendingData.pdId, batchPendingData.ctIds);
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('batchApproveModal')).hide();
+            showToast('Đã nhất trí thành công!', 'success');
+
+            // Reload page after short delay to reflect all changes
+            setTimeout(() => location.reload(), 800);
+        } catch (err) {
+            console.error(err);
+            showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'danger');
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-check-all me-1"></i>Xác nhận';
+        }
+    });
+
+    // ===================== HELPER FUNCTIONS =====================
+
+    function getPendingCtIds(pdId) {
+        const ids = [];
+        const card = document.getElementById(`unit-card-${pdId}`);
+        card.querySelectorAll('.toggle-approval').forEach(sw => {
+            if (!sw.checked && !sw.disabled) {
+                const ctId = sw.dataset.ctId;
+                // Skip out-of-scope items
+                const row = document.getElementById(`row-${pdId}-${ctId}`);
+                if (row && row.dataset.outOfScope === 'true') return;
+                // Check if this item is not already rejected
+                const reasonText = document.getElementById(`reason-text-${pdId}-${ctId}`);
+                if (!reasonText) {
+                    ids.push(parseInt(ctId));
+                }
+            }
+        });
+        return ids;
+    }
+
+    async function doBatchApprove(pdId, ctIds) {
+        const res = await fetch('/approval/batch-approve', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({ pd_id: parseInt(pdId), ct_ids: ctIds }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Batch approve failed');
+        }
+
+        // Update UI for each approved item
+        ctIds.forEach(ctId => {
+            const sw = document.getElementById(`switch-${pdId}-${ctId}`);
+            if (sw) {
+                sw.checked = true;
+                const row = document.getElementById(`row-${pdId}-${ctId}`);
+                row.classList.remove('table-danger');
+                row.classList.add('table-success');
+                // Remove reject link
+                const switchCell = sw.closest('td');
+                const rl = switchCell.querySelector('.reject-link');
+                if (rl) rl.remove();
+            }
+        });
+
+        // Update stats
+        updateUnitStats(pdId, data.stats);
+
+        if (data.auto_finalized) {
+            handleAutoFinalized(pdId, data.stats);
+        }
+
+        return data;
+    }
+
+    function showRejectRow(pdId, ctId) {
+        const row = document.getElementById(`reject-row-${pdId}-${ctId}`);
+        row.style.display = '';
+        const input = document.getElementById(`reason-input-${pdId}-${ctId}`);
+        input.classList.remove('is-invalid');
+        input.focus();
+    }
+
+    function hideRejectRow(pdId, ctId) {
+        document.getElementById(`reject-row-${pdId}-${ctId}`).style.display = 'none';
+    }
+
+    async function saveToggle(pdId, ctId, approved, lyDo) {
+        const sw = document.getElementById(`switch-${pdId}-${ctId}`);
+        try {
+            const res = await fetch(`/approval/toggle/${pdId}/${ctId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ approved: approved, ly_do: lyDo }),
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                alert(data.message || 'Có lỗi xảy ra');
+                sw.checked = !sw.checked;
+                return;
+            }
+
+            const row = document.getElementById(`row-${pdId}-${ctId}`);
+            row.classList.remove('table-success', 'table-danger');
+
+            // Hide reject row
+            hideRejectRow(pdId, ctId);
+
+            // Update row styling and switch cell content
+            const switchCell = sw.closest('td');
+
+            if (approved) {
+                row.classList.add('table-success');
+                sw.checked = true;
+                // Remove reject link and reason text
+                const rl = switchCell.querySelector('.reject-link');
+                if (rl) rl.remove();
+                const rt = switchCell.querySelector('[id^="reason-text-"]');
+                if (rt) rt.remove();
+            } else {
+                row.classList.add('table-danger');
+                sw.checked = false;
+                // Show reason text, hide reject link
+                const rl = switchCell.querySelector('.reject-link');
+                if (rl) rl.style.display = 'none';
+                let rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
+                if (rt) {
+                    rt.textContent = lyDo.length > 20 ? lyDo.substring(0, 20) + '...' : lyDo;
+                    rt.title = lyDo;
+                } else {
+                    const small = document.createElement('small');
+                    small.className = 'text-danger d-block';
+                    small.id = `reason-text-${pdId}-${ctId}`;
+                    small.style.fontSize = '0.72rem';
+                    small.title = lyDo;
+                    small.textContent = lyDo.length > 20 ? lyDo.substring(0, 20) + '...' : lyDo;
+                    switchCell.appendChild(small);
+                }
+            }
+
+            // Update stats
+            updateUnitStats(pdId, data.stats);
+
+            // Auto-finalized
+            if (data.auto_finalized) {
+                handleAutoFinalized(pdId, data.stats);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi kết nối. Vui lòng thử lại.');
+            sw.checked = !sw.checked;
+        }
+    }
+
+    function updateUnitStats(pdId, stats) {
+        const approvedBadge = document.getElementById(`stat-approved-${pdId}`);
+        const rejectedBadge = document.getElementById(`stat-rejected-${pdId}`);
+        const progressBadge = document.getElementById(`stat-progress-${pdId}`);
+
+        if (approvedBadge) approvedBadge.textContent = stats.approved;
+        if (rejectedBadge) {
+            rejectedBadge.textContent = stats.rejected;
+            rejectedBadge.classList.toggle('d-none', stats.rejected === 0);
+        }
+        if (progressBadge) progressBadge.textContent = `${stats.reviewed}/${stats.total}`;
+
+        // Update global stats
+        updateGlobalStats();
+    }
+
+    function updateGlobalStats() {
+        let totalApproved = 0, totalRejected = 0, totalItems = 0;
+        document.querySelectorAll('.unit-card').forEach(card => {
+            const pdId = card.dataset.pdId;
+            const approvedBadge = document.getElementById(`stat-approved-${pdId}`);
+            const rejectedBadge = document.getElementById(`stat-rejected-${pdId}`);
+            const progressBadge = document.getElementById(`stat-progress-${pdId}`);
+            if (progressBadge) {
+                const parts = progressBadge.textContent.split('/');
+                totalItems += parseInt(parts[1]) || 0;
+            }
+            if (approvedBadge) totalApproved += parseInt(approvedBadge.textContent) || 0;
+            if (rejectedBadge && !rejectedBadge.classList.contains('d-none')) {
+                totalRejected += parseInt(rejectedBadge.textContent) || 0;
+            }
+        });
+        const pending = totalItems - totalApproved - totalRejected;
+        const gsTotal = document.getElementById('gs-total');
+        const gsPending = document.getElementById('gs-pending');
+        const gsApproved = document.getElementById('gs-approved');
+        const gsRejected = document.getElementById('gs-rejected');
+        if (gsTotal) gsTotal.textContent = totalItems;
+        if (gsPending) gsPending.textContent = pending;
+        if (gsApproved) gsApproved.textContent = totalApproved;
+        if (gsRejected) gsRejected.textContent = totalRejected;
+    }
+
+    function handleAutoFinalized(pdId, stats) {
+        const card = document.getElementById(`unit-card-${pdId}`);
+        const body = card.querySelector('.collapse');
+        body.insertAdjacentHTML('afterbegin',
+            `<div class="alert alert-success m-2 py-2 px-3 d-flex align-items-center" style="font-size:0.85rem;">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span>Đã tự động hoàn tất duyệt. Nhất trí: ${stats.approved}, Không NT: ${stats.rejected}</span>
+            </div>`);
+        // Disable all switches in this unit
+        card.querySelectorAll('.toggle-approval').forEach(s => s.disabled = true);
+        card.querySelectorAll('.reject-link').forEach(l => l.style.display = 'none');
+        card.querySelectorAll('.btn-approve-unit').forEach(b => { b.disabled = true; b.classList.add('disabled'); });
+        // Mark header
+        const header = card.querySelector('.card-header-custom');
+        const chevron = header.querySelector('.bi-chevron-down');
+        if (chevron) {
+            chevron.classList.remove('bi-chevron-down');
+            chevron.classList.add('bi-check-circle-fill', 'text-success');
+        }
+    }
+
+    function showToast(message, type) {
+        // Simple flash-like notification
+        const container = document.querySelector('.content-area') || document.querySelector('.page-header').parentNode;
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.style.fontSize = '0.85rem';
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        container.insertBefore(alertDiv, container.firstChild);
+        setTimeout(() => alertDiv.remove(), 4000);
+    }
+});
+</script>
+{% endblock %}

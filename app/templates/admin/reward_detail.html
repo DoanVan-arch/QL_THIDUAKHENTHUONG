@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết khen thưởng - {{ kt.ho_ten }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-trophy me-2"></i>Chi tiết khen thưởng</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.reward_list') }}">Danh sách khen thưởng</a></li>
+                <li class="breadcrumb-item active">{{ kt.ho_ten }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        {% if kt.loai_danh_hieu == 'Chiến sĩ thi đua' %}
+        <span class="badge bg-warning text-dark" style="font-size:0.85rem;">CSTD</span>
+        {% elif kt.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
+        <span class="badge bg-info text-dark" style="font-size:0.85rem;">CSTT</span>
+        {% elif kt.loai_danh_hieu == 'Đơn vị quyết thắng' %}
+        <span class="badge bg-navy" style="font-size:0.85rem;">DVQT</span>
+        {% else %}
+        <span class="badge bg-secondary" style="font-size:0.85rem;">DVTT</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <!-- Personal info -->
+    <div class="col-md-8">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-person me-2"></i>Thông tin cá nhân</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Họ tên</small>
+                        <span class="fw-semibold" style="font-size:1rem;">{{ kt.ho_ten }}</span>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted d-block">Cấp bậc</small>
+                        <span>{{ kt.cap_bac or '-' }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Chức vụ</small>
+                        <span>{{ kt.chuc_vu or '-' }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Đơn vị</small>
+                        <span>{{ kt.don_vi.ten_don_vi }}</span>
+                    </div>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Đối tượng</small>
+                        <span>{{ kt.doi_tuong or '-' }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Danh hiệu</small>
+                        {% if kt.loai_danh_hieu == 'Chiến sĩ thi đua' %}
+                        <span class="badge bg-warning text-dark">Chiến sĩ thi đua</span>
+                        {% elif kt.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
+                        <span class="badge bg-info text-dark">Chiến sĩ tiên tiến</span>
+                        {% elif kt.loai_danh_hieu == 'Đơn vị quyết thắng' %}
+                        <span class="badge bg-navy">Đơn vị quyết thắng</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Đơn vị tiên tiến</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Năm học</small>
+                        <span>{{ kt.nam_hoc }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Ngày gửi đề xuất</small>
+                        <span>{{ de_xuat.ngay_gui.strftime('%d/%m/%Y') if de_xuat and de_xuat.ngay_gui else '-' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reward info -->
+    <div class="col-md-4">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-shield-check me-2"></i>Thông tin khen thưởng</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="mb-2">
+                    <small class="text-muted d-block">Trạng thái</small>
+                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã khen thưởng</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted d-block">Ngày phê duyệt cuối</small>
+                    <span>{{ kt.ngay_duyet.strftime('%d/%m/%Y %H:%M') if kt.ngay_duyet else '-' }}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted d-block">Người phê duyệt</small>
+                    <span>{{ kt.nguoi_duyet.ho_ten if kt.nguoi_duyet else '-' }}</span>
+                </div>
+                {% if kt.ghi_chu %}
+                <div>
+                    <small class="text-muted d-block">Ghi chú phê duyệt</small>
+                    <span>{{ kt.ghi_chu }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Department approval results -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-clipboard-check me-2"></i>Kết quả duyệt các cơ quan</h5>
+    </div>
+    <div class="card-body-custom">
+        <div class="row g-2">
+            {% for phong_name in dept_names %}
+            <div class="col-md-2 col-sm-6">
+                <div class="dept-result-card">
+                    {% if phong_name in dept_item_results %}
+                        {% set dept = dept_item_results[phong_name] %}
+                        {% set kq = dept.item_result %}
+                        {% if kq and kq.ket_qua == 'Đồng ý' %}
+                        <div class="step-icon step-approved mb-1"><i class="bi bi-check-lg"></i></div>
+                        {% elif kq and kq.ket_qua == 'Từ chối' %}
+                        <div class="step-icon step-rejected mb-1"><i class="bi bi-x-lg"></i></div>
+                        {% else %}
+                        <div class="step-icon step-pending mb-1"><i class="bi bi-hourglass"></i></div>
+                        {% endif %}
+                        <div class="fw-semibold" style="font-size:0.82rem;">{{ phong_name }}</div>
+                        <small class="text-muted">{{ kq.ket_qua if kq else 'Chưa duyệt' }}
+                            {% if dept.phe_duyet.ngay_duyet %}<br>{{ dept.phe_duyet.ngay_duyet.strftime('%d/%m/%Y') }}{% endif %}
+                        </small>
+                        {% if kq and kq.ly_do %}
+                        <br><small class="text-danger">{{ kq.ly_do }}</small>
+                        {% endif %}
+                    {% else %}
+                        <div class="step-icon step-pending mb-1"><i class="bi bi-hourglass"></i></div>
+                        <div class="fw-semibold" style="font-size:0.82rem;">{{ phong_name }}</div>
+                        <small class="text-muted">Chưa duyệt</small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Criteria fields -->
+{% if ct %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-clipboard-data me-2"></i>Các tiêu chí đánh giá</h5>
+    </div>
+    <div class="card-body-custom">
+        {% set has_any_field = namespace(val=false) %}
+        {% for field in all_fields %}
+            {% set val = ct[field] if ct[field] is defined else None %}
+            {% if val is not none and val != '' and val != 0 %}
+                {% set has_any_field.val = true %}
+            {% endif %}
+        {% endfor %}
+
+        {% if has_any_field.val %}
+        <div class="row g-2">
+            {% for field in all_fields %}
+                {% set val = ct[field] if ct[field] is defined else None %}
+                {% if val is not none and val != '' and val != 0 %}
+                <div class="col-md-4 col-sm-6">
+                    <div class="detail-field-item">
+                        <small class="text-muted d-block">{{ all_field_labels.get(field, field) }}</small>
+                        {% if field == 'nckh_minh_chung' and val %}
+                        <span class="text-break" style="word-break:break-all;">{{ val }}</span>
+                        {% elif field == 'nckh_noi_dung' and val %}
+                        <span class="text-break">{{ val }}</span>
+                        {% elif field == 'diem_nckh' %}
+                        <span class="fw-semibold text-primary">{{ val }}</span>
+                        {% else %}
+                        <span>{{ val }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-muted small fst-italic">Chưa có dữ liệu tiêu chí</div>
+        {% endif %}
+    </div>
+</div>
+
+{% if ct.ghi_chu %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-chat-left-text me-2"></i>Ghi chú đề xuất</h5>
+    </div>
+    <div class="card-body-custom">
+        <p class="mb-0">{{ ct.ghi_chu }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Evidence files -->
+{% if ct.minh_chungs %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-paperclip me-2"></i>Minh chứng ({{ ct.minh_chungs|length }})</h5>
+    </div>
+    <div class="card-body-custom">
+        <div class="d-flex flex-wrap gap-2">
+            {% for mc in ct.minh_chungs %}
+            <a href="{{ url_for('static', filename='uploads/' + mc.duong_dan) }}"
+               target="_blank" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-file-earmark me-1"></i>{{ mc.ten_file_goc or mc.loai_minh_chung }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<div class="card-section mb-3">
+    <div class="card-body-custom">
+        <div class="text-muted small fst-italic">Không tìm thấy dữ liệu chi tiết đề xuất gốc.</div>
+    </div>
+</div>
+{% endif %}
+
+<a href="{{ url_for('admin.reward_list') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Quay lại
+</a>
+
+<style>
+.detail-field-item {
+    background: #f8f9fc;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    height: 100%;
+}
+.detail-field-item small {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.dept-result-card {
+    background: #f8f9fc;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem;
+    text-align: center;
+    height: 100%;
+}
+</style>
+{% endblock %}

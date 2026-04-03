@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Quản lý đơn vị{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-building me-2"></i>Quản lý đơn vị</h4>
+        <small class="text-muted">Quản lý danh sách đơn vị trong toàn trường</small>
+    </div>
+    <button class="btn btn-navy btn-sm" data-bs-toggle="modal" data-bs-target="#createUnitModal">
+        <i class="bi bi-plus-lg me-1"></i>Thêm đơn vị
+    </button>
+</div>
+
+{% for loai, units in units_by_type.items() %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-diagram-3 me-2"></i>{{ loai.value }}</h5>
+        <span class="badge bg-navy">{{ units|length }} đơn vị</span>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if units %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">Mã</th>
+                        <th>Tên đơn vị</th>
+                        <th style="width:80px;">Thứ tự</th>
+                        <th>Tài khoản</th>
+                        <th style="width:100px;">Trạng thái</th>
+                        <th class="text-center" style="width:120px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in units %}
+                    <tr class="{{ 'table-secondary' if not u.is_active }}">
+                        <td class="fw-semibold">{{ u.ma_don_vi }}</td>
+                        <td>{{ u.ten_don_vi }}</td>
+                        <td>{{ u.thu_tu }}</td>
+                        <td>
+                            {% if u.user_account %}
+                            <span class="badge bg-success">{{ u.user_account.username }}</span>
+                            {% else %}
+                            <span class="text-muted">Chưa có</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_active %}
+                            <span class="badge-status badge-approved">Hoạt động</span>
+                            {% else %}
+                            <span class="badge-status badge-rejected">Ngừng</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-navy me-1"
+                                    title="Sửa đơn vị"
+                                    onclick="openEditModal({{ u.id }}, '{{ u.ma_don_vi|e }}', '{{ u.ten_don_vi|e }}', '{{ u.loai_don_vi.value|e }}', {{ u.thu_tu }})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('admin.toggle_unit', id=u.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if u.is_active %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Ngừng hoạt động"
+                                        onclick="return confirm('Ngừng hoạt động đơn vị {{ u.ten_don_vi }}?')">
+                                    <i class="bi bi-pause-circle"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Kích hoạt lại">
+                                    <i class="bi bi-play-circle"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-2">
+            <small>Không có đơn vị nào</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+<!-- Create Unit Modal -->
+<div class="modal fade" id="createUnitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.create_unit') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-primary), var(--navy-light)); color: #fff;">
+                    <h6 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Thêm đơn vị mới</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mã đơn vị <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" name="ma_don_vi"
+                               required placeholder="VD: K1, TD1, H1...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên đơn vị <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" name="ten_don_vi"
+                               required placeholder="VD: Khoa Mác-Lênin">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Loại đơn vị <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" name="loai_don_vi" required>
+                            <option value="">-- Chọn loại --</option>
+                            {% for val, name in loai_don_vi_list %}
+                            <option value="{{ val }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Thứ tự hiển thị</label>
+                        <input type="number" class="form-control form-control-sm" name="thu_tu"
+                               value="0" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo đơn vị
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Unit Modal -->
+<div class="modal fade" id="editUnitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editUnitForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-primary), var(--navy-light)); color: #fff;">
+                    <h6 class="modal-title"><i class="bi bi-pencil me-2"></i>Sửa đơn vị</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mã đơn vị <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" name="ma_don_vi"
+                               id="editMaDonVi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên đơn vị <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" name="ten_don_vi"
+                               id="editTenDonVi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Loại đơn vị <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" name="loai_don_vi" id="editLoaiDonVi" required>
+                            <option value="">-- Chọn loại --</option>
+                            {% for val, name in loai_don_vi_list %}
+                            <option value="{{ val }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Thứ tự hiển thị</label>
+                        <input type="number" class="form-control form-control-sm" name="thu_tu"
+                               id="editThuTu" value="0" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy">
+                        <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openEditModal(id, maDonVi, tenDonVi, loaiDonVi, thuTu) {
+    document.getElementById('editUnitForm').action = '{{ url_for("admin.edit_unit", id=0) }}'.replace('/0/', '/' + id + '/');
+    document.getElementById('editMaDonVi').value = maDonVi;
+    document.getElementById('editTenDonVi').value = tenDonVi;
+    document.getElementById('editLoaiDonVi').value = loaiDonVi;
+    document.getElementById('editThuTu').value = thuTu;
+    var modal = new bootstrap.Modal(document.getElementById('editUnitModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

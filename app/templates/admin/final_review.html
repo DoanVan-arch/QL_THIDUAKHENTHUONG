@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Phê duyệt cuối cùng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối cùng</h4>
+        <small class="text-muted">Cơ quan Tuyên huấn</small>
+    </div>
+</div>
+
+{% set status_class = {
+    'Nháp': 'badge-draft', 'Chờ duyệt': 'badge-pending',
+    'Đang duyệt': 'badge-reviewing', 'Đã duyệt': 'badge-approved',
+    'Phê duyệt cuối': 'badge-final', 'Từ chối': 'badge-rejected'
+} %}
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if nominations.items %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Đơn vị</th>
+                        <th>Năm học</th>
+                        <th>Số cá nhân</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày gửi</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dx in nominations.items %}
+                    <tr>
+                        <td>{{ (nominations.page - 1) * nominations.per_page + loop.index }}</td>
+                        <td class="fw-semibold">{{ dx.don_vi.ten_don_vi }}</td>
+                        <td>{{ dx.nam_hoc }}</td>
+                        <td>{{ dx.chi_tiets|length }}</td>
+                        <td>
+                            <span class="badge-status {{ status_class.get(dx.trang_thai, 'badge-draft') }}">
+                                {{ dx.trang_thai }}
+                            </span>
+                        </td>
+                        <td>{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.final_review_detail', id=dx.id) }}" class="btn btn-sm btn-outline-navy me-1">
+                                <i class="bi bi-eye"></i> Xem
+                            </a>
+                            {% if dx.trang_thai == 'Đã duyệt' %}
+                            <form method="POST" action="{{ url_for('admin.final_approve', id=dx.id) }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-success me-1"
+                                        onclick="return confirm('Phê duyệt cuối cùng cho đề xuất này?')">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            </form>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ dx.id }}">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+
+                            <!-- Reject Modal -->
+                            <div class="modal fade" id="rejectModal{{ dx.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header modal-header-navy">
+                                            <h6 class="modal-title">Từ chối đề xuất</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('admin.final_reject', id=dx.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <div class="modal-body">
+                                                <label class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
+                                                <textarea class="form-control" name="ly_do" rows="3" required></textarea>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                                <button type="submit" class="btn btn-danger">Từ chối</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-shield-check d-block"></i>
+            <p>Không có đề xuất nào cần phê duyệt</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

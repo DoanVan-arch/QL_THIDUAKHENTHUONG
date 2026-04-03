@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết đề xuất - {{ de_xuat.nam_hoc }}{% endblock %}
+
+{% block content %}
+{% set status_class = {
+    'Nháp': 'badge-draft', 'Chờ duyệt': 'badge-pending',
+    'Đang duyệt': 'badge-reviewing', 'Đã duyệt': 'badge-approved',
+    'Phê duyệt cuối': 'badge-final', 'Từ chối': 'badge-rejected'
+} %}
+
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-file-earmark-text me-2"></i>Chi tiết đề xuất khen thưởng</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                {% if current_user.is_unit_user %}
+                <li class="breadcrumb-item"><a href="{{ url_for('nomination.list_nominations') }}">Đề xuất</a></li>
+                {% endif %}
+                <li class="breadcrumb-item active">{{ de_xuat.nam_hoc }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        {% if current_user.is_unit_user and de_xuat.trang_thai in ('Chờ duyệt', 'Từ chối') %}
+        {% set ns_revoke = namespace(can=true) %}
+        {% for pd in de_xuat.phe_duyets %}
+            {% if pd.phong_duyet != 'Tuyên huấn' and pd.ket_qua != 'Chờ duyệt' %}
+                {% set ns_revoke.can = false %}
+            {% endif %}
+        {% endfor %}
+        {% if ns_revoke.can %}
+        <form method="POST" action="{{ url_for('nomination.revoke_nomination', id=de_xuat.id) }}"
+              onsubmit="return confirm('Bạn có chắc muốn thu hồi đề xuất này? Đề xuất sẽ chuyển về trạng thái Nháp.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-warning">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi đề xuất
+            </button>
+        </form>
+        {% endif %}
+        {% endif %}
+        <span class="badge-status {{ status_class.get(de_xuat.trang_thai, 'badge-draft') }}" style="font-size:0.9rem;">
+            {{ de_xuat.trang_thai }}
+        </span>
+    </div>
+</div>
+
+<!-- Info -->
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-info-circle me-2"></i>Thông tin chung</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <small class="text-muted">Đơn vị</small>
+                        <div class="fw-semibold">{{ de_xuat.don_vi.ten_don_vi }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Năm học</small>
+                        <div>{{ de_xuat.nam_hoc }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Ngày gửi</small>
+                        <div>{{ de_xuat.ngay_gui.strftime('%d/%m/%Y %H:%M') if de_xuat.ngay_gui else '-' }}</div>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">Số cá nhân</small>
+                        <div class="fw-semibold">{{ de_xuat.chi_tiets|length }}</div>
+                    </div>
+                    {% if de_xuat.ghi_chu %}
+                    <div class="col-12">
+                        <small class="text-muted">Ghi chú</small>
+                        <div>{{ de_xuat.ghi_chu }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-check2-square me-2"></i>Trạng thái phê duyệt</h5>
+            </div>
+            <div class="card-body-custom">
+                {% for pd in de_xuat.phe_duyets %}
+                <div class="approval-step">
+                    {% if pd.ket_qua == 'Đồng ý' %}
+                    <div class="step-icon step-approved"><i class="bi bi-check-lg"></i></div>
+                    {% elif pd.ket_qua == 'Từ chối' %}
+                    <div class="step-icon step-rejected"><i class="bi bi-x-lg"></i></div>
+                    {% else %}
+                    <div class="step-icon step-pending"><i class="bi bi-hourglass"></i></div>
+                    {% endif %}
+                    <div>
+                        <div class="fw-semibold" style="font-size:0.85rem;">{{ pd.phong_duyet }}</div>
+                        <small class="text-muted">{{ pd.ket_qua }}
+                            {% if pd.ngay_duyet %} - {{ pd.ngay_duyet.strftime('%d/%m/%Y') }}{% endif %}
+                        </small>
+                        {% if pd.ly_do %}
+                        <br><small class="text-danger">{{ pd.ly_do }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-muted small">Chưa gửi duyệt</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Per-individual approval tracking table -->
+{% if de_xuat.trang_thai != 'Nháp' and chi_tiets_data %}
+<div class="card-section mb-4">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-table me-2"></i>Tiến độ duyệt theo cá nhân</h5>
+    </div>
+    <div class="card-body-custom p-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0" style="font-size:0.82rem;">
+                <thead>
+                    <tr>
+                        <th style="min-width:30px;">STT</th>
+                        <th style="min-width:140px;">Họ tên</th>
+                        <th>Danh hiệu</th>
+                        {% for dept in dept_names %}
+                        <th class="text-center" style="min-width:60px;">
+                            {{ dept | replace('Phòng ', 'P.') | replace('Ban ', 'B.') }}
+                        </th>
+                        {% endfor %}
+                        <th class="text-center">KQ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in chi_tiets_data %}
+                    {% set ct = item.ct %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-semibold">
+                            {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}
+                            {% if ct.quan_nhan and ct.quan_nhan.cap_bac %}
+                            <br><small class="text-muted">{{ ct.quan_nhan.cap_bac }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
+                            <span class="badge bg-warning text-dark">CSTD</span>
+                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
+                            <span class="badge bg-info text-dark">CSTT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}
+                            <span class="badge bg-navy">DVQT</span>
+                            {% else %}
+                            <span class="badge bg-secondary">DVTT</span>
+                            {% endif %}
+                        </td>
+                        {% for dept in dept_names %}
+                        <td class="text-center">
+                            {% set kq = item.dept_results.get(dept) %}
+                            {% if kq == 'Đồng ý' %}
+                            <span class="badge bg-success rounded-circle p-1" title="Đồng ý" style="width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;">
+                                <i class="bi bi-check-lg" style="font-size:0.7rem;"></i>
+                            </span>
+                            {% elif kq == 'Từ chối' %}
+                            <span class="badge bg-danger rounded-circle p-1" title="Từ chối" style="width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;">
+                                <i class="bi bi-x-lg" style="font-size:0.7rem;"></i>
+                            </span>
+                            {% elif kq == 'Chờ duyệt' %}
+                            <span class="badge bg-secondary rounded-circle p-1" title="Chờ duyệt" style="width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;">
+                                <i class="bi bi-hourglass" style="font-size:0.6rem;"></i>
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="text-center">
+                            {% if item.is_rewarded %}
+                            <span class="badge bg-primary" title="Đã khen thưởng"><i class="bi bi-trophy-fill"></i></span>
+                            {% else %}
+                            {% set approved_count = item.dept_results.values()|select('equalto', 'Đồng ý')|list|length %}
+                            {% set rejected_count = item.dept_results.values()|select('equalto', 'Từ chối')|list|length %}
+                            {% if rejected_count > 0 %}
+                            <span class="badge bg-danger" style="font-size:0.7rem;">Từ chối</span>
+                            {% elif approved_count == dept_names|length %}
+                            <span class="badge bg-success" style="font-size:0.7rem;">Đạt</span>
+                            {% else %}
+                            <small class="text-muted">{{ approved_count }}/{{ dept_names|length }}</small>
+                            {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Detail Items -->
+<div class="card-section">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-people me-2"></i>Danh sách cá nhân đề xuất</h5>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if de_xuat.chi_tiets %}
+        {% for ct in de_xuat.chi_tiets %}
+        <div class="p-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h6 class="fw-bold mb-1">
+                        {{ loop.index }}. {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}
+                        {% if ct.quan_nhan and ct.quan_nhan.cap_bac %}
+                        <small class="text-muted">- {{ ct.quan_nhan.cap_bac }}</small>
+                        {% endif %}
+                    </h6>
+                    {% if ct.quan_nhan and ct.quan_nhan.chuc_vu %}
+                    <small class="text-muted">{{ ct.quan_nhan.chuc_vu }}</small>
+                    {% endif %}
+                </div>
+                <span class="badge bg-navy">{{ ct.loai_danh_hieu }}</span>
+            </div>
+
+            <div class="row g-2" style="font-size:0.85rem;">
+                {% if ct.doi_tuong %}
+                <div class="col-md-3"><small class="text-muted">Đối tượng:</small> {{ ct.doi_tuong }}</div>
+                {% endif %}
+                {% if ct.muc_do_hoan_thanh %}
+                <div class="col-md-3"><small class="text-muted">Hoàn thành NV:</small> {{ ct.muc_do_hoan_thanh }}</div>
+                {% endif %}
+                {% if ct.phieu_tin_nhiem %}
+                <div class="col-md-3"><small class="text-muted">Phiếu tín nhiệm:</small> {{ ct.phieu_tin_nhiem }}</div>
+                {% endif %}
+                {% if ct.kiem_tra_dieu_lenh %}
+                <div class="col-md-3"><small class="text-muted">Điều lệnh:</small> {{ ct.kiem_tra_dieu_lenh }}</div>
+                {% endif %}
+                {% if ct.ban_sung %}
+                <div class="col-md-3"><small class="text-muted">Bắn súng:</small> {{ ct.ban_sung }}</div>
+                {% endif %}
+                {% if ct.the_luc %}
+                <div class="col-md-3"><small class="text-muted">Thể lực:</small> {{ ct.the_luc }}</div>
+                {% endif %}
+                {% if ct.kiem_tra_chinh_tri %}
+                <div class="col-md-3"><small class="text-muted">Chính trị:</small> {{ ct.kiem_tra_chinh_tri }}</div>
+                {% endif %}
+                {% if ct.kiem_tra_tin_hoc %}
+                <div class="col-md-3"><small class="text-muted">Kỹ năng số:</small> {{ ct.kiem_tra_tin_hoc }}</div>
+                {% endif %}
+                {% if ct.dia_ly_quan_su %}
+                <div class="col-md-3"><small class="text-muted">Địa hình QS:</small> {{ ct.dia_ly_quan_su }}</div>
+                {% endif %}
+                {% if ct.danh_hieu_gv_gioi %}
+                <div class="col-md-3"><small class="text-muted">GV giỏi:</small> {{ ct.danh_hieu_gv_gioi }}</div>
+                {% endif %}
+                {% if ct.dinh_muc_giang_day %}
+                <div class="col-md-3"><small class="text-muted">Định mức GD:</small> {{ ct.dinh_muc_giang_day }}</div>
+                {% endif %}
+                {% if ct.ket_qua_kiem_tra_giang %}
+                <div class="col-md-3"><small class="text-muted">KT giảng:</small> {{ ct.ket_qua_kiem_tra_giang }}</div>
+                {% endif %}
+                {% if ct.thoi_gian_lao_dong_kh %}
+                <div class="col-md-3"><small class="text-muted">LĐ KH:</small> {{ ct.thoi_gian_lao_dong_kh }}</div>
+                {% endif %}
+                {% if ct.tien_do_pgs %}
+                <div class="col-md-3"><small class="text-muted">Tiến độ PGS:</small> {{ ct.tien_do_pgs }}</div>
+                {% endif %}
+                {% if ct.danh_hieu_hv_gioi %}
+                <div class="col-md-3"><small class="text-muted">HV giỏi:</small> {{ ct.danh_hieu_hv_gioi }}</div>
+                {% endif %}
+                {% if ct.diem_tong_ket %}
+                <div class="col-md-3"><small class="text-muted">Điểm TK:</small> {{ ct.diem_tong_ket }}</div>
+                {% endif %}
+                {% if ct.ket_qua_thuc_hanh %}
+                <div class="col-md-3"><small class="text-muted">Thực hành:</small> {{ ct.ket_qua_thuc_hanh }}</div>
+                {% endif %}
+                {% if ct.ket_qua_doan_the %}
+                <div class="col-md-6"><small class="text-muted">Đoàn thể:</small> {{ ct.ket_qua_doan_the }}</div>
+                {% endif %}
+                {% if ct.chu_tri_don_vi_danh_hieu %}
+                <div class="col-md-6"><small class="text-muted">Chủ trì đơn vị:</small> {{ ct.chu_tri_don_vi_danh_hieu }}</div>
+                {% endif %}
+            </div>
+
+            {% if ct.nckh_noi_dung %}
+            <div class="mt-2" style="font-size:0.85rem;">
+                <small class="text-muted fw-semibold">NCKH:</small> {{ ct.nckh_noi_dung }}
+            </div>
+            {% endif %}
+
+            {% if ct.diem_nckh is not none %}
+            <div class="mt-2" style="font-size:0.85rem;">
+                <small class="text-muted fw-semibold">Điểm khoa học:</small> {{ ct.diem_nckh }}
+            </div>
+            {% endif %}
+
+            {% if ct.minh_chungs %}
+            <div class="mt-2">
+                <small class="text-muted fw-semibold">Minh chứng:</small>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    {% for mc in ct.minh_chungs %}
+                    <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}"
+                         class="evidence-thumb" alt="{{ mc.ten_file_goc }}"
+                         onclick="showImageModal(this.src)">
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if ct.ghi_chu %}
+            <div class="mt-1" style="font-size:0.85rem;">
+                <small class="text-muted">Ghi chú:</small> {{ ct.ghi_chu }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state py-3">
+            <i class="bi bi-inbox d-block"></i>
+            <small>Không có cá nhân nào trong đề xuất</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

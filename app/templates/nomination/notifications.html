@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Thông báo{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-bell me-2"></i>Thông báo</h4>
+        <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
+    </div>
+    {% if thong_baos.items %}
+    <form action="{{ url_for('nomination.mark_notifications_read') }}" method="POST" class="d-inline">
+        <button type="submit" class="btn btn-sm btn-outline-navy">
+            <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if thong_baos.items %}
+        <div class="list-group list-group-flush">
+            {% for tb in thong_baos.items %}
+            <div class="list-group-item {% if not tb.da_doc %}list-group-item-warning{% endif %} py-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            {% if tb.loai == 'tu_choi' %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Từ chối</span>
+                            {% else %}
+                            <span class="badge bg-info"><i class="bi bi-info-circle me-1"></i>Thông tin</span>
+                            {% endif %}
+                            {% if not tb.da_doc %}
+                            <span class="badge bg-warning text-dark" style="font-size:0.65rem;">Mới</span>
+                            {% endif %}
+                        </div>
+                        <h6 class="mb-1 fw-semibold" style="font-size:0.9rem;">{{ tb.tieu_de }}</h6>
+                        {% if tb.noi_dung %}
+                        <p class="mb-1 text-muted" style="font-size:0.85rem;">{{ tb.noi_dung }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted d-block">{{ tb.created_at.strftime('%d/%m/%Y %H:%M') if tb.created_at else '' }}</small>
+                        {% if tb.de_xuat_id %}
+                        <a href="{{ url_for('nomination.detail_nomination', id=tb.de_xuat_id) }}" class="btn btn-sm btn-outline-navy mt-1 py-0">
+                            <i class="bi bi-eye me-1"></i>Xem
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if thong_baos.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if thong_baos.has_prev %}
+                    <li class="page-item"><a class="page-link" href="?page={{ thong_baos.prev_num }}">&laquo;</a></li>
+                    {% endif %}
+                    {% for p in thong_baos.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == thong_baos.page }}">
+                        <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if thong_baos.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ thong_baos.next_num }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-bell-slash d-block"></i>
+            <p>Chưa có thông báo nào</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

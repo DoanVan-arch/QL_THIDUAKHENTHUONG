@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Quản lý tài khoản{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-person-gear me-2"></i>Quản lý tài khoản</h4>
+    </div>
+    <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#addUserModal">
+        <i class="bi bi-person-plus me-1"></i> Tạo tài khoản
+    </button>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Tên đăng nhập</th>
+                        <th>Họ tên</th>
+                        <th>Vai trò</th>
+                        <th>Đơn vị</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td class="fw-semibold">{{ u.username }}</td>
+                        <td>{{ u.ho_ten }}</td>
+                        <td><span class="badge bg-navy">{{ u.role_display }}</span></td>
+                        <td>{{ u.don_vi.ten_don_vi if u.don_vi else '-' }}</td>
+                        <td>
+                            {% if u.is_active_account %}
+                            <span class="badge-status badge-approved">Hoạt động</span>
+                            {% else %}
+                            <span class="badge-status badge-rejected">Vô hiệu</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin.toggle_user', id=u.id) }}" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm {{ 'btn-outline-danger' if u.is_active_account else 'btn-outline-success' }}" title="{{ 'Vô hiệu hóa' if u.is_active_account else 'Kích hoạt' }}">
+                                    <i class="bi {{ 'bi-person-dash' if u.is_active_account else 'bi-person-check' }}"></i>
+                                </button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                                    data-bs-target="#resetPwModal{{ u.id }}" title="Đặt lại mật khẩu">
+                                <i class="bi bi-key"></i>
+                            </button>
+
+                            <!-- Reset Password Modal -->
+                            <div class="modal fade" id="resetPwModal{{ u.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-sm">
+                                    <div class="modal-content">
+                                        <div class="modal-header modal-header-navy">
+                                            <h6 class="modal-title">Đặt lại mật khẩu - {{ u.username }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('admin.reset_password', id=u.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <div class="modal-body">
+                                                <label class="form-label">Mật khẩu mới</label>
+                                                <input type="password" class="form-control" name="new_password" required minlength="4">
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="submit" class="btn btn-navy">Đặt lại</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-header-navy">
+                <h6 class="modal-title"><i class="bi bi-person-plus me-2"></i>Tạo tài khoản mới</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.create_user') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" name="password" required minlength="4">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Họ tên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ho_ten" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Vai trò <span class="text-danger">*</span></label>
+                        <select class="form-select" name="role" required id="newUserRole" onchange="toggleUnitField()">
+                            {% for val, name in roles %}
+                            <option value="{{ val }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="unitField">
+                        <label class="form-label">Đơn vị (cho tài khoản đơn vị)</label>
+                        <select class="form-select" name="don_vi_id">
+                            <option value="">-- Chọn đơn vị --</option>
+                            {% for u in units %}
+                            <option value="{{ u.id }}">{{ u.ma_don_vi }} - {{ u.ten_don_vi }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Tạo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function toggleUnitField() {
+    const role = document.getElementById('newUserRole').value;
+    document.getElementById('unitField').style.display = (role === 'unit_user') ? 'block' : 'none';
+}
+toggleUnitField();
+</script>
+{% endblock %}
+{% endblock %}

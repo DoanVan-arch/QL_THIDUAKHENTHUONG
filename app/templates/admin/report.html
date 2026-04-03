@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo thống kê{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-bar-chart me-2"></i>Báo cáo thống kê</h4>
+        <small class="text-muted">Tổng hợp tình hình thi đua khen thưởng</small>
+    </div>
+    <div>
+        <form method="GET" class="d-flex align-items-center gap-2">
+            <select class="form-select form-select-sm" name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả năm học</option>
+                {% for nh in nam_hoc_list %}
+                <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
+                {% endfor %}
+            </select>
+            {% if nam_hoc_filter %}
+            <a href="{{ url_for('admin.report_summary') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Summary stat cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-value">{{ total_personnel }}</div>
+            <div class="stat-label">Tổng quân nhân</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-file-earmark-text"></i></div>
+            <div class="stat-value">{{ total_nominations }}</div>
+            <div class="stat-label">Tổng đề xuất</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card" style="border-left: 4px solid #198754;">
+            <div class="stat-icon text-success"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="stat-value text-success">{{ total_approved }}</div>
+            <div class="stat-label">Đề xuất đã PD cuối</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card" style="border-left: 4px solid #ffc107;">
+            <div class="stat-icon text-warning"><i class="bi bi-trophy-fill"></i></div>
+            <div class="stat-value text-warning">{{ total_rewards }}</div>
+            <div class="stat-label">Cá nhân khen thưởng</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts row -->
+<div class="row g-3 mb-4">
+    <!-- Danh hieu pie chart -->
+    <div class="col-md-4">
+        <div class="card-section h-100">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-pie-chart me-2"></i>Theo danh hiệu</h5>
+            </div>
+            <div class="card-body-custom d-flex flex-column align-items-center justify-content-center" style="min-height:260px;">
+                {% if total_rewards > 0 %}
+                <canvas id="danhHieuChart" style="max-height:220px;"></canvas>
+                {% else %}
+                <div class="text-muted small fst-italic">Chưa có dữ liệu</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Unit type bar chart -->
+    <div class="col-md-4">
+        <div class="card-section h-100">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-bar-chart-fill me-2"></i>Theo loại đơn vị</h5>
+            </div>
+            <div class="card-body-custom d-flex flex-column align-items-center justify-content-center" style="min-height:260px;">
+                {% if total_rewards > 0 %}
+                <canvas id="loaiDvChart" style="max-height:220px;"></canvas>
+                {% else %}
+                <div class="text-muted small fst-italic">Chưa có dữ liệu</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Status doughnut chart -->
+    <div class="col-md-4">
+        <div class="card-section h-100">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-graph-up me-2"></i>Trạng thái đề xuất</h5>
+            </div>
+            <div class="card-body-custom d-flex flex-column align-items-center justify-content-center" style="min-height:260px;">
+                {% if total_nominations > 0 %}
+                <canvas id="statusChart" style="max-height:220px;"></canvas>
+                {% else %}
+                <div class="text-muted small fst-italic">Chưa có dữ liệu</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rewards by unit bar chart -->
+{% if chart_unit_names %}
+<div class="card-section mb-4">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-bar-chart-steps me-2"></i>Khen thưởng theo đơn vị</h5>
+    </div>
+    <div class="card-body-custom">
+        <canvas id="unitRewardChart" style="height:300px;"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<!-- Department approval stats -->
+<div class="card-section mb-4">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-clipboard-check me-2"></i>Thống kê duyệt theo cơ quan</h5>
+    </div>
+    <div class="card-body-custom p-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th>Cơ quan</th>
+                        <th class="text-center">Tổng đã duyệt</th>
+                        <th class="text-center">Đồng ý</th>
+                        <th class="text-center">Không đồng ý</th>
+                        <th class="text-center">Tỷ lệ đồng ý</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept_name in dept_names %}
+                    {% set ds = dept_stats.get(dept_name, {}) %}
+                    <tr>
+                        <td class="fw-semibold">{{ dept_name }}</td>
+                        <td class="text-center">{{ ds.get('total', 0) }}</td>
+                        <td class="text-center"><span class="text-success fw-semibold">{{ ds.get('approved', 0) }}</span></td>
+                        <td class="text-center"><span class="text-danger fw-semibold">{{ ds.get('rejected', 0) }}</span></td>
+                        <td class="text-center">
+                            {% if ds.get('total', 0) > 0 %}
+                            {% set pct = (ds.get('approved', 0) / ds.get('total', 1) * 100)|round(1) %}
+                            <div class="progress" style="height:18px; min-width:100px;">
+                                <div class="progress-bar bg-success" style="width:{{ pct }}%">{{ pct }}%</div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Danh hieu summary cards -->
+<div class="row g-3 mb-4">
+    {% for dh, count in danh_hieu_stats.items() %}
+    <div class="col-md-3 col-6">
+        <div class="card-section text-center py-3">
+            <div style="font-size:1.5rem; font-weight:700;">{{ count }}</div>
+            <div style="font-size:0.8rem;">
+                {% if dh == 'Chiến sĩ thi đua' %}
+                <span class="badge bg-warning text-dark">CSTD</span>
+                {% elif dh == 'Chiến sĩ tiên tiến' %}
+                <span class="badge bg-info text-dark">CSTT</span>
+                {% elif dh == 'Đơn vị quyết thắng' %}
+                <span class="badge bg-navy">DVQT</span>
+                {% else %}
+                <span class="badge bg-secondary">DVTT</span>
+                {% endif %}
+            </div>
+            <small class="text-muted">{{ dh }}</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Per-unit detailed table -->
+<div class="card-section">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-table me-2"></i>Chi tiết theo đơn vị</h5>
+    </div>
+    <div class="card-body-custom p-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0" style="font-size:0.82rem;">
+                <thead>
+                    <tr>
+                        <th>Mã</th>
+                        <th>Đơn vị</th>
+                        <th class="text-center">Quân nhân</th>
+                        <th class="text-center">Đề xuất</th>
+                        <th class="text-center">PD cuối</th>
+                        <th class="text-center">KT</th>
+                        <th class="text-center">CSTD</th>
+                        <th class="text-center">CSTT</th>
+                        <th class="text-center">DVQT</th>
+                        <th class="text-center">DVTT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in unit_stats %}
+                    {% if stat.personnel > 0 or stat.nominations > 0 or stat.rewards > 0 %}
+                    <tr>
+                        <td class="fw-semibold">{{ stat.unit.ma_don_vi }}</td>
+                        <td>{{ stat.unit.ten_don_vi }}</td>
+                        <td class="text-center">{{ stat.personnel }}</td>
+                        <td class="text-center">{{ stat.nominations }}</td>
+                        <td class="text-center">
+                            {% if stat.approved > 0 %}
+                            <span class="badge-status badge-final">{{ stat.approved }}</span>
+                            {% else %}0{% endif %}
+                        </td>
+                        <td class="text-center fw-semibold">{{ stat.rewards }}</td>
+                        <td class="text-center">{{ stat.by_danh_hieu.get('Chiến sĩ thi đua', 0) or '-' }}</td>
+                        <td class="text-center">{{ stat.by_danh_hieu.get('Chiến sĩ tiên tiến', 0) or '-' }}</td>
+                        <td class="text-center">{{ stat.by_danh_hieu.get('Đơn vị quyết thắng', 0) or '-' }}</td>
+                        <td class="text-center">{{ stat.by_danh_hieu.get('Đơn vị tiên tiến', 0) or '-' }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold" style="background:#f0f2f5;">
+                        <td colspan="2">Tổng cộng</td>
+                        <td class="text-center">{{ total_personnel }}</td>
+                        <td class="text-center">{{ total_nominations }}</td>
+                        <td class="text-center">{{ total_approved }}</td>
+                        <td class="text-center">{{ total_rewards }}</td>
+                        <td class="text-center">{{ danh_hieu_stats.get('Chiến sĩ thi đua', 0) }}</td>
+                        <td class="text-center">{{ danh_hieu_stats.get('Chiến sĩ tiên tiến', 0) }}</td>
+                        <td class="text-center">{{ danh_hieu_stats.get('Đơn vị quyết thắng', 0) }}</td>
+                        <td class="text-center">{{ danh_hieu_stats.get('Đơn vị tiên tiến', 0) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var chartFont = { family: 'Inter, sans-serif', size: 11 };
+    Chart.defaults.font = chartFont;
+
+    // Danh hieu pie chart
+    var dhCanvas = document.getElementById('danhHieuChart');
+    if (dhCanvas) {
+        new Chart(dhCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: {{ danh_hieu_stats.keys()|list|tojson }},
+                datasets: [{
+                    data: {{ danh_hieu_stats.values()|list|tojson }},
+                    backgroundColor: ['#ffc107', '#0dcaf0', '#1b3a5c', '#6c757d'],
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, pointStyle: 'circle' } },
+                },
+                cutout: '50%',
+            }
+        });
+    }
+
+    // Loai don vi bar chart
+    var ldvCanvas = document.getElementById('loaiDvChart');
+    if (ldvCanvas) {
+        new Chart(ldvCanvas, {
+            type: 'bar',
+            data: {
+                labels: {{ loai_dv_stats.keys()|list|tojson }},
+                datasets: [{
+                    label: 'Khen thưởng',
+                    data: {{ loai_dv_stats.values()|list|tojson }},
+                    backgroundColor: ['#1b3a5c', '#2c5282', '#3182ce', '#63b3ed'],
+                    borderRadius: 4,
+                    maxBarThickness: 40,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                    x: { ticks: { font: { size: 10 } } }
+                },
+            }
+        });
+    }
+
+    // Status doughnut chart
+    var stCanvas = document.getElementById('statusChart');
+    if (stCanvas) {
+        new Chart(stCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: {{ status_stats.keys()|list|tojson }},
+                datasets: [{
+                    data: {{ status_stats.values()|list|tojson }},
+                    backgroundColor: ['#ffc107', '#0dcaf0', '#198754', '#0d6efd', '#dc3545'],
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true, pointStyle: 'circle', font: { size: 10 } } },
+                },
+                cutout: '45%',
+            }
+        });
+    }
+
+    // Unit rewards bar chart
+    var urCanvas = document.getElementById('unitRewardChart');
+    if (urCanvas) {
+        new Chart(urCanvas, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_unit_names|tojson }},
+                datasets: [{
+                    label: 'Số cá nhân khen thưởng',
+                    data: {{ chart_unit_rewards|tojson }},
+                    backgroundColor: 'rgba(27, 58, 92, 0.75)',
+                    borderColor: '#1b3a5c',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    maxBarThickness: 50,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                    x: { ticks: { font: { size: 10 } } }
+                },
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

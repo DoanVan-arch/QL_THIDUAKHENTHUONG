@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ - Quản trị{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-house-door me-2"></i>Trang chủ - Quản trị hệ thống</h4>
+        <small class="text-muted">Cơ quan Tuyên huấn</small>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2 col-sm-4">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_units }}</div>
+            <div class="stat-label">Đơn vị</div>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_personnel }}</div>
+            <div class="stat-label">Quân nhân</div>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_nominations }}</div>
+            <div class="stat-label">Tổng đề xuất</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card" style="border-left: 4px solid var(--gold-accent);">
+            <div class="stat-value text-warning">{{ awaiting_final }}</div>
+            <div class="stat-label">Chờ phê duyệt cuối</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card" style="border-left: 4px solid #198754;">
+            <div class="stat-value text-success">{{ final_approved }}</div>
+            <div class="stat-label">Đã phê duyệt</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-lightning me-2"></i>Thao tác nhanh</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin.approval_tracking') }}" class="btn btn-outline-navy btn-sm">
+                        <i class="bi bi-eye me-1"></i> Theo dõi phê duyệt
+                    </a>
+                    <a href="{{ url_for('admin.reward_list') }}" class="btn btn-gold btn-sm">
+                        <i class="bi bi-trophy me-1"></i> Danh sách khen thưởng
+                    </a>
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-navy btn-sm">
+                        <i class="bi bi-person-gear me-1"></i> Quản lý tài khoản
+                    </a>
+                    <a href="{{ url_for('admin.manage_units') }}" class="btn btn-outline-navy btn-sm">
+                        <i class="bi bi-building me-1"></i> Quản lý đơn vị
+                    </a>
+                    <a href="{{ url_for('admin.report_summary') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-bar-chart me-1"></i> Báo cáo thống kê
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-clock-history me-2"></i>Đề xuất gần đây</h5>
+            </div>
+            <div class="card-body-custom">
+                {% if recent_nominations %}
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Đơn vị</th>
+                                <th>Năm học</th>
+                                <th>Số cá nhân</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày tạo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dx in recent_nominations %}
+                            {% set status_class = {
+                                'Nháp': 'badge-draft', 'Chờ duyệt': 'badge-pending',
+                                'Đang duyệt': 'badge-reviewing', 'Đã duyệt': 'badge-approved',
+                                'Phê duyệt cuối': 'badge-final', 'Từ chối': 'badge-rejected'
+                            } %}
+                            <tr>
+                                <td>{{ dx.don_vi.ten_don_vi }}</td>
+                                <td>{{ dx.nam_hoc }}</td>
+                                <td>{{ dx.chi_tiets|length }}</td>
+                                <td><span class="badge-status {{ status_class.get(dx.trang_thai, 'badge-draft') }}">{{ dx.trang_thai }}</span></td>
+                                <td>{{ dx.ngay_tao.strftime('%d/%m/%Y') if dx.ngay_tao else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox d-block"></i>
+                    <p>Chưa có đề xuất nào</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

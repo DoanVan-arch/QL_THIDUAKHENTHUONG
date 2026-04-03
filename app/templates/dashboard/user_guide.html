@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+{% block title %}Hướng dẫn sử dụng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-question-circle me-2"></i>Hướng dẫn sử dụng</h4>
+        <small class="text-muted">Tài liệu hướng dẫn vận hành Hệ thống Quản lý Thi đua, Khen thưởng</small>
+    </div>
+</div>
+
+<!-- Tổng quan hệ thống -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-info-circle me-2"></i>Tổng quan hệ thống</h5>
+    </div>
+    <div class="card-body-custom">
+        <p>Hệ thống <strong>Quản lý Thi đua, Khen thưởng</strong> của Trường Sĩ quan Chính trị giúp số hóa toàn bộ quy trình đề xuất, xét duyệt và quản lý kết quả thi đua khen thưởng.</p>
+        <div class="row g-3 mt-2">
+            <div class="col-md-4">
+                <div class="guide-card">
+                    <div class="guide-card-icon text-primary"><i class="bi bi-building"></i></div>
+                    <h6>Đơn vị (Đề xuất)</h6>
+                    <p class="small text-muted mb-0">Quản lý quân nhân, tạo và gửi đề xuất khen thưởng, theo dõi kết quả.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="guide-card">
+                    <div class="guide-card-icon text-success"><i class="bi bi-clipboard-check"></i></div>
+                    <h6>Cơ quan (Phê duyệt)</h6>
+                    <p class="small text-muted mb-0">6 cơ quan xét duyệt song song: P.Chính trị, P.Tham mưu, P.Khoa học, P.Đào tạo, B.Cán bộ, B.Quân lực.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="guide-card">
+                    <div class="guide-card-icon text-warning"><i class="bi bi-shield-check"></i></div>
+                    <h6>Ban Tuyên huấn (Quản trị)</h6>
+                    <p class="small text-muted mb-0">Theo dõi toàn bộ quy trình, phê duyệt cuối, quản lý danh sách khen thưởng, báo cáo thống kê.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quy trình phê duyệt -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-diagram-3 me-2"></i>Quy trình phê duyệt</h5>
+    </div>
+    <div class="card-body-custom">
+        <div class="guide-flow">
+            <div class="guide-flow-step">
+                <div class="guide-flow-num">1</div>
+                <div>
+                    <strong>Đơn vị tạo đề xuất</strong>
+                    <p class="small text-muted mb-0">Đơn vị chọn quân nhân, điền các tiêu chí đánh giá, đính kèm minh chứng và gửi đề xuất khen thưởng.</p>
+                </div>
+            </div>
+            <div class="guide-flow-step">
+                <div class="guide-flow-num">2</div>
+                <div>
+                    <strong>6 cơ quan xét duyệt song song</strong>
+                    <p class="small text-muted mb-0">Mỗi cơ quan xét duyệt các tiêu chí thuộc lĩnh vực phụ trách, đưa ra kết quả <span class="badge bg-success">Đồng ý</span> hoặc <span class="badge bg-danger">Từ chối</span> cho từng cá nhân.</p>
+                </div>
+            </div>
+            <div class="guide-flow-step">
+                <div class="guide-flow-num">3</div>
+                <div>
+                    <strong>Ban Tuyên huấn phê duyệt cuối</strong>
+                    <p class="small text-muted mb-0">Khi cả 6 cơ quan đồng ý, Ban Tuyên huấn xem xét và phê duyệt cuối cùng, lưu kết quả vào danh sách khen thưởng.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_unit_user %}
+<!-- Hướng dẫn cho Đơn vị -->
+<div class="card-section mb-3">
+    <div class="card-header-custom" style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color: #fff;">
+        <h5><i class="bi bi-building me-2"></i>Hướng dẫn dành cho Đơn vị</h5>
+    </div>
+    <div class="card-body-custom">
+        <div class="accordion" id="guideUnit">
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit1">
+                        <i class="bi bi-people me-2"></i>Quản lý quân nhân
+                    </button>
+                </h2>
+                <div id="guideUnit1" class="accordion-collapse collapse show" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Vào menu <strong>Quân nhân</strong> ở thanh bên trái.</li>
+                            <li>Bấm <strong>Thêm quân nhân</strong> để tạo mới, điền đầy đủ thông tin: họ tên, cấp bậc, chức vụ, đối tượng, ngày sinh, năm nhập ngũ, trình độ...</li>
+                            <li>Có thể chỉnh sửa hoặc vô hiệu hóa quân nhân đã tạo.</li>
+                            <li>Hệ thống phân loại quân nhân theo <strong>đối tượng</strong>: Sĩ quan, Giảng viên, Học viên, Quân nhân chuyên nghiệp, Công nhân viên, Công chức quốc phòng...</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit2">
+                        <i class="bi bi-award me-2"></i>Tạo và gửi đề xuất khen thưởng
+                    </button>
+                </h2>
+                <div id="guideUnit2" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Vào menu <strong>Đề xuất khen thưởng</strong>.</li>
+                            <li>Bấm <strong>Tạo đề xuất mới</strong>, chọn năm học.</li>
+                            <li>Thêm từng cá nhân vào đề xuất, chọn <strong>danh hiệu</strong> (Chiến sĩ thi đua, Chiến sĩ tiên tiến, Đơn vị quyết thắng, Đơn vị tiên tiến).</li>
+                            <li>Điền đầy đủ các tiêu chí đánh giá cho mỗi cá nhân:
+                                <ul>
+                                    <li><strong>Chung:</strong> Mức độ hoàn thành, Phiếu tín nhiệm, KT Chính trị, KT Điều lệnh, Kỹ năng số, ĐHQS, Bắn súng, Thể lực...</li>
+                                    <li><strong>Giảng viên:</strong> Danh hiệu GV giỏi, Định mức giảng dạy, KT giảng, Tiến độ PGS, LĐ Khoa học...</li>
+                                    <li><strong>Học viên:</strong> Danh hiệu HV giỏi, Điểm tổng kết, Thực hành...</li>
+                                    <li><strong>Khoa học:</strong> Điểm NCKH, Nội dung NCKH, Minh chứng NCKH...</li>
+                                </ul>
+                            </li>
+                            <li>Đính kèm minh chứng (file) nếu cần.</li>
+                            <li>Bấm <strong>Lưu nháp</strong> để lưu tạm, hoặc <strong>Gửi đề xuất</strong> để chuyển sang các cơ quan duyệt.</li>
+                        </ol>
+                        <div class="alert alert-warning py-2 mt-2 mb-0" style="font-size:0.82rem;">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <strong>Lưu ý:</strong> Sau khi gửi đề xuất, đơn vị không thể chỉnh sửa. Nếu cần sửa, hãy thu hồi đề xuất (nếu chưa có cơ quan nào duyệt).
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit3">
+                        <i class="bi bi-clock-history me-2"></i>Theo dõi kết quả và thông báo
+                    </button>
+                </h2>
+                <div id="guideUnit3" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li><strong>Lịch sử đề xuất:</strong> Xem tất cả đề xuất đã gửi, trạng thái hiện tại (Chờ duyệt, Đang duyệt, Đã duyệt, Phê duyệt cuối, Từ chối).</li>
+                            <li><strong>Thông báo:</strong> Nhận thông báo khi có cơ quan từ chối hoặc phê duyệt. Biểu tượng <i class="bi bi-bell"></i> trên thanh trên cùng hiển thị số thông báo chưa đọc.</li>
+                            <li>Bấm vào từng đề xuất trong lịch sử để xem chi tiết kết quả duyệt của từng cơ quan.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if current_user.is_department %}
+<!-- Hướng dẫn cho Cơ quan phê duyệt -->
+<div class="card-section mb-3">
+    <div class="card-header-custom" style="background: linear-gradient(135deg, #198754, #157347); color: #fff;">
+        <h5><i class="bi bi-clipboard-check me-2"></i>Hướng dẫn dành cho Cơ quan phê duyệt</h5>
+    </div>
+    <div class="card-body-custom">
+        <div class="accordion" id="guideDept">
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#guideDept1">
+                        <i class="bi bi-clipboard-check me-2"></i>Duyệt đề xuất
+                    </button>
+                </h2>
+                <div id="guideDept1" class="accordion-collapse collapse show" data-bs-parent="#guideDept">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Vào menu <strong>Chờ duyệt</strong> để xem danh sách đề xuất cần duyệt.</li>
+                            <li>Bấm vào một đề xuất để xem chi tiết từng cá nhân và các tiêu chí thuộc lĩnh vực quản lý của cơ quan.</li>
+                            <li>Với mỗi cá nhân, chọn <span class="badge bg-success">Đồng ý</span> hoặc <span class="badge bg-danger">Từ chối</span>. Nếu từ chối, cần nhập lý do.</li>
+                            <li>Có thể duyệt hàng loạt (tất cả đồng ý) hoặc duyệt từng cá nhân.</li>
+                        </ol>
+                        <div class="alert alert-info py-2 mt-2 mb-0" style="font-size:0.82rem;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Phạm vi duyệt:</strong>
+                            <ul class="mb-0 mt-1">
+                                <li><strong>Ban Quân lực</strong> duyệt đối tượng: Công nhân viên, Quân nhân chuyên nghiệp, Công chức quốc phòng.</li>
+                                <li><strong>Ban Cán bộ</strong> duyệt tất cả đối tượng khác (Sĩ quan, Giảng viên, Học viên...).</li>
+                                <li>Các phòng chức năng duyệt theo lĩnh vực chuyên môn (Chính trị, Tham mưu, Khoa học, Đào tạo).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideDept2">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Thu hồi duyệt và Lịch sử
+                    </button>
+                </h2>
+                <div id="guideDept2" class="accordion-collapse collapse" data-bs-parent="#guideDept">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li><strong>Thu hồi:</strong> Nếu phát hiện sai sót sau khi duyệt, có thể thu hồi kết quả duyệt (trước khi Ban Tuyên huấn phê duyệt cuối).</li>
+                            <li><strong>Lịch sử duyệt:</strong> Vào menu <strong>Lịch sử duyệt</strong> để xem tất cả đề xuất đã duyệt, lọc theo trạng thái (Đồng ý/Từ chối).</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if current_user.is_admin %}
+<!-- Hướng dẫn cho Ban Tuyên huấn -->
+<div class="card-section mb-3">
+    <div class="card-header-custom" style="background: linear-gradient(135deg, var(--navy-primary), var(--navy-dark)); color: #fff;">
+        <h5><i class="bi bi-shield-check me-2"></i>Hướng dẫn dành cho Ban Tuyên huấn (Quản trị)</h5>
+    </div>
+    <div class="card-body-custom">
+        <div class="accordion" id="guideAdmin">
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#guideAdmin1">
+                        <i class="bi bi-eye me-2"></i>Theo dõi phê duyệt
+                    </button>
+                </h2>
+                <div id="guideAdmin1" class="accordion-collapse collapse show" data-bs-parent="#guideAdmin">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Vào menu <strong>Theo dõi phê duyệt</strong> để xem toàn bộ tiến trình duyệt của tất cả đề xuất.</li>
+                            <li>Bảng hiển thị theo đơn vị, mỗi dòng là một cá nhân, kèm trạng thái duyệt của 6 cơ quan.</li>
+                            <li><strong>Bộ lọc:</strong> Lọc theo trạng thái, đơn vị, danh hiệu, diện quản lý (Quân lực/Cán bộ), hoặc tìm kiếm theo họ tên.</li>
+                            <li><strong>Chế độ xem:</strong>
+                                <ul>
+                                    <li><i class="bi bi-list"></i> <strong>Xem gọn:</strong> Hiển thị thông tin cơ bản (mặc định).</li>
+                                    <li><i class="bi bi-table"></i> <strong>Xem chi tiết:</strong> Hiển thị tất cả tiêu chí đánh giá inline trong bảng.</li>
+                                </ul>
+                            </li>
+                            <li>Bấm <i class="bi bi-eye"></i> để xem chi tiết từng cá nhân.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideAdmin2">
+                        <i class="bi bi-shield-check me-2"></i>Phê duyệt cuối
+                    </button>
+                </h2>
+                <div id="guideAdmin2" class="accordion-collapse collapse" data-bs-parent="#guideAdmin">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Khi cả 6 cơ quan đều <span class="badge bg-success">Đồng ý</span>, cá nhân sẽ có biểu tượng <i class="bi bi-shield-check text-success"></i> và hàng được tô xanh.</li>
+                            <li>Bấm <i class="bi bi-shield-check"></i> để phê duyệt cuối cho từng cá nhân.</li>
+                            <li>Hoặc dùng các nút <strong>PD cuối ĐV</strong> / <strong>PD cuối toàn bộ</strong> để phê duyệt hàng loạt.</li>
+                            <li>Sau khi phê duyệt cuối, cá nhân sẽ được lưu vào <strong>Danh sách khen thưởng</strong>.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideAdmin3">
+                        <i class="bi bi-trophy me-2"></i>Danh sách khen thưởng và Xuất Excel
+                    </button>
+                </h2>
+                <div id="guideAdmin3" class="accordion-collapse collapse" data-bs-parent="#guideAdmin">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Vào menu <strong>Danh sách khen thưởng</strong> để xem tất cả cá nhân đã được phê duyệt cuối.</li>
+                            <li>Lọc theo năm học, đơn vị, danh hiệu hoặc tìm kiếm theo họ tên.</li>
+                            <li>Bấm nút <span class="badge bg-success"><i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel</span> để tải file Excel với đầy đủ thông tin và tiêu chí đánh giá.</li>
+                            <li>Có thể <strong>thu hồi phê duyệt cuối</strong> nếu phát hiện sai sót.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideAdmin4">
+                        <i class="bi bi-person-gear me-2"></i>Quản lý tài khoản và đơn vị
+                    </button>
+                </h2>
+                <div id="guideAdmin4" class="accordion-collapse collapse" data-bs-parent="#guideAdmin">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li><strong>Quản lý tài khoản:</strong> Tạo, vô hiệu hóa, đặt lại mật khẩu cho các tài khoản đơn vị và cơ quan.</li>
+                            <li><strong>Quản lý đơn vị:</strong> Thêm, sửa, kích hoạt/ngừng hoạt động các đơn vị trong trường.</li>
+                            <li><strong>Báo cáo thống kê:</strong> Xem tổng quan số liệu thi đua khen thưởng theo đơn vị, danh hiệu, cơ quan duyệt.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chú giải trạng thái -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-tags me-2"></i>Chú giải trạng thái đề xuất</h5>
+    </div>
+    <div class="card-body-custom">
+        <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-status badge-draft" style="font-size:0.8rem;">Nháp</span>
+                <small class="text-muted">Đề xuất chưa gửi, đang soạn</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-status badge-pending" style="font-size:0.8rem;">Chờ duyệt</span>
+                <small class="text-muted">Đã gửi, chờ các cơ quan xét duyệt</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-status badge-reviewing" style="font-size:0.8rem;">Đang duyệt</span>
+                <small class="text-muted">Một số cơ quan đã duyệt, còn lại đang xem xét</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-status badge-approved" style="font-size:0.8rem;">Đã duyệt</span>
+                <small class="text-muted">Cả 6 cơ quan đã đồng ý</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-status badge-final" style="font-size:0.8rem;">Phê duyệt cuối</span>
+                <small class="text-muted">Ban Tuyên huấn đã phê duyệt, lưu khen thưởng</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-status badge-rejected" style="font-size:0.8rem;">Từ chối</span>
+                <small class="text-muted">Đề xuất bị từ chối</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liên hệ hỗ trợ -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-headset me-2"></i>Liên hệ hỗ trợ</h5>
+    </div>
+    <div class="card-body-custom">
+        <p class="mb-1">Nếu gặp sự cố hoặc cần hỗ trợ kỹ thuật, vui lòng liên hệ:</p>
+        <ul class="mb-0">
+            <li><strong>Ban Tuyên huấn</strong> - Trường Sĩ quan Chính trị</li>
+            <li>Bộ phận quản trị hệ thống</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.guide-card {
+    background: #f8f9fc;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1.2rem;
+    text-align: center;
+    height: 100%;
+}
+.guide-card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+.guide-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.guide-flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f8f9fc;
+    border-radius: 8px;
+    border-left: 3px solid var(--navy-primary);
+}
+.guide-flow-num {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    background: var(--navy-primary);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}

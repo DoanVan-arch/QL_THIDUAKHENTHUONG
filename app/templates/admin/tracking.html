@@ -1,0 +1,537 @@
+{% extends "base.html" %}
+{% block title %}Theo dõi phê duyệt{% endblock %}
+
+{% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+{% set status_class = {
+    'Chờ duyệt': 'badge-pending', 'Đang duyệt': 'badge-reviewing',
+    'Đã duyệt': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
+    'Từ chối': 'badge-rejected'
+} %}
+
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-eye me-2"></i>Theo dõi quy trình phê duyệt</h4>
+        <small class="text-muted">Xem tất cả cá nhân và tiến trình duyệt theo đơn vị</small>
+    </div>
+    {% if unit_groups %}
+    <div class="d-flex gap-2 align-items-center">
+        <select class="form-select form-select-sm" id="unitFilter" style="width:220px;">
+            <option value="">Tất cả đơn vị ({{ unit_groups|length }})</option>
+            {% for ug in unit_groups %}
+            <option value="{{ ug.unit_name }}" {% if unit_filter == ug.unit_name %}selected{% endif %}>{{ ug.unit_name }}</option>
+            {% endfor %}
+        </select>
+        <!-- View mode toggle -->
+        <div class="btn-group btn-group-sm" role="group" title="Chế độ xem">
+            <a href="{{ url_for('admin.approval_tracking', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, view='compact') }}"
+               class="btn {{ 'btn-navy' if view_mode == 'compact' else 'btn-outline-navy' }}" title="Xem gọn">
+                <i class="bi bi-list"></i>
+            </a>
+            <a href="{{ url_for('admin.approval_tracking', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, view='detail') }}"
+               class="btn {{ 'btn-navy' if view_mode == 'detail' else 'btn-outline-navy' }}" title="Xem chi tiết">
+                <i class="bi bi-table"></i>
+            </a>
+        </div>
+        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Phê duyệt cuối tất cả đề xuất sẵn sàng">
+            <i class="bi bi-shield-check me-1"></i>PD cuối toàn bộ
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Summary stats -->
+<div class="d-flex gap-3 mb-3 flex-wrap">
+    <div class="stat-mini">
+        <i class="bi bi-people-fill text-primary"></i>
+        <span>Cá nhân: <strong>{{ total_individuals }}</strong></span>
+    </div>
+    <div class="stat-mini">
+        <i class="bi bi-folder2-open text-secondary"></i>
+        <span>Đề xuất: <strong>{{ stats.total }}</strong></span>
+    </div>
+    <div class="stat-mini">
+        <i class="bi bi-hourglass-split text-warning"></i>
+        <span>Chờ duyệt: <strong>{{ stats.pending }}</strong></span>
+    </div>
+    <div class="stat-mini">
+        <i class="bi bi-arrow-repeat text-info"></i>
+        <span>Đang duyệt: <strong>{{ stats.reviewing }}</strong></span>
+    </div>
+    <div class="stat-mini">
+        <i class="bi bi-check-circle text-success"></i>
+        <span>6 CQ duyệt: <strong>{{ stats.dept_approved }}</strong></span>
+    </div>
+    <div class="stat-mini">
+        <i class="bi bi-shield-check text-primary"></i>
+        <span>PD cuối: <strong>{{ stats.final_approved }}</strong></span>
+    </div>
+    {% if stats.rejected > 0 %}
+    <div class="stat-mini">
+        <i class="bi bi-x-circle text-danger"></i>
+        <span>Từ chối: <strong>{{ stats.rejected }}</strong></span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card-section mb-3">
+    <div class="card-body-custom py-2">
+        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+            {# Preserve view mode #}
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
+            <select class="form-select form-select-sm" name="status" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả trạng thái</option>
+                {% for s in status_list %}
+                <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" name="unit" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả đơn vị</option>
+                {% for u in unit_names %}
+                <option value="{{ u }}" {% if unit_filter == u %}selected{% endif %}>{{ u }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" name="danh_hieu" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả danh hiệu</option>
+                {% for dh in danh_hieu_list %}
+                <option value="{{ dh }}" {% if danh_hieu_filter == dh %}selected{% endif %}>{{ dh }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" name="scope" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả diện QL</option>
+                <option value="quan_luc" {% if scope_filter == 'quan_luc' %}selected{% endif %}>Diện Quân lực</option>
+                <option value="can_bo" {% if scope_filter == 'can_bo' %}selected{% endif %}>Diện Cán bộ</option>
+            </select>
+            <div class="input-group input-group-sm" style="width:220px;">
+                <input type="text" class="form-control" name="q" value="{{ search_query }}" placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
+                <button class="btn btn-outline-navy" type="submit" title="Tìm kiếm">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            {% if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
+            <a href="{{ url_for('admin.approval_tracking', view=view_mode) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Xóa lọc
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if unit_groups %}
+<div class="accordion" id="trackingAccordion">
+    {% for ug in unit_groups %}
+    {% set ug_index = loop.index %}
+    <div class="card-section mb-3 unit-card" data-unit-name="{{ ug.unit_name }}">
+        <div class="card-header-custom d-flex justify-content-between align-items-center"
+             data-bs-toggle="collapse" data-bs-target="#unit-{{ ug_index }}" style="cursor:pointer;">
+            <h6 class="mb-0">
+                <i class="bi bi-building me-2"></i>{{ ug.unit_name }}
+            </h6>
+            <div class="d-flex align-items-center gap-2">
+                {# Check if any nomination in this unit is ready for final approval #}
+                {% set ns_unit = namespace(has_ready=false) %}
+                {% for nom_data in ug.nominations %}
+                    {% if nom_data.dx.trang_thai == 'Đã duyệt' %}
+                        {% set ns_unit.has_ready = true %}
+                    {% endif %}
+                {% endfor %}
+                {% if ns_unit.has_ready %}
+                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 btn-approve-unit"
+                        data-unit-name="{{ ug.unit_name }}" title="Phê duyệt cuối đơn vị này"
+                        onclick="event.stopPropagation();">
+                    <i class="bi bi-shield-check me-1"></i><small>PD cuối ĐV</small>
+                </button>
+                {% endif %}
+                <span class="badge bg-primary" title="Số cá nhân">{{ ug.individual_count }} CN</span>
+                <span class="badge bg-secondary" title="Số đề xuất">{{ ug.nominations|length }} ĐX</span>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+        </div>
+        <div id="unit-{{ ug_index }}" class="collapse show">
+            <div class="p-0">
+                {% for nom_data in ug.nominations %}
+                {% set dx = nom_data.dx %}
+                {% set sc = status_class[dx.trang_thai] if dx.trang_thai in status_class else 'badge-draft' %}
+
+                {% if ug.nominations|length > 1 %}
+                <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-light" style="font-size:0.82rem;">
+                    <small class="fw-semibold text-muted">{{ dx.nam_hoc }}</small>
+                    <span class="badge-status {{ sc }}" style="font-size:0.72rem;">{{ dx.trang_thai }}</span>
+                    {% if dx.trang_thai == 'Đã duyệt' %}
+                    <span class="badge bg-gold text-dark ms-1" style="font-size:0.72rem;">
+                        <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
+                        <thead>
+                            <tr>
+                                <th style="width:35px;">STT</th>
+                                <th style="min-width:130px;">Họ tên</th>
+                                <th>Cấp bậc / Chức vụ</th>
+                                <th>Đối tượng</th>
+                                <th>Danh hiệu</th>
+                                {% if view_mode == 'detail' %}
+                                {# Extra personal info columns #}
+                                <th>Đơn vị</th>
+                                <th>Năm học</th>
+                                {# Criteria columns #}
+                                {% for field in all_fields %}
+                                <th class="text-center" style="min-width:70px;font-size:0.72rem;">{{ all_field_labels[field] }}</th>
+                                {% endfor %}
+                                {% endif %}
+                                <th class="text-center">P. Chính trị</th>
+                                <th class="text-center">P. Tham mưu</th>
+                                <th class="text-center">P. Khoa học</th>
+                                <th class="text-center">P. Đào tạo</th>
+                                <th class="text-center">B. Cán bộ</th>
+                                <th class="text-center">B. Quân lực</th>
+                                <th class="text-center sticky-action-col" style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ct_data in nom_data.chi_tiets %}
+                            {% set ct = ct_data.ct %}
+                            {% set dept_results = ct_data.dept_results %}
+                            {% set ct_can_approve = ct_data.can_final_approve %}
+                            {# Determine row styling #}
+                            {% set any_rejected = false %}
+                            {% for dn in dept_names %}
+                                {% if dept_results[dn] == 'Từ chối' %}{% set any_rejected = true %}{% endif %}
+                            {% endfor %}
+                            <tr class="{% if any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
+                                <td>{{ loop.index }}</td>
+                                <td class="fw-semibold">
+                                    {{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}
+                                </td>
+                                <td>
+                                    {% if ct.quan_nhan %}
+                                    <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ ct.doi_tuong or '-' }}</small></td>
+                                <td>
+                                    {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
+                                    <span class="badge bg-warning text-dark">CSTD</span>
+                                    {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
+                                    <span class="badge bg-info text-dark">CSTT</span>
+                                    {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}
+                                    <span class="badge bg-navy">DVQT</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>
+                                    {% endif %}
+                                </td>
+                                {% if view_mode == 'detail' %}
+                                {# Extra personal info #}
+                                <td><small>{{ dx.don_vi.ten_don_vi }}</small></td>
+                                <td><small>{{ dx.nam_hoc }}</small></td>
+                                {# Criteria field values #}
+                                {% for field in all_fields %}
+                                <td class="text-center" style="font-size:0.75rem;">
+                                    {% set val = ct[field] if ct[field] is defined else None %}
+                                    {% if val is not none and val != '' and val != 0 %}
+                                        {{ val }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                {% endif %}
+                                {% for dn in dept_names %}
+                                <td class="text-center">
+                                    {% set kq = dept_results[dn] %}
+                                    {% if kq == 'Đồng ý' %}
+                                    <span class="badge bg-success" title="{{ dn }}: Đồng ý"><i class="bi bi-check-lg"></i></span>
+                                    {% elif kq == 'Từ chối' %}
+                                    <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                                    {% elif kq == 'Chờ duyệt' %}
+                                    <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                                    {% else %}
+                                    <span class="text-muted" title="Chưa có">-</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="text-center sticky-action-col">
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if ct_can_approve %}
+                                        <button type="button" class="btn btn-sm btn-success py-0 px-2"
+                                                title="Phê duyệt cuối"
+                                                onclick="openIndividualApproveModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi)|e }}')">
+                                            <i class="bi bi-shield-check"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if ug.nominations|length > 1 and not loop.last %}
+                <hr class="m-0">
+                {% endif %}
+
+                {% endfor %}
+
+                {% if ug.nominations|length <= 1 %}
+                {% set dx = ug.nominations[0].dx %}
+                {% set sc = status_class[dx.trang_thai] if dx.trang_thai in status_class else 'badge-draft' %}
+                <div class="d-flex align-items-center gap-2 px-3 py-2 border-top" style="font-size:0.82rem;">
+                    <small class="text-muted">{{ dx.nam_hoc }}</small>
+                    <span class="badge-status {{ sc }}" style="font-size:0.72rem;">{{ dx.trang_thai }}</span>
+                    {% if dx.trang_thai == 'Đã duyệt' %}
+                    <span class="badge bg-gold text-dark ms-1" title="Sẵn sàng phê duyệt cuối" style="font-size:0.72rem;">
+                        <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Individual final approve modal -->
+<div class="modal fade" id="individualApproveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="individualApproveForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-primary), var(--navy-light)); color: #fff;">
+                    <h6 class="modal-title"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối cá nhân</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Phê duyệt cuối sẽ lưu cá nhân này vào danh sách khen thưởng.
+                    </div>
+                    <p class="mb-2" style="font-size:0.9rem;">
+                        Cá nhân: <strong id="approveIndividualName"></strong>
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small">Ghi chú (tùy chọn)</label>
+                        <textarea class="form-control form-control-sm" name="ghi_chu" rows="2" placeholder="Ghi chú thêm..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Batch approve confirmation modal -->
+<div class="modal fade" id="batchFinalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-primary), var(--navy-light)); color: #fff;">
+                <h6 class="modal-title" id="batchFinalTitle"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="batchFinalMessage"></p>
+                <div class="mb-3">
+                    <label class="form-label small">Ghi chú (tùy chọn)</label>
+                    <textarea class="form-control form-control-sm" id="batchGhiChu" rows="2" placeholder="Ghi chú thêm..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" id="batchFinalConfirm">
+                    <i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="card-section">
+    <div class="empty-state">
+        <i class="bi bi-eye d-block"></i>
+        <p>Không có đề xuất nào{{ ' phù hợp bộ lọc' if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query else '' }}</p>
+        {% if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
+        <a href="{{ url_for('admin.approval_tracking') }}" class="btn btn-sm btn-outline-navy">
+            <i class="bi bi-x-lg me-1"></i>Xóa bộ lọc
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Nomination ID data for batch approve -->
+<script type="application/json" id="nominationData">
+{% if unit_groups %}
+[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Đã duyệt' %}{"id": {{ nom_data.dx.id }}, "unit": "{{ ug.unit_name }}", "name": "{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
+{% else %}
+[]
+{% endif %}
+</script>
+
+<style>
+    .stat-mini {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.82rem;
+    }
+    .stat-mini i { font-size: 1rem; }
+    .unit-card.filtered-out { display: none !important; }
+    .sticky-action-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 1;
+        background: #fff !important;
+        box-shadow: -2px 0 4px rgba(0,0,0,0.08);
+    }
+    thead th.sticky-action-col {
+        background: var(--navy-primary) !important;
+        color: #fff !important;
+        z-index: 2;
+    }
+    tr.table-info td.sticky-action-col { background: #cff4fc !important; }
+    tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
+    .table-custom tbody tr:hover td.sticky-action-col { background: #F8F9FB !important; }
+    .btn-navy {
+        background: var(--navy-primary);
+        color: #fff;
+        border-color: var(--navy-primary);
+    }
+    .btn-navy:hover {
+        background: var(--navy-dark);
+        color: #fff;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    // Parse nomination data
+    let nominations = [];
+    try {
+        const raw = document.getElementById('nominationData').textContent.trim();
+        // Remove trailing comma before ]
+        const cleaned = raw.replace(/,\s*\]/, ']');
+        nominations = JSON.parse(cleaned);
+    } catch(e) { console.warn('Parse error:', e); }
+
+    // ===================== UNIT FILTER =====================
+    const unitFilter = document.getElementById('unitFilter');
+    if (unitFilter) {
+        unitFilter.addEventListener('change', function () {
+            const selected = this.value;
+            document.querySelectorAll('.unit-card').forEach(card => {
+                if (!selected || card.dataset.unitName === selected) {
+                    card.classList.remove('filtered-out');
+                } else {
+                    card.classList.add('filtered-out');
+                }
+            });
+        });
+    }
+
+    // ===================== BATCH FINAL APPROVE =====================
+    let batchIds = [];
+
+    // Per-unit button
+    document.querySelectorAll('.btn-approve-unit').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const unitName = this.dataset.unitName;
+            const unitNoms = nominations.filter(n => n.unit === unitName);
+            if (unitNoms.length === 0) {
+                alert('Đơn vị này không có đề xuất nào sẵn sàng phê duyệt cuối.');
+                return;
+            }
+            batchIds = unitNoms.map(n => n.id);
+            document.getElementById('batchFinalTitle').textContent = 'PD cuối: ' + unitName;
+            document.getElementById('batchFinalMessage').innerHTML =
+                'Phê duyệt cuối <strong>' + unitNoms.length + '</strong> đề xuất của đơn vị <strong>"' + unitName + '"</strong>?<br>' +
+                '<small class="text-muted">' + unitNoms.map(n => n.name).join(', ') + '</small>';
+            document.getElementById('batchGhiChu').value = '';
+            new bootstrap.Modal(document.getElementById('batchFinalModal')).show();
+        });
+    });
+
+    // All button
+    const btnApproveAll = document.getElementById('btnApproveAll');
+    if (btnApproveAll) {
+        btnApproveAll.addEventListener('click', function() {
+            if (nominations.length === 0) {
+                alert('Không có đề xuất nào sẵn sàng phê duyệt cuối.');
+                return;
+            }
+            batchIds = nominations.map(n => n.id);
+            document.getElementById('batchFinalTitle').textContent = 'PD cuối toàn bộ';
+            document.getElementById('batchFinalMessage').innerHTML =
+                'Phê duyệt cuối <strong>' + nominations.length + '</strong> đề xuất sẵn sàng?<br>' +
+                '<small class="text-muted">' + nominations.map(n => n.name).join(', ') + '</small>';
+            document.getElementById('batchGhiChu').value = '';
+            new bootstrap.Modal(document.getElementById('batchFinalModal')).show();
+        });
+    }
+
+    // Confirm
+    document.getElementById('batchFinalConfirm').addEventListener('click', async function() {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+        const ghiChu = document.getElementById('batchGhiChu').value.trim();
+
+        try {
+            const res = await fetch('/admin/batch-final-approve', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ ids: batchIds, ghi_chu: ghiChu }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('batchFinalModal')).hide();
+                location.reload();
+            } else {
+                alert(data.message || 'Có lỗi xảy ra');
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Lỗi kết nối. Vui lòng thử lại.');
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt';
+        }
+    });
+});
+
+// ===================== INDIVIDUAL FINAL APPROVE =====================
+function openIndividualApproveModal(ctId, hoTen) {
+    document.getElementById('individualApproveForm').action =
+        '{{ url_for("admin.final_approve_individual", ct_id=0) }}'.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+    document.getElementById('approveIndividualName').textContent = hoTen;
+    new bootstrap.Modal(document.getElementById('individualApproveModal')).show();
+}
+</script>
+{% endblock %}

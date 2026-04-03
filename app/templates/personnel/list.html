@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Danh sách quân nhân{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-people me-2"></i>Danh sách quân nhân</h4>
+        <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
+    </div>
+    <a href="{{ url_for('personnel.create_personnel') }}" class="btn btn-navy">
+        <i class="bi bi-person-plus me-1"></i> Thêm quân nhân
+    </a>
+</div>
+
+<!-- Search -->
+<div class="card-section">
+    <div class="card-body-custom">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="search" value="{{ search }}"
+                       placeholder="Tìm kiếm theo họ tên...">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-navy w-100"><i class="bi bi-search me-1"></i> Tìm</button>
+            </div>
+            {% if search %}
+            <div class="col-md-2">
+                <a href="{{ url_for('personnel.list_personnel') }}" class="btn btn-outline-secondary w-100">Bỏ lọc</a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card-section mt-3">
+    <div class="card-body-custom p-0">
+        {% if personnel.items %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ và tên</th>
+                        <th>Cấp bậc</th>
+                        <th>Chức vụ</th>
+                        <th>Đối tượng</th>
+                        <th>Học vị</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qn in personnel.items %}
+                    <tr>
+                        <td>{{ (personnel.page - 1) * personnel.per_page + loop.index }}</td>
+                        <td>
+                            <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="text-decoration-none fw-500">
+                                {{ qn.ho_ten }}
+                            </a>
+                            {% if qn.la_chi_huy %}<span class="badge bg-primary ms-1" style="font-size:0.65rem">CHỈ HUY</span>{% endif %}
+                            {% if qn.la_bi_thu %}<span class="badge bg-info ms-1" style="font-size:0.65rem">BÍ THƯ</span>{% endif %}
+                        </td>
+                        <td>{{ qn.cap_bac or '-' }}</td>
+                        <td>{{ qn.chuc_vu or '-' }}</td>
+                        <td>{{ qn.doi_tuong or '-' }}</td>
+                        <td>{{ qn.hoc_vi if qn.hoc_vi != 'Không' else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Chi tiết">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('personnel.edit_personnel', id=qn.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if personnel.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if personnel.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+                    {% for p in personnel.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == personnel.page }}">
+                        <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if personnel.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people d-block"></i>
+            <p>{% if search %}Không tìm thấy kết quả phù hợp{% else %}Chưa có quân nhân nào{% endif %}</p>
+            {% if not search %}
+            <a href="{{ url_for('personnel.create_personnel') }}" class="btn btn-navy btn-sm">
+                <i class="bi bi-person-plus me-1"></i> Thêm quân nhân đầu tiên
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Lịch sử đề xuất{% endblock %}
+
+{% block content %}
+{% set status_class = {
+    'Chờ duyệt': 'badge-pending', 'Đang duyệt': 'badge-reviewing',
+    'Đã duyệt': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
+    'Từ chối': 'badge-rejected'
+} %}
+
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-clock-history me-2"></i>Lịch sử đề xuất</h4>
+        <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card-section mb-3">
+    <div class="card-body-custom py-2">
+        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
+            <select class="form-select form-select-sm" name="status" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả trạng thái</option>
+                <option value="Chờ duyệt" {% if status_filter == 'Chờ duyệt' %}selected{% endif %}>Chờ duyệt</option>
+                <option value="Đang duyệt" {% if status_filter == 'Đang duyệt' %}selected{% endif %}>Đang duyệt</option>
+                <option value="Đã duyệt" {% if status_filter == 'Đã duyệt' %}selected{% endif %}>Đã duyệt</option>
+                <option value="Phê duyệt cuối" {% if status_filter == 'Phê duyệt cuối' %}selected{% endif %}>Phê duyệt cuối</option>
+                <option value="Từ chối" {% if status_filter == 'Từ chối' %}selected{% endif %}>Từ chối</option>
+            </select>
+            <select class="form-select form-select-sm" name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả năm học</option>
+                {% for nh in nam_hoc_list %}
+                <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
+                {% endfor %}
+            </select>
+            {% if status_filter or nam_hoc_filter %}
+            <a href="{{ url_for('nomination.nomination_history') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Xóa lọc
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if nominations.items %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Năm học</th>
+                        <th>Số cá nhân</th>
+                        <th>Trạng thái</th>
+                        <th>Tiến độ duyệt</th>
+                        <th>Ngày gửi</th>
+                        <th>Thông báo</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dx in nominations.items %}
+                    <tr>
+                        <td>{{ (nominations.page - 1) * nominations.per_page + loop.index }}</td>
+                        <td class="fw-semibold">{{ dx.nam_hoc }}</td>
+                        <td>{{ dx.chi_tiets|length }}</td>
+                        <td>
+                            <span class="badge-status {{ status_class.get(dx.trang_thai, 'badge-draft') }}">
+                                {{ dx.trang_thai }}
+                            </span>
+                        </td>
+                        <td>
+                            {% set approved, total = dx.approval_progress %}
+                            {% if total > 0 %}
+                            <div class="d-flex align-items-center gap-1">
+                                <div class="progress" style="height:6px;width:60px;">
+                                    <div class="progress-bar bg-success" style="width:{{ (approved / total * 100)|int }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ approved }}/{{ total }}</small>
+                            </div>
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>
+                        <td>
+                            {% set rejected_count = dx.chi_tiets | selectattr('de_xuat') | list | length %}
+                            {# Check for rejected individuals across departments #}
+                            {% set ns = namespace(has_rejection=false) %}
+                            {% for pd in dx.phe_duyets %}
+                                {% if pd.ket_qua == 'Từ chối' %}
+                                    {% set ns.has_rejection = true %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if ns.has_rejection %}
+                            <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Có từ chối</span>
+                            {% elif dx.trang_thai == 'Phê duyệt cuối' %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Hoàn tất</span>
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('nomination.detail_nomination', id=dx.id, from='history') }}" class="btn btn-sm btn-outline-navy" title="Chi tiết">
+                                <i class="bi bi-eye me-1"></i>Chi tiết
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if nominations.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if nominations.has_prev %}
+                    <li class="page-item"><a class="page-link" href="?page={{ nominations.prev_num }}&status={{ status_filter }}&nam_hoc={{ nam_hoc_filter }}">&laquo;</a></li>
+                    {% endif %}
+                    {% for p in nominations.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == nominations.page }}">
+                        <a class="page-link" href="?page={{ p }}&status={{ status_filter }}&nam_hoc={{ nam_hoc_filter }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if nominations.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ nominations.next_num }}&status={{ status_filter }}&nam_hoc={{ nam_hoc_filter }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-clock-history d-block"></i>
+            <p>Chưa có đề xuất nào đã gửi{{ ' phù hợp bộ lọc' if status_filter or nam_hoc_filter else '' }}</p>
+            {% if status_filter or nam_hoc_filter %}
+            <a href="{{ url_for('nomination.nomination_history') }}" class="btn btn-sm btn-outline-navy">
+                <i class="bi bi-x-lg me-1"></i>Xóa bộ lọc
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

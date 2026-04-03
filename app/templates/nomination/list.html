@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Danh sách đề xuất khen thưởng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-award me-2"></i>Đề xuất khen thưởng</h4>
+        <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
+    </div>
+    <a href="{{ url_for('nomination.create_nomination') }}" class="btn btn-gold">
+        <i class="bi bi-plus-lg me-1"></i> Tạo đề xuất mới
+    </a>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if nominations.items %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Năm học</th>
+                        <th>Số cá nhân</th>
+                        <th>Trạng thái</th>
+                        <th>Tiến độ duyệt</th>
+                        <th>Ngày tạo</th>
+                        <th>Ngày gửi</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set status_class = {
+                        'Nháp': 'badge-draft', 'Chờ duyệt': 'badge-pending',
+                        'Đang duyệt': 'badge-reviewing', 'Đã duyệt': 'badge-approved',
+                        'Phê duyệt cuối': 'badge-final', 'Từ chối': 'badge-rejected'
+                    } %}
+                    {% for dx in nominations.items %}
+                    <tr>
+                        <td>{{ (nominations.page - 1) * nominations.per_page + loop.index }}</td>
+                        <td class="fw-semibold">{{ dx.nam_hoc }}</td>
+                        <td>{{ dx.chi_tiets|length }}</td>
+                        <td>
+                            <span class="badge-status {{ status_class.get(dx.trang_thai, 'badge-draft') }}">
+                                {{ dx.trang_thai }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if dx.trang_thai not in ('Nháp', 'Từ chối') %}
+                            {% set approved, total = dx.approval_progress %}
+                            {% if total > 0 %}
+                            <div class="d-flex align-items-center gap-1">
+                                <div class="progress" style="height:6px;width:60px;">
+                                    <div class="progress-bar bg-success" style="width:{{ (approved / total * 100)|int }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ approved }}/{{ total }}</small>
+                            </div>
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ dx.ngay_tao.strftime('%d/%m/%Y') if dx.ngay_tao else '-' }}</td>
+                        <td>{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('nomination.detail_nomination', id=dx.id) }}" class="btn btn-sm btn-outline-navy" title="Chi tiết">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if dx.trang_thai in ('Nháp', 'Từ chối') %}
+                            <a href="{{ url_for('nomination.edit_nomination', id=dx.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                            {% if dx.trang_thai == 'Chờ duyệt' %}
+                            <form method="POST" action="{{ url_for('nomination.revoke_nomination', id=dx.id) }}"
+                                  class="d-inline"
+                                  onsubmit="return confirm('Thu hồi đề xuất này về trạng thái Nháp?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Thu hồi đề xuất">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if nominations.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if nominations.has_prev %}
+                    <li class="page-item"><a class="page-link" href="?page={{ nominations.prev_num }}">&laquo;</a></li>
+                    {% endif %}
+                    {% for p in nominations.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == nominations.page }}">
+                        <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if nominations.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ nominations.next_num }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-award d-block"></i>
+            <p>Chưa có đề xuất khen thưởng nào</p>
+            <a href="{{ url_for('nomination.create_nomination') }}" class="btn btn-gold btn-sm">
+                <i class="bi bi-plus-lg me-1"></i> Tạo đề xuất đầu tiên
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

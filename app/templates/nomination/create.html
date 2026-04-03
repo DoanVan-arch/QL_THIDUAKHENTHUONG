@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Tạo đề xuất khen thưởng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-plus-lg me-2"></i>Tạo đề xuất khen thưởng mới</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('nomination.list_nominations') }}">Đề xuất</a></li>
+                <li class="breadcrumb-item active">Tạo mới</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom">
+        <form method="POST" action="{{ url_for('nomination.create_nomination') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Năm học <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="nam_hoc" placeholder="VD: 2025-2026" required>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Ghi chú</label>
+                    <input type="text" class="form-control" name="ghi_chu" placeholder="Ghi chú (không bắt buộc)">
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-navy">
+                    <i class="bi bi-check-lg me-1"></i> Tạo đề xuất & Thêm cá nhân
+                </button>
+                <a href="{{ url_for('nomination.list_nominations') }}" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

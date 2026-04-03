@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}{{ qn.ho_ten }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-person me-2"></i>{{ qn.ho_ten }}</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('personnel.list_personnel') }}">Quân nhân</a></li>
+                <li class="breadcrumb-item active">{{ qn.ho_ten }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('personnel.edit_personnel', id=qn.id) }}" class="btn btn-outline-navy btn-sm">
+            <i class="bi bi-pencil me-1"></i> Sửa
+        </a>
+        <form id="deleteForm{{ qn.id }}" method="POST" action="{{ url_for('personnel.delete_personnel', id=qn.id) }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('deleteForm{{ qn.id }}', '{{ qn.ho_ten }}')">
+                <i class="bi bi-trash me-1"></i> Xóa
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Personal Info -->
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card-section">
+            <div class="card-header-custom">
+                <h5><i class="bi bi-info-circle me-2"></i>Thông tin cá nhân</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <small class="text-muted">Họ và tên</small>
+                        <div class="fw-semibold">{{ qn.ho_ten }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Cấp bậc</small>
+                        <div>{{ qn.cap_bac or '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Đối tượng</small>
+                        <div>{{ qn.doi_tuong or '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Chức danh</small>
+                        <div>{{ qn.chuc_danh or '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Chức vụ</small>
+                        <div>{{ qn.chuc_vu or '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Ngày sinh</small>
+                        <div>{{ qn.ngay_sinh.strftime('%d/%m/%Y') if qn.ngay_sinh else '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Nhập ngũ</small>
+                        <div>{{ qn.ngay_nhap_ngu or '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Học hàm</small>
+                        <div>{{ qn.hoc_ham if qn.hoc_ham != 'Không' else '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Học vị</small>
+                        <div>{{ qn.hoc_vi if qn.hoc_vi != 'Không' else '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Học vấn</small>
+                        <div>{{ qn.trinh_do_hoc_van or '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Ngoại ngữ</small>
+                        <div>{{ qn.ngoai_ngu or '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Vai trò</small>
+                        <div>
+                            {% if qn.la_chi_huy %}<span class="badge bg-primary">Chỉ huy</span>{% endif %}
+                            {% if qn.la_bi_thu %}<span class="badge bg-info">Bí thư</span>{% endif %}
+                            {% if not qn.la_chi_huy and not qn.la_bi_thu %}-{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Certificates -->
+<div class="card-section">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-award me-2"></i>Bằng khen, Giấy khen, Thành tích</h5>
+        <button class="btn btn-navy btn-sm" data-bs-toggle="modal" data-bs-target="#addCertModal">
+            <i class="bi bi-plus-lg me-1"></i> Thêm
+        </button>
+    </div>
+    <div class="card-body-custom">
+        {% if qn.chung_chis %}
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr>
+                        <th>Loại</th>
+                        <th>Tên</th>
+                        <th>Số hiệu</th>
+                        <th>Ngày cấp</th>
+                        <th>Cơ quan cấp</th>
+                        <th>Minh chứng</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cc in qn.chung_chis %}
+                    <tr>
+                        <td><span class="badge bg-navy">{{ cc.loai }}</span></td>
+                        <td>{{ cc.ten_chung_chi }}</td>
+                        <td>{{ cc.so_hieu or '-' }}</td>
+                        <td>{{ cc.ngay_cap.strftime('%d/%m/%Y') if cc.ngay_cap else '-' }}</td>
+                        <td>{{ cc.co_quan_cap or '-' }}</td>
+                        <td>
+                            {% if cc.duong_dan_anh %}
+                            <img src="{{ url_for('uploaded_file', filename=cc.duong_dan_anh) }}"
+                                 class="evidence-thumb" alt="Minh chứng"
+                                 onclick="showImageModal(this.src)">
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form id="delCert{{ cc.id }}" method="POST"
+                                  action="{{ url_for('personnel.delete_certificate', id=cc.id) }}" style="display:inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="confirmDelete('delCert{{ cc.id }}', '{{ cc.ten_chung_chi }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-3">
+            <i class="bi bi-award d-block"></i>
+            <small>Chưa có bằng khen, giấy khen nào</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Certificate Modal -->
+<div class="modal fade" id="addCertModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-header-navy">
+                <h6 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Thêm bằng khen / giấy khen</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('personnel.add_certificate', id=qn.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Loại <span class="text-danger">*</span></label>
+                        <select class="form-select" name="loai" required>
+                            {% for lcc in loai_chung_chi_list %}
+                            <option value="{{ lcc }}">{{ lcc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ten_chung_chi" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Số hiệu</label>
+                            <input type="text" class="form-control" name="so_hieu">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày cấp</label>
+                            <input type="date" class="form-control" name="ngay_cap">
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Cơ quan cấp</label>
+                        <input type="text" class="form-control" name="co_quan_cap">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ảnh minh chứng</label>
+                        <input type="file" class="form-control" name="anh_minh_chung" accept="image/*,.pdf">
+                        <small class="text-muted">Chấp nhận: JPG, PNG, GIF, PDF (tối đa 16MB)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <textarea class="form-control" name="ghi_chu" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
