@@ -185,6 +185,17 @@
 </div>
 {% endif %}
 
+{% if ct.thanh_tich_ca_nhan_khac %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-star me-2"></i>Thành tích cá nhân khác</h5>
+    </div>
+    <div class="card-body-custom">
+        <p class="mb-0">{{ ct.thanh_tich_ca_nhan_khac }}</p>
+    </div>
+</div>
+{% endif %}
+
 <!-- Evidence files -->
 {% if ct.minh_chungs %}
 <div class="card-section mb-3">

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Quản lý danh hiệu{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-bookmark-star me-2"></i>Quản lý danh hiệu đề xuất</h4>
+        <small class="text-muted">Quản lý danh sách danh hiệu thi đua khen thưởng và tiêu chí đi kèm</small>
+    </div>
+    <button class="btn btn-navy btn-sm" data-bs-toggle="modal" data-bs-target="#createDanhHieuModal">
+        <i class="bi bi-plus-lg me-1"></i>Thêm danh hiệu
+    </button>
+</div>
+
+<!-- Danh hiệu table -->
+<div class="card-section">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-list-ul me-2"></i>Danh sách danh hiệu</h5>
+        <span class="badge bg-navy">{{ danh_hieus|length }} danh hiệu</span>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if danh_hieus %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">TT</th>
+                        <th>Tên danh hiệu</th>
+                        <th style="width:80px;">Mã</th>
+                        <th style="width:100px;">Phạm vi</th>
+                        <th>Tiêu chí áp dụng</th>
+                        <th style="width:100px;">Trạng thái</th>
+                        <th class="text-center" style="width:150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dh in danh_hieus %}
+                    <tr class="{{ 'table-secondary' if not dh.is_active }}">
+                        <td>{{ dh.thu_tu }}</td>
+                        <td class="fw-semibold">{{ dh.ten_danh_hieu }}</td>
+                        <td><span class="badge bg-light text-dark">{{ dh.ma_danh_hieu }}</span></td>
+                        <td>
+                            {% if dh.pham_vi == 'Cá nhân' %}
+                            <span class="badge bg-primary">Cá nhân</span>
+                            {% else %}
+                            <span class="badge bg-success">Đơn vị</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if dh.tieu_chi %}
+                            <span class="text-muted small">{{ dh.tieu_chi|length }} tiêu chí</span>
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-1" 
+                                    data-bs-toggle="popover" data-bs-trigger="focus"
+                                    data-bs-html="true" data-bs-placement="left"
+                                    title="Tiêu chí áp dụng"
+                                    data-bs-content="{% for tc_key in dh.tieu_chi %}{% for opt_key, opt_label in tieu_chi_options %}{% if opt_key == tc_key %}<span class='badge bg-light text-dark me-1 mb-1' style='font-size:0.7rem;'>{{ opt_label }}</span>{% endif %}{% endfor %}{% endfor %}">
+                                <i class="bi bi-eye text-navy"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted small">Không có</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if dh.is_active %}
+                            <span class="badge-status badge-approved">Hoạt động</span>
+                            {% else %}
+                            <span class="badge-status badge-rejected">Ngừng</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <a href="{{ url_for('admin.edit_danh_hieu', id=dh.id) }}" 
+                               class="btn btn-sm btn-outline-navy me-1" title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.toggle_danh_hieu', id=dh.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if dh.is_active %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning me-1" title="Vô hiệu hóa"
+                                        onclick="return confirm('Vô hiệu hóa danh hiệu {{ dh.ten_danh_hieu }}?')">
+                                    <i class="bi bi-pause-circle"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success me-1" title="Kích hoạt lại">
+                                    <i class="bi bi-play-circle"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                            <form id="delDH{{ dh.id }}" method="POST" action="{{ url_for('admin.delete_danh_hieu', id=dh.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa"
+                                        onclick="confirmDelete('delDH{{ dh.id }}', '{{ dh.ten_danh_hieu }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-3">
+            <i class="bi bi-bookmark-star d-block"></i>
+            <p>Chưa có danh hiệu nào</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create DanhHieu Modal -->
+<div class="modal fade" id="createDanhHieuModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.create_danh_hieu') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Thêm danh hiệu mới</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tên danh hiệu <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" name="ten_danh_hieu" 
+                                   required placeholder="VD: Chiến sĩ thi đua">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Mã <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" name="ma_danh_hieu"
+                                   required placeholder="VD: CSTD">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Phạm vi</label>
+                            <select class="form-select form-select-sm" name="pham_vi">
+                                <option value="Cá nhân">Cá nhân</option>
+                                <option value="Đơn vị">Đơn vị</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Thứ tự</label>
+                            <input type="number" class="form-control form-control-sm" name="thu_tu" value="0" min="0">
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+                    <label class="form-label small fw-semibold">Tiêu chí áp dụng</label>
+                    <small class="text-muted d-block mb-2">Chọn các tiêu chí sẽ hiển thị khi đề xuất danh hiệu này</small>
+                    <div class="row g-2">
+                        {% for key, label in tieu_chi_options %}
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="tieu_chi" 
+                                       value="{{ key }}" id="create_tc_{{ key }}">
+                                <label class="form-check-label small" for="create_tc_{{ key }}">{{ label }}</label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo danh hiệu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Enable popovers
+document.addEventListener('DOMContentLoaded', function() {
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    popoverTriggerList.map(function(el) {
+        return new bootstrap.Popover(el);
+    });
+});
+</script>
+{% endblock %}

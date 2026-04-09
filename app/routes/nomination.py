@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.personnel import QuanNhan, DoiTuong, MucDoHoanThanh
-from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat
+from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
 from app.utils.decorators import unit_user_required
@@ -206,17 +206,26 @@ def edit_nomination(id):
 
     already_nominated_ids = already_in_current | already_in_other
 
-    danh_hieu_list = [e.value for e in LoaiDanhHieu]
+    danh_hieu_db = DanhHieu.query.filter_by(is_active=True).order_by(DanhHieu.thu_tu).all()
+    danh_hieu_list = [dh.ten_danh_hieu for dh in danh_hieu_db]
+    # Build a mapping of danh_hieu -> criteria fields for JS
+    danh_hieu_tieu_chi = {dh.ten_danh_hieu: dh.tieu_chi for dh in danh_hieu_db}
     doi_tuong_list = [e.value for e in DoiTuong]
     muc_do_list = [e.value for e in MucDoHoanThanh]
+
+    # Build tooltips from TieuChi DB: {ma_truong: huong_dan}
+    tieu_chi_db = TieuChi.query.filter_by(is_active=True).all()
+    tieu_chi_tooltips = {tc.ma_truong: tc.huong_dan for tc in tieu_chi_db if tc.huong_dan}
 
     return render_template('nomination/edit.html',
                            de_xuat=de_xuat,
                            personnel=personnel,
                            already_nominated_ids=already_nominated_ids,
                            danh_hieu_list=danh_hieu_list,
+                           danh_hieu_tieu_chi=danh_hieu_tieu_chi,
                            doi_tuong_list=doi_tuong_list,
-                           muc_do_list=muc_do_list)
+                           muc_do_list=muc_do_list,
+                           tieu_chi_tooltips=tieu_chi_tooltips)
 
 
 @nomination_bp.route('/<int:id>/add-item', methods=['POST'])
@@ -300,6 +309,7 @@ def add_nomination_item(id):
         # NCKH
         nckh_noi_dung=request.form.get('nckh_noi_dung', '').strip() or None,
         diem_nckh=float(request.form.get('diem_nckh')) if request.form.get('diem_nckh', '').strip() else None,
+        thanh_tich_ca_nhan_khac=request.form.get('thanh_tich_ca_nhan_khac', '').strip() or None,
         ghi_chu=request.form.get('ghi_chu_item', '').strip() or None,
     )
 
@@ -349,6 +359,34 @@ def add_nomination_item(id):
                 )
                 db.session.add(mc)
 
+    # Handle evidence files for ket_qua_doan_the
+    doan_the_files = request.files.getlist('minh_chung_doan_the')
+    for file in doan_the_files:
+        if file and file.filename:
+            path = save_upload(file, 'evidence')
+            if path:
+                mc = MinhChung(
+                    chi_tiet_id=chi_tiet.id,
+                    loai_minh_chung='minh_chung_doan_the',
+                    duong_dan=path,
+                    ten_file_goc=file.filename,
+                )
+                db.session.add(mc)
+
+    # Handle evidence files for thanh_tich_ca_nhan_khac
+    thanh_tich_files = request.files.getlist('minh_chung_thanh_tich_khac')
+    for file in thanh_tich_files:
+        if file and file.filename:
+            path = save_upload(file, 'evidence')
+            if path:
+                mc = MinhChung(
+                    chi_tiet_id=chi_tiet.id,
+                    loai_minh_chung='minh_chung_thanh_tich_khac',
+                    duong_dan=path,
+                    ten_file_goc=file.filename,
+                )
+                db.session.add(mc)
+
     db.session.commit()
 
     name = qn.ho_ten if qn else 'Đơn vị'
@@ -392,7 +430,7 @@ def submit_nomination(id):
 
     # Validate: commander/secretary must have DON_VI_QUYET_THANG
     has_unit_award = any(
-        ct.loai_danh_hieu == LoaiDanhHieu.DON_VI_QUYET_THANG.value
+        ct.loai_danh_hieu == 'Đơn vị quyết thắng'
         for ct in de_xuat.chi_tiets
     )
     for ct in de_xuat.chi_tiets:

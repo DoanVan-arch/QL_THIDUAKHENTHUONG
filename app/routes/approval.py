@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import User, Role
 from app.models.unit import DonVi
-from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat
+from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, TieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.notification import ThongBao
 from app.utils.decorators import department_required
@@ -20,103 +20,86 @@ ROLE_TO_PHONG = {
     Role.BAN_QUANLUC: PhongDuyet.BAN_QUANLUC.value,
 }
 
-# Fields each department is allowed to see and approve
-PHONG_FIELDS = {
+# Reverse map: PhongDuyet display name -> Role
+_PHONG_TO_ROLE = {v: k for k, v in ROLE_TO_PHONG.items()}
+
+# --- Hardcoded fallbacks (used when DB has no tieu_chi rows) ---
+_FALLBACK_PHONG_FIELDS = {
     Role.PHONG_DAOTAO: [
-        'danh_hieu_gv_gioi',
-        'tien_do_pgs',
-        'dinh_muc_giang_day',
-        'ket_qua_kiem_tra_giang',
-        'danh_hieu_hv_gioi',
-        'diem_tong_ket',
-        'ket_qua_thuc_hanh',
+        'danh_hieu_gv_gioi', 'tien_do_pgs', 'dinh_muc_giang_day',
+        'ket_qua_kiem_tra_giang', 'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh',
     ],
-    Role.PHONG_KHOAHOC: [
-        'thoi_gian_lao_dong_kh',
-        'diem_nckh',
-        'nckh_noi_dung',
-        'nckh_minh_chung',
-    ],
+    Role.PHONG_KHOAHOC: ['thoi_gian_lao_dong_kh', 'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung'],
     Role.PHONG_THAMMUU: [
-        'kiem_tra_tin_hoc',
-        'kiem_tra_dieu_lenh',
-        'dia_ly_quan_su',
-        'ban_sung',
-        'the_luc',
-        'ket_qua_doan_the',
+        'kiem_tra_tin_hoc', 'kiem_tra_dieu_lenh', 'dia_ly_quan_su', 'ban_sung', 'the_luc', 'ket_qua_doan_the',
     ],
-    Role.PHONG_CHINHTRI: [
-        'kiem_tra_chinh_tri',
-        'ket_qua_doan_the',
-    ],
-    Role.BAN_CANBO: [
-        'muc_do_hoan_thanh',
-    ],
-    Role.BAN_QUANLUC: [
-        'muc_do_hoan_thanh',
-    ],
+    Role.PHONG_CHINHTRI: ['kiem_tra_chinh_tri', 'ket_qua_doan_the'],
+    Role.BAN_CANBO: ['muc_do_hoan_thanh'],
+    Role.BAN_QUANLUC: ['muc_do_hoan_thanh'],
 }
 
-# Display labels for criteria fields
-FIELD_LABELS = {
-    'muc_do_hoan_thanh': 'Hoàn thành NV',
-    'phieu_tin_nhiem': 'Tín nhiệm',
-    'kiem_tra_dieu_lenh': 'Điều lệnh',
-    'ban_sung': 'Bắn súng',
-    'the_luc': 'Thể lực',
-    'kiem_tra_chinh_tri': 'Chính trị',
-    'kiem_tra_tin_hoc': 'Kỹ năng số',
-    'dia_ly_quan_su': 'Địa hình QS',
-    'danh_hieu_gv_gioi': 'GV giỏi',
-    'dinh_muc_giang_day': 'Định mức GD',
-    'ket_qua_kiem_tra_giang': 'KT giảng',
-    'thoi_gian_lao_dong_kh': 'LĐ KH',
-    'tien_do_pgs': 'Tiến độ PGS',
-    'danh_hieu_hv_gioi': 'HV giỏi',
-    'diem_tong_ket': 'Điểm TK',
-    'ket_qua_thuc_hanh': 'Thực hành',
-    'ket_qua_doan_the': 'Đoàn thể',
-    'chu_tri_don_vi_danh_hieu': 'Chủ trì ĐV',
-    'diem_nckh': 'Điểm KH',
-    'nckh_noi_dung': 'NCKH',
-    'nckh_minh_chung': 'MC NCKH',
+_FALLBACK_FIELD_LABELS = {
+    'muc_do_hoan_thanh': 'Hoàn thành NV', 'phieu_tin_nhiem': 'Tín nhiệm',
+    'kiem_tra_dieu_lenh': 'Điều lệnh', 'ban_sung': 'Bắn súng', 'the_luc': 'Thể lực',
+    'kiem_tra_chinh_tri': 'Chính trị', 'kiem_tra_tin_hoc': 'Kỹ năng số',
+    'dia_ly_quan_su': 'Địa hình QS', 'danh_hieu_gv_gioi': 'GV giỏi',
+    'dinh_muc_giang_day': 'Định mức GD', 'ket_qua_kiem_tra_giang': 'KT giảng',
+    'thoi_gian_lao_dong_kh': 'LĐ KH', 'tien_do_pgs': 'Tiến độ PGS',
+    'danh_hieu_hv_gioi': 'HV giỏi', 'diem_tong_ket': 'Điểm TK',
+    'ket_qua_thuc_hanh': 'Thực hành', 'ket_qua_doan_the': 'Đoàn thể',
+    'chu_tri_don_vi_danh_hieu': 'Chủ trì ĐV', 'diem_nckh': 'Điểm KH',
+    'nckh_noi_dung': 'NCKH', 'nckh_minh_chung': 'MC NCKH',
+    'thanh_tich_ca_nhan_khac': 'Thành tích khác',
 }
 
-# Subset of fields for table columns (excludes long text/file fields)
-PHONG_TABLE_COLUMNS = {
-    Role.PHONG_DAOTAO: [
-        'danh_hieu_gv_gioi',
-        'dinh_muc_giang_day',
-        'ket_qua_kiem_tra_giang',
-        'danh_hieu_hv_gioi',
-        'diem_tong_ket',
-        'ket_qua_thuc_hanh',
-    ],
-    Role.PHONG_KHOAHOC: [
-        'thoi_gian_lao_dong_kh',
-        'diem_nckh',
-    ],
-    Role.PHONG_THAMMUU: [
-        'kiem_tra_tin_hoc',
-        'kiem_tra_dieu_lenh',
-        'dia_ly_quan_su',
-        'ban_sung',
-        'the_luc',
-        'ket_qua_doan_the',
-    ],
-    Role.PHONG_CHINHTRI: [
-        'kiem_tra_chinh_tri',
-        'ket_qua_doan_the',
-    ],
-    Role.BAN_CANBO: [
-        'muc_do_hoan_thanh',
-    ],
-    Role.BAN_QUANLUC: [
-        'muc_do_hoan_thanh',
-    ],
-}
+# Long text / file fields excluded from table columns
+_LONG_TEXT_FIELDS = {'nckh_noi_dung', 'nckh_minh_chung', 'tien_do_pgs', 'thanh_tich_ca_nhan_khac'}
 
-# Conditional field visibility by doi_tuong
+
+def _load_phong_fields_from_db():
+    """Build PHONG_FIELDS dict from TieuChi table. Returns None if table is empty."""
+    rows = TieuChi.query.filter_by(is_active=True).all()
+    if not rows:
+        return None
+    result = {}
+    for tc in rows:
+        for pd_name in tc.phong_duyet:
+            role = _PHONG_TO_ROLE.get(pd_name)
+            if role:
+                result.setdefault(role, [])
+                if tc.ma_truong not in result[role]:
+                    result[role].append(tc.ma_truong)
+    return result
+
+
+def _load_field_labels_from_db():
+    """Build FIELD_LABELS dict from TieuChi table. Returns None if table is empty."""
+    rows = TieuChi.query.filter_by(is_active=True).all()
+    if not rows:
+        return None
+    return {tc.ma_truong: tc.ten for tc in rows}
+
+
+def get_phong_fields():
+    """Get department -> fields mapping, preferring DB over hardcoded fallback."""
+    result = _load_phong_fields_from_db()
+    return result if result else _FALLBACK_PHONG_FIELDS
+
+
+def get_field_labels():
+    """Get field -> label mapping, preferring DB over hardcoded fallback."""
+    result = _load_field_labels_from_db()
+    return result if result else _FALLBACK_FIELD_LABELS
+
+
+def get_phong_table_columns():
+    """Get department -> table column fields (excluding long text/file fields)."""
+    phong_fields = get_phong_fields()
+    return {role: [f for f in fields if f not in _LONG_TEXT_FIELDS]
+            for role, fields in phong_fields.items()}
+
+
+# Conditional field visibility by doi_tuong (remains hardcoded — specific to business logic)
 PHONG_FIELD_CONDITIONS = {
     Role.BAN_CANBO: {
         'muc_do_hoan_thanh': ['Giảng viên', 'Cán bộ'],
@@ -251,8 +234,8 @@ def pending_list():
                 if not _is_in_dept_scope(current_user.role, ct.doi_tuong):
                     out_of_scope_ct_ids.add(ct.id)
 
-    allowed_fields = PHONG_FIELDS.get(current_user.role, [])
-    table_columns = PHONG_TABLE_COLUMNS.get(current_user.role, [])
+    allowed_fields = get_phong_fields().get(current_user.role, [])
+    table_columns = get_phong_table_columns().get(current_user.role, [])
     field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
 
     # Collect unique unit names for dropdown filter
@@ -268,7 +251,7 @@ def pending_list():
                            phong_name=phong_name,
                            allowed_fields=allowed_fields,
                            table_columns=table_columns,
-                           field_labels=FIELD_LABELS,
+                           field_labels=get_field_labels(),
                            field_conditions=field_conditions,
                            unit_names=unit_names,
                            out_of_scope_ct_ids=out_of_scope_ct_ids)
@@ -312,8 +295,8 @@ def review_nomination(id):
             if not _is_in_dept_scope(current_user.role, ct.doi_tuong):
                 out_of_scope_ct_ids.add(ct.id)
 
-    allowed_fields = PHONG_FIELDS.get(current_user.role, [])
-    table_columns = PHONG_TABLE_COLUMNS.get(current_user.role, [])
+    allowed_fields = get_phong_fields().get(current_user.role, [])
+    table_columns = get_phong_table_columns().get(current_user.role, [])
     field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
 
     return render_template('approval/review.html',
@@ -321,7 +304,7 @@ def review_nomination(id):
                            phong_name=phong_name, item_results=item_results,
                            allowed_fields=allowed_fields,
                            table_columns=table_columns,
-                           field_labels=FIELD_LABELS,
+                           field_labels=get_field_labels(),
                            field_conditions=field_conditions,
                            out_of_scope_ct_ids=out_of_scope_ct_ids)
 
@@ -721,8 +704,8 @@ def history():
         'rejected': base_q.filter(KetQuaDuyetChiTiet.ket_qua == KetQuaDuyet.TU_CHOI.value).count(),
     }
 
-    allowed_fields = PHONG_FIELDS.get(current_user.role, [])
-    table_columns = PHONG_TABLE_COLUMNS.get(current_user.role, [])
+    allowed_fields = get_phong_fields().get(current_user.role, [])
+    table_columns = get_phong_table_columns().get(current_user.role, [])
 
     return render_template('approval/history.html',
                            individual_results=individual_results,
@@ -734,7 +717,7 @@ def history():
                            stats=stats,
                            allowed_fields=allowed_fields,
                            table_columns=table_columns,
-                           field_labels=FIELD_LABELS)
+                           field_labels=get_field_labels())
 
 
 @approval_bp.route('/history/chi-tiet/<int:ct_id>')
@@ -755,7 +738,7 @@ def history_detail(ct_id):
         phe_duyet_id=phe_duyet.id, chi_tiet_id=ct.id
     ).first()
 
-    allowed_fields = PHONG_FIELDS.get(current_user.role, [])
+    allowed_fields = get_phong_fields().get(current_user.role, [])
 
     return render_template('approval/history_detail.html',
                            ct=ct,
@@ -764,7 +747,7 @@ def history_detail(ct_id):
                            kq=kq,
                            phong_name=phong_name,
                            allowed_fields=allowed_fields,
-                           field_labels=FIELD_LABELS)
+                           field_labels=get_field_labels())
 
 
 @approval_bp.route('/revoke/<int:pd_id>', methods=['POST'])

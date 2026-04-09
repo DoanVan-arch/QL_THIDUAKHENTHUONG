@@ -7,11 +7,13 @@ from openpyxl.utils import get_column_letter
 from app.extensions import db
 from app.models.user import User, Role
 from app.models.unit import DonVi, LoaiDonVi
-from app.models.personnel import QuanNhan
-from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDanhHieu
+from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
+from app.models.certificate import ChungChi, LoaiChungChi
+from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDanhHieu, DanhHieu, TieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
 from app.utils.decorators import admin_required
+from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__)
@@ -48,6 +50,7 @@ ALL_FIELD_LABELS = {
     'diem_nckh': 'Điểm NCKH',
     'nckh_noi_dung': 'ND NCKH',
     'nckh_minh_chung': 'MC NCKH',
+    'thanh_tich_ca_nhan_khac': 'Thành tích khác',
 }
 
 # Criteria fields in display order
@@ -60,6 +63,7 @@ ALL_FIELDS = [
     'tien_do_pgs', 'thoi_gian_lao_dong_kh',
     'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh',
     'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
+    'thanh_tich_ca_nhan_khac',
 ]
 
 
@@ -276,6 +280,7 @@ def tracking_detail(ct_id):
         'diem_nckh': 'Điểm NCKH',
         'nckh_noi_dung': 'Nội dung NCKH',
         'nckh_minh_chung': 'Minh chứng NCKH',
+        'thanh_tich_ca_nhan_khac': 'Thành tích cá nhân khác',
     }
 
     # All field names in display order
@@ -288,6 +293,7 @@ def tracking_detail(ct_id):
         'tien_do_pgs', 'thoi_gian_lao_dong_kh',
         'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh',
         'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
+        'thanh_tich_ca_nhan_khac',
     ]
 
     return render_template('admin/tracking_detail.html',
@@ -917,6 +923,7 @@ def reward_detail(kt_id):
         'diem_nckh': 'Điểm NCKH',
         'nckh_noi_dung': 'Nội dung NCKH',
         'nckh_minh_chung': 'Minh chứng NCKH',
+        'thanh_tich_ca_nhan_khac': 'Thành tích cá nhân khác',
     }
 
     all_fields = [
@@ -928,6 +935,7 @@ def reward_detail(kt_id):
         'tien_do_pgs', 'thoi_gian_lao_dong_kh',
         'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh',
         'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
+        'thanh_tich_ca_nhan_khac',
     ]
 
     return render_template('admin/reward_detail.html',
@@ -1281,5 +1289,461 @@ def report_summary():
                            dept_names=DEPT_NAMES,
                            nam_hoc_filter=nam_hoc_filter,
                            nam_hoc_list=nam_hoc_list,
-                           chart_unit_names=chart_unit_names,
+                            chart_unit_names=chart_unit_names,
                            chart_unit_rewards=chart_unit_rewards)
+
+
+# ------------------------------------------------------------------
+# Admin: View all personnel across all units
+# ------------------------------------------------------------------
+@admin_bp.route('/personnel')
+@login_required
+@admin_required
+def all_personnel():
+    search = request.args.get('search', '').strip()
+    don_vi_id = request.args.get('don_vi_id', '', type=str)
+    doi_tuong = request.args.get('doi_tuong', '').strip()
+    page = request.args.get('page', 1, type=int)
+
+    query = QuanNhan.query.filter_by(is_active=True).join(DonVi)
+
+    if search:
+        query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
+    if don_vi_id:
+        query = query.filter(QuanNhan.don_vi_id == int(don_vi_id))
+    if doi_tuong:
+        query = query.filter(QuanNhan.doi_tuong == doi_tuong)
+
+    query = query.order_by(DonVi.thu_tu, DonVi.ten_don_vi, QuanNhan.ho_ten)
+    personnel = query.paginate(page=page, per_page=30, error_out=False)
+
+    units = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu, DonVi.ten_don_vi).all()
+    doi_tuong_list = [e.value for e in DoiTuong]
+
+    return render_template('admin/all_personnel.html',
+                           personnel=personnel,
+                           search=search,
+                           don_vi_id=don_vi_id,
+                           doi_tuong_filter=doi_tuong,
+                           units=units,
+                           doi_tuong_list=doi_tuong_list)
+
+
+# ------------------------------------------------------------------
+# Admin: View personnel detail (any unit)
+# ------------------------------------------------------------------
+@admin_bp.route('/personnel/<int:id>')
+@login_required
+@admin_required
+def admin_personnel_detail(id):
+    qn = QuanNhan.query.get_or_404(id)
+    return render_template('admin/personnel_detail.html', qn=qn,
+                           loai_chung_chi_list=[e.value for e in LoaiChungChi])
+
+
+# ------------------------------------------------------------------
+# Admin: Edit personnel (any unit)
+# ------------------------------------------------------------------
+@admin_bp.route('/personnel/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_personnel_edit(id):
+    qn = QuanNhan.query.get_or_404(id)
+
+    if request.method == 'POST':
+        qn.ho_ten = request.form.get('ho_ten', '').strip()
+        qn.cap_bac = request.form.get('cap_bac', '').strip() or None
+        qn.chuc_danh = request.form.get('chuc_danh', '').strip() or None
+        qn.chuc_vu = request.form.get('chuc_vu', '').strip() or None
+        qn.doi_tuong = request.form.get('doi_tuong', '').strip() or None
+        qn.hoc_ham = request.form.get('hoc_ham', 'Không').strip()
+        qn.hoc_vi = request.form.get('hoc_vi', 'Không').strip()
+        qn.trinh_do_hoc_van = request.form.get('trinh_do_hoc_van', '').strip() or None
+        qn.ngoai_ngu = request.form.get('ngoai_ngu', '').strip() or None
+        qn.ngay_nhap_ngu = request.form.get('ngay_nhap_ngu', '').strip() or None
+        qn.la_chi_huy = 'la_chi_huy' in request.form
+        qn.la_bi_thu = 'la_bi_thu' in request.form
+
+        ns_str = request.form.get('ngay_sinh', '').strip()
+        if ns_str:
+            try:
+                qn.ngay_sinh = datetime.strptime(ns_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        else:
+            qn.ngay_sinh = None
+
+        if not qn.ho_ten:
+            flash('Họ tên không được để trống.', 'danger')
+        else:
+            db.session.commit()
+            flash('Đã cập nhật thông tin.', 'success')
+            return redirect(url_for('admin.admin_personnel_detail', id=qn.id))
+
+    return render_template('admin/personnel_edit.html', qn=qn,
+                           cap_bac_list=[e.value for e in CapBac],
+                           hoc_ham_list=[e.value for e in HocHam],
+                           hoc_vi_list=[e.value for e in HocVi],
+                           doi_tuong_list=[e.value for e in DoiTuong])
+
+
+# ------------------------------------------------------------------
+# Admin: Add certificate for any personnel
+# ------------------------------------------------------------------
+@admin_bp.route('/personnel/<int:id>/certificate', methods=['POST'])
+@login_required
+@admin_required
+def admin_add_certificate(id):
+    qn = QuanNhan.query.get_or_404(id)
+
+    ten = request.form.get('ten_chung_chi', '').strip()
+    if not ten:
+        flash('Tên chứng chỉ không được để trống.', 'danger')
+        return redirect(url_for('admin.admin_personnel_detail', id=qn.id))
+
+    duong_dan_anh = None
+    file = request.files.get('anh_minh_chung')
+    if file and file.filename:
+        duong_dan_anh = save_upload(file, 'certificates')
+
+    ngay_cap = None
+    nc_str = request.form.get('ngay_cap', '').strip()
+    if nc_str:
+        try:
+            ngay_cap = datetime.strptime(nc_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    cc = ChungChi(
+        quan_nhan_id=qn.id,
+        loai=request.form.get('loai', LoaiChungChi.THANH_TICH_KHAC.value),
+        ten_chung_chi=ten,
+        so_hieu=request.form.get('so_hieu', '').strip() or None,
+        ngay_cap=ngay_cap,
+        co_quan_cap=request.form.get('co_quan_cap', '').strip() or None,
+        duong_dan_anh=duong_dan_anh,
+        ghi_chu=request.form.get('ghi_chu', '').strip() or None,
+    )
+    db.session.add(cc)
+    db.session.commit()
+    flash(f'Đã thêm: {ten}', 'success')
+    return redirect(url_for('admin.admin_personnel_detail', id=qn.id))
+
+
+# ------------------------------------------------------------------
+# Admin: Delete certificate for any personnel
+# ------------------------------------------------------------------
+@admin_bp.route('/certificate/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_certificate(id):
+    cc = ChungChi.query.get_or_404(id)
+    qn_id = cc.quan_nhan_id
+
+    if cc.duong_dan_anh:
+        delete_upload(cc.duong_dan_anh)
+
+    db.session.delete(cc)
+    db.session.commit()
+    flash('Đã xóa chứng chỉ.', 'success')
+    return redirect(url_for('admin.admin_personnel_detail', id=qn_id))
+
+
+# ------------------------------------------------------------------
+# Admin: Manage DanhHieu (Award Titles) - List
+# ------------------------------------------------------------------
+# Master list of all possible criteria fields (column names on DeXuatChiTiet)
+TIEU_CHI_OPTIONS = [
+    ('muc_do_hoan_thanh', 'Mức độ hoàn thành nhiệm vụ'),
+    ('phieu_tin_nhiem', 'Phiếu tín nhiệm'),
+    ('kiem_tra_chinh_tri', 'Kiểm tra chính trị'),
+    ('kiem_tra_dieu_lenh', 'Kiểm tra điều lệnh'),
+    ('kiem_tra_tin_hoc', 'Kỹ năng số'),
+    ('dia_ly_quan_su', 'Địa hình quân sự'),
+    ('ban_sung', 'Bắn súng'),
+    ('the_luc', 'Thể lực'),
+    ('ket_qua_doan_the', 'Kết quả đoàn thể'),
+    ('chu_tri_don_vi_danh_hieu', 'Chủ trì đơn vị đạt danh hiệu'),
+    ('danh_hieu_gv_gioi', 'Danh hiệu GV giỏi'),
+    ('dinh_muc_giang_day', 'Định mức giảng dạy'),
+    ('ket_qua_kiem_tra_giang', 'Kết quả kiểm tra giảng'),
+    ('tien_do_pgs', 'Tiến độ PGS'),
+    ('thoi_gian_lao_dong_kh', 'Thời gian lao động khoa học'),
+    ('danh_hieu_hv_gioi', 'Danh hiệu HV giỏi'),
+    ('diem_tong_ket', 'Điểm tổng kết'),
+    ('ket_qua_thuc_hanh', 'Kết quả thực hành'),
+    ('diem_nckh', 'Điểm NCKH'),
+    ('nckh_noi_dung', 'Nội dung NCKH'),
+    ('nckh_minh_chung', 'Minh chứng NCKH'),
+    ('thanh_tich_ca_nhan_khac', 'Thành tích cá nhân khác'),
+]
+
+
+@admin_bp.route('/danh-hieu')
+@login_required
+@admin_required
+def manage_danh_hieu():
+    danh_hieus = DanhHieu.query.order_by(DanhHieu.thu_tu, DanhHieu.ten_danh_hieu).all()
+    # Build tieu_chi_options from DB (fallback to hardcoded TIEU_CHI_OPTIONS for safety)
+    db_tieu_chi = TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all()
+    if db_tieu_chi:
+        tc_options = [(tc.ma_truong, tc.ten) for tc in db_tieu_chi]
+    else:
+        tc_options = TIEU_CHI_OPTIONS
+    return render_template('admin/manage_danh_hieu.html',
+                           danh_hieus=danh_hieus,
+                           tieu_chi_options=tc_options)
+
+
+# ------------------------------------------------------------------
+# Admin: Create DanhHieu
+# ------------------------------------------------------------------
+@admin_bp.route('/danh-hieu/create', methods=['POST'])
+@login_required
+@admin_required
+def create_danh_hieu():
+    ten = request.form.get('ten_danh_hieu', '').strip()
+    ma = request.form.get('ma_danh_hieu', '').strip()
+    pham_vi = request.form.get('pham_vi', 'Cá nhân').strip()
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    tieu_chi = request.form.getlist('tieu_chi')
+
+    if not ten or not ma:
+        flash('Tên và mã danh hiệu không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_danh_hieu'))
+
+    # Check uniqueness
+    if DanhHieu.query.filter_by(ten_danh_hieu=ten).first():
+        flash(f'Danh hiệu "{ten}" đã tồn tại.', 'danger')
+        return redirect(url_for('admin.manage_danh_hieu'))
+    if DanhHieu.query.filter_by(ma_danh_hieu=ma).first():
+        flash(f'Mã "{ma}" đã tồn tại.', 'danger')
+        return redirect(url_for('admin.manage_danh_hieu'))
+
+    dh = DanhHieu(
+        ten_danh_hieu=ten,
+        ma_danh_hieu=ma,
+        pham_vi=pham_vi,
+        thu_tu=thu_tu,
+        tieu_chi=tieu_chi,
+    )
+    db.session.add(dh)
+    db.session.commit()
+    flash(f'Đã thêm danh hiệu: {ten}', 'success')
+    return redirect(url_for('admin.manage_danh_hieu'))
+
+
+# ------------------------------------------------------------------
+# Admin: Edit DanhHieu
+# ------------------------------------------------------------------
+@admin_bp.route('/danh-hieu/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_danh_hieu(id):
+    dh = DanhHieu.query.get_or_404(id)
+
+    if request.method == 'POST':
+        ten = request.form.get('ten_danh_hieu', '').strip()
+        ma = request.form.get('ma_danh_hieu', '').strip()
+        pham_vi = request.form.get('pham_vi', 'Cá nhân').strip()
+        thu_tu = request.form.get('thu_tu', 0, type=int)
+        tieu_chi = request.form.getlist('tieu_chi')
+
+        if not ten or not ma:
+            flash('Tên và mã danh hiệu không được để trống.', 'danger')
+            return redirect(url_for('admin.edit_danh_hieu', id=id))
+
+        # Check uniqueness (excluding current)
+        dup_ten = DanhHieu.query.filter(DanhHieu.ten_danh_hieu == ten, DanhHieu.id != id).first()
+        if dup_ten:
+            flash(f'Danh hiệu "{ten}" đã tồn tại.', 'danger')
+            return redirect(url_for('admin.edit_danh_hieu', id=id))
+        dup_ma = DanhHieu.query.filter(DanhHieu.ma_danh_hieu == ma, DanhHieu.id != id).first()
+        if dup_ma:
+            flash(f'Mã "{ma}" đã tồn tại.', 'danger')
+            return redirect(url_for('admin.edit_danh_hieu', id=id))
+
+        dh.ten_danh_hieu = ten
+        dh.ma_danh_hieu = ma
+        dh.pham_vi = pham_vi
+        dh.thu_tu = thu_tu
+        dh.tieu_chi = tieu_chi
+        db.session.commit()
+        flash(f'Đã cập nhật danh hiệu: {ten}', 'success')
+        return redirect(url_for('admin.manage_danh_hieu'))
+
+    return render_template('admin/edit_danh_hieu.html',
+                           dh=dh,
+                           tieu_chi_options=[(tc.ma_truong, tc.ten) for tc in TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all()] or TIEU_CHI_OPTIONS,
+                           tieu_chi_db=TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all())
+
+
+# ------------------------------------------------------------------
+# Admin: Toggle DanhHieu active/inactive
+# ------------------------------------------------------------------
+@admin_bp.route('/danh-hieu/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_danh_hieu(id):
+    dh = DanhHieu.query.get_or_404(id)
+    dh.is_active = not dh.is_active
+    db.session.commit()
+    status = 'kích hoạt' if dh.is_active else 'vô hiệu hóa'
+    flash(f'Đã {status} danh hiệu: {dh.ten_danh_hieu}', 'success')
+    return redirect(url_for('admin.manage_danh_hieu'))
+
+
+# ------------------------------------------------------------------
+# Admin: Delete DanhHieu
+# ------------------------------------------------------------------
+@admin_bp.route('/danh-hieu/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_danh_hieu(id):
+    dh = DanhHieu.query.get_or_404(id)
+
+    # Check if any DeXuatChiTiet uses this danh_hieu
+    usage_count = DeXuatChiTiet.query.filter_by(loai_danh_hieu=dh.ten_danh_hieu).count()
+    if usage_count > 0:
+        flash(f'Không thể xóa: Danh hiệu đang được sử dụng bởi {usage_count} đề xuất.', 'danger')
+        return redirect(url_for('admin.manage_danh_hieu'))
+
+    db.session.delete(dh)
+    db.session.commit()
+    flash(f'Đã xóa danh hiệu: {dh.ten_danh_hieu}', 'success')
+    return redirect(url_for('admin.manage_danh_hieu'))
+
+
+# ------------------------------------------------------------------
+# Admin: Manage TieuChi (Criteria) - List
+# ------------------------------------------------------------------
+PHONG_DUYET_OPTIONS = [
+    ('Phòng Chính trị', 'Phòng Chính trị'),
+    ('Phòng Tham mưu', 'Phòng Tham mưu'),
+    ('Phòng Khoa học', 'Phòng Khoa học'),
+    ('Phòng Đào tạo', 'Phòng Đào tạo'),
+    ('Ban Cán bộ', 'Ban Cán bộ'),
+    ('Ban Quân lực', 'Ban Quân lực'),
+]
+
+
+@admin_bp.route('/tieu-chi')
+@login_required
+@admin_required
+def manage_tieu_chi():
+    tieu_chis = TieuChi.query.order_by(TieuChi.thu_tu, TieuChi.ten).all()
+    return render_template('admin/manage_tieu_chi.html',
+                           tieu_chis=tieu_chis,
+                           nhom_choices=TieuChi.NHOM_CHOICES,
+                           phong_duyet_options=PHONG_DUYET_OPTIONS)
+
+
+# ------------------------------------------------------------------
+# Admin: Create TieuChi
+# ------------------------------------------------------------------
+@admin_bp.route('/tieu-chi/create', methods=['POST'])
+@login_required
+@admin_required
+def create_tieu_chi():
+    ma = request.form.get('ma_truong', '').strip()
+    ten = request.form.get('ten', '').strip()
+    huong_dan = request.form.get('huong_dan', '').strip() or None
+    nhom = request.form.get('nhom', 'chung').strip()
+    co_minh_chung = request.form.get('co_minh_chung') == '1'
+    phong_duyet = request.form.getlist('phong_duyet')
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+
+    if not ma or not ten:
+        flash('Mã trường và tên tiêu chí không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_tieu_chi'))
+
+    if TieuChi.query.filter_by(ma_truong=ma).first():
+        flash(f'Mã trường "{ma}" đã tồn tại.', 'danger')
+        return redirect(url_for('admin.manage_tieu_chi'))
+
+    tc = TieuChi(
+        ma_truong=ma,
+        ten=ten,
+        huong_dan=huong_dan,
+        nhom=nhom,
+        co_minh_chung=co_minh_chung,
+        thu_tu=thu_tu,
+    )
+    tc.phong_duyet = phong_duyet
+    db.session.add(tc)
+    db.session.commit()
+    flash(f'Đã thêm tiêu chí: {ten}', 'success')
+    return redirect(url_for('admin.manage_tieu_chi'))
+
+
+# ------------------------------------------------------------------
+# Admin: Edit TieuChi
+# ------------------------------------------------------------------
+@admin_bp.route('/tieu-chi/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_tieu_chi(id):
+    tc = TieuChi.query.get_or_404(id)
+
+    if request.method == 'POST':
+        ma = request.form.get('ma_truong', '').strip()
+        ten = request.form.get('ten', '').strip()
+        huong_dan = request.form.get('huong_dan', '').strip() or None
+        nhom = request.form.get('nhom', 'chung').strip()
+        co_minh_chung = request.form.get('co_minh_chung') == '1'
+        phong_duyet = request.form.getlist('phong_duyet')
+        thu_tu = request.form.get('thu_tu', 0, type=int)
+
+        if not ma or not ten:
+            flash('Mã trường và tên tiêu chí không được để trống.', 'danger')
+            return redirect(url_for('admin.edit_tieu_chi', id=id))
+
+        dup = TieuChi.query.filter(TieuChi.ma_truong == ma, TieuChi.id != id).first()
+        if dup:
+            flash(f'Mã trường "{ma}" đã tồn tại.', 'danger')
+            return redirect(url_for('admin.edit_tieu_chi', id=id))
+
+        tc.ma_truong = ma
+        tc.ten = ten
+        tc.huong_dan = huong_dan
+        tc.nhom = nhom
+        tc.co_minh_chung = co_minh_chung
+        tc.phong_duyet = phong_duyet
+        tc.thu_tu = thu_tu
+        db.session.commit()
+        flash(f'Đã cập nhật tiêu chí: {ten}', 'success')
+        return redirect(url_for('admin.manage_tieu_chi'))
+
+    return render_template('admin/edit_tieu_chi.html',
+                           tc=tc,
+                           nhom_choices=TieuChi.NHOM_CHOICES,
+                           phong_duyet_options=PHONG_DUYET_OPTIONS)
+
+
+# ------------------------------------------------------------------
+# Admin: Toggle TieuChi active/inactive
+# ------------------------------------------------------------------
+@admin_bp.route('/tieu-chi/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_tieu_chi(id):
+    tc = TieuChi.query.get_or_404(id)
+    tc.is_active = not tc.is_active
+    db.session.commit()
+    status = 'kích hoạt' if tc.is_active else 'vô hiệu hóa'
+    flash(f'Đã {status} tiêu chí: {tc.ten}', 'success')
+    return redirect(url_for('admin.manage_tieu_chi'))
+
+
+# ------------------------------------------------------------------
+# Admin: Delete TieuChi
+# ------------------------------------------------------------------
+@admin_bp.route('/tieu-chi/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_tieu_chi(id):
+    tc = TieuChi.query.get_or_404(id)
+    db.session.delete(tc)
+    db.session.commit()
+    flash(f'Đã xóa tiêu chí: {tc.ten}', 'success')
+    return redirect(url_for('admin.manage_tieu_chi'))

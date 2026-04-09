@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Sửa danh hiệu - {{ dh.ten_danh_hieu }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-pencil me-2"></i>Sửa danh hiệu</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.manage_danh_hieu') }}">Quản lý danh hiệu</a></li>
+                <li class="breadcrumb-item active">{{ dh.ten_danh_hieu }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom">
+        <form method="POST" action="{{ url_for('admin.edit_danh_hieu', id=dh.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-section">
+                <div class="form-section-title">Thông tin danh hiệu</div>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Tên danh hiệu <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ten_danh_hieu" 
+                               value="{{ dh.ten_danh_hieu }}" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Mã <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ma_danh_hieu"
+                               value="{{ dh.ma_danh_hieu }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Phạm vi</label>
+                        <select class="form-select" name="pham_vi">
+                            <option value="Cá nhân" {% if dh.pham_vi == 'Cá nhân' %}selected{% endif %}>Cá nhân</option>
+                            <option value="Đơn vị" {% if dh.pham_vi == 'Đơn vị' %}selected{% endif %}>Đơn vị</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Thứ tự</label>
+                        <input type="number" class="form-control" name="thu_tu" 
+                               value="{{ dh.thu_tu }}" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">Tiêu chí áp dụng</div>
+                <small class="text-muted d-block mb-3">Chọn các tiêu chí sẽ hiển thị khi đề xuất danh hiệu này. Các tiêu chí không được chọn sẽ bị ẩn trên form đề xuất.</small>
+
+                <div class="mb-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="selectAllTC()">
+                        <i class="bi bi-check-all me-1"></i>Chọn tất cả
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAllTC()">
+                        <i class="bi bi-x-lg me-1"></i>Bỏ chọn tất cả
+                    </button>
+                </div>
+
+                <div class="row g-2">
+                    {% if tieu_chi_db %}
+                    {# DB-driven grouped display #}
+                    {% set nhom_labels = {'chung': 'Tiêu chí chung', 'giang_vien': 'Tiêu chí giảng viên', 'hoc_vien': 'Tiêu chí học viên', 'nckh': 'Tiêu chí NCKH', 'khac': 'Khác'} %}
+                    {% set ns = namespace(current_nhom='') %}
+                    {% for tc in tieu_chi_db %}
+                    {% if tc.nhom != ns.current_nhom %}
+                    {% set ns.current_nhom = tc.nhom %}
+                    <div class="col-12 {% if not loop.first %}mt-3{% endif %}">
+                        <small class="fw-semibold text-muted">{{ nhom_labels.get(tc.nhom, tc.nhom) }}</small>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input tc-checkbox" type="checkbox" name="tieu_chi" 
+                                   value="{{ tc.ma_truong }}" id="tc_{{ tc.ma_truong }}"
+                                   {% if tc.ma_truong in dh.tieu_chi %}checked{% endif %}>
+                            <label class="form-check-label small" for="tc_{{ tc.ma_truong }}">
+                                {{ tc.ten }}
+                                {% if tc.huong_dan %}
+                                <i class="bi bi-info-circle text-muted ms-1" 
+                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="{{ tc.huong_dan }}"></i>
+                                {% endif %}
+                                {% if tc.co_minh_chung %}
+                                <i class="bi bi-paperclip text-muted ms-1" title="Yêu cầu minh chứng"></i>
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    {# Fallback to flat tieu_chi_options list #}
+                    {% for key, label in tieu_chi_options %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input tc-checkbox" type="checkbox" name="tieu_chi" 
+                                   value="{{ key }}" id="tc_{{ key }}"
+                                   {% if key in dh.tieu_chi %}checked{% endif %}>
+                            <label class="form-check-label small" for="tc_{{ key }}">{{ label }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Cập nhật</button>
+                <a href="{{ url_for('admin.manage_danh_hieu') }}" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectAllTC() {
+    document.querySelectorAll('.tc-checkbox').forEach(function(cb) { cb.checked = true; });
+}
+function deselectAllTC() {
+    document.querySelectorAll('.tc-checkbox').forEach(function(cb) { cb.checked = false; });
+}
+// Enable tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
+});
+</script>
+{% endblock %}

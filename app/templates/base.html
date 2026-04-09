@@ -71,6 +71,15 @@
                 <a href="{{ url_for('admin.manage_units') }}" class="sidebar-link {% if request.endpoint == 'admin.manage_units' %}active{% endif %}">
                     <i class="bi bi-building"></i> <span>Quản lý đơn vị</span>
                 </a>
+                <a href="{{ url_for('admin.all_personnel') }}" class="sidebar-link {% if request.endpoint in ['admin.all_personnel', 'admin.admin_personnel_detail', 'admin.admin_personnel_edit'] %}active{% endif %}">
+                    <i class="bi bi-people"></i> <span>Hồ sơ cá nhân</span>
+                </a>
+                <a href="{{ url_for('admin.manage_danh_hieu') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_danh_hieu', 'admin.edit_danh_hieu'] %}active{% endif %}">
+                    <i class="bi bi-bookmark-star"></i> <span>Quản lý danh hiệu</span>
+                </a>
+                <a href="{{ url_for('admin.manage_tieu_chi') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_tieu_chi', 'admin.edit_tieu_chi'] %}active{% endif %}">
+                    <i class="bi bi-list-check"></i> <span>Quản lý tiêu chí</span>
+                </a>
                 <a href="{{ url_for('admin.report_summary') }}" class="sidebar-link {% if request.endpoint == 'admin.report_summary' %}active{% endif %}">
                     <i class="bi bi-bar-chart"></i> <span>Báo cáo thống kê</span>
                 </a>

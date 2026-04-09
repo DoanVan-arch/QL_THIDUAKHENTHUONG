@@ -284,6 +284,12 @@
                 {% endif %}
             </div>
 
+            {% if ct.thanh_tich_ca_nhan_khac %}
+            <div class="mt-2" style="font-size:0.85rem;">
+                <small class="text-muted fw-semibold">Thành tích cá nhân khác:</small> {{ ct.thanh_tich_ca_nhan_khac }}
+            </div>
+            {% endif %}
+
             {% if ct.nckh_noi_dung %}
             <div class="mt-2" style="font-size:0.85rem;">
                 <small class="text-muted fw-semibold">NCKH:</small> {{ ct.nckh_noi_dung }}

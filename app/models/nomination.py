@@ -1,7 +1,50 @@
 import enum
+import json
 from sqlalchemy import Column, Integer, String, Enum, Boolean, Float, Date, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import relationship
 from app.extensions import db
+
+
+class TieuChi(db.Model):
+    """Criteria definition with metadata, tooltip, evidence flag, and department assignments."""
+    __tablename__ = 'tieu_chi'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ma_truong = Column(String(50), nullable=False, unique=True)   # matches DeXuatChiTiet column name
+    ten = Column(String(150), nullable=False)                      # display label
+    huong_dan = Column(Text, nullable=True)                        # tooltip / guidance text
+    nhom = Column(String(50), nullable=False, default='chung')     # category: chung, giang_vien, hoc_vien, nckh, khac
+    co_minh_chung = Column(Boolean, default=False)                 # requires evidence upload?
+    _phong_duyet = Column('phong_duyet', Text, nullable=True)      # JSON list of department role strings
+    thu_tu = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    @property
+    def phong_duyet(self):
+        if self._phong_duyet:
+            try:
+                return json.loads(self._phong_duyet)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+
+    @phong_duyet.setter
+    def phong_duyet(self, value):
+        if isinstance(value, list):
+            self._phong_duyet = json.dumps(value, ensure_ascii=False)
+        else:
+            self._phong_duyet = value
+
+    # Convenience: map of nhom display names
+    NHOM_CHOICES = {
+        'chung': 'Tiêu chí chung',
+        'giang_vien': 'Tiêu chí giảng viên',
+        'hoc_vien': 'Tiêu chí học viên',
+        'nckh': 'Tiêu chí NCKH',
+        'khac': 'Khác',
+    }
 
 
 class LoaiDanhHieu(enum.Enum):
@@ -9,6 +52,37 @@ class LoaiDanhHieu(enum.Enum):
     CHIEN_SI_TIEN_TIEN = 'Chiến sĩ tiên tiến'
     DON_VI_QUYET_THANG = 'Đơn vị quyết thắng'
     DON_VI_TIEN_TIEN = 'Đơn vị tiên tiến'
+
+
+class DanhHieu(db.Model):
+    """Award title with associated criteria fields (stored as JSON list of field names)."""
+    __tablename__ = 'danh_hieu'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ten_danh_hieu = Column(String(100), nullable=False, unique=True)
+    ma_danh_hieu = Column(String(20), nullable=False, unique=True)
+    pham_vi = Column(String(20), nullable=False, default='Cá nhân')  # 'Cá nhân' or 'Đơn vị'
+    _tieu_chi = Column('tieu_chi', Text, nullable=True)  # JSON list of field names
+    thu_tu = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    @property
+    def tieu_chi(self):
+        if self._tieu_chi:
+            try:
+                return json.loads(self._tieu_chi)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+
+    @tieu_chi.setter
+    def tieu_chi(self, value):
+        if isinstance(value, list):
+            self._tieu_chi = json.dumps(value, ensure_ascii=False)
+        else:
+            self._tieu_chi = value
 
 
 class TrangThaiDeXuat(enum.Enum):
@@ -95,6 +169,8 @@ class DeXuatChiTiet(db.Model):
     diem_nckh = Column(Float, nullable=True)
     nckh_noi_dung = Column(Text, nullable=True)
     nckh_minh_chung = Column(String(255), nullable=True)
+
+    thanh_tich_ca_nhan_khac = Column(Text, nullable=True)
 
     ghi_chu = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
