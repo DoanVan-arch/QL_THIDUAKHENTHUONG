@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Sửa tiêu chí - {{ tc.ten }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-pencil me-2"></i>Sửa tiêu chí</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.manage_tieu_chi') }}">Quản lý tiêu chí</a></li>
+                <li class="breadcrumb-item active">{{ tc.ten }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom">
+        <form method="POST" action="{{ url_for('admin.edit_tieu_chi', id=tc.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-section">
+                <div class="form-section-title">Thông tin tiêu chí</div>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Tên tiêu chí <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ten" 
+                               value="{{ tc.ten }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Mã trường <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ma_truong"
+                               value="{{ tc.ma_truong }}" required>
+                        <small class="text-muted">Tên cột trong CSDL (cẩn thận khi thay đổi)</small>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Nhóm</label>
+                        <select class="form-select" name="nhom">
+                            {% for k, v in nhom_choices.items() %}
+                            <option value="{{ k }}" {% if tc.nhom == k %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Thứ tự</label>
+                        <input type="number" class="form-control" name="thu_tu" 
+                               value="{{ tc.thu_tu }}" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">Hướng dẫn & Minh chứng</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Hướng dẫn / Mô tả (tooltip)</label>
+                        <textarea class="form-control" name="huong_dan" rows="3"
+                                  placeholder="Nội dung hiển thị khi di chuột vào tiêu chí trên form đề xuất">{{ tc.huong_dan or '' }}</textarea>
+                        <small class="text-muted">Nội dung này sẽ hiển thị dưới dạng tooltip trên form đề xuất khen thưởng</small>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="co_minh_chung" value="1" 
+                                   id="edit_mc" {% if tc.co_minh_chung %}checked{% endif %}>
+                            <label class="form-check-label" for="edit_mc">
+                                Yêu cầu tải minh chứng cho tiêu chí này
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">Phòng / Ban phê duyệt</div>
+                <small class="text-muted d-block mb-3">Chọn phòng/ban có quyền xem xét và phê duyệt tiêu chí này. 
+                    Điều này quyết định phòng nào sẽ thấy tiêu chí khi phê duyệt đề xuất.</small>
+                <div class="row g-2">
+                    {% for val, label in phong_duyet_options %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="phong_duyet"
+                                   value="{{ val }}" id="edit_pd_{{ loop.index }}"
+                                   {% if val in tc.phong_duyet %}checked{% endif %}>
+                            <label class="form-check-label" for="edit_pd_{{ loop.index }}">{{ label }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Cập nhật</button>
+                <a href="{{ url_for('admin.manage_tieu_chi') }}" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

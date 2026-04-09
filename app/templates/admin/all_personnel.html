@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Hồ sơ cá nhân toàn bộ đơn vị{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-people me-2"></i>Hồ sơ cá nhân toàn bộ đơn vị</h4>
+        <small class="text-muted">Tổng cộng: {{ personnel.total }} quân nhân</small>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card-section">
+    <div class="card-body-custom">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label mb-1 small">Tìm theo họ tên</label>
+                <input type="text" class="form-control" name="search" value="{{ search }}"
+                       placeholder="Nhập họ tên...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1 small">Đơn vị</label>
+                <select class="form-select" name="don_vi_id">
+                    <option value="">-- Tất cả đơn vị --</option>
+                    {% for u in units %}
+                    <option value="{{ u.id }}" {% if don_vi_id|string == u.id|string %}selected{% endif %}>
+                        {{ u.ten_don_vi }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1 small">Đối tượng</label>
+                <select class="form-select" name="doi_tuong">
+                    <option value="">-- Tất cả --</option>
+                    {% for dt in doi_tuong_list %}
+                    <option value="{{ dt }}" {% if doi_tuong_filter == dt %}selected{% endif %}>{{ dt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-navy w-100"><i class="bi bi-search"></i></button>
+            </div>
+            <div class="col-md-1">
+                <a href="{{ url_for('admin.all_personnel') }}" class="btn btn-outline-secondary w-100" title="Bỏ lọc"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card-section mt-3">
+    <div class="card-body-custom p-0">
+        {% if personnel.items %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ và tên</th>
+                        <th>Đơn vị</th>
+                        <th>Cấp bậc</th>
+                        <th>Chức vụ</th>
+                        <th>Đối tượng</th>
+                        <th>Học vị</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qn in personnel.items %}
+                    <tr>
+                        <td>{{ (personnel.page - 1) * personnel.per_page + loop.index }}</td>
+                        <td>
+                            <span class="fw-500">{{ qn.ho_ten }}</span>
+                            {% if qn.la_chi_huy %}<span class="badge bg-primary ms-1" style="font-size:0.65rem">CHỈ HUY</span>{% endif %}
+                            {% if qn.la_bi_thu %}<span class="badge bg-info ms-1" style="font-size:0.65rem">BÍ THƯ</span>{% endif %}
+                        </td>
+                        <td><span class="badge bg-light text-dark">{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</span></td>
+                        <td>{{ qn.cap_bac or '-' }}</td>
+                        <td>{{ qn.chuc_vu or '-' }}</td>
+                        <td>{{ qn.doi_tuong or '-' }}</td>
+                        <td>{{ qn.hoc_vi if qn.hoc_vi and qn.hoc_vi != 'Không' else '-' }}</td>
+                        <td class="text-center text-nowrap">
+                            <a href="{{ url_for('admin.admin_personnel_detail', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Xem chi tiết">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('admin.admin_personnel_edit', id=qn.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if personnel.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if personnel.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}">&laquo;</a>
+                    </li>
+                    {% endif %}
+                    {% for p in personnel.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == personnel.page }}">
+                        <a class="page-link" href="?page={{ p }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if personnel.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}">&raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people d-block"></i>
+            <p>{% if search or don_vi_id or doi_tuong_filter %}Không tìm thấy kết quả phù hợp{% else %}Chưa có quân nhân nào trong hệ thống{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

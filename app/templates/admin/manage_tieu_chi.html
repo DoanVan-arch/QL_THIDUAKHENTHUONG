@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Quản lý tiêu chí{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-list-check me-2"></i>Quản lý tiêu chí đánh giá</h4>
+        <small class="text-muted">Quản lý các tiêu chí, hướng dẫn, yêu cầu minh chứng và phòng phê duyệt</small>
+    </div>
+    <button class="btn btn-navy btn-sm" data-bs-toggle="modal" data-bs-target="#createTieuChiModal">
+        <i class="bi bi-plus-lg me-1"></i>Thêm tiêu chí
+    </button>
+</div>
+
+<!-- TieuChi table -->
+<div class="card-section">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-list-ul me-2"></i>Danh sách tiêu chí</h5>
+        <span class="badge bg-navy">{{ tieu_chis|length }} tiêu chí</span>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if tieu_chis %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0" style="font-size:0.83rem;">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">TT</th>
+                        <th>Tên tiêu chí</th>
+                        <th style="width:130px;">Mã trường</th>
+                        <th style="width:130px;">Nhóm</th>
+                        <th style="width:70px;" class="text-center">MC</th>
+                        <th>Phòng phê duyệt</th>
+                        <th style="width:90px;">Trạng thái</th>
+                        <th class="text-center" style="width:150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tc in tieu_chis %}
+                    <tr class="{{ 'table-secondary' if not tc.is_active }}">
+                        <td>{{ tc.thu_tu }}</td>
+                        <td>
+                            <span class="fw-semibold">{{ tc.ten }}</span>
+                            {% if tc.huong_dan %}
+                            <i class="bi bi-info-circle text-muted ms-1" 
+                               data-bs-toggle="tooltip" data-bs-placement="top"
+                               title="{{ tc.huong_dan }}"></i>
+                            {% endif %}
+                        </td>
+                        <td><code class="small">{{ tc.ma_truong }}</code></td>
+                        <td>
+                            <span class="badge bg-light text-dark" style="font-size:0.72rem;">
+                                {{ nhom_choices.get(tc.nhom, tc.nhom) }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if tc.co_minh_chung %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-dash text-muted"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if tc.phong_duyet %}
+                            {% for pd in tc.phong_duyet %}
+                            <span class="badge bg-light text-dark me-1 mb-1" style="font-size:0.68rem;">{{ pd }}</span>
+                            {% endfor %}
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if tc.is_active %}
+                            <span class="badge-status badge-approved">Hoạt động</span>
+                            {% else %}
+                            <span class="badge-status badge-rejected">Ngừng</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <a href="{{ url_for('admin.edit_tieu_chi', id=tc.id) }}" 
+                               class="btn btn-sm btn-outline-navy me-1" title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.toggle_tieu_chi', id=tc.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if tc.is_active %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning me-1" title="Vô hiệu hóa"
+                                        onclick="return confirm('Vô hiệu hóa tiêu chí {{ tc.ten }}?')">
+                                    <i class="bi bi-pause-circle"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success me-1" title="Kích hoạt lại">
+                                    <i class="bi bi-play-circle"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                            <form id="delTC{{ tc.id }}" method="POST" action="{{ url_for('admin.delete_tieu_chi', id=tc.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa"
+                                        onclick="if(confirm('Xóa tiêu chí: {{ tc.ten }}?')) this.closest('form').submit();">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-3">
+            <i class="bi bi-list-check d-block"></i>
+            <p>Chưa có tiêu chí nào</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create TieuChi Modal -->
+<div class="modal fade" id="createTieuChiModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.create_tieu_chi') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Thêm tiêu chí mới</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tên tiêu chí <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" name="ten"
+                                   required placeholder="VD: Kiểm tra chính trị">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Mã trường <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" name="ma_truong"
+                                   required placeholder="VD: kiem_tra_chinh_tri">
+                            <small class="text-muted">Tên cột trong CSDL</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Nhóm</label>
+                            <select class="form-select form-select-sm" name="nhom">
+                                {% for k, v in nhom_choices.items() %}
+                                <option value="{{ k }}">{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Thứ tự</label>
+                            <input type="number" class="form-control form-control-sm" name="thu_tu" value="0" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Yêu cầu minh chứng</label>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" name="co_minh_chung" value="1" id="create_mc">
+                                <label class="form-check-label small" for="create_mc">Có yêu cầu tải minh chứng</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Hướng dẫn / Mô tả (tooltip)</label>
+                            <textarea class="form-control form-control-sm" name="huong_dan" rows="2"
+                                      placeholder="Nội dung hiển thị khi di chuột vào tiêu chí trên form đề xuất"></textarea>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+                    <label class="form-label small fw-semibold">Phòng / Ban phê duyệt</label>
+                    <small class="text-muted d-block mb-2">Chọn phòng/ban có quyền xem xét và phê duyệt tiêu chí này</small>
+                    <div class="row g-2">
+                        {% for val, label in phong_duyet_options %}
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="phong_duyet"
+                                       value="{{ val }}" id="create_pd_{{ loop.index }}">
+                                <label class="form-check-label small" for="create_pd_{{ loop.index }}">{{ label }}</label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo tiêu chí
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enable tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(el) {
+        return new bootstrap.Tooltip(el);
+    });
+});
+</script>
+{% endblock %}

@@ -86,10 +86,20 @@ function updateConditionalFields(doiTuong, hocVi) {
 function updateNckhSection() {
     const dhSelect = document.getElementById('loai_danh_hieu_select');
     const danhHieu = dhSelect ? dhSelect.value : '';
-    const isCSTT = danhHieu === 'Chiến sĩ tiên tiến';
 
-    toggleFieldGroup('nckh-section-cstd', !isCSTT);
-    toggleFieldGroup('nckh-section-cstt', isCSTT);
+    // Use DB-driven mapping if available, otherwise fall back to hardcoded logic
+    if (typeof DANH_HIEU_TIEU_CHI !== 'undefined' && danhHieu && DANH_HIEU_TIEU_CHI[danhHieu]) {
+        const tieuChi = DANH_HIEU_TIEU_CHI[danhHieu];
+        const hasFullNckh = tieuChi.includes('nckh_noi_dung');
+        const hasSimpleNckh = tieuChi.includes('diem_nckh') && !hasFullNckh;
+        toggleFieldGroup('nckh-section-cstd', hasFullNckh);
+        toggleFieldGroup('nckh-section-cstt', hasSimpleNckh);
+    } else {
+        // Fallback: CSTT gets simple NCKH, others get full
+        const isCSTT = danhHieu === 'Chiến sĩ tiên tiến';
+        toggleFieldGroup('nckh-section-cstd', !isCSTT && danhHieu !== '');
+        toggleFieldGroup('nckh-section-cstt', isCSTT);
+    }
 }
 
 function onDanhHieuChange() {

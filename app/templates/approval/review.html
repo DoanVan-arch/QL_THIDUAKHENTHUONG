@@ -61,7 +61,6 @@
 </div>
 
 {% set display_fields = allowed_fields|reject('equalto', 'nckh_minh_chung')|list %}
-{% set show_evidence = 'nckh_minh_chung' in allowed_fields %}
 
 <!-- Stats summary -->
 {% if phe_duyet.ket_qua == 'Chờ duyệt' %}
@@ -120,9 +119,7 @@
                         {% for col in table_columns %}
                         <th><small>{{ field_labels[col] if col in field_labels else col }}</small></th>
                         {% endfor %}
-                        {% if show_evidence %}
                         <th style="width:60px;">MC</th>
-                        {% endif %}
                         <th style="width:60px;">Chi tiết</th>
                         <th style="width:100px;" class="text-center">Nhất trí</th>
                     </tr>
@@ -181,7 +178,6 @@
                             {% endif %}
                         </td>
                         {% endfor %}
-                        {% if show_evidence %}
                         <td class="text-center">
                             {% if ct.minh_chungs %}
                             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
@@ -193,7 +189,6 @@
                             <small class="text-muted">-</small>
                             {% endif %}
                         </td>
-                        {% endif %}
                         <td class="text-center">
                             <button type="button" class="btn btn-sm btn-outline-navy py-0" data-bs-toggle="modal" data-bs-target="#detailModal{{ ct.id }}">
                                 <i class="bi bi-eye"></i>
@@ -339,9 +334,16 @@
                             {% endif %}
                         {% endif %}
                     {% endfor %}
+
+                    {% if ct.thanh_tich_ca_nhan_khac %}
+                    <div class="col-12 mt-1">
+                        <small class="text-muted fw-semibold">Thành tích cá nhân khác:</small>
+                        {{ ct.thanh_tich_ca_nhan_khac }}
+                    </div>
+                    {% endif %}
                 </div>
 
-                {% if ct.minh_chungs and 'nckh_minh_chung' in allowed_fields %}
+                {% if ct.minh_chungs %}
                 <div class="mt-2">
                     <small class="text-muted fw-semibold">Minh chứng:</small>
                     <div class="d-flex flex-wrap gap-2 mt-1">
@@ -366,7 +368,6 @@
 {% endfor %}
 
 <!-- Evidence Modals -->
-{% if show_evidence %}
 {% for ct in de_xuat.chi_tiets %}
 {% if ct.minh_chungs %}
 <div class="modal fade" id="mcModal{{ ct.id }}" tabindex="-1">
@@ -390,7 +391,6 @@
 </div>
 {% endif %}
 {% endfor %}
-{% endif %}
 
 <!-- Batch approve confirmation modal -->
 <div class="modal fade" id="batchApproveModal" tabindex="-1">

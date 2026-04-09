@@ -203,6 +203,10 @@
                         <input type="text" class="form-control" name="ket_qua_doan_the" placeholder="Nếu còn trong độ tuổi sinh hoạt đoàn">
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label">Minh chứng đoàn thể (nhiều file)</label>
+                        <input type="file" class="form-control" name="minh_chung_doan_the" accept="image/*,.pdf" multiple>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Chủ trì đơn vị đạt danh hiệu thi đua</label>
                         <input type="text" class="form-control" name="chu_tri_don_vi_danh_hieu" placeholder="Nếu là chỉ huy/bí thư">
                     </div>
@@ -318,6 +322,24 @@
                 </div>
             </div>
 
+            <!-- Thành tích cá nhân khác -->
+            <div class="form-section">
+                <div class="form-section-title" style="color: #E67E22;">
+                    <i class="bi bi-star me-1"></i>Thành tích cá nhân khác
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Mô tả thành tích cá nhân khác</label>
+                        <textarea class="form-control" name="thanh_tich_ca_nhan_khac" rows="3"
+                                  placeholder="Nhập các thành tích cá nhân khác ngoài tiêu chí trên (nếu có)..."></textarea>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Ảnh minh chứng thành tích khác (nhiều file)</label>
+                        <input type="file" class="form-control" name="minh_chung_thanh_tich_khac" accept="image/*,.pdf" multiple>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notes -->
             <div class="mb-3">
                 <label class="form-label">Ghi chú thêm</label>
@@ -330,4 +352,42 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Danh hiệu -> tiêu chí mapping from DB
+var DANH_HIEU_TIEU_CHI = {{ danh_hieu_tieu_chi | default({}) | tojson }};
+
+// Tiêu chí tooltips from DB: {field_name: tooltip_text}
+var TIEU_CHI_TOOLTIPS = {{ tieu_chi_tooltips | default({}) | tojson }};
+
+// Auto-inject tooltip icons next to form labels for criteria fields
+document.addEventListener('DOMContentLoaded', function() {
+    Object.keys(TIEU_CHI_TOOLTIPS).forEach(function(fieldName) {
+        var tooltip = TIEU_CHI_TOOLTIPS[fieldName];
+        if (!tooltip) return;
+        // Find input/select/textarea with this name
+        var input = document.querySelector('[name="' + fieldName + '"]');
+        if (!input) return;
+        // Find the closest label
+        var container = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
+        if (!container) return;
+        var label = container.querySelector('.form-label');
+        if (!label) return;
+        // Add tooltip icon
+        var icon = document.createElement('i');
+        icon.className = 'bi bi-info-circle text-muted ms-1';
+        icon.setAttribute('data-bs-toggle', 'tooltip');
+        icon.setAttribute('data-bs-placement', 'top');
+        icon.setAttribute('title', tooltip);
+        icon.style.cursor = 'help';
+        icon.style.fontSize = '0.8rem';
+        label.appendChild(icon);
+    });
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
+});
+</script>
 {% endblock %}
