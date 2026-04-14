@@ -12,7 +12,9 @@ from datetime import datetime
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
     'Phòng Chính trị', 'Phòng Tham mưu', 'Phòng Khoa học', 'Phòng Đào tạo',
-    'Ban Cán bộ', 'Ban Quân lực'
+    'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
+    'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
+    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Quân lực'
 ]
 
 nomination_bp = Blueprint('nomination', __name__)
@@ -288,12 +290,19 @@ def add_nomination_item(id):
         nam_hoc=de_xuat.nam_hoc,
         muc_do_hoan_thanh=request.form.get('muc_do_hoan_thanh', '').strip() or None,
         kiem_tra_tin_hoc=request.form.get('kiem_tra_tin_hoc', '').strip() or None,
+        diem_kiem_tra_tin_hoc=request.form.get('diem_kiem_tra_tin_hoc', '').strip() or None,
         kiem_tra_dieu_lenh=request.form.get('kiem_tra_dieu_lenh', '').strip() or None,
+        diem_kiem_tra_dieu_lenh=request.form.get('diem_kiem_tra_dieu_lenh', '').strip() or None,
         dia_ly_quan_su=request.form.get('dia_ly_quan_su', '').strip() or None,
+        diem_dia_ly_quan_su=request.form.get('diem_dia_ly_quan_su', '').strip() or None,
         ban_sung=request.form.get('ban_sung', '').strip() or None,
+        diem_ban_sung=request.form.get('diem_ban_sung', '').strip() or None,
         the_luc=request.form.get('the_luc', '').strip() or None,
+        diem_the_luc=request.form.get('diem_the_luc', '').strip() or None,
         kiem_tra_chinh_tri=request.form.get('kiem_tra_chinh_tri', '').strip() or None,
+        diem_kiem_tra_chinh_tri=request.form.get('diem_kiem_tra_chinh_tri', '').strip() or None,
         phieu_tin_nhiem=request.form.get('phieu_tin_nhiem', '').strip() or None,
+        xep_loai_dang_vien=request.form.get('xep_loai_dang_vien', '').strip() or None,
         ket_qua_doan_the=request.form.get('ket_qua_doan_the', '').strip() or None,
         chu_tri_don_vi_danh_hieu=request.form.get('chu_tri_don_vi_danh_hieu', '').strip() or None,
         # Lecturer fields
@@ -442,10 +451,15 @@ def submit_nomination(id):
                 )
                 return redirect(url_for('nomination.edit_nomination', id=id))
 
-    # Create 6 pending approval records
+    # Create pending approval records
     for phong in [PhongDuyet.PHONG_CHINHTRI, PhongDuyet.PHONG_THAMMUU,
                   PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
-                  PhongDuyet.BAN_CANBO, PhongDuyet.BAN_QUANLUC]:
+                  PhongDuyet.THU_TRUONG_PHONG_CHINHTRI, PhongDuyet.THU_TRUONG_PHONG_TMHC,
+                  PhongDuyet.BAN_CANBO, PhongDuyet.BAN_TOCHUC,
+                  PhongDuyet.BAN_TUYENHUAN, PhongDuyet.BAN_CTCQ,
+                  PhongDuyet.BAN_CNTT, PhongDuyet.BAN_TAC_HUAN,
+                  PhongDuyet.BAN_KHAOTHI,
+                  PhongDuyet.BAN_QUANLUC]:
         existing = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id, phong_duyet=phong.value).first()
         if not existing:
             pd = PheDuyet(

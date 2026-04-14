@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Quản lý chức vụ{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-list-check me-2"></i>Quản lý danh mục chức vụ</h4>
+    </div>
+    <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#addModal">
+        <i class="bi bi-plus-lg me-1"></i> Thêm chức vụ
+    </button>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Tên chức vụ</th>
+                        <th>Thứ tự</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="fw-semibold">{{ item.ten }}</td>
+                        <td>{{ item.thu_tu }}</td>
+                        <td>
+                            {% if item.is_active %}
+                            <span class="badge bg-success">Đang dùng</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Ẩn</span>
+                            {% endif %}
+                        </td>
+                        <td class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-navy" data-bs-toggle="modal" data-bs-target="#edit{{ item.id }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('admin.toggle_chuc_vu', id=item.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-warning" type="submit"><i class="bi bi-arrow-repeat"></i></button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin.delete_chuc_vu', id=item.id) }}" onsubmit="return confirm('Xóa chức vụ này?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="edit{{ item.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST" action="{{ url_for('admin.edit_chuc_vu', id=item.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <div class="modal-header modal-header-navy">
+                                        <h6 class="modal-title">Sửa chức vụ</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-2">
+                                            <label class="form-label">Tên</label>
+                                            <input class="form-control" name="ten" value="{{ item.ten }}" required>
+                                        </div>
+                                        <div>
+                                            <label class="form-label">Thứ tự</label>
+                                            <input class="form-control" name="thu_tu" type="number" value="{{ item.thu_tu }}">
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                        <button type="submit" class="btn btn-navy">Lưu</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.create_chuc_vu') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title">Thêm chức vụ</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Tên chức vụ</label>
+                        <input class="form-control" name="ten" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Thứ tự</label>
+                        <input class="form-control" name="thu_tu" type="number" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy">Thêm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

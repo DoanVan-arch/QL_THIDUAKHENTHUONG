@@ -85,7 +85,8 @@
                 <h5><i class="bi bi-shield-check me-2"></i>Kết quả duyệt</h5>
             </div>
             <div class="card-body-custom">
-                {% for phong_name in dept_names %}
+                {% for col in tracking_dept_columns %}
+                {% set phong_name = col.key %}
                 <div class="approval-step">
                     {% if phong_name in dept_item_results %}
                         {% set dept = dept_item_results[phong_name] %}

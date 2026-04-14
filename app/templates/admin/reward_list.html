@@ -15,6 +15,53 @@
     </div>
 </div>
 
+{% if can_admin_action and pending_final_nominations %}
+<div class="card-section mb-3">
+    <div class="card-body-custom py-2">
+        <div class="mb-2">
+            <strong>Đề xuất chờ phê duyệt cuối (danh sách cá nhân):</strong>
+            <span class="badge bg-warning text-dark ms-1">{{ pending_final_nominations|length }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Đơn vị</th>
+                        <th>Cá nhân</th>
+                        <th>Danh hiệu</th>
+                        <th>Năm học</th>
+                        <th>Ngày gửi</th>
+                        <th class="text-center">Đồng ý / Không đồng ý</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in pending_final_nominations %}
+                    {% set dx = item.dx %}
+                    {% set ct = item.ct %}
+                    <tr>
+                        <td>{{ dx.don_vi.ten_don_vi }}</td>
+                        <td>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}</td>
+                        <td>{{ ct.loai_danh_hieu }}</td>
+                        <td>{{ dx.nam_hoc }}</td>
+                        <td>{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>
+                        <td class="text-center">
+                            <form method="POST" action="{{ url_for('admin.final_approve_individual', ct_id=ct.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>Đồng ý</button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger ms-1" type="button" onclick="openRejectModal({{ dx.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi)|e }}')">
+                                <i class="bi bi-x-lg me-1"></i>Không đồng ý
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Summary stats -->
 <div class="d-flex gap-3 mb-3 flex-wrap">
     <div class="stat-mini">
@@ -120,11 +167,13 @@
                                class="btn btn-sm btn-outline-navy me-1" title="Xem chi tiết">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            {% if can_admin_action %}
                             <button type="button" class="btn btn-sm btn-outline-danger"
                                     title="Thu hồi phê duyệt cuối cho đề xuất này"
                                     onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -204,6 +253,31 @@
     </div>
 </div>
 
+{% if can_admin_action %}
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="rejectForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-danger text-white">
+                    <h6 class="modal-title"><i class="bi bi-x-lg me-2"></i>Không đồng ý phê duyệt cuối</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Đơn vị: <strong id="rejectUnit"></strong></p>
+                    <label class="form-label">Lý do</label>
+                    <textarea class="form-control" name="ly_do" rows="3" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận không đồng ý</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <style>
     .stat-mini {
         display: flex;
@@ -224,6 +298,13 @@ function openRevokeModal(deXuatId, unitName, namHoc) {
     document.getElementById('revokeUnitName').textContent = unitName;
     document.getElementById('revokeNamHoc').textContent = namHoc;
     var modal = new bootstrap.Modal(document.getElementById('revokeModal'));
+    modal.show();
+}
+
+function openRejectModal(deXuatId, unitName) {
+    document.getElementById('rejectForm').action = '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0', '/' + deXuatId);
+    document.getElementById('rejectUnit').textContent = unitName;
+    var modal = new bootstrap.Modal(document.getElementById('rejectModal'));
     modal.show();
 }
 </script>

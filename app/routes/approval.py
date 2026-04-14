@@ -16,8 +16,30 @@ ROLE_TO_PHONG = {
     Role.PHONG_THAMMUU: PhongDuyet.PHONG_THAMMUU.value,
     Role.PHONG_KHOAHOC: PhongDuyet.PHONG_KHOAHOC.value,
     Role.PHONG_DAOTAO: PhongDuyet.PHONG_DAOTAO.value,
+    Role.THU_TRUONG_PHONG_CHINHTRI: PhongDuyet.THU_TRUONG_PHONG_CHINHTRI.value,
+    Role.THU_TRUONG_PHONG_TMHC: PhongDuyet.THU_TRUONG_PHONG_TMHC.value,
     Role.BAN_CANBO: PhongDuyet.BAN_CANBO.value,
+    Role.BAN_TOCHUC: PhongDuyet.BAN_TOCHUC.value,
+    Role.BAN_TUYENHUAN: PhongDuyet.BAN_TUYENHUAN.value,
+    Role.BAN_CTCQ: PhongDuyet.BAN_CTCQ.value,
+    Role.BAN_CNTT: PhongDuyet.BAN_CNTT.value,
+    Role.BAN_TAC_HUAN: PhongDuyet.BAN_TAC_HUAN.value,
+    Role.BAN_KHAOTHI: PhongDuyet.BAN_KHAOTHI.value,
     Role.BAN_QUANLUC: PhongDuyet.BAN_QUANLUC.value,
+}
+
+_GROUP_CONFIRMATION = {
+    Role.THU_TRUONG_PHONG_CHINHTRI: {
+        PhongDuyet.BAN_CANBO.value,
+        PhongDuyet.BAN_TOCHUC.value,
+        PhongDuyet.BAN_TUYENHUAN.value,
+        PhongDuyet.BAN_CTCQ.value,
+    },
+    Role.THU_TRUONG_PHONG_TMHC: {
+        PhongDuyet.BAN_TAC_HUAN.value,
+        PhongDuyet.BAN_QUANLUC.value,
+        PhongDuyet.BAN_CNTT.value,
+    },
 }
 
 # Reverse map: PhongDuyet display name -> Role
@@ -33,7 +55,7 @@ _FALLBACK_PHONG_FIELDS = {
     Role.PHONG_THAMMUU: [
         'kiem_tra_tin_hoc', 'kiem_tra_dieu_lenh', 'dia_ly_quan_su', 'ban_sung', 'the_luc', 'ket_qua_doan_the',
     ],
-    Role.PHONG_CHINHTRI: ['kiem_tra_chinh_tri', 'ket_qua_doan_the'],
+    Role.PHONG_CHINHTRI: ['kiem_tra_chinh_tri', 'ket_qua_doan_the', 'xep_loai_dang_vien'],
     Role.BAN_CANBO: ['muc_do_hoan_thanh'],
     Role.BAN_QUANLUC: ['muc_do_hoan_thanh'],
 }
@@ -43,6 +65,7 @@ _FALLBACK_FIELD_LABELS = {
     'kiem_tra_dieu_lenh': 'Điều lệnh', 'ban_sung': 'Bắn súng', 'the_luc': 'Thể lực',
     'kiem_tra_chinh_tri': 'Chính trị', 'kiem_tra_tin_hoc': 'Kỹ năng số',
     'dia_ly_quan_su': 'Địa hình QS', 'danh_hieu_gv_gioi': 'GV giỏi',
+    'xep_loai_dang_vien': 'Xếp loại ĐV',
     'dinh_muc_giang_day': 'Định mức GD', 'ket_qua_kiem_tra_giang': 'KT giảng',
     'thoi_gian_lao_dong_kh': 'LĐ KH', 'tien_do_pgs': 'Tiến độ PGS',
     'danh_hieu_hv_gioi': 'HV giỏi', 'diem_tong_ket': 'Điểm TK',
@@ -160,10 +183,25 @@ def _notify_rejections(phe_duyet):
 def pending_list():
     phong_name = ROLE_TO_PHONG.get(current_user.role, '')
 
-    pending_reviews = PheDuyet.query.filter_by(
-        phong_duyet=phong_name,
-        ket_qua=KetQuaDuyet.CHO_DUYET.value
-    ).order_by(PheDuyet.created_at.desc()).all()
+    if current_user.role in _GROUP_CONFIRMATION:
+        all_pending = PheDuyet.query.filter_by(
+            phong_duyet=phong_name,
+            ket_qua=KetQuaDuyet.CHO_DUYET.value
+        ).order_by(PheDuyet.created_at.desc()).all()
+        pending_reviews = []
+        required_groups = _GROUP_CONFIRMATION[current_user.role]
+        for pd in all_pending:
+            group_reviews = PheDuyet.query.filter(
+                PheDuyet.de_xuat_id == pd.de_xuat_id,
+                PheDuyet.phong_duyet.in_(list(required_groups))
+            ).all()
+            if group_reviews and all(g.ket_qua == KetQuaDuyet.DONG_Y.value for g in group_reviews):
+                pending_reviews.append(pd)
+    else:
+        pending_reviews = PheDuyet.query.filter_by(
+            phong_duyet=phong_name,
+            ket_qua=KetQuaDuyet.CHO_DUYET.value
+        ).order_by(PheDuyet.created_at.desc()).all()
 
     # Ensure per-item records exist for all chi_tiets
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items
@@ -267,6 +305,16 @@ def review_nomination(id):
     phe_duyet = PheDuyet.query.filter_by(
         de_xuat_id=id, phong_duyet=phong_name
     ).first_or_404()
+
+    if current_user.role in _GROUP_CONFIRMATION:
+        required_groups = _GROUP_CONFIRMATION[current_user.role]
+        group_reviews = PheDuyet.query.filter(
+            PheDuyet.de_xuat_id == id,
+            PheDuyet.phong_duyet.in_(list(required_groups))
+        ).all()
+        if not group_reviews or not all(g.ket_qua == KetQuaDuyet.DONG_Y.value for g in group_reviews):
+            flash('Chưa đủ kết quả nhất trí từ các ban thuộc nhóm xác nhận.', 'warning')
+            return redirect(url_for('approval.pending_list'))
 
     # Ensure per-item records exist for all chi_tiets
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items

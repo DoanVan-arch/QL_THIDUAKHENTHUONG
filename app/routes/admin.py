@@ -5,14 +5,15 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 from app.extensions import db
-from app.models.user import User, Role
+from app.models.user import User, Role, ROLE_DISPLAY
 from app.models.unit import DonVi, LoaiDonVi
 from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
 from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDanhHieu, DanhHieu, TieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
-from app.utils.decorators import admin_required
+from app.models.catalog import ChucVuOption, CapBacOption
+from app.utils.decorators import admin_required, admin_or_reward_viewer_required
 from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
 
@@ -21,7 +22,26 @@ admin_bp = Blueprint('admin', __name__)
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
     'Phòng Chính trị', 'Phòng Tham mưu', 'Phòng Khoa học', 'Phòng Đào tạo',
-    'Ban Cán bộ', 'Ban Quân lực'
+    'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
+    'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
+    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Quân lực'
+]
+
+# Display order for approval columns in tracking screens
+TRACKING_DEPT_COLUMNS = [
+    {'key': 'Ban Cán bộ', 'label': 'Ban Cán bộ'},
+    {'key': 'Ban Tổ chức', 'label': 'Ban Tổ chức'},
+    {'key': 'Ban Tuyên huấn', 'label': 'Ban Tuyên huấn'},
+    {'key': 'Ban Công tác quần chúng', 'label': 'Ban Công tác quần chúng'},
+    {'key': 'Thủ trưởng Phòng Chính trị', 'label': 'TT phòng Chính trị'},
+    {'key': 'Ban Công nghệ thông tin', 'label': 'Ban Công nghệ thông tin'},
+    {'key': 'Ban Tác huấn', 'label': 'Ban Tác huấn'},
+    {'key': 'Ban Quân lực', 'label': 'Ban Quân lực'},
+    {'key': 'Thủ trưởng Phòng TM-HC', 'label': 'TT phòng TM-HC'},
+    {'key': 'Phòng Đào tạo', 'label': '(Phòng Đào tạo)'},
+    {'key': 'Phòng Khoa học', 'label': '(Phòng Khoa học quân sự)'},
+    {'key': 'Ban Khảo thí', 'label': 'Ban Khảo thí'},
+    {'key': 'Ủy ban Kiểm tra', 'label': 'Ủy ban Kiểm tra'},
 ]
 
 # Đối tượng thuộc diện Ban Quân lực quản lý
@@ -37,6 +57,7 @@ ALL_FIELD_LABELS = {
     'kiem_tra_chinh_tri': 'KT Chính trị',
     'kiem_tra_tin_hoc': 'Kỹ năng số',
     'dia_ly_quan_su': 'ĐHQS',
+    'xep_loai_dang_vien': 'Xếp loại đảng viên',
     'danh_hieu_gv_gioi': 'DH GV giỏi',
     'dinh_muc_giang_day': 'Định mức GD',
     'ket_qua_kiem_tra_giang': 'KT giảng',
@@ -58,6 +79,7 @@ ALL_FIELDS = [
     'muc_do_hoan_thanh', 'phieu_tin_nhiem',
     'kiem_tra_chinh_tri', 'kiem_tra_dieu_lenh', 'kiem_tra_tin_hoc',
     'dia_ly_quan_su', 'ban_sung', 'the_luc',
+    'xep_loai_dang_vien',
     'ket_qua_doan_the', 'chu_tri_don_vi_danh_hieu',
     'danh_hieu_gv_gioi', 'dinh_muc_giang_day', 'ket_qua_kiem_tra_giang',
     'tien_do_pgs', 'thoi_gian_lao_dong_kh',
@@ -122,6 +144,8 @@ def approval_tracking():
     unit_groups_dict = {}  # unit_name -> list of nomination data
     total_individuals = 0
 
+    tracking_dept_names = [c['key'] for c in TRACKING_DEPT_COLUMNS]
+
     for dx in nominations:
         unit_name = dx.don_vi.ten_don_vi
         if unit_name not in unit_groups_dict:
@@ -130,11 +154,10 @@ def approval_tracking():
         # Build dept approval lookup: dept_name -> {ct_id -> KetQuaDuyetChiTiet}
         dept_lookup = {}
         for pd in dx.phe_duyets:
-            if pd.phong_duyet in DEPT_NAMES:
-                dept_lookup[pd.phong_duyet] = {
-                    'phe_duyet': pd,
-                    'items': {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet},
-                }
+            dept_lookup[pd.phong_duyet] = {
+                'phe_duyet': pd,
+                'items': {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet},
+            }
 
         chi_tiets_data = []
         for ct in dx.chi_tiets:
@@ -160,16 +183,17 @@ def approval_tracking():
 
             ct_dept_results = {}
             all_dept_ok = True
-            for dept_name in DEPT_NAMES:
+            for dept_name in tracking_dept_names:
                 dept_data = dept_lookup.get(dept_name)
                 if dept_data:
                     kq = dept_data['items'].get(ct.id)
                     ct_dept_results[dept_name] = kq.ket_qua if kq else None
-                    if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
+                    if dept_name in DEPT_NAMES and (not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value):
                         all_dept_ok = False
                 else:
                     ct_dept_results[dept_name] = None
-                    all_dept_ok = False
+                    if dept_name in DEPT_NAMES:
+                        all_dept_ok = False
 
             # Individual can be final-approved if all 6 depts approved this person
             ct_can_approve = all_dept_ok
@@ -217,6 +241,7 @@ def approval_tracking():
                            danh_hieu_list=danh_hieu_list,
                            stats=stats,
                            dept_names=DEPT_NAMES,
+                           tracking_dept_columns=TRACKING_DEPT_COLUMNS,
                            total_individuals=total_individuals,
                            all_field_labels=ALL_FIELD_LABELS,
                            all_fields=ALL_FIELDS)
@@ -301,6 +326,7 @@ def tracking_detail(ct_id):
                            de_xuat=de_xuat,
                            dept_item_results=dept_item_results,
                            dept_names=DEPT_NAMES,
+                           tracking_dept_columns=TRACKING_DEPT_COLUMNS,
                            can_final_approve=can_final_approve,
                            already_approved=already_approved,
                            all_field_labels=all_field_labels,
@@ -626,7 +652,7 @@ def revoke_final_approval(id):
 
 @admin_bp.route('/reward-list')
 @login_required
-@admin_required
+@admin_or_reward_viewer_required
 def reward_list():
     """View all finalized awards (KhenThuong records)."""
     page = request.args.get('page', 1, type=int)
@@ -668,6 +694,30 @@ def reward_list():
     for dh in danh_hieu_list:
         stats_by_danh_hieu[dh] = KhenThuong.query.filter_by(loai_danh_hieu=dh).count()
 
+    pending_final_nominations = []
+    if current_user.is_admin:
+        pending_final_nominations = []
+        nominations_waiting = DeXuat.query.filter_by(
+            trang_thai=TrangThaiDeXuat.DA_DUYET.value
+        ).order_by(DeXuat.ngay_gui.desc()).all()
+
+        for dx in nominations_waiting:
+            for ct in dx.chi_tiets:
+                if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
+                    continue
+                all_dept_ok = True
+                for dept_name in DEPT_NAMES:
+                    pd = PheDuyet.query.filter_by(de_xuat_id=dx.id, phong_duyet=dept_name).first()
+                    if not pd:
+                        all_dept_ok = False
+                        break
+                    kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
+                    if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
+                        all_dept_ok = False
+                        break
+                if all_dept_ok:
+                    pending_final_nominations.append({'dx': dx, 'ct': ct})
+
     return render_template('admin/reward_list.html',
                            rewards=rewards,
                            nam_hoc_filter=nam_hoc_filter,
@@ -678,12 +728,14 @@ def reward_list():
                            unit_names=unit_names,
                            danh_hieu_list=danh_hieu_list,
                            total_rewards=total_rewards,
-                           stats_by_danh_hieu=stats_by_danh_hieu)
+                           stats_by_danh_hieu=stats_by_danh_hieu,
+                           can_admin_action=current_user.is_admin,
+                           pending_final_nominations=pending_final_nominations)
 
 
 @admin_bp.route('/reward-list/export')
 @login_required
-@admin_required
+@admin_or_reward_viewer_required
 def export_reward_list():
     """Export danh sách khen thưởng ra file Excel với đầy đủ thông tin."""
     nam_hoc_filter = request.args.get('nam_hoc', '')
@@ -877,7 +929,7 @@ def export_reward_list():
 
 @admin_bp.route('/reward-detail/<int:kt_id>')
 @login_required
-@admin_required
+@admin_or_reward_viewer_required
 def reward_detail(kt_id):
     """View detailed info for one KhenThuong record (individual award)."""
     kt = KhenThuong.query.get_or_404(kt_id)
@@ -990,7 +1042,7 @@ def final_reject(id):
 def manage_users():
     users = User.query.order_by(User.role, User.username).all()
     units = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu).all()
-    roles = [(r.value, r.name) for r in Role]
+    roles = [(r.value, ROLE_DISPLAY.get(r, r.name)) for r in Role]
     return render_template('admin/manage_users.html',
                            users=users, units=units, roles=roles)
 
@@ -1355,6 +1407,7 @@ def admin_personnel_edit(id):
         qn.cap_bac = request.form.get('cap_bac', '').strip() or None
         qn.chuc_danh = request.form.get('chuc_danh', '').strip() or None
         qn.chuc_vu = request.form.get('chuc_vu', '').strip() or None
+        qn.can_cuoc_cong_dan = request.form.get('can_cuoc_cong_dan', '').strip() or None
         qn.doi_tuong = request.form.get('doi_tuong', '').strip() or None
         qn.hoc_ham = request.form.get('hoc_ham', 'Không').strip()
         qn.hoc_vi = request.form.get('hoc_vi', 'Không').strip()
@@ -1381,10 +1434,149 @@ def admin_personnel_edit(id):
             return redirect(url_for('admin.admin_personnel_detail', id=qn.id))
 
     return render_template('admin/personnel_edit.html', qn=qn,
-                           cap_bac_list=[e.value for e in CapBac],
+                           cap_bac_list=[x.ten for x in CapBacOption.query.filter_by(is_active=True).order_by(CapBacOption.thu_tu, CapBacOption.ten).all()] or [e.value for e in CapBac],
                            hoc_ham_list=[e.value for e in HocHam],
                            hoc_vi_list=[e.value for e in HocVi],
-                           doi_tuong_list=[e.value for e in DoiTuong])
+                           doi_tuong_list=[e.value for e in DoiTuong],
+                           chuc_vu_options=ChucVuOption.query.filter_by(is_active=True).order_by(ChucVuOption.thu_tu, ChucVuOption.ten).all())
+
+
+@admin_bp.route('/cap-bac')
+@login_required
+@admin_required
+def manage_cap_bac():
+    items = CapBacOption.query.order_by(CapBacOption.thu_tu, CapBacOption.ten).all()
+    return render_template('admin/manage_cap_bac.html', items=items)
+
+
+@admin_bp.route('/cap-bac/create', methods=['POST'])
+@login_required
+@admin_required
+def create_cap_bac():
+    ten = request.form.get('ten', '').strip()
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    if not ten:
+        flash('Tên cấp bậc không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_cap_bac'))
+    if CapBacOption.query.filter_by(ten=ten).first():
+        flash('Cấp bậc đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_cap_bac'))
+    db.session.add(CapBacOption(ten=ten, thu_tu=thu_tu, is_active=True))
+    db.session.commit()
+    flash('Đã thêm cấp bậc.', 'success')
+    return redirect(url_for('admin.manage_cap_bac'))
+
+
+@admin_bp.route('/cap-bac/<int:id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_cap_bac(id):
+    item = CapBacOption.query.get_or_404(id)
+    ten = request.form.get('ten', '').strip()
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    if not ten:
+        flash('Tên cấp bậc không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_cap_bac'))
+    dup = CapBacOption.query.filter(CapBacOption.ten == ten, CapBacOption.id != id).first()
+    if dup:
+        flash('Tên cấp bậc đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_cap_bac'))
+    item.ten = ten
+    item.thu_tu = thu_tu
+    db.session.commit()
+    flash('Đã cập nhật cấp bậc.', 'success')
+    return redirect(url_for('admin.manage_cap_bac'))
+
+
+@admin_bp.route('/cap-bac/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_cap_bac(id):
+    item = CapBacOption.query.get_or_404(id)
+    item.is_active = not item.is_active
+    db.session.commit()
+    flash('Đã cập nhật trạng thái cấp bậc.', 'success')
+    return redirect(url_for('admin.manage_cap_bac'))
+
+
+@admin_bp.route('/cap-bac/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_cap_bac(id):
+    item = CapBacOption.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Đã xóa cấp bậc.', 'success')
+    return redirect(url_for('admin.manage_cap_bac'))
+
+
+@admin_bp.route('/chuc-vu')
+@login_required
+@admin_required
+def manage_chuc_vu():
+    items = ChucVuOption.query.order_by(ChucVuOption.thu_tu, ChucVuOption.ten).all()
+    return render_template('admin/manage_chuc_vu.html', items=items)
+
+
+@admin_bp.route('/chuc-vu/create', methods=['POST'])
+@login_required
+@admin_required
+def create_chuc_vu():
+    ten = request.form.get('ten', '').strip()
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    if not ten:
+        flash('Tên chức vụ không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_chuc_vu'))
+    if ChucVuOption.query.filter_by(ten=ten).first():
+        flash('Chức vụ đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_chuc_vu'))
+    db.session.add(ChucVuOption(ten=ten, thu_tu=thu_tu, is_active=True))
+    db.session.commit()
+    flash('Đã thêm chức vụ.', 'success')
+    return redirect(url_for('admin.manage_chuc_vu'))
+
+
+@admin_bp.route('/chuc-vu/<int:id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_chuc_vu(id):
+    item = ChucVuOption.query.get_or_404(id)
+    ten = request.form.get('ten', '').strip()
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    if not ten:
+        flash('Tên chức vụ không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_chuc_vu'))
+    dup = ChucVuOption.query.filter(ChucVuOption.ten == ten, ChucVuOption.id != id).first()
+    if dup:
+        flash('Tên chức vụ đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_chuc_vu'))
+    item.ten = ten
+    item.thu_tu = thu_tu
+    db.session.commit()
+    flash('Đã cập nhật chức vụ.', 'success')
+    return redirect(url_for('admin.manage_chuc_vu'))
+
+
+@admin_bp.route('/chuc-vu/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_chuc_vu(id):
+    item = ChucVuOption.query.get_or_404(id)
+    item.is_active = not item.is_active
+    db.session.commit()
+    flash('Đã cập nhật trạng thái chức vụ.', 'success')
+    return redirect(url_for('admin.manage_chuc_vu'))
+
+
+@admin_bp.route('/chuc-vu/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_chuc_vu(id):
+    item = ChucVuOption.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Đã xóa chức vụ.', 'success')
+    return redirect(url_for('admin.manage_chuc_vu'))
 
 
 # ------------------------------------------------------------------
@@ -1457,11 +1649,18 @@ TIEU_CHI_OPTIONS = [
     ('muc_do_hoan_thanh', 'Mức độ hoàn thành nhiệm vụ'),
     ('phieu_tin_nhiem', 'Phiếu tín nhiệm'),
     ('kiem_tra_chinh_tri', 'Kiểm tra chính trị'),
+    ('diem_kiem_tra_chinh_tri', 'Điểm kiểm tra chính trị'),
     ('kiem_tra_dieu_lenh', 'Kiểm tra điều lệnh'),
+    ('diem_kiem_tra_dieu_lenh', 'Điểm kiểm tra điều lệnh'),
     ('kiem_tra_tin_hoc', 'Kỹ năng số'),
+    ('diem_kiem_tra_tin_hoc', 'Điểm kỹ năng số'),
     ('dia_ly_quan_su', 'Địa hình quân sự'),
+    ('diem_dia_ly_quan_su', 'Điểm địa hình quân sự'),
     ('ban_sung', 'Bắn súng'),
+    ('diem_ban_sung', 'Điểm bắn súng'),
     ('the_luc', 'Thể lực'),
+    ('diem_the_luc', 'Điểm thể lực'),
+    ('xep_loai_dang_vien', 'Xếp loại đảng viên hằng năm'),
     ('ket_qua_doan_the', 'Kết quả đoàn thể'),
     ('chu_tri_don_vi_danh_hieu', 'Chủ trì đơn vị đạt danh hiệu'),
     ('danh_hieu_gv_gioi', 'Danh hiệu GV giỏi'),
@@ -1622,7 +1821,15 @@ PHONG_DUYET_OPTIONS = [
     ('Phòng Tham mưu', 'Phòng Tham mưu'),
     ('Phòng Khoa học', 'Phòng Khoa học'),
     ('Phòng Đào tạo', 'Phòng Đào tạo'),
+    ('Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng Chính trị'),
+    ('Thủ trưởng Phòng TM-HC', 'Thủ trưởng Phòng TM-HC'),
     ('Ban Cán bộ', 'Ban Cán bộ'),
+    ('Ban Tổ chức', 'Ban Tổ chức'),
+    ('Ban Tuyên huấn', 'Ban Tuyên huấn'),
+    ('Ban Công tác quần chúng', 'Ban Công tác quần chúng'),
+    ('Ban Công nghệ thông tin', 'Ban Công nghệ thông tin'),
+    ('Ban Tác huấn', 'Ban Tác huấn'),
+    ('Ban Khảo thí', 'Ban Khảo thí'),
     ('Ban Quân lực', 'Ban Quân lực'),
 ]
 
@@ -1632,10 +1839,19 @@ PHONG_DUYET_OPTIONS = [
 @admin_required
 def manage_tieu_chi():
     tieu_chis = TieuChi.query.order_by(TieuChi.thu_tu, TieuChi.ten).all()
+
+    model_fields = set(col.name for col in DeXuatChiTiet.__table__.columns)
+    db_fields = set(tc.ma_truong for tc in tieu_chis)
+    missing_fields = sorted([f for f in model_fields if f not in db_fields and f not in {
+        'id', 'de_xuat_id', 'quan_nhan_id', 'loai_danh_hieu', 'doi_tuong', 'nam_hoc',
+        'ghi_chu', 'created_at', 'updated_at'
+    }])
+
     return render_template('admin/manage_tieu_chi.html',
                            tieu_chis=tieu_chis,
                            nhom_choices=TieuChi.NHOM_CHOICES,
-                           phong_duyet_options=PHONG_DUYET_OPTIONS)
+                           phong_duyet_options=PHONG_DUYET_OPTIONS,
+                           missing_fields=missing_fields)
 
 
 # ------------------------------------------------------------------

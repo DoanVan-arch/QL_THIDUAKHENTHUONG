@@ -75,6 +75,7 @@ class QuanNhan(db.Model):
     cap_bac = Column(String(50), nullable=True)
     chuc_danh = Column(String(100), nullable=True)
     chuc_vu = Column(String(100), nullable=True)
+    can_cuoc_cong_dan = Column(String(20), nullable=True)
     ngay_sinh = Column(Date, nullable=True)
     ngay_nhap_ngu = Column(String(20), nullable=True)
     doi_tuong = Column(String(50), nullable=True)

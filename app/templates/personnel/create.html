@@ -27,6 +27,10 @@
                         <input type="text" class="form-control" name="ho_ten" required>
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label">Căn cước công dân</label>
+                        <input type="text" class="form-control" name="can_cuoc_cong_dan" placeholder="VD: 012345678901">
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">Cấp bậc</label>
                         <select class="form-select" name="cap_bac">
                             <option value="">-- Chọn --</option>
@@ -50,7 +54,12 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Chức vụ</label>
-                        <input type="text" class="form-control" name="chuc_vu">
+                        <input class="form-control" list="chucVuOptions" name="chuc_vu" placeholder="Chọn hoặc nhập chức vụ">
+                        <datalist id="chucVuOptions">
+                            {% for cv in chuc_vu_options %}
+                            <option value="{{ cv.ten }}"></option>
+                            {% endfor %}
+                        </datalist>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Ngày sinh</label>

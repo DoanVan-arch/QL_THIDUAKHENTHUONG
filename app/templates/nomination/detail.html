@@ -234,23 +234,26 @@
                 {% if ct.phieu_tin_nhiem %}
                 <div class="col-md-3"><small class="text-muted">Phiếu tín nhiệm:</small> {{ ct.phieu_tin_nhiem }}</div>
                 {% endif %}
-                {% if ct.kiem_tra_dieu_lenh %}
-                <div class="col-md-3"><small class="text-muted">Điều lệnh:</small> {{ ct.kiem_tra_dieu_lenh }}</div>
+                {% if ct.diem_kiem_tra_dieu_lenh or ct.kiem_tra_dieu_lenh %}
+                <div class="col-md-6"><small class="text-muted">Điều lệnh:</small> Điểm {{ ct.diem_kiem_tra_dieu_lenh or '-' }} - Xếp loại {{ ct.kiem_tra_dieu_lenh or '-' }}</div>
                 {% endif %}
-                {% if ct.ban_sung %}
-                <div class="col-md-3"><small class="text-muted">Bắn súng:</small> {{ ct.ban_sung }}</div>
+                {% if ct.diem_ban_sung or ct.ban_sung %}
+                <div class="col-md-6"><small class="text-muted">Bắn súng:</small> Điểm {{ ct.diem_ban_sung or '-' }} - Xếp loại {{ ct.ban_sung or '-' }}</div>
                 {% endif %}
-                {% if ct.the_luc %}
-                <div class="col-md-3"><small class="text-muted">Thể lực:</small> {{ ct.the_luc }}</div>
+                {% if ct.diem_the_luc or ct.the_luc %}
+                <div class="col-md-6"><small class="text-muted">Thể lực:</small> Điểm {{ ct.diem_the_luc or '-' }} - Xếp loại {{ ct.the_luc or '-' }}</div>
                 {% endif %}
-                {% if ct.kiem_tra_chinh_tri %}
-                <div class="col-md-3"><small class="text-muted">Chính trị:</small> {{ ct.kiem_tra_chinh_tri }}</div>
+                {% if ct.diem_kiem_tra_chinh_tri or ct.kiem_tra_chinh_tri %}
+                <div class="col-md-6"><small class="text-muted">Chính trị:</small> Điểm {{ ct.diem_kiem_tra_chinh_tri or '-' }} - Xếp loại {{ ct.kiem_tra_chinh_tri or '-' }}</div>
                 {% endif %}
-                {% if ct.kiem_tra_tin_hoc %}
-                <div class="col-md-3"><small class="text-muted">Kỹ năng số:</small> {{ ct.kiem_tra_tin_hoc }}</div>
+                {% if ct.diem_kiem_tra_tin_hoc or ct.kiem_tra_tin_hoc %}
+                <div class="col-md-6"><small class="text-muted">Kỹ năng số:</small> Điểm {{ ct.diem_kiem_tra_tin_hoc or '-' }} - Xếp loại {{ ct.kiem_tra_tin_hoc or '-' }}</div>
                 {% endif %}
-                {% if ct.dia_ly_quan_su %}
-                <div class="col-md-3"><small class="text-muted">Địa hình QS:</small> {{ ct.dia_ly_quan_su }}</div>
+                {% if ct.diem_dia_ly_quan_su or ct.dia_ly_quan_su %}
+                <div class="col-md-6"><small class="text-muted">Địa hình QS:</small> Điểm {{ ct.diem_dia_ly_quan_su or '-' }} - Xếp loại {{ ct.dia_ly_quan_su or '-' }}</div>
+                {% endif %}
+                {% if ct.xep_loai_dang_vien %}
+                <div class="col-md-3"><small class="text-muted">Xếp loại ĐV:</small> {{ ct.xep_loai_dang_vien }}</div>
                 {% endif %}
                 {% if ct.danh_hieu_gv_gioi %}
                 <div class="col-md-3"><small class="text-muted">GV giỏi:</small> {{ ct.danh_hieu_gv_gioi }}</div>

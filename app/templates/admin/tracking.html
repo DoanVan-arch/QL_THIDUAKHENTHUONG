@@ -186,12 +186,9 @@
                                 <th class="text-center" style="min-width:70px;font-size:0.72rem;">{{ all_field_labels[field] }}</th>
                                 {% endfor %}
                                 {% endif %}
-                                <th class="text-center">P. Chính trị</th>
-                                <th class="text-center">P. Tham mưu</th>
-                                <th class="text-center">P. Khoa học</th>
-                                <th class="text-center">P. Đào tạo</th>
-                                <th class="text-center">B. Cán bộ</th>
-                                <th class="text-center">B. Quân lực</th>
+                                {% for col in tracking_dept_columns %}
+                                <th class="text-center">{{ col.label }}</th>
+                                {% endfor %}
                                 <th class="text-center sticky-action-col" style="width:120px;">Thao tác</th>
                             </tr>
                         </thead>
@@ -245,7 +242,8 @@
                                 </td>
                                 {% endfor %}
                                 {% endif %}
-                                {% for dn in dept_names %}
+                                {% for col in tracking_dept_columns %}
+                                {% set dn = col.key %}
                                 <td class="text-center">
                                     {% set kq = dept_results[dn] %}
                                     {% if kq == 'Đồng ý' %}
