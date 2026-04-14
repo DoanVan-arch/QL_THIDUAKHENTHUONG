@@ -108,7 +108,7 @@
                         <label class="form-label">Vai trò <span class="text-danger">*</span></label>
                         <select class="form-select" name="role" required id="newUserRole" onchange="toggleUnitField()">
                             {% for val, name in roles %}
-                            <option value="{{ val }}">{{ val }}</option>
+                            <option value="{{ val }}">{{ name }}</option>
                             {% endfor %}
                         </select>
                     </div>

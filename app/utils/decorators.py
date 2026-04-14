@@ -25,7 +25,11 @@ def department_required(f):
     return role_required(
         Role.PHONG_CHINHTRI, Role.PHONG_THAMMUU,
         Role.PHONG_KHOAHOC, Role.PHONG_DAOTAO,
-        Role.BAN_CANBO, Role.BAN_QUANLUC,
+        Role.THU_TRUONG_PHONG_CHINHTRI, Role.THU_TRUONG_PHONG_TMHC,
+        Role.BAN_CANBO, Role.BAN_TOCHUC, Role.BAN_TUYENHUAN,
+        Role.BAN_CTCQ, Role.BAN_CNTT, Role.BAN_TAC_HUAN,
+        Role.BAN_KHAOTHI,
+        Role.BAN_QUANLUC,
     )(f)
 
 
@@ -37,5 +41,22 @@ def admin_or_department_required(f):
     return role_required(
         Role.ADMIN, Role.PHONG_CHINHTRI, Role.PHONG_THAMMUU,
         Role.PHONG_KHOAHOC, Role.PHONG_DAOTAO,
-        Role.BAN_CANBO, Role.BAN_QUANLUC,
+        Role.THU_TRUONG_PHONG_CHINHTRI, Role.THU_TRUONG_PHONG_TMHC,
+        Role.BAN_CANBO, Role.BAN_TOCHUC, Role.BAN_TUYENHUAN,
+        Role.BAN_CTCQ, Role.BAN_CNTT, Role.BAN_TAC_HUAN,
+        Role.BAN_KHAOTHI,
+        Role.BAN_QUANLUC,
+    )(f)
+
+
+def admin_or_reward_viewer_required(f):
+    return role_required(
+        Role.ADMIN,
+        Role.BAN_TUYENHUAN,
+        Role.BAN_CANBO,
+        Role.BAN_TOCHUC,
+        Role.BAN_BAOVE_ANNINH,
+        Role.BAN_CTCQ,
+        Role.BAN_KEHOACH_TONGHOP,
+        Role.UY_BAN_KIEMTRA,
     )(f)

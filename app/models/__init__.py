@@ -6,3 +6,4 @@ from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
 from app.models.notification import ThongBao
+from app.models.catalog import ChucVuOption, CapBacOption

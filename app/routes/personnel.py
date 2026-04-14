@@ -1,12 +1,16 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import Role
 from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
+from app.models.catalog import ChucVuOption, CapBacOption
 from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
+from io import BytesIO
+from openpyxl import Workbook, load_workbook
+from openpyxl.worksheet.datavalidation import DataValidation
 
 personnel_bp = Blueprint('personnel', __name__)
 
@@ -34,6 +38,15 @@ def list_personnel():
                            doi_tuong_list=[e.value for e in DoiTuong])
 
 
+def _get_chuc_vu_options():
+    return ChucVuOption.query.filter_by(is_active=True).order_by(ChucVuOption.thu_tu, ChucVuOption.ten).all()
+
+
+def _get_cap_bac_list():
+    db_values = [x.ten for x in CapBacOption.query.filter_by(is_active=True).order_by(CapBacOption.thu_tu, CapBacOption.ten).all()]
+    return db_values if db_values else [e.value for e in CapBac]
+
+
 @personnel_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 @unit_user_required
@@ -57,6 +70,7 @@ def create_personnel():
             cap_bac=request.form.get('cap_bac', '').strip() or None,
             chuc_danh=request.form.get('chuc_danh', '').strip() or None,
             chuc_vu=request.form.get('chuc_vu', '').strip() or None,
+            can_cuoc_cong_dan=request.form.get('can_cuoc_cong_dan', '').strip() or None,
             ngay_sinh=ngay_sinh,
             ngay_nhap_ngu=request.form.get('ngay_nhap_ngu', '').strip() or None,
             doi_tuong=request.form.get('doi_tuong', '').strip() or None,
@@ -71,10 +85,11 @@ def create_personnel():
         if not qn.ho_ten:
             flash('Họ tên không được để trống.', 'danger')
             return render_template('personnel/create.html',
-                                   cap_bac_list=[e.value for e in CapBac],
+                                   cap_bac_list=_get_cap_bac_list(),
                                    hoc_ham_list=[e.value for e in HocHam],
                                    hoc_vi_list=[e.value for e in HocVi],
-                                   doi_tuong_list=[e.value for e in DoiTuong])
+                                   doi_tuong_list=[e.value for e in DoiTuong],
+                                   chuc_vu_options=_get_chuc_vu_options())
 
         db.session.add(qn)
         db.session.commit()
@@ -82,10 +97,11 @@ def create_personnel():
         return redirect(url_for('personnel.detail_personnel', id=qn.id))
 
     return render_template('personnel/create.html',
-                           cap_bac_list=[e.value for e in CapBac],
+                           cap_bac_list=_get_cap_bac_list(),
                            hoc_ham_list=[e.value for e in HocHam],
                            hoc_vi_list=[e.value for e in HocVi],
-                           doi_tuong_list=[e.value for e in DoiTuong])
+                           doi_tuong_list=[e.value for e in DoiTuong],
+                           chuc_vu_options=_get_chuc_vu_options())
 
 
 @personnel_bp.route('/<int:id>')
@@ -115,6 +131,7 @@ def edit_personnel(id):
         qn.cap_bac = request.form.get('cap_bac', '').strip() or None
         qn.chuc_danh = request.form.get('chuc_danh', '').strip() or None
         qn.chuc_vu = request.form.get('chuc_vu', '').strip() or None
+        qn.can_cuoc_cong_dan = request.form.get('can_cuoc_cong_dan', '').strip() or None
         qn.doi_tuong = request.form.get('doi_tuong', '').strip() or None
         qn.hoc_ham = request.form.get('hoc_ham', 'Không').strip()
         qn.hoc_vi = request.form.get('hoc_vi', 'Không').strip()
@@ -141,10 +158,11 @@ def edit_personnel(id):
             return redirect(url_for('personnel.detail_personnel', id=qn.id))
 
     return render_template('personnel/edit.html', qn=qn,
-                           cap_bac_list=[e.value for e in CapBac],
+                           cap_bac_list=_get_cap_bac_list(),
                            hoc_ham_list=[e.value for e in HocHam],
                            hoc_vi_list=[e.value for e in HocVi],
-                           doi_tuong_list=[e.value for e in DoiTuong])
+                           doi_tuong_list=[e.value for e in DoiTuong],
+                           chuc_vu_options=_get_chuc_vu_options())
 
 
 @personnel_bp.route('/<int:id>/delete', methods=['POST'])
@@ -222,3 +240,197 @@ def delete_certificate(id):
     db.session.commit()
     flash('Đã xóa chứng chỉ.', 'success')
     return redirect(url_for('personnel.detail_personnel', id=qn.id))
+
+
+def _parse_bool(value):
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value == 1
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'y', 'x'}
+
+
+def _parse_date(value):
+    if value is None or value == '':
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if hasattr(value, 'date'):
+        try:
+            return value.date()
+        except Exception:
+            pass
+    text = str(value).strip()
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+@personnel_bp.route('/template')
+@login_required
+@unit_user_required
+def download_personnel_template():
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'QuanNhan'
+
+    lookup = wb.create_sheet('DanhMuc')
+    lookup.sheet_state = 'hidden'
+
+    cap_bac_values = _get_cap_bac_list()
+    doi_tuong_values = [e.value for e in DoiTuong]
+    hoc_ham_values = [e.value for e in HocHam]
+    hoc_vi_values = [e.value for e in HocVi]
+    chuc_vu_values = [x.ten for x in _get_chuc_vu_options()]
+    bool_values = ['0', '1']
+
+    data_sets = [
+        ('A', cap_bac_values),
+        ('B', doi_tuong_values),
+        ('C', hoc_ham_values),
+        ('D', hoc_vi_values),
+        ('E', chuc_vu_values),
+        ('F', bool_values),
+    ]
+    for col, values in data_sets:
+        for idx, value in enumerate(values, start=1):
+            lookup[f'{col}{idx}'] = value
+
+    headers = [
+        'ho_ten', 'cap_bac', 'doi_tuong', 'chuc_danh', 'chuc_vu', 'can_cuoc_cong_dan',
+        'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
+        'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
+    ]
+    ws.append(headers)
+    ws.append([
+        'Nguyễn Văn A', 'Trung úy', 'Giảng viên', 'Giảng viên', 'Trợ lý', '012345678901',
+        '1990-01-15', '09/2015', 'Không', 'Thạc sĩ', '12/12',
+        'Anh B2', 1, 0,
+    ])
+
+    max_row = 500
+    validations = [
+        ('B', f"=DanhMuc!$A$1:$A${max(1, len(cap_bac_values))}"),
+        ('C', f"=DanhMuc!$B$1:$B${max(1, len(doi_tuong_values))}"),
+        ('I', f"=DanhMuc!$C$1:$C${max(1, len(hoc_ham_values))}"),
+        ('J', f"=DanhMuc!$D$1:$D${max(1, len(hoc_vi_values))}"),
+        ('E', f"=DanhMuc!$E$1:$E${max(1, len(chuc_vu_values))}"),
+        ('M', "=DanhMuc!$F$1:$F$2"),
+        ('N', "=DanhMuc!$F$1:$F$2"),
+    ]
+    for col, formula in validations:
+        dv = DataValidation(type='list', formula1=formula, allow_blank=True)
+        dv.prompt = 'Chọn giá trị từ danh sách'
+        ws.add_data_validation(dv)
+        dv.add(f'{col}2:{col}{max_row}')
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='mau_quan_nhan.xlsx',
+    )
+
+
+@personnel_bp.route('/import', methods=['POST'])
+@login_required
+@unit_user_required
+def import_personnel_excel():
+    if not current_user.don_vi:
+        flash('Tài khoản chưa được gán đơn vị.', 'warning')
+        return redirect(url_for('personnel.list_personnel'))
+
+    file = request.files.get('excel_file')
+    if not file or not file.filename:
+        flash('Vui lòng chọn file Excel (.xlsx).', 'danger')
+        return redirect(url_for('personnel.list_personnel'))
+
+    try:
+        wb = load_workbook(file, data_only=True)
+    except Exception:
+        flash('Không thể đọc file Excel. Vui lòng kiểm tra định dạng.', 'danger')
+        return redirect(url_for('personnel.list_personnel'))
+
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        flash('File Excel trống.', 'warning')
+        return redirect(url_for('personnel.list_personnel'))
+
+    header_row = [str(c).strip() if c is not None else '' for c in rows[0]]
+    headers = {h.lower(): idx for idx, h in enumerate(header_row) if h}
+
+    required_cols = ['ho_ten']
+    optional_cols = [
+        'cap_bac', 'doi_tuong', 'chuc_danh', 'chuc_vu', 'can_cuoc_cong_dan',
+        'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
+        'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
+    ]
+    missing = [c for c in required_cols if c not in headers]
+    if missing:
+        flash('Thiếu cột bắt buộc trong file Excel: ' + ', '.join(missing), 'danger')
+        return redirect(url_for('personnel.list_personnel'))
+
+    created = 0
+    skipped = 0
+    errors = 0
+
+    for row in rows[1:]:
+        try:
+            ho_ten = row[headers['ho_ten']] if headers.get('ho_ten') is not None else None
+            ho_ten = str(ho_ten).strip() if ho_ten is not None else ''
+            if not ho_ten:
+                skipped += 1
+                continue
+
+            cccd = None
+            if 'can_cuoc_cong_dan' in headers:
+                cccd_val = row[headers['can_cuoc_cong_dan']]
+                cccd = str(cccd_val).strip() if cccd_val is not None else None
+
+            if cccd:
+                existing_cccd = QuanNhan.query.filter_by(
+                    don_vi_id=current_user.don_vi_id,
+                    can_cuoc_cong_dan=cccd,
+                    is_active=True
+                ).first()
+                if existing_cccd:
+                    skipped += 1
+                    continue
+
+            qn = QuanNhan(
+                don_vi_id=current_user.don_vi_id,
+                ho_ten=ho_ten,
+                cap_bac=str(row[headers['cap_bac']]).strip() if headers.get('cap_bac') is not None and row[headers['cap_bac']] is not None else None,
+                doi_tuong=str(row[headers['doi_tuong']]).strip() if headers.get('doi_tuong') is not None and row[headers['doi_tuong']] is not None else None,
+                chuc_danh=str(row[headers['chuc_danh']]).strip() if headers.get('chuc_danh') is not None and row[headers['chuc_danh']] is not None else None,
+                chuc_vu=str(row[headers['chuc_vu']]).strip() if headers.get('chuc_vu') is not None and row[headers['chuc_vu']] is not None else None,
+                can_cuoc_cong_dan=cccd or None,
+                ngay_sinh=_parse_date(row[headers['ngay_sinh']]) if headers.get('ngay_sinh') is not None else None,
+                ngay_nhap_ngu=str(row[headers['ngay_nhap_ngu']]).strip() if headers.get('ngay_nhap_ngu') is not None and row[headers['ngay_nhap_ngu']] is not None else None,
+                hoc_ham=str(row[headers['hoc_ham']]).strip() if headers.get('hoc_ham') is not None and row[headers['hoc_ham']] is not None else 'Không',
+                hoc_vi=str(row[headers['hoc_vi']]).strip() if headers.get('hoc_vi') is not None and row[headers['hoc_vi']] is not None else 'Không',
+                trinh_do_hoc_van=str(row[headers['trinh_do_hoc_van']]).strip() if headers.get('trinh_do_hoc_van') is not None and row[headers['trinh_do_hoc_van']] is not None else None,
+                ngoai_ngu=str(row[headers['ngoai_ngu']]).strip() if headers.get('ngoai_ngu') is not None and row[headers['ngoai_ngu']] is not None else None,
+                la_chi_huy=_parse_bool(row[headers['la_chi_huy']]) if headers.get('la_chi_huy') is not None else False,
+                la_bi_thu=_parse_bool(row[headers['la_bi_thu']]) if headers.get('la_bi_thu') is not None else False,
+            )
+            db.session.add(qn)
+            created += 1
+        except Exception:
+            errors += 1
+
+    if created > 0:
+        db.session.commit()
+
+    flash(f'Đã nhập {created} quân nhân. Bỏ qua: {skipped}. Lỗi: {errors}.', 'success' if created > 0 else 'warning')
+    return redirect(url_for('personnel.list_personnel'))

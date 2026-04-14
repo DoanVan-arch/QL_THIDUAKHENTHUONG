@@ -7,9 +7,17 @@
         <h4><i class="bi bi-people me-2"></i>Danh sách quân nhân</h4>
         <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
     </div>
-    <a href="{{ url_for('personnel.create_personnel') }}" class="btn btn-navy">
-        <i class="bi bi-person-plus me-1"></i> Thêm quân nhân
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('personnel.download_personnel_template') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-download me-1"></i> Tải mẫu Excel
+        </a>
+        <button type="button" class="btn btn-outline-navy" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+            <i class="bi bi-file-earmark-excel me-1"></i> Nhập Excel
+        </button>
+        <a href="{{ url_for('personnel.create_personnel') }}" class="btn btn-navy">
+            <i class="bi bi-person-plus me-1"></i> Thêm quân nhân
+        </a>
+    </div>
 </div>
 
 <!-- Search -->
@@ -118,6 +126,32 @@
             {% endif %}
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Import Excel Modal -->
+<div class="modal fade" id="importExcelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('personnel.import_personnel_excel') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-excel me-1"></i>Nhập danh sách quân nhân</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Chọn file Excel (.xlsx)</label>
+                        <input type="file" class="form-control" name="excel_file" accept=".xlsx" required>
+                    </div>
+                    <small class="text-muted">Vui lòng dùng đúng mẫu để đảm bảo dữ liệu chính xác.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy"><i class="bi bi-upload me-1"></i>Nhập</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

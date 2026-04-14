@@ -436,7 +436,10 @@ with app.app_context():
     DEPT_PHONGS = [
         PhongDuyet.PHONG_CHINHTRI, PhongDuyet.PHONG_THAMMUU,
         PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
-        PhongDuyet.BAN_CANBO, PhongDuyet.BAN_QUANLUC,
+        PhongDuyet.BAN_CANBO, PhongDuyet.BAN_TOCHUC,
+        PhongDuyet.BAN_TUYENHUAN, PhongDuyet.BAN_CTCQ,
+        PhongDuyet.BAN_CNTT, PhongDuyet.BAN_TAC_HUAN,
+        PhongDuyet.BAN_QUANLUC,
     ]
 
     # Map PhongDuyet -> Role for finding department user accounts
@@ -446,6 +449,11 @@ with app.app_context():
         PhongDuyet.PHONG_KHOAHOC: Role.PHONG_KHOAHOC,
         PhongDuyet.PHONG_DAOTAO: Role.PHONG_DAOTAO,
         PhongDuyet.BAN_CANBO: Role.BAN_CANBO,
+        PhongDuyet.BAN_TOCHUC: Role.BAN_TOCHUC,
+        PhongDuyet.BAN_TUYENHUAN: Role.BAN_TUYENHUAN,
+        PhongDuyet.BAN_CTCQ: Role.BAN_CTCQ,
+        PhongDuyet.BAN_CNTT: Role.BAN_CNTT,
+        PhongDuyet.BAN_TAC_HUAN: Role.BAN_TAC_HUAN,
         PhongDuyet.BAN_QUANLUC: Role.BAN_QUANLUC,
     }
 

@@ -12,7 +12,18 @@ class Role(enum.Enum):
     PHONG_THAMMUU = 'phong_thamMuu'
     PHONG_KHOAHOC = 'phong_khoaHoc'
     PHONG_DAOTAO = 'phong_daoTao'
+    THU_TRUONG_PHONG_CHINHTRI = 'thu_truongPhongChinhTri'
+    THU_TRUONG_PHONG_TMHC = 'thu_truongPhongTMHC'
     BAN_CANBO = 'ban_canBo'
+    BAN_TOCHUC = 'ban_toChuc'
+    BAN_TUYENHUAN = 'ban_tuyenHuan'
+    BAN_CTCQ = 'ban_congTacQuanChung'
+    BAN_CNTT = 'ban_congNgheThongTin'
+    BAN_TAC_HUAN = 'ban_tacHuan'
+    BAN_KHAOTHI = 'ban_khaoThi'
+    BAN_BAOVE_ANNINH = 'ban_baoVeAnNinh'
+    BAN_KEHOACH_TONGHOP = 'ban_keHoachTongHop'
+    UY_BAN_KIEMTRA = 'uy_banKiemTra'
     BAN_QUANLUC = 'ban_quanLuc'
     ADMIN = 'admin'
 
@@ -23,7 +34,18 @@ ROLE_DISPLAY = {
     Role.PHONG_THAMMUU: 'Phòng Tham mưu - Hành chính',
     Role.PHONG_KHOAHOC: 'Phòng Khoa học quân sự',
     Role.PHONG_DAOTAO: 'Phòng Đào tạo',
+    Role.THU_TRUONG_PHONG_CHINHTRI: 'Thủ trưởng Phòng Chính trị',
+    Role.THU_TRUONG_PHONG_TMHC: 'Thủ trưởng Phòng TM-HC',
     Role.BAN_CANBO: 'Ban Cán bộ',
+    Role.BAN_TOCHUC: 'Ban Tổ chức',
+    Role.BAN_TUYENHUAN: 'Ban Tuyên huấn',
+    Role.BAN_CTCQ: 'Ban Công tác quần chúng',
+    Role.BAN_CNTT: 'Ban Công nghệ thông tin',
+    Role.BAN_TAC_HUAN: 'Ban Tác huấn',
+    Role.BAN_KHAOTHI: 'Ban Khảo thí',
+    Role.BAN_BAOVE_ANNINH: 'Ban Bảo vệ an ninh',
+    Role.BAN_KEHOACH_TONGHOP: 'Ban Kế hoạch tổng hợp',
+    Role.UY_BAN_KIEMTRA: 'Ủy ban Kiểm tra',
     Role.BAN_QUANLUC: 'Ban Quân lực',
     Role.ADMIN: 'Cơ quan Tuyên huấn (Admin)',
 }
@@ -36,7 +58,7 @@ class User(db.Model, UserMixin):
     username = Column(String(80), unique=True, nullable=False, index=True)
     password_hash = Column(String(256), nullable=False)
     ho_ten = Column(String(100), nullable=False)
-    role = Column(Enum(Role), nullable=False)
+    role = Column(Enum(Role, values_callable=lambda x: [e.value for e in x], native_enum=False), nullable=False)
     don_vi_id = Column(Integer, ForeignKey('don_vi.id'), nullable=True)
     is_active_account = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
@@ -63,7 +85,11 @@ class User(db.Model, UserMixin):
         return self.role in (
             Role.PHONG_CHINHTRI, Role.PHONG_THAMMUU,
             Role.PHONG_KHOAHOC, Role.PHONG_DAOTAO,
-            Role.BAN_CANBO, Role.BAN_QUANLUC,
+            Role.THU_TRUONG_PHONG_CHINHTRI, Role.THU_TRUONG_PHONG_TMHC,
+            Role.BAN_CANBO, Role.BAN_TOCHUC, Role.BAN_TUYENHUAN,
+            Role.BAN_CTCQ, Role.BAN_CNTT, Role.BAN_TAC_HUAN,
+            Role.BAN_KHAOTHI,
+            Role.BAN_QUANLUC,
         )
 
     @property
@@ -73,6 +99,18 @@ class User(db.Model, UserMixin):
     @property
     def is_unit_user(self):
         return self.role == Role.UNIT_USER
+
+    @property
+    def is_reward_viewer(self):
+        return self.role in (
+            Role.BAN_TUYENHUAN,
+            Role.BAN_CANBO,
+            Role.BAN_TOCHUC,
+            Role.BAN_BAOVE_ANNINH,
+            Role.BAN_CTCQ,
+            Role.BAN_KEHOACH_TONGHOP,
+            Role.UY_BAN_KIEMTRA,
+        )
 
 
 @login_manager.user_loader

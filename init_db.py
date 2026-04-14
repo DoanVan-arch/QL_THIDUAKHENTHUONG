@@ -87,7 +87,17 @@ with app.app_context():
             ('phong_thammuu', 'Phòng Tham mưu - Hành chính', Role.PHONG_THAMMUU, None),
             ('phong_khoahoc', 'Phòng Khoa học quân sự', Role.PHONG_KHOAHOC, None),
             ('phong_daotao', 'Phòng Đào tạo', Role.PHONG_DAOTAO, None),
+            ('tt_phong_chinhtri', 'Thủ trưởng Phòng Chính trị', Role.THU_TRUONG_PHONG_CHINHTRI, None),
+            ('tt_phong_tmhc', 'Thủ trưởng Phòng TM-HC', Role.THU_TRUONG_PHONG_TMHC, None),
             ('ban_canbo', 'Ban Cán bộ', Role.BAN_CANBO, None),
+            ('ban_tochuc', 'Ban Tổ chức', Role.BAN_TOCHUC, None),
+            ('ban_tuyenhuan', 'Ban Tuyên huấn', Role.BAN_TUYENHUAN, None),
+            ('ban_ctcq', 'Ban Công tác quần chúng', Role.BAN_CTCQ, None),
+            ('ban_cntt', 'Ban Công nghệ thông tin', Role.BAN_CNTT, None),
+            ('ban_tachuan', 'Ban Tác huấn', Role.BAN_TAC_HUAN, None),
+            ('ban_baove_anninh', 'Ban Bảo vệ an ninh', Role.BAN_BAOVE_ANNINH, None),
+            ('ban_khth', 'Ban Kế hoạch tổng hợp', Role.BAN_KEHOACH_TONGHOP, None),
+            ('uyban_kiemtra', 'Ủy ban Kiểm tra', Role.UY_BAN_KIEMTRA, None),
             ('ban_quanluc', 'Ban Quân lực', Role.BAN_QUANLUC, None),
         ]
 
@@ -119,7 +129,17 @@ with app.app_context():
         print("  phong_thammuu  - Phong Tham muu")
         print("  phong_khoahoc  - Phong Khoa hoc")
         print("  phong_daotao   - Phong Dao tao")
+        print("  tt_phong_chinhtri - Thu truong Phong Chinh tri")
+        print("  tt_phong_tmhc  - Thu truong Phong TM-HC")
         print("  ban_canbo      - Ban Can bo")
+        print("  ban_tochuc     - Ban To chuc")
+        print("  ban_tuyenhuan  - Ban Tuyen huan")
+        print("  ban_ctcq       - Ban Cong tac quan chung")
+        print("  ban_cntt       - Ban Cong nghe thong tin")
+        print("  ban_tachuan    - Ban Tac huan")
+        print("  ban_baove_anninh - Ban Bao ve an ninh")
+        print("  ban_khth       - Ban Ke hoach tong hop")
+        print("  uyban_kiemtra  - Uy ban Kiem tra")
         print("  ban_quanluc    - Ban Quan luc")
         print("  k1, k2, k3     - Khoa (unit)")
         print("  td1, td2       - Tieu doan (unit)")

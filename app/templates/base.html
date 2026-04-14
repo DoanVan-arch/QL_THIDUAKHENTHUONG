@@ -55,6 +55,18 @@
                 <a href="{{ url_for('approval.history') }}" class="sidebar-link {% if request.endpoint in ['approval.history', 'approval.history_detail'] %}active{% endif %}">
                     <i class="bi bi-clock-history"></i> <span>Lịch sử duyệt</span>
                 </a>
+                {% if current_user.is_reward_viewer %}
+                <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
+                    <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
+                </a>
+                {% endif %}
+                {% endif %}
+
+                {% if current_user.is_reward_viewer and not current_user.is_department and not current_user.is_admin %}
+                <div class="sidebar-section-title">KHEN THƯỞNG</div>
+                <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
+                    <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
+                </a>
                 {% endif %}
 
                 {% if current_user.is_admin %}
@@ -73,6 +85,12 @@
                 </a>
                 <a href="{{ url_for('admin.all_personnel') }}" class="sidebar-link {% if request.endpoint in ['admin.all_personnel', 'admin.admin_personnel_detail', 'admin.admin_personnel_edit'] %}active{% endif %}">
                     <i class="bi bi-people"></i> <span>Hồ sơ cá nhân</span>
+                </a>
+                <a href="{{ url_for('admin.manage_chuc_vu') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_chuc_vu'] %}active{% endif %}">
+                    <i class="bi bi-list-ul"></i> <span>Danh mục chức vụ</span>
+                </a>
+                <a href="{{ url_for('admin.manage_cap_bac') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_cap_bac'] %}active{% endif %}">
+                    <i class="bi bi-collection"></i> <span>Danh mục cấp bậc</span>
                 </a>
                 <a href="{{ url_for('admin.manage_danh_hieu') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_danh_hieu', 'admin.edit_danh_hieu'] %}active{% endif %}">
                     <i class="bi bi-bookmark-star"></i> <span>Quản lý danh hiệu</span>
