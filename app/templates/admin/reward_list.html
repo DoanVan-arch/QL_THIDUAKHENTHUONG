@@ -55,13 +55,17 @@
 </div>
 {% endif %}
 
-{% if can_admin_action and pending_final_nominations %}
+{% if can_admin_action %}
 <div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Bảng 1: Danh sách chờ phê duyệt cuối</h6>
+    </div>
     <div class="card-body-custom py-2">
         <div class="mb-2">
             <strong>Đề xuất chờ phê duyệt cuối (danh sách cá nhân):</strong>
             <span class="badge bg-warning text-dark ms-1">{{ pending_final_nominations|length }}</span>
         </div>
+        {% if pending_final_nominations %}
         <div class="table-responsive">
             <table class="table table-sm table-custom mb-0">
                 <thead>
@@ -98,9 +102,22 @@
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="text-muted small fst-italic">Hiện không có cá nhân nào chờ phê duyệt cuối.</div>
+        {% endif %}
     </div>
 </div>
 {% endif %}
+
+<!-- Final reward list -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Bảng 2: Danh sách khen thưởng cuối cùng</h6>
+    </div>
+    <div class="card-body-custom py-2">
+        <small class="text-muted">Danh sách này chỉ gồm các cá nhân đã được admin đồng ý phê duyệt cuối.</small>
+    </div>
+</div>
 
 <!-- Summary stats -->
 <div class="d-flex gap-3 mb-3 flex-wrap">
