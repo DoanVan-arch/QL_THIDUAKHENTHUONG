@@ -58,8 +58,6 @@ def unit_dashboard():
 
 def department_dashboard():
     role_phong_map = {
-        Role.PHONG_CHINHTRI: 'Phòng Chính trị',
-        Role.PHONG_THAMMUU: 'Phòng Tham mưu',
         Role.PHONG_KHOAHOC: 'Phòng Khoa học',
         Role.PHONG_DAOTAO: 'Phòng Đào tạo',
         Role.THU_TRUONG_PHONG_CHINHTRI: 'Thủ trưởng Phòng Chính trị',

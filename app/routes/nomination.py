@@ -11,7 +11,7 @@ from datetime import datetime
 
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
-    'Phòng Chính trị', 'Phòng Tham mưu', 'Phòng Khoa học', 'Phòng Đào tạo',
+    'Phòng Khoa học', 'Phòng Đào tạo',
     'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
     'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ủy ban Kiểm tra', 'Ban Quân lực'
@@ -452,8 +452,7 @@ def submit_nomination(id):
                 return redirect(url_for('nomination.edit_nomination', id=id))
 
     # Create pending approval records
-    for phong in [PhongDuyet.PHONG_CHINHTRI, PhongDuyet.PHONG_THAMMUU,
-                  PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
+    for phong in [PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
                   PhongDuyet.THU_TRUONG_PHONG_CHINHTRI, PhongDuyet.THU_TRUONG_PHONG_TMHC,
                   PhongDuyet.BAN_CANBO, PhongDuyet.BAN_TOCHUC,
                   PhongDuyet.BAN_TUYENHUAN, PhongDuyet.BAN_CTCQ,

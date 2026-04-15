@@ -50,39 +50,6 @@
     {% endif %}
 </div>
 
-{% if group_gate_by_pd is defined and group_gate_by_pd %}
-<div class="card-section mb-3">
-    <div class="card-header-custom">
-        <h6 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Tiến độ ban/phòng bắt buộc trước khi Thủ trưởng phê duyệt</h6>
-    </div>
-    <div class="card-body-custom py-2">
-        {% for pd in pending_reviews %}
-        {% set gate = group_gate_by_pd[pd.id] if pd.id in group_gate_by_pd else None %}
-        {% if gate %}
-        <div class="mb-2 pb-2 border-bottom">
-            <small class="text-muted d-block mb-1">{{ pd.de_xuat.don_vi.ten_don_vi }} - {{ pd.de_xuat.nam_hoc }}</small>
-            {% for dept in gate.required %}
-                {% set rs = gate.results.get(dept) %}
-                {% if rs == 'Đồng ý' %}
-                <span class="badge-status badge-approved me-1 mb-1">{{ dept }}: Đã duyệt</span>
-                {% elif rs == 'Từ chối' %}
-                <span class="badge-status badge-rejected me-1 mb-1">{{ dept }}: Từ chối</span>
-                {% else %}
-                <span class="badge-status badge-pending me-1 mb-1">{{ dept }}: Chờ duyệt</span>
-                {% endif %}
-            {% endfor %}
-            {% if gate.can_review %}
-            <span class="badge-status badge-reviewing ms-1">Đủ điều kiện phê duyệt</span>
-            {% else %}
-            <span class="badge-status badge-draft ms-1">Chưa đủ điều kiện</span>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
 {% set display_fields = allowed_fields|reject('equalto', 'nckh_minh_chung')|list %}
 {% set show_evidence = 'nckh_minh_chung' in allowed_fields %}
 
