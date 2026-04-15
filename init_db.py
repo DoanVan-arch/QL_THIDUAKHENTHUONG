@@ -83,8 +83,6 @@ with app.app_context():
     if User.query.count() == 0:
         users_data = [
             ('admin', 'Cơ quan Tuyên huấn', Role.ADMIN, None),
-            ('phong_chinhtri', 'Phòng Chính trị', Role.PHONG_CHINHTRI, None),
-            ('phong_thammuu', 'Phòng Tham mưu - Hành chính', Role.PHONG_THAMMUU, None),
             ('phong_khoahoc', 'Phòng Khoa học quân sự', Role.PHONG_KHOAHOC, None),
             ('phong_daotao', 'Phòng Đào tạo', Role.PHONG_DAOTAO, None),
             ('tt_phong_chinhtri', 'Thủ trưởng Phòng Chính trị', Role.THU_TRUONG_PHONG_CHINHTRI, None),
@@ -125,8 +123,6 @@ with app.app_context():
         print("=" * 50)
         print("SAMPLE ACCOUNTS (password: 123456):")
         print("  admin          - Admin (Tuyen huan)")
-        print("  phong_chinhtri - Phong Chinh tri")
-        print("  phong_thammuu  - Phong Tham muu")
         print("  phong_khoahoc  - Phong Khoa hoc")
         print("  phong_daotao   - Phong Dao tao")
         print("  tt_phong_chinhtri - Thu truong Phong Chinh tri")

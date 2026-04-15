@@ -245,12 +245,14 @@
                                 {% for col in tracking_dept_columns %}
                                 {% set dn = col.key %}
                                 <td class="text-center">
-                                    {% set kq = dept_results[dn] %}
-                                    {% if kq == 'Đồng ý' %}
-                                    <span class="badge bg-success" title="{{ dn }}: Đồng ý"><i class="bi bi-check-lg"></i></span>
-                                    {% elif kq == 'Từ chối' %}
+                                    {% set kq_obj = dept_results[dn] %}
+                                    {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
+                                    <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
+                                        <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
+                                    </span>
+                                    {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
                                     <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                                    {% elif kq == 'Chờ duyệt' %}
+                                    {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
                                     <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
                                     {% else %}
                                     <span class="text-muted" title="Chưa có">-</span>

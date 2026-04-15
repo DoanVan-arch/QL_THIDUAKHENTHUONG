@@ -7,9 +7,35 @@
         <h4><i class="bi bi-award me-2"></i>Đề xuất khen thưởng</h4>
         <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
     </div>
-    <a href="{{ url_for('nomination.create_nomination') }}" class="btn btn-gold">
-        <i class="bi bi-plus-lg me-1"></i> Tạo đề xuất mới
-    </a>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
+            <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
+        </button>
+        <a href="{{ url_for('nomination.create_nomination') }}" class="btn btn-gold">
+            <i class="bi bi-plus-lg me-1"></i> Tạo đề xuất mới
+        </a>
+    </div>
+</div>
+
+<div class="card-section mb-3" id="filterBar">
+    <div class="card-body-custom py-2">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Tìm năm học/trạng thái...">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="statusFilter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="Nháp">Nháp</option>
+                    <option value="Chờ duyệt">Chờ duyệt</option>
+                    <option value="Đang duyệt">Đang duyệt</option>
+                    <option value="Đã duyệt">Đã duyệt</option>
+                    <option value="Phê duyệt cuối">Phê duyệt cuối</option>
+                    <option value="Từ chối">Từ chối</option>
+                </select>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card-section">
@@ -18,7 +44,7 @@
         <div class="table-responsive">
             <table class="table table-custom mb-0">
                 <thead>
-                    <tr>
+                    <tr class="nom-row" data-nam-hoc="{{ dx.nam_hoc }}" data-trang-thai="{{ dx.trang_thai }}">
                         <th>STT</th>
                         <th>Năm học</th>
                         <th>Số cá nhân</th>
@@ -125,4 +151,34 @@
         {% endif %}
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('toggleFilterBar');
+    const bar = document.getElementById('filterBar');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+
+    if (btn && bar) {
+        btn.addEventListener('click', function() {
+            bar.classList.toggle('d-none');
+        });
+    }
+
+    function applyFilters() {
+        const q = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const st = statusFilter ? statusFilter.value : '';
+        document.querySelectorAll('.nom-row').forEach(row => {
+            let visible = true;
+            const namHoc = (row.dataset.namHoc || '').toLowerCase();
+            const trangThai = row.dataset.trangThai || '';
+            if (q && !(namHoc.includes(q) || trangThai.toLowerCase().includes(q))) visible = false;
+            if (visible && st && trangThai !== st) visible = false;
+            row.style.display = visible ? '' : 'none';
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+});
+</script>
 {% endblock %}

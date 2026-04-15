@@ -14,7 +14,7 @@ DEPT_NAMES = [
     'Phòng Chính trị', 'Phòng Tham mưu', 'Phòng Khoa học', 'Phòng Đào tạo',
     'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
-    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Quân lực'
+    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ủy ban Kiểm tra', 'Ban Quân lực'
 ]
 
 nomination_bp = Blueprint('nomination', __name__)
@@ -458,7 +458,7 @@ def submit_nomination(id):
                   PhongDuyet.BAN_CANBO, PhongDuyet.BAN_TOCHUC,
                   PhongDuyet.BAN_TUYENHUAN, PhongDuyet.BAN_CTCQ,
                   PhongDuyet.BAN_CNTT, PhongDuyet.BAN_TAC_HUAN,
-                  PhongDuyet.BAN_KHAOTHI,
+                  PhongDuyet.BAN_KHAOTHI, PhongDuyet.UY_BAN_KIEMTRA,
                   PhongDuyet.BAN_QUANLUC]:
         existing = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id, phong_duyet=phong.value).first()
         if not existing:

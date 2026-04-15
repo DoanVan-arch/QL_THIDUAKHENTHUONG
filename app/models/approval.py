@@ -18,6 +18,7 @@ class PhongDuyet(enum.Enum):
     BAN_CNTT = 'Ban Công nghệ thông tin'
     BAN_TAC_HUAN = 'Ban Tác huấn'
     BAN_KHAOTHI = 'Ban Khảo thí'
+    UY_BAN_KIEMTRA = 'Ủy ban Kiểm tra'
     BAN_QUANLUC = 'Ban Quân lực'
     ADMIN_TUYENHUAN = 'Tuyên huấn'
 

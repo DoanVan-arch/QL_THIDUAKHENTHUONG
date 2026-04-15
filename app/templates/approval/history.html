@@ -7,6 +7,9 @@
         <h4><i class="bi bi-clock-history me-2"></i>Lịch sử duyệt</h4>
         <small class="text-muted">{{ phong_name }}</small>
     </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
+        <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
+    </button>
 </div>
 
 <!-- Summary stats -->
@@ -28,7 +31,7 @@
 </div>
 
 <!-- Filters -->
-<div class="card-section mb-3">
+<div class="card-section mb-3" id="filterBar">
     <div class="card-body-custom py-2">
         <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
             <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
@@ -145,6 +148,7 @@
                                 {% if dx.trang_thai != 'Phê duyệt cuối' and pd.ket_qua != 'Chờ duyệt' %}
                                 <form action="{{ url_for('approval.revoke_review', pd_id=pd.id) }}" method="POST" class="d-inline"
                                       onsubmit="return confirm('Thu hồi kết quả duyệt cho đề xuất của {{ dx.don_vi.ten_don_vi }}?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2" title="Thu hồi duyệt">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
@@ -209,4 +213,15 @@
     }
     .stat-mini i { font-size: 1rem; }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('toggleFilterBar');
+    const bar = document.getElementById('filterBar');
+    if (btn && bar) {
+        btn.addEventListener('click', function() {
+            bar.classList.toggle('d-none');
+        });
+    }
+});
+</script>
 {% endblock %}
