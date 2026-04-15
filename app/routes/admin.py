@@ -22,7 +22,7 @@ admin_bp = Blueprint('admin', __name__)
 
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
-    'Phòng Chính trị', 'Phòng Tham mưu', 'Phòng Khoa học', 'Phòng Đào tạo',
+    'Phòng Khoa học', 'Phòng Đào tạo',
     'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
     'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ủy ban Kiểm tra', 'Ban Quân lực'
@@ -1893,8 +1893,6 @@ def delete_danh_hieu(id):
 # Admin: Manage TieuChi (Criteria) - List
 # ------------------------------------------------------------------
 PHONG_DUYET_OPTIONS = [
-    ('Phòng Chính trị', 'Phòng Chính trị'),
-    ('Phòng Tham mưu', 'Phòng Tham mưu'),
     ('Phòng Khoa học', 'Phòng Khoa học'),
     ('Phòng Đào tạo', 'Phòng Đào tạo'),
     ('Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng Chính trị'),
