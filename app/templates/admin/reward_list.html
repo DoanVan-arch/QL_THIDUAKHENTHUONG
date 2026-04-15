@@ -64,14 +64,27 @@
         <div class="mb-2">
             <strong>Đề xuất chờ phê duyệt cuối (danh sách cá nhân):</strong>
             <span class="badge bg-warning text-dark ms-1">{{ pending_final_nominations|length }}</span>
+            <span class="ms-2">
+                <a href="{{ url_for('admin.export_pending_final_excel') }}" class="btn btn-sm btn-outline-success me-1">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+                </a>
+                <a href="{{ url_for('admin.export_pending_final_word') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-file-earmark-word me-1"></i>Xuất Word
+                </a>
+            </span>
         </div>
         {% if pending_final_nominations %}
         <div class="table-responsive">
             <table class="table table-sm table-custom mb-0">
                 <thead>
                     <tr>
+                        <th>STT</th>
                         <th>Đơn vị</th>
                         <th>Cá nhân</th>
+                        <th>CCCD</th>
+                        <th>Cấp bậc</th>
+                        <th>Chức vụ</th>
+                        <th>Đối tượng</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
                         <th>Ngày gửi</th>
@@ -82,9 +95,15 @@
                     {% for item in pending_final_nominations %}
                     {% set dx = item.dx %}
                     {% set ct = item.ct %}
+                    {% set qn = ct.quan_nhan %}
                     <tr>
+                        <td>{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
-                        <td>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}</td>
+                        <td>{{ qn.ho_ten if qn else dx.don_vi.ten_don_vi }}</td>
+                        <td>{{ qn.can_cuoc_cong_dan if qn and qn.can_cuoc_cong_dan else '-' }}</td>
+                        <td>{{ qn.cap_bac if qn and qn.cap_bac else '-' }}</td>
+                        <td>{{ qn.chuc_vu if qn and qn.chuc_vu else '-' }}</td>
+                        <td>{{ ct.doi_tuong or '-' }}</td>
                         <td>{{ ct.loai_danh_hieu }}</td>
                         <td>{{ dx.nam_hoc }}</td>
                         <td>{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>

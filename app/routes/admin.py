@@ -1,6 +1,6 @@
 from io import BytesIO
 from types import SimpleNamespace
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, Response
 from flask_login import login_required, current_user
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
@@ -17,6 +17,7 @@ from app.models.catalog import ChucVuOption, CapBacOption
 from app.utils.decorators import admin_required, admin_or_reward_viewer_required
 from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
+from html import escape
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -730,27 +731,7 @@ def reward_list():
 
     pending_final_nominations = []
     if current_user.is_admin:
-        pending_final_nominations = []
-        nominations_waiting = DeXuat.query.filter_by(
-            trang_thai=TrangThaiDeXuat.DA_DUYET.value
-        ).order_by(DeXuat.ngay_gui.desc()).all()
-
-        for dx in nominations_waiting:
-            for ct in dx.chi_tiets:
-                if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
-                    continue
-                all_dept_ok = True
-                for dept_name in DEPT_NAMES:
-                    pd = PheDuyet.query.filter_by(de_xuat_id=dx.id, phong_duyet=dept_name).first()
-                    if not pd:
-                        all_dept_ok = False
-                        break
-                    kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
-                    if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
-                        all_dept_ok = False
-                        break
-                if all_dept_ok:
-                    pending_final_nominations.append({'dx': dx, 'ct': ct})
+        pending_final_nominations = _get_pending_final_individuals()
 
     # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
@@ -807,6 +788,123 @@ def reward_list():
                            pending_final_nominations=pending_final_nominations,
                            cstd_non_consecutive=cstd_non_consecutive,
                            cstd_consecutive=cstd_consecutive)
+
+
+def _get_pending_final_individuals():
+    pending = []
+    nominations_waiting = DeXuat.query.filter_by(
+        trang_thai=TrangThaiDeXuat.DA_DUYET.value
+    ).order_by(DeXuat.ngay_gui.desc()).all()
+
+    for dx in nominations_waiting:
+        for ct in dx.chi_tiets:
+            if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
+                continue
+            all_dept_ok = True
+            for dept_name in DEPT_NAMES:
+                pd = PheDuyet.query.filter_by(de_xuat_id=dx.id, phong_duyet=dept_name).first()
+                if not pd:
+                    all_dept_ok = False
+                    break
+                kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
+                if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
+                    all_dept_ok = False
+                    break
+            if all_dept_ok:
+                pending.append({'dx': dx, 'ct': ct})
+    return pending
+
+
+@admin_bp.route('/reward-list/pending-final/export-excel')
+@login_required
+@admin_required
+def export_pending_final_excel():
+    items = _get_pending_final_individuals()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Cho phe duyet cuoi'
+
+    headers = [
+        'STT', 'Họ và tên', 'CCCD', 'Cấp bậc', 'Chức vụ', 'Đối tượng',
+        'Đơn vị', 'Danh hiệu', 'Năm học', 'Ngày gửi'
+    ]
+    for i, h in enumerate(headers, 1):
+        c = ws.cell(row=1, column=i, value=h)
+        c.font = Font(bold=True)
+
+    for idx, item in enumerate(items, 1):
+        dx = item['dx']
+        ct = item['ct']
+        qn = ct.quan_nhan
+        ws.append([
+            idx,
+            qn.ho_ten if qn else dx.don_vi.ten_don_vi,
+            qn.can_cuoc_cong_dan if qn else '',
+            qn.cap_bac if qn else '',
+            qn.chuc_vu if qn else '',
+            ct.doi_tuong or '',
+            dx.don_vi.ten_don_vi,
+            ct.loai_danh_hieu,
+            dx.nam_hoc,
+            dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '',
+        ])
+
+    widths = [6, 24, 16, 12, 20, 18, 28, 20, 12, 12]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    out = BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return send_file(
+        out,
+        as_attachment=True,
+        download_name='danh_sach_cho_phe_duyet_cuoi.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
+@admin_bp.route('/reward-list/pending-final/export-word')
+@login_required
+@admin_required
+def export_pending_final_word():
+    items = _get_pending_final_individuals()
+
+    rows_html = []
+    for idx, item in enumerate(items, 1):
+        dx = item['dx']
+        ct = item['ct']
+        qn = ct.quan_nhan
+        rows_html.append(
+            '<tr>'
+            f'<td>{idx}</td>'
+            f'<td>{escape(qn.ho_ten if qn else dx.don_vi.ten_don_vi)}</td>'
+            f'<td>{escape(qn.can_cuoc_cong_dan if qn and qn.can_cuoc_cong_dan else "")}</td>'
+            f'<td>{escape(qn.cap_bac if qn and qn.cap_bac else "")}</td>'
+            f'<td>{escape(qn.chuc_vu if qn and qn.chuc_vu else "")}</td>'
+            f'<td>{escape(ct.doi_tuong or "")}</td>'
+            f'<td>{escape(dx.don_vi.ten_don_vi)}</td>'
+            f'<td>{escape(ct.loai_danh_hieu or "")}</td>'
+            f'<td>{escape(dx.nam_hoc or "")}</td>'
+            f'<td>{escape(dx.ngay_gui.strftime("%d/%m/%Y") if dx.ngay_gui else "")}</td>'
+            '</tr>'
+        )
+
+    html = (
+        '<html><head><meta charset="utf-8"></head><body>'
+        '<h3>Danh sách chờ phê duyệt cuối</h3>'
+        '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse; font-family:Times New Roman; font-size:12pt;">'
+        '<tr><th>STT</th><th>Họ và tên</th><th>CCCD</th><th>Cấp bậc</th><th>Chức vụ</th><th>Đối tượng</th><th>Đơn vị</th><th>Danh hiệu</th><th>Năm học</th><th>Ngày gửi</th></tr>'
+        + ''.join(rows_html) +
+        '</table></body></html>'
+    )
+
+    return Response(
+        html,
+        mimetype='application/msword',
+        headers={'Content-Disposition': 'attachment; filename=danh_sach_cho_phe_duyet_cuoi.doc'}
+    )
 
 
 @admin_bp.route('/reward-list/export')
