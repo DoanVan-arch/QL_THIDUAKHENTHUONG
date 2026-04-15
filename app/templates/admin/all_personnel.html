@@ -7,10 +7,13 @@
         <h4><i class="bi bi-people me-2"></i>Hồ sơ cá nhân toàn bộ đơn vị</h4>
         <small class="text-muted">Tổng cộng: {{ personnel.total }} quân nhân</small>
     </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
+        <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
+    </button>
 </div>
 
 <!-- Filters -->
-<div class="card-section">
+<div class="card-section" id="filterBar">
     <div class="card-body-custom">
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-4">
@@ -47,6 +50,18 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('toggleFilterBar');
+    const bar = document.getElementById('filterBar');
+    if (btn && bar) {
+        btn.addEventListener('click', function() {
+            bar.classList.toggle('d-none');
+        });
+    }
+});
+</script>
 
 <!-- Table -->
 <div class="card-section mt-3">

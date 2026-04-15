@@ -1,4 +1,5 @@
 from io import BytesIO
+from types import SimpleNamespace
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
 from openpyxl import Workbook
@@ -24,7 +25,7 @@ DEPT_NAMES = [
     'Phòng Chính trị', 'Phòng Tham mưu', 'Phòng Khoa học', 'Phòng Đào tạo',
     'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
-    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Quân lực'
+    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ủy ban Kiểm tra', 'Ban Quân lực'
 ]
 
 # Display order for approval columns in tracking screens
@@ -43,6 +44,14 @@ TRACKING_DEPT_COLUMNS = [
     {'key': 'Ban Khảo thí', 'label': 'Ban Khảo thí'},
     {'key': 'Ủy ban Kiểm tra', 'label': 'Ủy ban Kiểm tra'},
 ]
+
+
+def _is_auto_scope_approved(dept_name, doi_tuong):
+    if dept_name == 'Ban Quân lực':
+        return doi_tuong not in BAN_QUANLUC_DOI_TUONG
+    if dept_name == 'Ban Cán bộ':
+        return doi_tuong in BAN_QUANLUC_DOI_TUONG
+    return False
 
 # Đối tượng thuộc diện Ban Quân lực quản lý
 BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Công chức quốc phòng']
@@ -185,14 +194,32 @@ def approval_tracking():
             all_dept_ok = True
             for dept_name in tracking_dept_names:
                 dept_data = dept_lookup.get(dept_name)
+                is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
                 if dept_data:
                     kq = dept_data['items'].get(ct.id)
-                    ct_dept_results[dept_name] = kq.ket_qua if kq else None
-                    if dept_name in DEPT_NAMES and (not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value):
+                    if kq:
+                        ct_dept_results[dept_name] = {
+                            'ket_qua': kq.ket_qua,
+                            'auto': is_auto,
+                        }
+                    elif is_auto:
+                        ct_dept_results[dept_name] = {
+                            'ket_qua': KetQuaDuyet.DONG_Y.value,
+                            'auto': True,
+                        }
+                    else:
+                        ct_dept_results[dept_name] = None
+                    if dept_name in DEPT_NAMES and not is_auto and (not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value):
                         all_dept_ok = False
                 else:
-                    ct_dept_results[dept_name] = None
-                    if dept_name in DEPT_NAMES:
+                    if is_auto:
+                        ct_dept_results[dept_name] = {
+                            'ket_qua': KetQuaDuyet.DONG_Y.value,
+                            'auto': True,
+                        }
+                    else:
+                        ct_dept_results[dept_name] = None
+                    if dept_name in DEPT_NAMES and not is_auto:
                         all_dept_ok = False
 
             # Individual can be final-approved if all 6 depts approved this person
@@ -261,9 +288,13 @@ def tracking_detail(ct_id):
         kq = KetQuaDuyetChiTiet.query.filter_by(
             phe_duyet_id=pd.id, chi_tiet_id=ct.id
         ).first()
+        is_auto = _is_auto_scope_approved(pd.phong_duyet, ct.doi_tuong)
+        if not kq and is_auto:
+            kq = SimpleNamespace(ket_qua=KetQuaDuyet.DONG_Y.value, ly_do='Tự động duyệt theo phạm vi')
         dept_item_results[pd.phong_duyet] = {
             'phe_duyet': pd,
             'item_result': kq,
+            'is_auto': is_auto,
         }
 
     # Check if all 6 departments approved THIS individual
@@ -273,6 +304,9 @@ def tracking_detail(ct_id):
             all_dept_ok = False
             break
         kq = dept_item_results[dept_name].get('item_result')
+        is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
+        if is_auto:
+            continue
         if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
             all_dept_ok = False
             break
@@ -718,6 +752,46 @@ def reward_list():
                 if all_dept_ok:
                     pending_final_nominations.append({'dx': dx, 'ct': ct})
 
+    # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
+    cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
+        KhenThuong.loai_danh_hieu == LoaiDanhHieu.CHIEN_SI_THI_DUA.value,
+        KhenThuong.quan_nhan_id.isnot(None)
+    ).all()
+
+    by_person = {}
+    for qn_id, nam_hoc in cstd_rows:
+        by_person.setdefault(qn_id, set()).add(nam_hoc)
+
+    def _nam_hoc_start(nh):
+        try:
+            return int(str(nh).split('-')[0])
+        except Exception:
+            return 0
+
+    cstd_non_consecutive = []
+    cstd_consecutive = []
+    for qn_id, years in by_person.items():
+        if len(years) < 3:
+            continue
+        qn = QuanNhan.query.get(qn_id)
+        if not qn:
+            continue
+        years_sorted = sorted(list(years), key=_nam_hoc_start)
+        cstd_non_consecutive.append({'qn': qn, 'years': years_sorted, 'count': len(years_sorted)})
+
+        starts = [_nam_hoc_start(y) for y in years_sorted if _nam_hoc_start(y) > 0]
+        starts = sorted(starts)
+        streak = 1
+        max_streak = 1
+        for i in range(1, len(starts)):
+            if starts[i] == starts[i - 1] + 1:
+                streak += 1
+                max_streak = max(max_streak, streak)
+            else:
+                streak = 1
+        if max_streak >= 3:
+            cstd_consecutive.append({'qn': qn, 'years': years_sorted, 'max_streak': max_streak})
+
     return render_template('admin/reward_list.html',
                            rewards=rewards,
                            nam_hoc_filter=nam_hoc_filter,
@@ -730,7 +804,9 @@ def reward_list():
                            total_rewards=total_rewards,
                            stats_by_danh_hieu=stats_by_danh_hieu,
                            can_admin_action=current_user.is_admin,
-                           pending_final_nominations=pending_final_nominations)
+                           pending_final_nominations=pending_final_nominations,
+                           cstd_non_consecutive=cstd_non_consecutive,
+                           cstd_consecutive=cstd_consecutive)
 
 
 @admin_bp.route('/reward-list/export')

@@ -15,6 +15,46 @@
     </div>
 </div>
 
+{% if cstd_non_consecutive or cstd_consecutive %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Thống kê CSTD >= 3 lần</h6>
+    </div>
+    <div class="card-body-custom py-2" style="font-size:0.85rem;">
+        <div class="row g-2">
+            <div class="col-md-6">
+                <div class="fw-semibold mb-1">CSTD 3 lần trở lên (không liên tiếp)</div>
+                {% if cstd_non_consecutive %}
+                    {% for item in cstd_non_consecutive %}
+                    <div class="small mb-1">
+                        <span class="fw-semibold">{{ item.qn.ho_ten }}</span>
+                        <span class="text-muted">({{ item.count }} lần)</span>
+                        <span class="text-muted">- {{ item.years|join(', ') }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-muted small">Không có dữ liệu</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <div class="fw-semibold mb-1">CSTD 3 năm liên tiếp trở lên</div>
+                {% if cstd_consecutive %}
+                    {% for item in cstd_consecutive %}
+                    <div class="small mb-1">
+                        <span class="fw-semibold">{{ item.qn.ho_ten }}</span>
+                        <span class="text-muted">(chuỗi dài nhất: {{ item.max_streak }})</span>
+                        <span class="text-muted">- {{ item.years|join(', ') }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-muted small">Không có dữ liệu</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if can_admin_action and pending_final_nominations %}
 <div class="card-section mb-3">
     <div class="card-body-custom py-2">
@@ -161,7 +201,7 @@
                             {% endif %}
                         </td>
                         <td>{{ kt.nam_hoc }}</td>
-                        <td>{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</td>
+                        <td><span class="text-ellipsis-sm" title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
                         <td class="text-center">
                             <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
                                class="btn btn-sm btn-outline-navy me-1" title="Xem chi tiết">

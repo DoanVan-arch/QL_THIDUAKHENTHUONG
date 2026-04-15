@@ -10,12 +10,16 @@
         <small class="text-muted">{{ phong_name }}</small>
     </div>
     {% if pending_reviews %}
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-        <!-- Search by name -->
-        <div class="input-group input-group-sm" style="width:200px;">
-            <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
+                <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
+            </button>
+            <div id="filterBar" class="d-flex gap-2 align-items-center flex-wrap">
+            <!-- Search by name -->
+            <div class="input-group input-group-sm" style="width:200px;">
+                <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+            </div>
         <!-- Scope filter -->
         <select class="form-select form-select-sm" id="scopeFilter" style="width:160px;">
             <option value="">Tất cả diện QL</option>
@@ -37,13 +41,47 @@
             <option value="{{ name }}">{{ name }}</option>
             {% endfor %}
         </select>
-        <!-- Batch approve all button -->
-        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Nhất trí tất cả chưa duyệt">
-            <i class="bi bi-check-all me-1"></i>Nhất trí toàn bộ
-        </button>
-    </div>
+            <!-- Batch approve all button -->
+            <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Nhất trí tất cả chưa duyệt">
+                <i class="bi bi-check-all me-1"></i>Nhất trí toàn bộ
+            </button>
+            </div>
+        </div>
     {% endif %}
 </div>
+
+{% if group_gate_by_pd is defined and group_gate_by_pd %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Tiến độ ban/phòng bắt buộc trước khi Thủ trưởng phê duyệt</h6>
+    </div>
+    <div class="card-body-custom py-2">
+        {% for pd in pending_reviews %}
+        {% set gate = group_gate_by_pd[pd.id] if pd.id in group_gate_by_pd else None %}
+        {% if gate %}
+        <div class="mb-2 pb-2 border-bottom">
+            <small class="text-muted d-block mb-1">{{ pd.de_xuat.don_vi.ten_don_vi }} - {{ pd.de_xuat.nam_hoc }}</small>
+            {% for dept in gate.required %}
+                {% set rs = gate.results.get(dept) %}
+                {% if rs == 'Đồng ý' %}
+                <span class="badge-status badge-approved me-1 mb-1">{{ dept }}: Đã duyệt</span>
+                {% elif rs == 'Từ chối' %}
+                <span class="badge-status badge-rejected me-1 mb-1">{{ dept }}: Từ chối</span>
+                {% else %}
+                <span class="badge-status badge-pending me-1 mb-1">{{ dept }}: Chờ duyệt</span>
+                {% endif %}
+            {% endfor %}
+            {% if gate.can_review %}
+            <span class="badge-status badge-reviewing ms-1">Đủ điều kiện phê duyệt</span>
+            {% else %}
+            <span class="badge-status badge-draft ms-1">Chưa đủ điều kiện</span>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
 {% set display_fields = allowed_fields|reject('equalto', 'nckh_minh_chung')|list %}
 {% set show_evidence = 'nckh_minh_chung' in allowed_fields %}
@@ -142,7 +180,12 @@
                                 {% if show_evidence %}
                                 <th style="width:60px;">MC</th>
                                 {% endif %}
-                                <th style="width:100px;" class="text-center">Nhất trí</th>
+                                {% if managed_dept_columns %}
+                                    {% for mcol in managed_dept_columns %}
+                                    <th style="width:74px;"><small>{{ mcol }}</small></th>
+                                    {% endfor %}
+                                {% endif %}
+                                <th style="width:100px;" class="text-center">Đang chờ</th>
                                 <th style="width:40px;" class="text-center">CT</th>
                             </tr>
                         </thead>
@@ -152,6 +195,8 @@
                             {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
                             {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
                             {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
+                            {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                            {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
                             <tr id="row-{{ pd.id }}-{{ ct.id }}"
                                 class="{% if is_out_of_scope %}table-light text-muted{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
                                 data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
@@ -161,16 +206,19 @@
                                 data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi }}">
                                 <td>{{ loop.index }}</td>
                                 <td class="fw-semibold">
-                                    {{ ct.quan_nhan.ho_ten if ct.quan_nhan else pd.de_xuat.don_vi.ten_don_vi }}
+                                    {% set display_name = ct.quan_nhan.ho_ten if ct.quan_nhan else pd.de_xuat.don_vi.ten_don_vi %}
+                                    <span class="text-ellipsis" title="{{ display_name }}">{{ display_name }}</span>
                                 </td>
                                 <td>
                                     {% if ct.quan_nhan %}
-                                    <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
+                                    <small title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
+                                        <span class="text-ellipsis-sm">{{ ct.quan_nhan.cap_bac or '' }}</span>{% if ct.quan_nhan.chuc_vu %}<br><span class="text-ellipsis-sm">{{ ct.quan_nhan.chuc_vu }}</span>{% endif %}
+                                    </small>
                                     {% else %}
                                     <small class="text-muted">-</small>
                                     {% endif %}
                                 </td>
-                                <td><small>{{ ct.doi_tuong or '-' }}</small></td>
+                                <td><small class="text-ellipsis-sm" title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
                                 <td>
                                     {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
                                     <span class="badge bg-warning text-dark">CSTĐ</span>
@@ -213,6 +261,21 @@
                                     {% endif %}
                                 </td>
                                 {% endif %}
+                                {% if managed_dept_columns %}
+                                    {% for mcol in managed_dept_columns %}
+                                    {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                                    {% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                                    <td class="text-center">
+                                        {% if gate_kq == 'Đồng ý' %}
+                                        <span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>
+                                        {% elif gate_kq == 'Từ chối' %}
+                                        <span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                {% endif %}
                                 <td class="text-center">
                                     {% if is_out_of_scope %}
                                     <div class="form-check form-switch d-flex justify-content-center mb-0">
@@ -221,7 +284,7 @@
                                                style="width:2.5em; height:1.3em; opacity:0.5;">
                                     </div>
                                     <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
-                                    {% else %}
+                                    {% elif is_gate_ready %}
                                     <div class="form-check form-switch d-flex justify-content-center mb-0">
                                         <input class="form-check-input toggle-approval" type="checkbox"
                                                id="switch-{{ pd.id }}-{{ ct.id }}"
@@ -238,6 +301,13 @@
                                     <small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}"
                                            style="font-size:0.72rem;" title="{{ kq.ly_do }}">
                                         {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
+                                    </small>
+                                    {% endif %}
+                                    {% else %}
+                                    <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
+                                    {% if ct_gate and ct_gate.pending %}
+                                    <small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">
+                                        Chưa duyệt: {{ ct_gate.pending|join(', ') }}
                                     </small>
                                     {% endif %}
                                     {% endif %}
@@ -820,3 +890,10 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endblock %}
+    const toggleFilterBar = document.getElementById('toggleFilterBar');
+    const filterBar = document.getElementById('filterBar');
+    if (toggleFilterBar && filterBar) {
+        toggleFilterBar.addEventListener('click', function() {
+            filterBar.classList.toggle('d-none');
+        });
+    }

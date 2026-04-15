@@ -14,12 +14,60 @@
             </ol>
         </nav>
     </div>
-    {% if phe_duyet.ket_qua == 'Chờ duyệt' %}
-    <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Nhất trí tất cả chưa duyệt">
-        <i class="bi bi-check-all me-1"></i>Nhất trí toàn bộ
-    </button>
-    {% endif %}
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
+            <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
+        </button>
+        {% if phe_duyet.ket_qua == 'Chờ duyệt' %}
+        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Nhất trí tất cả chưa duyệt">
+            <i class="bi bi-check-all me-1"></i>Nhất trí toàn bộ
+        </button>
+        {% endif %}
+    </div>
 </div>
+
+<div class="card-section mb-3" id="filterBar">
+    <div class="card-body-custom py-2">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="input-group input-group-sm" style="width:220px;">
+                <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo họ tên...">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+            </div>
+            <select class="form-select form-select-sm" id="danhHieuFilter" style="width:190px;">
+                <option value="">Tất cả danh hiệu</option>
+                <option value="Chiến sĩ thi đua">CSTD</option>
+                <option value="Chiến sĩ tiên tiến">CSTT</option>
+                <option value="Đơn vị quyết thắng">DVQT</option>
+                <option value="Đơn vị tiên tiến">DVTT</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+{% if group_gate is defined and group_gate.required %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Điều kiện phê duyệt của Thủ trưởng</h6>
+    </div>
+    <div class="card-body-custom py-2">
+        {% for dept in group_gate.required %}
+            {% set rs = group_gate.results.get(dept) %}
+            {% if rs == 'Đồng ý' %}
+            <span class="badge-status badge-approved me-1 mb-1">{{ dept }}: Đã duyệt</span>
+            {% elif rs == 'Từ chối' %}
+            <span class="badge-status badge-rejected me-1 mb-1">{{ dept }}: Từ chối</span>
+            {% else %}
+            <span class="badge-status badge-pending me-1 mb-1">{{ dept }}: Chờ duyệt</span>
+            {% endif %}
+        {% endfor %}
+        {% if group_gate.can_review %}
+        <div class="mt-2"><span class="badge-status badge-reviewing"><i class="bi bi-check-circle me-1"></i>Đủ điều kiện để Thủ trưởng phê duyệt.</span></div>
+        {% else %}
+        <div class="mt-2"><span class="badge-status badge-draft"><i class="bi bi-exclamation-circle me-1"></i>Chưa đủ điều kiện, chưa thể phê duyệt.</span></div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
 <!-- Info -->
 <div class="card-section mb-3">
@@ -130,21 +178,28 @@
                     {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
                     {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
                     {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
+                    {% set ct_gate = group_gate_by_ct[ct.id] if group_gate_by_ct is defined and ct.id in group_gate_by_ct else None %}
+                    {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
                     <tr id="row-{{ phe_duyet.id }}-{{ ct.id }}"
                         class="{% if is_out_of_scope %}table-light text-muted{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %}"
-                        data-ct-id="{{ ct.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}">
+                        data-ct-id="{{ ct.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
+                        data-ho-ten="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi)|lower }}"
+                        data-danh-hieu="{{ ct.loai_danh_hieu or '' }}">
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">
-                            {{ ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi }}
+                            {% set display_name = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi %}
+                            <span class="text-ellipsis" title="{{ display_name }}">{{ display_name }}</span>
                         </td>
                         <td>
                             {% if ct.quan_nhan %}
-                            <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
+                            <small title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
+                                <span class="text-ellipsis-sm">{{ ct.quan_nhan.cap_bac or '' }}</span>{% if ct.quan_nhan.chuc_vu %}<br><span class="text-ellipsis-sm">{{ ct.quan_nhan.chuc_vu }}</span>{% endif %}
+                            </small>
                             {% else %}
                             <small class="text-muted">-</small>
                             {% endif %}
                         </td>
-                        <td><small>{{ ct.doi_tuong or '-' }}</small></td>
+                        <td><small class="text-ellipsis-sm" title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
                         <td>
                             {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
                             <span class="badge bg-warning text-dark">CSTĐ</span>
@@ -202,7 +257,7 @@
                                        style="width:2.5em; height:1.3em; opacity:0.5;">
                             </div>
                             <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
-                            {% elif phe_duyet.ket_qua == 'Chờ duyệt' %}
+                            {% elif phe_duyet.ket_qua == 'Chờ duyệt' and is_gate_ready %}
                             <div class="form-check form-switch d-flex justify-content-center mb-0">
                                 <input class="form-check-input toggle-approval" type="checkbox"
                                        id="switch-{{ phe_duyet.id }}-{{ ct.id }}"
@@ -219,6 +274,13 @@
                             <small class="text-danger d-block" id="reason-text-{{ phe_duyet.id }}-{{ ct.id }}"
                                    style="font-size:0.72rem;" title="{{ kq.ly_do }}">
                                 {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
+                            </small>
+                            {% endif %}
+                            {% elif phe_duyet.ket_qua == 'Chờ duyệt' and not is_gate_ready %}
+                            <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK theo nhóm ban</small>
+                            {% if ct_gate and ct_gate.pending %}
+                            <small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">
+                                Chưa duyệt: {{ ct_gate.pending|join(', ') }}
                             </small>
                             {% endif %}
                             {% else %}
@@ -431,11 +493,38 @@
     .stat-mini i { font-size: 1rem; }
 </style>
 
-{% if phe_duyet.ket_qua == 'Chờ duyệt' %}
+{% if phe_duyet.ket_qua == 'Chờ duyệt' and (group_gate is not defined or group_gate.can_review) %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     const pdId = '{{ phe_duyet.id }}';
+    const toggleFilterBar = document.getElementById('toggleFilterBar');
+    const filterBar = document.getElementById('filterBar');
+    const searchInput = document.getElementById('searchInput');
+    const danhHieuFilter = document.getElementById('danhHieuFilter');
+
+    if (toggleFilterBar && filterBar) {
+        toggleFilterBar.addEventListener('click', function() {
+            filterBar.classList.toggle('d-none');
+        });
+    }
+
+    function applyFilters() {
+        const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const dh = danhHieuFilter ? danhHieuFilter.value : '';
+        document.querySelectorAll(`tr[id^="row-${pdId}-"]`).forEach(row => {
+            let visible = true;
+            if (keyword && !row.dataset.hoTen.includes(keyword)) visible = false;
+            if (visible && dh && row.dataset.danhHieu !== dh) visible = false;
+            row.style.display = visible ? '' : 'none';
+            const ctId = row.dataset.ctId;
+            const rejectRow = document.getElementById(`reject-row-${pdId}-${ctId}`);
+            if (!visible && rejectRow) rejectRow.style.display = 'none';
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (danhHieuFilter) danhHieuFilter.addEventListener('change', applyFilters);
 
     // Toggle switches
     document.querySelectorAll('.toggle-approval').forEach(sw => {

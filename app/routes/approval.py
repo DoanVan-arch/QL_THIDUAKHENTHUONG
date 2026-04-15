@@ -12,8 +12,6 @@ from datetime import datetime
 approval_bp = Blueprint('approval', __name__)
 
 ROLE_TO_PHONG = {
-    Role.PHONG_CHINHTRI: PhongDuyet.PHONG_CHINHTRI.value,
-    Role.PHONG_THAMMUU: PhongDuyet.PHONG_THAMMUU.value,
     Role.PHONG_KHOAHOC: PhongDuyet.PHONG_KHOAHOC.value,
     Role.PHONG_DAOTAO: PhongDuyet.PHONG_DAOTAO.value,
     Role.THU_TRUONG_PHONG_CHINHTRI: PhongDuyet.THU_TRUONG_PHONG_CHINHTRI.value,
@@ -25,8 +23,26 @@ ROLE_TO_PHONG = {
     Role.BAN_CNTT: PhongDuyet.BAN_CNTT.value,
     Role.BAN_TAC_HUAN: PhongDuyet.BAN_TAC_HUAN.value,
     Role.BAN_KHAOTHI: PhongDuyet.BAN_KHAOTHI.value,
+    Role.UY_BAN_KIEMTRA: PhongDuyet.UY_BAN_KIEMTRA.value,
     Role.BAN_QUANLUC: PhongDuyet.BAN_QUANLUC.value,
 }
+
+
+def _managed_gate_columns(role):
+    if role == Role.THU_TRUONG_PHONG_CHINHTRI:
+        return [
+            PhongDuyet.BAN_CANBO.value,
+            PhongDuyet.BAN_TOCHUC.value,
+            PhongDuyet.BAN_TUYENHUAN.value,
+            PhongDuyet.BAN_CTCQ.value,
+        ]
+    if role == Role.THU_TRUONG_PHONG_TMHC:
+        return [
+            PhongDuyet.BAN_CNTT.value,
+            PhongDuyet.BAN_TAC_HUAN.value,
+            PhongDuyet.BAN_QUANLUC.value,
+        ]
+    return []
 
 _GROUP_CONFIRMATION = {
     Role.THU_TRUONG_PHONG_CHINHTRI: {
@@ -41,6 +57,84 @@ _GROUP_CONFIRMATION = {
         PhongDuyet.BAN_CNTT.value,
     },
 }
+
+
+def _get_group_gate_for_pd(role, de_xuat_id):
+    """Return gate status for group-confirmation roles.
+    Output: {
+      can_review: bool,
+      required: [dept_names],
+      approved: [dept_names],
+      pending: [dept_names],
+      rejected: [dept_names],
+      results: {dept_name: ket_qua}
+    }
+    """
+    if role not in _GROUP_CONFIRMATION:
+        return {
+            'can_review': True,
+            'required': [],
+            'approved': [],
+            'pending': [],
+            'rejected': [],
+            'results': {},
+        }
+
+    required_groups = sorted(list(_GROUP_CONFIRMATION[role]))
+    group_reviews = PheDuyet.query.filter(
+        PheDuyet.de_xuat_id == de_xuat_id,
+        PheDuyet.phong_duyet.in_(required_groups)
+    ).all()
+    result_map = {g.phong_duyet: g.ket_qua for g in group_reviews}
+
+    approved = [d for d in required_groups if result_map.get(d) == KetQuaDuyet.DONG_Y.value]
+    rejected = [d for d in required_groups if result_map.get(d) == KetQuaDuyet.TU_CHOI.value]
+    pending = [d for d in required_groups if result_map.get(d) != KetQuaDuyet.DONG_Y.value]
+
+    return {
+        'can_review': len(pending) == 0,
+        'required': required_groups,
+        'approved': approved,
+        'pending': pending,
+        'rejected': rejected,
+        'results': result_map,
+    }
+
+
+def _get_group_gate_for_ct(role, de_xuat_id, ct_id):
+    """Return per-individual gate status for group-confirmation roles."""
+    if role not in _GROUP_CONFIRMATION:
+        return {
+            'can_review': True,
+            'required': [],
+            'approved': [],
+            'pending': [],
+            'rejected': [],
+            'results': {},
+        }
+
+    required_groups = sorted(list(_GROUP_CONFIRMATION[role]))
+    rows = db.session.query(PheDuyet.phong_duyet, KetQuaDuyetChiTiet.ket_qua).outerjoin(
+        KetQuaDuyetChiTiet,
+        (KetQuaDuyetChiTiet.phe_duyet_id == PheDuyet.id) & (KetQuaDuyetChiTiet.chi_tiet_id == ct_id)
+    ).filter(
+        PheDuyet.de_xuat_id == de_xuat_id,
+        PheDuyet.phong_duyet.in_(required_groups)
+    ).all()
+    result_map = {phong: ket_qua for phong, ket_qua in rows}
+
+    approved = [d for d in required_groups if result_map.get(d) == KetQuaDuyet.DONG_Y.value]
+    rejected = [d for d in required_groups if result_map.get(d) == KetQuaDuyet.TU_CHOI.value]
+    pending = [d for d in required_groups if result_map.get(d) != KetQuaDuyet.DONG_Y.value]
+
+    return {
+        'can_review': len(pending) == 0,
+        'required': required_groups,
+        'approved': approved,
+        'pending': pending,
+        'rejected': rejected,
+        'results': result_map,
+    }
 
 # Reverse map: PhongDuyet display name -> Role
 _PHONG_TO_ROLE = {v: k for k, v in ROLE_TO_PHONG.items()}
@@ -182,26 +276,10 @@ def _notify_rejections(phe_duyet):
 @department_required
 def pending_list():
     phong_name = ROLE_TO_PHONG.get(current_user.role, '')
-
-    if current_user.role in _GROUP_CONFIRMATION:
-        all_pending = PheDuyet.query.filter_by(
-            phong_duyet=phong_name,
-            ket_qua=KetQuaDuyet.CHO_DUYET.value
-        ).order_by(PheDuyet.created_at.desc()).all()
-        pending_reviews = []
-        required_groups = _GROUP_CONFIRMATION[current_user.role]
-        for pd in all_pending:
-            group_reviews = PheDuyet.query.filter(
-                PheDuyet.de_xuat_id == pd.de_xuat_id,
-                PheDuyet.phong_duyet.in_(list(required_groups))
-            ).all()
-            if group_reviews and all(g.ket_qua == KetQuaDuyet.DONG_Y.value for g in group_reviews):
-                pending_reviews.append(pd)
-    else:
-        pending_reviews = PheDuyet.query.filter_by(
-            phong_duyet=phong_name,
-            ket_qua=KetQuaDuyet.CHO_DUYET.value
-        ).order_by(PheDuyet.created_at.desc()).all()
+    pending_reviews = PheDuyet.query.filter_by(
+        phong_duyet=phong_name,
+        ket_qua=KetQuaDuyet.CHO_DUYET.value
+    ).order_by(PheDuyet.created_at.desc()).all()
 
     # Ensure per-item records exist for all chi_tiets
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items
@@ -275,6 +353,18 @@ def pending_list():
     allowed_fields = get_phong_fields().get(current_user.role, [])
     table_columns = get_phong_table_columns().get(current_user.role, [])
     field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
+    managed_dept_columns = _managed_gate_columns(current_user.role)
+
+    # Group gate status for Thủ trưởng roles
+    group_gate_by_pd = {}
+    group_gate_by_ct = {}
+    if current_user.role in _GROUP_CONFIRMATION:
+        for pd in pending_reviews:
+            group_gate_by_pd[pd.id] = _get_group_gate_for_pd(current_user.role, pd.de_xuat_id)
+            ct_map = {}
+            for ct in pd.de_xuat.chi_tiets:
+                ct_map[ct.id] = _get_group_gate_for_ct(current_user.role, pd.de_xuat_id, ct.id)
+            group_gate_by_ct[pd.id] = ct_map
 
     # Collect unique unit names for dropdown filter
     unit_names = []
@@ -292,7 +382,10 @@ def pending_list():
                            field_labels=get_field_labels(),
                            field_conditions=field_conditions,
                            unit_names=unit_names,
-                           out_of_scope_ct_ids=out_of_scope_ct_ids)
+                           out_of_scope_ct_ids=out_of_scope_ct_ids,
+                           group_gate_by_pd=group_gate_by_pd,
+                           group_gate_by_ct=group_gate_by_ct,
+                           managed_dept_columns=managed_dept_columns)
 
 
 @approval_bp.route('/review/<int:id>', methods=['GET'])
@@ -306,15 +399,11 @@ def review_nomination(id):
         de_xuat_id=id, phong_duyet=phong_name
     ).first_or_404()
 
+    group_gate = _get_group_gate_for_pd(current_user.role, id)
+    group_gate_by_ct = {}
     if current_user.role in _GROUP_CONFIRMATION:
-        required_groups = _GROUP_CONFIRMATION[current_user.role]
-        group_reviews = PheDuyet.query.filter(
-            PheDuyet.de_xuat_id == id,
-            PheDuyet.phong_duyet.in_(list(required_groups))
-        ).all()
-        if not group_reviews or not all(g.ket_qua == KetQuaDuyet.DONG_Y.value for g in group_reviews):
-            flash('Chưa đủ kết quả nhất trí từ các ban thuộc nhóm xác nhận.', 'warning')
-            return redirect(url_for('approval.pending_list'))
+        for ct in de_xuat.chi_tiets:
+            group_gate_by_ct[ct.id] = _get_group_gate_for_ct(current_user.role, id, ct.id)
 
     # Ensure per-item records exist for all chi_tiets
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items
@@ -354,7 +443,9 @@ def review_nomination(id):
                            table_columns=table_columns,
                            field_labels=get_field_labels(),
                            field_conditions=field_conditions,
-                           out_of_scope_ct_ids=out_of_scope_ct_ids)
+                           out_of_scope_ct_ids=out_of_scope_ct_ids,
+                           group_gate=group_gate,
+                           group_gate_by_ct=group_gate_by_ct)
 
 
 @approval_bp.route('/review/<int:id>/item/<int:ct_id>/approve', methods=['POST'])
@@ -365,6 +456,12 @@ def approve_item(id, ct_id):
     phe_duyet = PheDuyet.query.filter_by(
         de_xuat_id=id, phong_duyet=phong_name
     ).first_or_404()
+
+    if current_user.role in _GROUP_CONFIRMATION:
+        group_gate = _get_group_gate_for_ct(current_user.role, id, ct_id)
+        if not group_gate['can_review']:
+            flash('Chưa đủ điều kiện phê duyệt của nhóm ban liên quan.', 'warning')
+            return redirect(url_for('approval.review_nomination', id=id))
 
     # Block if out of scope for BAN_QUANLUC/BAN_CANBO
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
@@ -393,6 +490,12 @@ def reject_item(id, ct_id):
     phe_duyet = PheDuyet.query.filter_by(
         de_xuat_id=id, phong_duyet=phong_name
     ).first_or_404()
+
+    if current_user.role in _GROUP_CONFIRMATION:
+        group_gate = _get_group_gate_for_ct(current_user.role, id, ct_id)
+        if not group_gate['can_review']:
+            flash('Chưa đủ điều kiện phê duyệt của nhóm ban liên quan.', 'warning')
+            return redirect(url_for('approval.review_nomination', id=id))
 
     # Block if out of scope for BAN_QUANLUC/BAN_CANBO
     ct_obj = DeXuatChiTiet.query.get_or_404(ct_id)
@@ -427,6 +530,16 @@ def submit_review(id):
     phe_duyet = PheDuyet.query.filter_by(
         de_xuat_id=id, phong_duyet=phong_name
     ).first_or_404()
+
+    if current_user.role in _GROUP_CONFIRMATION:
+        blocked = []
+        for kq in phe_duyet.chi_tiet_duyet:
+            ct_gate = _get_group_gate_for_ct(current_user.role, id, kq.chi_tiet_id)
+            if not ct_gate['can_review']:
+                blocked.append(kq.chi_tiet_id)
+        if blocked:
+            flash(f'Có {len(blocked)} cá nhân chưa đủ điều kiện theo nhóm ban liên quan.', 'warning')
+            return redirect(url_for('approval.review_nomination', id=id))
 
     # Check all items have been reviewed
     pending_items = [kq for kq in phe_duyet.chi_tiet_duyet
@@ -489,6 +602,11 @@ def toggle_item(pd_id, ct_id):
     phe_duyet = PheDuyet.query.filter_by(
         id=pd_id, phong_duyet=phong_name
     ).first_or_404()
+
+    if current_user.role in _GROUP_CONFIRMATION:
+        group_gate = _get_group_gate_for_ct(current_user.role, phe_duyet.de_xuat_id, ct_id)
+        if not group_gate['can_review']:
+            return jsonify({'success': False, 'message': 'Chưa đủ điều kiện phê duyệt của nhóm ban liên quan.'}), 403
 
     # Block if out of scope for BAN_QUANLUC/BAN_CANBO
     ct_obj = DeXuatChiTiet.query.get_or_404(ct_id)
@@ -600,6 +718,15 @@ def batch_approve():
     phe_duyet = PheDuyet.query.filter_by(
         id=pd_id, phong_duyet=phong_name
     ).first_or_404()
+
+    if current_user.role in _GROUP_CONFIRMATION:
+        blocked_ids = []
+        for ct_id in ct_ids:
+            ct_gate = _get_group_gate_for_ct(current_user.role, phe_duyet.de_xuat_id, ct_id)
+            if not ct_gate['can_review']:
+                blocked_ids.append(ct_id)
+        if blocked_ids:
+            return jsonify({'success': False, 'message': f'Có {len(blocked_ids)} cá nhân chưa đủ điều kiện phê duyệt của nhóm ban liên quan.'}), 403
 
     if phe_duyet.ket_qua != KetQuaDuyet.CHO_DUYET.value:
         return jsonify({'success': False, 'message': 'Đã hoàn tất duyệt'}), 400
@@ -820,6 +947,16 @@ def revoke_review(pd_id):
     if phe_duyet.ket_qua == KetQuaDuyet.CHO_DUYET.value:
         flash('Kết quả duyệt này vẫn đang chờ, không cần thu hồi.', 'warning')
         return redirect(url_for('approval.history'))
+
+    # For paired scope logic, disallow revoke if this department is auto-approved-by-scope
+    if current_user.role in (Role.BAN_CANBO, Role.BAN_QUANLUC):
+        in_scope_items = [
+            kq for kq in phe_duyet.chi_tiet_duyet
+            if _is_in_dept_scope(current_user.role, kq.chi_tiet.doi_tuong)
+        ]
+        if not in_scope_items:
+            flash('Kết quả tự động theo phạm vi, không thể thu hồi.', 'warning')
+            return redirect(url_for('approval.history'))
 
     # 1. Reset the PheDuyet record
     phe_duyet.ket_qua = KetQuaDuyet.CHO_DUYET.value

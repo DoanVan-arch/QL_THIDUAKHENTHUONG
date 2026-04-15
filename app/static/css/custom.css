@@ -543,6 +543,25 @@ body {
     color: #721C24;
 }
 
+/* Table truncation helpers */
+.text-ellipsis {
+    display: inline-block;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.text-ellipsis-sm {
+    display: inline-block;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
 /* ---- Conditional Field Groups ---- */
 .field-group {
     transition: all 0.3s ease;
