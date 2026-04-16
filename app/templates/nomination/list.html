@@ -44,7 +44,7 @@
         <div class="table-responsive">
             <table class="table table-custom mb-0">
                 <thead>
-                    <tr class="nom-row" data-nam-hoc="{{ dx.nam_hoc }}" data-trang-thai="{{ dx.trang_thai }}">
+                    <tr>
                         <th>STT</th>
                         <th>Năm học</th>
                         <th>Số cá nhân</th>
@@ -62,7 +62,7 @@
                         'Phê duyệt cuối': 'badge-final', 'Từ chối': 'badge-rejected'
                     } %}
                     {% for dx in nominations.items %}
-                    <tr>
+                    <tr class="nom-row" data-nam-hoc="{{ dx.nam_hoc }}" data-trang-thai="{{ dx.trang_thai }}">
                         <td>{{ (nominations.page - 1) * nominations.per_page + loop.index }}</td>
                         <td class="fw-semibold">{{ dx.nam_hoc }}</td>
                         <td>{{ dx.chi_tiets|length }}</td>

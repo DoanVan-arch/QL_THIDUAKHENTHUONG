@@ -43,14 +43,14 @@ const NCKH_CRITERIA = {
     'Học viên năm thứ IV': 'Tối thiểu nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc chuyên đề đạt giải Ba cấp Trường trở lên',
     'Học viên sau đại học': 'Tối thiểu nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên',
     'Học viên VB2': 'Tối thiểu nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc chuyên đề đạt giải Ba cấp Trường trở lên',
-    'Học viên tiến sĩ': 'Tối thiểu nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên',
+    'Học viên TS': 'Tối thiểu nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên',
     'Học viên quốc tế': 'Hoàn thành tốt nhiệm vụ NCKH theo đúng mức quy định'
 };
 
 const STUDENT_TYPES = [
     'Học viên năm thứ I', 'Học viên năm thứ II', 'Học viên năm thứ III',
     'Học viên năm thứ IV', 'Học viên sau đại học', 'Học viên VB2',
-    'Học viên tiến sĩ', 'Học viên quốc tế'
+    'Học viên TS', 'Học viên quốc tế'
 ];
 
 function updateConditionalFields(doiTuong, hocVi) {
@@ -104,6 +104,9 @@ function updateNckhSection() {
 
 function onDanhHieuChange() {
     updateNckhSection();
+    if (typeof applyCriteriaVisibilityByGroup === 'function') {
+        applyCriteriaVisibilityByGroup();
+    }
 }
 
 function toggleFieldGroup(groupId, show) {
@@ -132,6 +135,9 @@ function onPersonnelSelect(selectEl) {
     }
 
     updateConditionalFields(doiTuong, hocVi);
+    if (typeof applyCriteriaVisibilityByGroup === 'function') {
+        applyCriteriaVisibilityByGroup();
+    }
 }
 
 // When doi_tuong dropdown changes manually
@@ -150,6 +156,46 @@ function onDoiTuongSelectChange() {
     }
 
     updateConditionalFields(doiTuong, hocVi);
+    if (typeof applyCriteriaVisibilityByGroup === 'function') {
+        applyCriteriaVisibilityByGroup();
+    }
+}
+
+function filterPersonnelOptions(inputEl) {
+    const keyword = (inputEl.value || '').trim().toLowerCase();
+    const qnSelect = document.getElementById('quan_nhan_select');
+    if (!qnSelect) return;
+
+    const selectedValue = qnSelect.value;
+    let firstVisibleValue = '';
+
+    for (let i = 0; i < qnSelect.options.length; i += 1) {
+        const option = qnSelect.options[i];
+        if (!option.value) {
+            option.hidden = false;
+            continue;
+        }
+
+        const label = (option.text || '').toLowerCase();
+        const matched = !keyword || label.includes(keyword);
+        option.hidden = !matched;
+
+        if (matched && !option.disabled && !firstVisibleValue) {
+            firstVisibleValue = option.value;
+        }
+    }
+
+    if (selectedValue) {
+        const selectedOption = Array.prototype.find.call(qnSelect.options, function (opt) {
+            return opt.value === selectedValue;
+        });
+        if (selectedOption && selectedOption.hidden) {
+            qnSelect.value = firstVisibleValue || '';
+            if (qnSelect.value) {
+                onPersonnelSelect(qnSelect);
+            }
+        }
+    }
 }
 
 // File upload preview

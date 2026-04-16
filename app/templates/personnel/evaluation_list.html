@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Đánh giá hằng năm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-clipboard-data me-2"></i>Đánh giá xếp loại hằng năm</h4>
+        <small class="text-muted">Đánh giá xếp loại đảng viên và cán bộ cho toàn bộ quân nhân đơn vị</small>
+    </div>
+</div>
+
+<div class="card-section mb-3">
+    <div class="card-body-custom">
+        {% if migration_missing %}
+        <div class="alert alert-danger py-2">
+            Thiếu bảng dữ liệu đánh giá hằng năm. Chạy lệnh: <code>flask db upgrade</code>
+        </div>
+        {% endif %}
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">Năm học</label>
+                <input type="text" class="form-control" name="nam_hoc" value="{{ nam_hoc }}" placeholder="VD: 2025-2026">
+                {% if nam_hoc_list %}
+                <small class="text-muted">Năm học đã có dữ liệu: {{ nam_hoc_list|join(', ') }}</small>
+                {% endif %}
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-navy w-100"><i class="bi bi-search me-1"></i>Tìm</button>
+                <a href="{{ url_for('personnel.annual_evaluations') }}" class="btn btn-outline-secondary w-100">Bỏ lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        <form method="POST" action="{{ url_for('personnel.save_annual_evaluations') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="nam_hoc" value="{{ nam_hoc }}">
+
+            <div class="p-3 border-bottom">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label small">Áp dụng xếp loại đảng viên cho toàn đơn vị</label>
+                        <select class="form-select form-select-sm" name="bulk_xep_loai_dang_vien" {% if migration_missing %}disabled{% endif %}>
+                            <option value="">-- Không áp dụng --</option>
+                            {% for x in dang_vien_choices %}
+                            <option value="{{ x }}">{{ x }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small">Áp dụng xếp loại cán bộ cho toàn đơn vị</label>
+                        <select class="form-select form-select-sm" name="bulk_xep_loai_can_bo" {% if migration_missing %}disabled{% endif %}>
+                            <option value="">-- Không áp dụng --</option>
+                            {% for x in can_bo_choices %}
+                            <option value="{{ x }}">{{ x }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyBulkToAll()" {% if migration_missing %}disabled{% endif %}>
+                            Áp dụng toàn bộ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {% if personnel %}
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Họ tên</th>
+                            <th>Cấp bậc</th>
+                            <th>Chức vụ</th>
+                            <th>Xếp loại đảng viên</th>
+                            <th>Xếp loại cán bộ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for qn in personnel %}
+                        {% set row = existing_rows.get(qn.id) %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="fw-semibold">{{ qn.ho_ten }}</td>
+                            <td>{{ qn.cap_bac or '-' }}</td>
+                            <td>{{ qn.chuc_vu or '-' }}</td>
+                            <td>
+                                <select class="form-select form-select-sm" name="xep_loai_dang_vien_{{ qn.id }}" required>
+                                    <option value="">-- Chọn --</option>
+                                    {% for x in dang_vien_choices %}
+                                    <option value="{{ x }}" {% if row and row.xep_loai_dang_vien == x %}selected{% endif %}>{{ x }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm" name="xep_loai_can_bo_{{ qn.id }}" required>
+                                    <option value="">-- Chọn --</option>
+                                    {% for x in can_bo_choices %}
+                                    <option value="{{ x }}" {% if row and row.xep_loai_can_bo == x %}selected{% endif %}>{{ x }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-end align-items-center p-3">
+                <button type="submit" class="btn btn-navy">
+                    <i class="bi bi-save me-1"></i>Lưu đánh giá năm học {{ nam_hoc }}
+                </button>
+            </div>
+            {% else %}
+            <div class="empty-state py-4">
+                <i class="bi bi-clipboard-x d-block"></i>
+                <p>Không có quân nhân phù hợp</p>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if ({{ 'true' if migration_missing else 'false' }}) {
+        return;
+    }
+});
+
+function applyBulkToAll() {
+    const dv = document.querySelector('select[name="bulk_xep_loai_dang_vien"]');
+    const cb = document.querySelector('select[name="bulk_xep_loai_can_bo"]');
+    const valDv = dv ? dv.value : '';
+    const valCb = cb ? cb.value : '';
+
+    if (valDv) {
+        document.querySelectorAll('select[name^="xep_loai_dang_vien_"]').forEach(function(el) {
+            el.value = valDv;
+        });
+    }
+
+    if (valCb) {
+        document.querySelectorAll('select[name^="xep_loai_can_bo_"]').forEach(function(el) {
+            el.value = valCb;
+        });
+    }
+}
+</script>
+{% endblock %}

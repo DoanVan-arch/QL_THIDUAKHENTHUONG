@@ -23,6 +23,10 @@
             <div class="form-section">
                 <div class="form-section-title">Thông tin cá nhân</div>
                 <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Đơn vị</label>
+                        <input type="text" class="form-control" value="{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}" readonly>
+                    </div>
                     <div class="col-md-6">
                         <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="ho_ten" value="{{ qn.ho_ten }}" required>
@@ -61,6 +65,11 @@
                             <option value="{{ cv.ten }}"></option>
                             {% endfor %}
                         </datalist>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Đơn vị trực thuộc</label>
+                        <input type="text" class="form-control" name="don_vi_truc_thuoc" value="{{ qn.don_vi_truc_thuoc or '' }}" placeholder="VD: Đại đội 1, Bộ môn, Ban...">
+                        <small class="text-muted">Chú thích: Đại đội, bộ môn, ban, ...</small>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Ngày sinh</label>

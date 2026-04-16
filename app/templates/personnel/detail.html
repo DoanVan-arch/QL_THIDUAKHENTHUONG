@@ -50,6 +50,10 @@
                         <small class="text-muted">Đối tượng</small>
                         <div>{{ qn.doi_tuong or '-' }}</div>
                     </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Đơn vị</small>
+                        <div>{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</div>
+                    </div>
                     <div class="col-md-4">
                         <small class="text-muted">Chức danh</small>
                         <div>{{ qn.chuc_danh or '-' }}</div>
@@ -57,6 +61,10 @@
                     <div class="col-md-4">
                         <small class="text-muted">Chức vụ</small>
                         <div>{{ qn.chuc_vu or '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Đơn vị trực thuộc</small>
+                        <div>{{ qn.don_vi_truc_thuoc or '-' }}</div>
                     </div>
                     <div class="col-md-4">
                         <small class="text-muted">Ngày sinh</small>

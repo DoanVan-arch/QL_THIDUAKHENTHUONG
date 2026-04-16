@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Theo dõi đánh giá hằng năm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-clipboard2-data me-2"></i>Theo dõi đánh giá hằng năm</h4>
+        <small class="text-muted">Admin xem đánh giá xếp loại đảng viên và cán bộ của các đơn vị theo năm học</small>
+    </div>
+</div>
+
+{% if migration_missing %}
+<div class="alert alert-danger py-2">
+    Thiếu bảng đánh giá hằng năm. Vui lòng chạy: <code>flask db upgrade</code>
+</div>
+{% endif %}
+
+<div class="card-section mb-3">
+    <div class="card-body-custom">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">Năm học</label>
+                <select class="form-select" name="nam_hoc">
+                    <option value="">-- Tất cả --</option>
+                    {% for nh in nam_hoc_list %}
+                    <option value="{{ nh }}" {% if nam_hoc == nh %}selected{% endif %}>{{ nh }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Đơn vị</label>
+                <select class="form-select" name="don_vi_id">
+                    <option value="">-- Tất cả đơn vị --</option>
+                    {% for u in units %}
+                    <option value="{{ u.id }}" {% if don_vi_id == u.id %}selected{% endif %}>{{ u.ten_don_vi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Tìm quân nhân</label>
+                <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="Nhập họ tên...">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-navy w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if evaluations and evaluations.items %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Năm học</th>
+                        <th>Họ tên</th>
+                        <th>Đơn vị</th>
+                        <th>Xếp loại đảng viên</th>
+                        <th>Xếp loại cán bộ</th>
+                        <th>Cập nhật gần nhất</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in evaluations.items %}
+                    <tr>
+                        <td>{{ (evaluations.page - 1) * evaluations.per_page + loop.index }}</td>
+                        <td>{{ row.nam_hoc }}</td>
+                        <td class="fw-semibold">{{ row.quan_nhan.ho_ten if row.quan_nhan else '-' }}</td>
+                        <td>{{ row.don_vi.ten_don_vi if row.don_vi else '-' }}</td>
+                        <td>{{ row.xep_loai_dang_vien }}</td>
+                        <td>{{ row.xep_loai_can_bo }}</td>
+                        <td>{{ row.updated_at.strftime('%d/%m/%Y %H:%M') if row.updated_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if evaluations and evaluations.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if evaluations.has_prev %}
+                    <li class="page-item"><a class="page-link" href="?page={{ evaluations.prev_num }}&nam_hoc={{ nam_hoc }}&don_vi_id={{ don_vi_id or '' }}&search={{ search }}">&laquo;</a></li>
+                    {% endif %}
+                    {% for p in evaluations.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == evaluations.page }}"><a class="page-link" href="?page={{ p }}&nam_hoc={{ nam_hoc }}&don_vi_id={{ don_vi_id or '' }}&search={{ search }}">{{ p }}</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if evaluations.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ evaluations.next_num }}&nam_hoc={{ nam_hoc }}&don_vi_id={{ don_vi_id or '' }}&search={{ search }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state py-4">
+            <i class="bi bi-clipboard-x d-block"></i>
+            <p>Chưa có dữ liệu đánh giá</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
