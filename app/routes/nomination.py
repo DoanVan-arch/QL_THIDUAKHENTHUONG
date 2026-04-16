@@ -3,11 +3,13 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.personnel import QuanNhan, DoiTuong, MucDoHoanThanh
 from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi
+from app.models.evaluation import NhomTieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
 from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload
 from datetime import datetime
+from sqlalchemy.exc import ProgrammingError, OperationalError
 
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
@@ -18,6 +20,11 @@ DEPT_NAMES = [
 ]
 
 nomination_bp = Blueprint('nomination', __name__)
+
+
+def _get_evidence_required_fields():
+    rows = TieuChi.query.filter_by(is_active=True, co_minh_chung=True).order_by(TieuChi.thu_tu, TieuChi.ten).all()
+    return [{'ma_truong': tc.ma_truong, 'ten': tc.ten, 'nhom': tc.nhom} for tc in rows]
 
 
 @nomination_bp.route('/history')
@@ -219,6 +226,35 @@ def edit_nomination(id):
     tieu_chi_db = TieuChi.query.filter_by(is_active=True).all()
     tieu_chi_tooltips = {tc.ma_truong: tc.huong_dan for tc in tieu_chi_db if tc.huong_dan}
 
+    # Build criteria/group metadata to keep unit UI aligned with admin group configuration
+    nhom_meta = {}
+    try:
+        nhom_rows = NhomTieuChi.query.filter_by(is_active=True).order_by(NhomTieuChi.thu_tu, NhomTieuChi.ten_nhom).all()
+        nhom_meta = {
+            row.ma_nhom: {
+                'ten_nhom': row.ten_nhom,
+                'doi_tuong_ap_dung': row.doi_tuong_ap_dung or [],
+            }
+            for row in nhom_rows
+        }
+    except (ProgrammingError, OperationalError):
+        db.session.rollback()
+
+    if not nhom_meta:
+        nhom_meta = {
+            key: {'ten_nhom': label, 'doi_tuong_ap_dung': []}
+            for key, label in TieuChi.NHOM_CHOICES.items()
+        }
+
+    criteria_meta = {}
+    for tc in tieu_chi_db:
+        nhom_info = nhom_meta.get(tc.nhom, {'ten_nhom': tc.nhom, 'doi_tuong_ap_dung': []})
+        criteria_meta[tc.ma_truong] = {
+            'nhom': tc.nhom,
+            'nhom_ten': nhom_info.get('ten_nhom') or tc.nhom,
+            'doi_tuong_ap_dung': nhom_info.get('doi_tuong_ap_dung') or [],
+        }
+
     return render_template('nomination/edit.html',
                            de_xuat=de_xuat,
                            personnel=personnel,
@@ -227,7 +263,10 @@ def edit_nomination(id):
                            danh_hieu_tieu_chi=danh_hieu_tieu_chi,
                            doi_tuong_list=doi_tuong_list,
                            muc_do_list=muc_do_list,
-                           tieu_chi_tooltips=tieu_chi_tooltips)
+                           tieu_chi_tooltips=tieu_chi_tooltips,
+                           criteria_meta=criteria_meta,
+                           nhom_meta=nhom_meta,
+                           evidence_fields=_get_evidence_required_fields())
 
 
 @nomination_bp.route('/<int:id>/add-item', methods=['POST'])
@@ -339,6 +378,22 @@ def add_nomination_item(id):
                     ten_file_goc=file.filename,
                 )
                 db.session.add(mc)
+
+    # Dynamic evidence files by configured criteria requiring evidence
+    for ef in _get_evidence_required_fields():
+        field_key = ef['ma_truong']
+        files = request.files.getlist(f'minh_chung_{field_key}')
+        for file in files:
+            if file and file.filename:
+                path = save_upload(file, 'evidence')
+                if path:
+                    mc = MinhChung(
+                        chi_tiet_id=chi_tiet.id,
+                        loai_minh_chung=f'minh_chung_{field_key}',
+                        duong_dan=path,
+                        ten_file_goc=file.filename,
+                    )
+                    db.session.add(mc)
 
     # Handle multiple evidence files
     evidence_files = request.files.getlist('minh_chung_files')
@@ -452,6 +507,8 @@ def submit_nomination(id):
                 return redirect(url_for('nomination.edit_nomination', id=id))
 
     # Create pending approval records
+    has_any_doan_the = any((ct.ket_qua_doan_the or '').strip() for ct in de_xuat.chi_tiets)
+
     for phong in [PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
                   PhongDuyet.THU_TRUONG_PHONG_CHINHTRI, PhongDuyet.THU_TRUONG_PHONG_TMHC,
                   PhongDuyet.BAN_CANBO, PhongDuyet.BAN_TOCHUC,
@@ -461,12 +518,33 @@ def submit_nomination(id):
                   PhongDuyet.BAN_QUANLUC]:
         existing = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id, phong_duyet=phong.value).first()
         if not existing:
+            initial_ket_qua = KetQuaDuyet.CHO_DUYET.value
+            initial_ghi_chu = None
+            if phong == PhongDuyet.BAN_CTCQ and not has_any_doan_the:
+                initial_ket_qua = KetQuaDuyet.DONG_Y.value
+                initial_ghi_chu = 'Tự động duyệt (không có dữ liệu kết quả đoàn thể)'
+
             pd = PheDuyet(
                 de_xuat_id=de_xuat.id,
                 phong_duyet=phong.value,
-                ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                ket_qua=initial_ket_qua,
+                ghi_chu=initial_ghi_chu,
             )
             db.session.add(pd)
+            db.session.flush()
+
+            if phong == PhongDuyet.BAN_CTCQ and not has_any_doan_the:
+                for ct in de_xuat.chi_tiets:
+                    exists_item = KetQuaDuyetChiTiet.query.filter_by(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                    ).first()
+                    if not exists_item:
+                        db.session.add(KetQuaDuyetChiTiet(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                            ket_qua=KetQuaDuyet.DONG_Y.value,
+                        ))
 
     de_xuat.trang_thai = TrangThaiDeXuat.CHO_DUYET.value
     de_xuat.ngay_gui = datetime.utcnow()

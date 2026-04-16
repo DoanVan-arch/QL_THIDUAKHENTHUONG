@@ -7,3 +7,4 @@ from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetCh
 from app.models.reward import KhenThuong
 from app.models.notification import ThongBao
 from app.models.catalog import ChucVuOption, CapBacOption
+from app.models.evaluation import NhomTieuChi, DanhGiaHangNam

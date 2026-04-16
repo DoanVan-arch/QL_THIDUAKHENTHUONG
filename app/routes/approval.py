@@ -222,13 +222,13 @@ PHONG_FIELD_CONDITIONS = {
         'muc_do_hoan_thanh': ['Giảng viên', 'Cán bộ'],
     },
     Role.BAN_QUANLUC: {
-        'muc_do_hoan_thanh': ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Công chức quốc phòng'],
+        'muc_do_hoan_thanh': ['Công nhân viên', 'Quân nhân chuyên nghiệp'],
     },
 }
 
 # doi_tuong scope: which doi_tuong values each department approves
 # Departments not listed approve ALL doi_tuong values
-BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Công chức quốc phòng']
+BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp']
 
 DEPT_DOI_TUONG_SCOPE = {
     Role.BAN_QUANLUC: BAN_QUANLUC_DOI_TUONG,

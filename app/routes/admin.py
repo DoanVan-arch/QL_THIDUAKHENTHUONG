@@ -11,6 +11,7 @@ from app.models.unit import DonVi, LoaiDonVi
 from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
 from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDanhHieu, DanhHieu, TieuChi
+from app.models.evaluation import NhomTieuChi, DanhGiaHangNam
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
 from app.models.catalog import ChucVuOption, CapBacOption
@@ -18,6 +19,8 @@ from app.utils.decorators import admin_required, admin_or_reward_viewer_required
 from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
 from html import escape
+from sqlalchemy import case
+from sqlalchemy.exc import ProgrammingError, OperationalError
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -55,7 +58,7 @@ def _is_auto_scope_approved(dept_name, doi_tuong):
     return False
 
 # Đối tượng thuộc diện Ban Quân lực quản lý
-BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Công chức quốc phòng']
+BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp']
 
 # All criteria field labels (for detailed view)
 ALL_FIELD_LABELS = {
@@ -1540,7 +1543,13 @@ def all_personnel():
     if doi_tuong:
         query = query.filter(QuanNhan.doi_tuong == doi_tuong)
 
-    query = query.order_by(DonVi.thu_tu, DonVi.ten_don_vi, QuanNhan.ho_ten)
+    query = query.order_by(
+        DonVi.thu_tu,
+        DonVi.ten_don_vi,
+        case((QuanNhan.chuc_vu.is_(None), 1), else_=0),
+        QuanNhan.chuc_vu.asc(),
+        QuanNhan.ho_ten.asc()
+    )
     personnel = query.paginate(page=page, per_page=30, error_out=False)
 
     units = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu, DonVi.ten_don_vi).all()
@@ -1581,6 +1590,7 @@ def admin_personnel_edit(id):
         qn.cap_bac = request.form.get('cap_bac', '').strip() or None
         qn.chuc_danh = request.form.get('chuc_danh', '').strip() or None
         qn.chuc_vu = request.form.get('chuc_vu', '').strip() or None
+        qn.don_vi_truc_thuoc = request.form.get('don_vi_truc_thuoc', '').strip() or None
         qn.can_cuoc_cong_dan = request.form.get('can_cuoc_cong_dan', '').strip() or None
         qn.doi_tuong = request.form.get('doi_tuong', '').strip() or None
         qn.hoc_ham = request.form.get('hoc_ham', 'Không').strip()
@@ -2002,8 +2012,162 @@ PHONG_DUYET_OPTIONS = [
     ('Ban Công nghệ thông tin', 'Ban Công nghệ thông tin'),
     ('Ban Tác huấn', 'Ban Tác huấn'),
     ('Ban Khảo thí', 'Ban Khảo thí'),
+    ('Ủy ban Kiểm tra', 'Ủy ban Kiểm tra'),
     ('Ban Quân lực', 'Ban Quân lực'),
 ]
+
+
+def _get_nhom_tieu_chi_choices(include_inactive=False):
+    try:
+        _ensure_default_nhom_tieu_chi()
+        query = NhomTieuChi.query
+        if not include_inactive:
+            query = query.filter_by(is_active=True)
+        rows = query.order_by(NhomTieuChi.thu_tu, NhomTieuChi.ten_nhom).all()
+        if rows:
+            return {row.ma_nhom: row.ten_nhom for row in rows}
+    except (ProgrammingError, OperationalError):
+        db.session.rollback()
+    return dict(TieuChi.NHOM_CHOICES)
+
+
+DEFAULT_NHOM_TIEU_CHI = [
+    {'ma_nhom': 'chung', 'ten_nhom': 'Tiêu chí chung', 'thu_tu': 1},
+    {'ma_nhom': 'giang_vien', 'ten_nhom': 'Tiêu chí giảng viên', 'thu_tu': 2},
+    {'ma_nhom': 'hoc_vien', 'ten_nhom': 'Tiêu chí học viên', 'thu_tu': 3},
+    {'ma_nhom': 'nckh', 'ten_nhom': 'Tiêu chí NCKH', 'thu_tu': 4},
+    {'ma_nhom': 'khac', 'ten_nhom': 'Khác', 'thu_tu': 5},
+]
+
+
+def _ensure_default_nhom_tieu_chi():
+    existing_codes = {row.ma_nhom for row in NhomTieuChi.query.with_entities(NhomTieuChi.ma_nhom).all()}
+    created = 0
+    for item in DEFAULT_NHOM_TIEU_CHI:
+        if item['ma_nhom'] in existing_codes:
+            continue
+        row = NhomTieuChi(
+            ma_nhom=item['ma_nhom'],
+            ten_nhom=item['ten_nhom'],
+            mo_ta=None,
+            thu_tu=item['thu_tu'],
+            is_active=True,
+        )
+        row.doi_tuong_ap_dung = []
+        db.session.add(row)
+        created += 1
+    if created:
+        db.session.commit()
+
+
+@admin_bp.route('/nhom-tieu-chi')
+@login_required
+@admin_required
+def manage_nhom_tieu_chi():
+    try:
+        _ensure_default_nhom_tieu_chi()
+        groups = NhomTieuChi.query.order_by(NhomTieuChi.thu_tu, NhomTieuChi.ten_nhom).all()
+        doi_tuong_list = [e.value for e in DoiTuong]
+        return render_template('admin/manage_nhom_tieu_chi.html',
+                               groups=groups,
+                               doi_tuong_list=doi_tuong_list,
+                               migration_missing=False)
+    except (ProgrammingError, OperationalError):
+        db.session.rollback()
+        flash('Thiếu bảng nhóm tiêu chí. Vui lòng chạy: flask db upgrade', 'danger')
+        return render_template('admin/manage_nhom_tieu_chi.html',
+                               groups=[],
+                               doi_tuong_list=[e.value for e in DoiTuong],
+                               migration_missing=True)
+
+
+@admin_bp.route('/nhom-tieu-chi/create', methods=['POST'])
+@login_required
+@admin_required
+def create_nhom_tieu_chi():
+    ma_nhom = request.form.get('ma_nhom', '').strip()
+    ten_nhom = request.form.get('ten_nhom', '').strip()
+    mo_ta = request.form.get('mo_ta', '').strip() or None
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    doi_tuong_ap_dung = request.form.getlist('doi_tuong_ap_dung')
+
+    if not ma_nhom or not ten_nhom:
+        flash('Mã nhóm và tên nhóm không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+    if NhomTieuChi.query.filter_by(ma_nhom=ma_nhom).first():
+        flash(f'Mã nhóm "{ma_nhom}" đã tồn tại.', 'danger')
+        return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+    row = NhomTieuChi(
+        ma_nhom=ma_nhom,
+        ten_nhom=ten_nhom,
+        mo_ta=mo_ta,
+        thu_tu=thu_tu,
+        is_active=True,
+    )
+    row.doi_tuong_ap_dung = doi_tuong_ap_dung
+    db.session.add(row)
+    db.session.commit()
+    flash(f'Đã thêm nhóm tiêu chí: {ten_nhom}', 'success')
+    return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+
+@admin_bp.route('/nhom-tieu-chi/<int:id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_nhom_tieu_chi(id):
+    row = NhomTieuChi.query.get_or_404(id)
+    ma_nhom = request.form.get('ma_nhom', '').strip()
+    ten_nhom = request.form.get('ten_nhom', '').strip()
+    mo_ta = request.form.get('mo_ta', '').strip() or None
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    doi_tuong_ap_dung = request.form.getlist('doi_tuong_ap_dung')
+
+    if not ma_nhom or not ten_nhom:
+        flash('Mã nhóm và tên nhóm không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+    dup = NhomTieuChi.query.filter(NhomTieuChi.ma_nhom == ma_nhom, NhomTieuChi.id != id).first()
+    if dup:
+        flash(f'Mã nhóm "{ma_nhom}" đã tồn tại.', 'danger')
+        return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+    row.ma_nhom = ma_nhom
+    row.ten_nhom = ten_nhom
+    row.mo_ta = mo_ta
+    row.thu_tu = thu_tu
+    row.doi_tuong_ap_dung = doi_tuong_ap_dung
+    db.session.commit()
+    flash('Đã cập nhật nhóm tiêu chí.', 'success')
+    return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+
+@admin_bp.route('/nhom-tieu-chi/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_nhom_tieu_chi(id):
+    row = NhomTieuChi.query.get_or_404(id)
+    row.is_active = not row.is_active
+    db.session.commit()
+    flash('Đã cập nhật trạng thái nhóm tiêu chí.', 'success')
+    return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+
+@admin_bp.route('/nhom-tieu-chi/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_nhom_tieu_chi(id):
+    row = NhomTieuChi.query.get_or_404(id)
+    used = TieuChi.query.filter_by(nhom=row.ma_nhom).count()
+    if used > 0:
+        flash(f'Không thể xóa: nhóm đang được dùng bởi {used} tiêu chí.', 'danger')
+        return redirect(url_for('admin.manage_nhom_tieu_chi'))
+
+    db.session.delete(row)
+    db.session.commit()
+    flash('Đã xóa nhóm tiêu chí.', 'success')
+    return redirect(url_for('admin.manage_nhom_tieu_chi'))
 
 
 @admin_bp.route('/tieu-chi')
@@ -2021,7 +2185,7 @@ def manage_tieu_chi():
 
     return render_template('admin/manage_tieu_chi.html',
                            tieu_chis=tieu_chis,
-                           nhom_choices=TieuChi.NHOM_CHOICES,
+                           nhom_choices=_get_nhom_tieu_chi_choices(include_inactive=True),
                            phong_duyet_options=PHONG_DUYET_OPTIONS,
                            missing_fields=missing_fields)
 
@@ -2104,8 +2268,54 @@ def edit_tieu_chi(id):
 
     return render_template('admin/edit_tieu_chi.html',
                            tc=tc,
-                           nhom_choices=TieuChi.NHOM_CHOICES,
+                           nhom_choices=_get_nhom_tieu_chi_choices(include_inactive=True),
                            phong_duyet_options=PHONG_DUYET_OPTIONS)
+
+
+@admin_bp.route('/evaluations')
+@login_required
+@admin_required
+def list_annual_evaluations():
+    nam_hoc = request.args.get('nam_hoc', '').strip()
+    don_vi_id = request.args.get('don_vi_id', type=int)
+    search = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+
+    migration_missing = False
+    evaluations = None
+    nam_hoc_list = []
+    try:
+        query = DanhGiaHangNam.query.join(QuanNhan).join(DonVi)
+        if nam_hoc:
+            query = query.filter(DanhGiaHangNam.nam_hoc == nam_hoc)
+        if don_vi_id:
+            query = query.filter(DanhGiaHangNam.don_vi_id == don_vi_id)
+        if search:
+            query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
+
+        evaluations = query.order_by(
+            DanhGiaHangNam.nam_hoc.desc(),
+            DonVi.thu_tu,
+            DonVi.ten_don_vi,
+            QuanNhan.ho_ten,
+        ).paginate(page=page, per_page=30, error_out=False)
+
+        nam_hoc_list = [row[0] for row in db.session.query(DanhGiaHangNam.nam_hoc).distinct().order_by(DanhGiaHangNam.nam_hoc.desc()).all()]
+    except (ProgrammingError, OperationalError):
+        db.session.rollback()
+        migration_missing = True
+        flash('Thiếu bảng đánh giá hằng năm. Vui lòng chạy: flask db upgrade', 'danger')
+
+    units = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu, DonVi.ten_don_vi).all()
+
+    return render_template('admin/evaluation_list.html',
+                           evaluations=evaluations,
+                           nam_hoc=nam_hoc,
+                           don_vi_id=don_vi_id,
+                           search=search,
+                           nam_hoc_list=nam_hoc_list,
+                           units=units,
+                           migration_missing=migration_missing)
 
 
 # ------------------------------------------------------------------

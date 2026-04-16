@@ -27,15 +27,47 @@
 <div class="card-section" id="filterBar">
     <div class="card-body-custom">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <input type="text" class="form-control" name="search" value="{{ search }}"
                        placeholder="Tìm kiếm theo họ tên...">
             </div>
             <div class="col-md-2">
+                <select class="form-select" name="cap_bac">
+                    <option value="">-- Cấp bậc --</option>
+                    {% for cb in cap_bac_list %}
+                    <option value="{{ cb }}" {% if cap_bac_filter == cb %}selected{% endif %}>{{ cb }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="chuc_vu">
+                    <option value="">-- Chức vụ --</option>
+                    {% for cv in chuc_vu_list %}
+                    <option value="{{ cv }}" {% if chuc_vu_filter == cv %}selected{% endif %}>{{ cv }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="doi_tuong">
+                    <option value="">-- Đối tượng --</option>
+                    {% for dt in doi_tuong_list %}
+                    <option value="{{ dt }}" {% if doi_tuong_filter == dt %}selected{% endif %}>{{ dt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="sort_by">
+                    <option value="chuc_vu_order" {% if sort_by == 'chuc_vu_order' %}selected{% endif %}>Sắp xếp chức vụ</option>
+                    <option value="ho_ten" {% if sort_by == 'ho_ten' %}selected{% endif %}>Theo họ tên</option>
+                    <option value="cap_bac" {% if sort_by == 'cap_bac' %}selected{% endif %}>Theo cấp bậc</option>
+                    <option value="doi_tuong" {% if sort_by == 'doi_tuong' %}selected{% endif %}>Theo đối tượng</option>
+                </select>
+            </div>
+            <div class="col-md-1">
                 <button type="submit" class="btn btn-navy w-100"><i class="bi bi-search me-1"></i> Tìm</button>
             </div>
-            {% if search %}
-            <div class="col-md-2">
+            {% if search or cap_bac_filter or chuc_vu_filter or doi_tuong_filter or sort_by != 'chuc_vu_order' %}
+            <div class="col-md-12">
                 <a href="{{ url_for('personnel.list_personnel') }}" class="btn btn-outline-secondary w-100">Bỏ lọc</a>
             </div>
             {% endif %}
@@ -67,7 +99,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <th>Họ và tên</th>
                         <th>Cấp bậc</th>
                         <th>Chức vụ</th>
+                        <th>Đơn vị trực thuộc</th>
                         <th>Đối tượng</th>
+                        <th>Đơn vị</th>
                         <th>Học vị</th>
                         <th>Thao tác</th>
                     </tr>
@@ -85,7 +119,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>{{ qn.cap_bac or '-' }}</td>
                         <td>{{ qn.chuc_vu or '-' }}</td>
+                        <td>{{ qn.don_vi_truc_thuoc or '-' }}</td>
                         <td>{{ qn.doi_tuong or '-' }}</td>
+                        <td>{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</td>
                         <td>{{ qn.hoc_vi if qn.hoc_vi != 'Không' else '-' }}</td>
                         <td>
                             <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Chi tiết">
@@ -108,13 +144,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <ul class="pagination pagination-sm mb-0">
                     {% if personnel.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}">&laquo;</a>
+                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}&doi_tuong={{ doi_tuong_filter }}&sort_by={{ sort_by }}">&laquo;</a>
                     </li>
                     {% endif %}
                     {% for p in personnel.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                     {% if p %}
                     <li class="page-item {{ 'active' if p == personnel.page }}">
-                        <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+                        <a class="page-link" href="?page={{ p }}&search={{ search }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}&doi_tuong={{ doi_tuong_filter }}&sort_by={{ sort_by }}">{{ p }}</a>
                     </li>
                     {% else %}
                     <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -122,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endfor %}
                     {% if personnel.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}">&raquo;</a>
+                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}&doi_tuong={{ doi_tuong_filter }}&sort_by={{ sort_by }}">&raquo;</a>
                     </li>
                     {% endif %}
                 </ul>

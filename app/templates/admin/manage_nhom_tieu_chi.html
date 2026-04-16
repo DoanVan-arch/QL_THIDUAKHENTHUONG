@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Quản lý nhóm tiêu chí{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-diagram-3 me-2"></i>Quản lý nhóm tiêu chí</h4>
+        <small class="text-muted">Thêm, sửa, xóa và cấu hình đối tượng áp dụng cho nhóm tiêu chí</small>
+    </div>
+    <button class="btn btn-navy btn-sm" data-bs-toggle="modal" data-bs-target="#createGroupModal" {% if migration_missing %}disabled{% endif %}>
+        <i class="bi bi-plus-lg me-1"></i>Thêm nhóm
+    </button>
+</div>
+
+{% if migration_missing %}
+<div class="alert alert-danger py-2">
+    Thiếu bảng nhóm tiêu chí. Vui lòng chạy: <code>flask db upgrade</code>
+</div>
+{% endif %}
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if groups %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>TT</th>
+                        <th>Mã nhóm</th>
+                        <th>Tên nhóm</th>
+                        <th>Đối tượng áp dụng</th>
+                        <th>Mô tả</th>
+                        <th>Trạng thái</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in groups %}
+                    <tr>
+                        <td>{{ g.thu_tu }}</td>
+                        <td><code>{{ g.ma_nhom }}</code></td>
+                        <td class="fw-semibold">{{ g.ten_nhom }}</td>
+                        <td>
+                            {% if g.doi_tuong_ap_dung %}
+                                {% for dt in g.doi_tuong_ap_dung %}
+                                <span class="badge bg-light text-dark me-1 mb-1">{{ dt }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">Tất cả</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ g.mo_ta or '-' }}</td>
+                        <td>
+                            {% if g.is_active %}
+                                <span class="badge-status badge-approved">Hoạt động</span>
+                            {% else %}
+                                <span class="badge-status badge-rejected">Ngừng</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <button class="btn btn-sm btn-outline-navy" data-bs-toggle="modal" data-bs-target="#editGroup{{ g.id }}" title="Sửa" {% if migration_missing %}disabled{% endif %}>
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('admin.toggle_nhom_tieu_chi', id=g.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Bật/tắt" {% if migration_missing %}disabled{% endif %}>
+                                    <i class="bi bi-power"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin.delete_nhom_tieu_chi', id=g.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa"
+                                        onclick="return confirm('Xóa nhóm {{ g.ten_nhom }}?')" {% if migration_missing %}disabled{% endif %}>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="editGroup{{ g.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <form method="POST" action="{{ url_for('admin.edit_nhom_tieu_chi', id=g.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <div class="modal-header modal-header-navy">
+                                        <h6 class="modal-title">Sửa nhóm tiêu chí</h6>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label">Mã nhóm</label>
+                                                <input type="text" class="form-control" name="ma_nhom" value="{{ g.ma_nhom }}" required>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <label class="form-label">Tên nhóm</label>
+                                                <input type="text" class="form-control" name="ten_nhom" value="{{ g.ten_nhom }}" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">Thứ tự</label>
+                                                <input type="number" class="form-control" name="thu_tu" value="{{ g.thu_tu }}" min="0">
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">Đối tượng áp dụng</label>
+                                                <div class="row g-2">
+                                                    {% for dt in doi_tuong_list %}
+                                                    <div class="col-md-4">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="doi_tuong_ap_dung" value="{{ dt }}"
+                                                                   id="edit_dt_{{ g.id }}_{{ loop.index }}" {% if dt in g.doi_tuong_ap_dung %}checked{% endif %}>
+                                                            <label class="form-check-label" for="edit_dt_{{ g.id }}_{{ loop.index }}">{{ dt }}</label>
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">Mô tả</label>
+                                                <textarea class="form-control" name="mo_ta" rows="2">{{ g.mo_ta or '' }}</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                        <button type="submit" class="btn btn-navy">Lưu</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-4">
+            <i class="bi bi-diagram-3 d-block"></i>
+            <p>Chưa có nhóm tiêu chí</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.create_nhom_tieu_chi') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title">Thêm nhóm tiêu chí</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Mã nhóm</label>
+                            <input type="text" class="form-control" name="ma_nhom" required placeholder="vd: chung" {% if migration_missing %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Tên nhóm</label>
+                            <input type="text" class="form-control" name="ten_nhom" required {% if migration_missing %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Thứ tự</label>
+                            <input type="number" class="form-control" name="thu_tu" value="0" min="0" {% if migration_missing %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Đối tượng áp dụng</label>
+                            <div class="row g-2">
+                                {% for dt in doi_tuong_list %}
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="doi_tuong_ap_dung" value="{{ dt }}" id="create_dt_{{ loop.index }}" {% if migration_missing %}disabled{% endif %}>
+                                        <label class="form-check-label" for="create_dt_{{ loop.index }}">{{ dt }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted">Không chọn gì nghĩa là áp dụng cho tất cả đối tượng.</small>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Mô tả</label>
+                            <textarea class="form-control" name="mo_ta" rows="2" {% if migration_missing %}disabled{% endif %}></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy" {% if migration_missing %}disabled{% endif %}>Tạo nhóm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

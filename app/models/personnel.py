@@ -44,7 +44,7 @@ class DoiTuong(enum.Enum):
     SV_NAM4 = 'Học viên năm thứ IV'
     SAU_DAI_HOC = 'Học viên sau đại học'
     VB2 = 'Học viên VB2'
-    HVTS = 'Học viên tiến sĩ'
+    HVTS = 'Học viên TS'
     HVQT = 'Học viên quốc tế'
 
 
@@ -75,6 +75,7 @@ class QuanNhan(db.Model):
     cap_bac = Column(String(50), nullable=True)
     chuc_danh = Column(String(100), nullable=True)
     chuc_vu = Column(String(100), nullable=True)
+    don_vi_truc_thuoc = Column(String(150), nullable=True)
     can_cuoc_cong_dan = Column(String(20), nullable=True)
     ngay_sinh = Column(Date, nullable=True)
     ngay_nhap_ngu = Column(String(20), nullable=True)

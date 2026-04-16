@@ -121,6 +121,9 @@
                 <div class="row g-3">
                     <div class="col-md-5">
                         <label class="form-label">Chọn cá nhân <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control mb-2" id="quan_nhan_search"
+                               placeholder="Tìm theo họ tên, cấp bậc, chức vụ..."
+                               oninput="filterPersonnelOptions(this)">
                         <select class="form-select" name="quan_nhan_id" id="quan_nhan_select" onchange="onPersonnelSelect(this)" required>
                             <option value="">-- Chọn quân nhân --</option>
                             {% for p in personnel %}
@@ -159,7 +162,12 @@
 
             <!-- Common fields - always visible -->
             <div class="form-section">
-                <div class="form-section-title">Tiêu chí chung</div>
+                <div class="form-section-title">Tiêu chí theo cấu hình danh hiệu</div>
+                <div class="mb-2">
+                    <small class="text-muted fst-italic">
+                        Nhãn nhóm của từng tiêu chí được lấy từ cấu hình "Nhóm tiêu chí" bên Admin.
+                    </small>
+                </div>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
@@ -373,6 +381,27 @@
                 </div>
             </div>
 
+            {% if evidence_fields %}
+            <div class="form-section" id="dynamic-evidence-section">
+                <div class="form-section-title" style="color: #6c757d;">
+                    <i class="bi bi-paperclip me-1"></i>Minh chứng theo tiêu chí bắt buộc
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted fst-italic">Các tiêu chí có tích "Yêu cầu minh chứng" ở admin sẽ hiện ô tải ảnh tại đây (hỗ trợ nhiều ảnh).</small>
+                </div>
+                <div class="row g-3">
+                    {% for ef in evidence_fields %}
+                    <div class="col-md-6">
+                        <label class="form-label">{{ ef.ten }}</label>
+                        <input type="file" class="form-control"
+                               name="minh_chung_{{ ef.ma_truong }}"
+                               accept="image/*,.pdf" multiple>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Notes -->
             <div class="mb-3">
                 <label class="form-label">Ghi chú thêm</label>
@@ -395,8 +424,145 @@ var DANH_HIEU_TIEU_CHI = {{ danh_hieu_tieu_chi | default({}) | tojson }};
 // Tiêu chí tooltips from DB: {field_name: tooltip_text}
 var TIEU_CHI_TOOLTIPS = {{ tieu_chi_tooltips | default({}) | tojson }};
 
+// Criteria metadata from admin group config
+var CRITERIA_META = {{ criteria_meta | default({}) | tojson }};
+var NHOM_META = {{ nhom_meta | default({}) | tojson }};
+
+function annotateCriteriaGroupLabels() {
+    Object.keys(CRITERIA_META || {}).forEach(function(fieldName) {
+        var input = document.querySelector('[name="' + fieldName + '"]');
+        if (!input) return;
+
+        var container = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
+        if (!container) return;
+
+        var label = container.querySelector('.form-label');
+        if (!label) return;
+
+        var oldBadge = label.querySelector('.criteria-group-badge');
+        if (oldBadge) {
+            oldBadge.remove();
+        }
+
+        var meta = CRITERIA_META[fieldName] || {};
+        var groupName = (meta.nhom_ten || meta.nhom || '').trim();
+        if (!groupName) return;
+
+        var badge = document.createElement('span');
+        badge.className = 'badge bg-light text-dark ms-2 criteria-group-badge';
+        badge.style.fontSize = '0.65rem';
+        badge.textContent = groupName;
+        label.appendChild(badge);
+    });
+}
+
+function applyCriteriaVisibilityByGroup() {
+    var dtSelect = document.getElementById('doi_tuong_select');
+    var selectedDoiTuong = dtSelect ? (dtSelect.value || '') : '';
+    var formEl = dtSelect ? dtSelect.closest('form') : null;
+
+    var currentCriteria = [];
+    var dhSelect = document.getElementById('loai_danh_hieu_select');
+    var selectedDanhHieu = dhSelect ? (dhSelect.value || '') : '';
+    if (selectedDanhHieu && DANH_HIEU_TIEU_CHI[selectedDanhHieu]) {
+        currentCriteria = DANH_HIEU_TIEU_CHI[selectedDanhHieu];
+    }
+
+    var allCriteriaFields = Object.keys(CRITERIA_META || {});
+    Object.keys(DANH_HIEU_TIEU_CHI || {}).forEach(function(dh) {
+        var arr = DANH_HIEU_TIEU_CHI[dh] || [];
+        arr.forEach(function(fieldName) {
+            if (allCriteriaFields.indexOf(fieldName) < 0) {
+                allCriteriaFields.push(fieldName);
+            }
+        });
+    });
+
+    // Hide/show individual criterion fields
+    allCriteriaFields.forEach(function(fieldName) {
+        var input = document.querySelector('[name="' + fieldName + '"]');
+        if (!input) return;
+
+        var container = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
+        if (!container) return;
+
+        var inDanhHieu = !selectedDanhHieu || currentCriteria.indexOf(fieldName) >= 0;
+        if (!inDanhHieu) {
+            container.classList.add('hidden');
+            return;
+        }
+
+        if (!selectedDoiTuong) {
+            container.classList.add('hidden');
+            return;
+        }
+
+        var meta = CRITERIA_META[fieldName] || null;
+        if (!meta) {
+            // Nếu tiêu chí chưa map nhóm thì ẩn để tránh nhập nhầm.
+            container.classList.add('hidden');
+            return;
+        }
+
+        var applyList = meta.doi_tuong_ap_dung || [];
+        // Chế độ strict: chỉ hiện khi nhóm có cấu hình chứa đúng đối tượng đang chọn.
+        var shouldShow = applyList.indexOf(selectedDoiTuong) >= 0;
+        container.classList.toggle('hidden', !shouldShow);
+    });
+
+    // Force-hide all criterion-like fields before selecting doi_tuong
+    if (formEl) {
+        var nonCriteriaNames = {
+            csrf_token: true,
+            quan_nhan_id: true,
+            loai_danh_hieu: true,
+            doi_tuong: true,
+            ghi_chu_item: true
+        };
+
+        formEl.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
+            var name = el.getAttribute('name') || '';
+            if (!name || nonCriteriaNames[name]) return;
+
+            var fieldWrap = el.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
+            if (!fieldWrap) return;
+
+            // Unknown fields are treated as criteria and hidden unless doi_tuong is selected
+            if (!selectedDoiTuong) {
+                fieldWrap.classList.add('hidden');
+            }
+        });
+
+        // Hide empty sections (or all criteria sections before choosing doi_tuong)
+        var basicSection = dtSelect ? dtSelect.closest('.form-section') : null;
+        formEl.querySelectorAll('.form-section').forEach(function(section) {
+            if (section === basicSection) {
+                section.classList.remove('hidden');
+                return;
+            }
+
+            if (!selectedDoiTuong) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            var visibleFieldCount = section.querySelectorAll(
+                '.col-md-4:not(.hidden), .col-md-6:not(.hidden), .col-md-8:not(.hidden), .col-md-12:not(.hidden)'
+            ).length;
+            section.classList.toggle('hidden', visibleFieldCount === 0);
+        });
+
+        var submitBtn = formEl.querySelector('button[type="submit"].btn-navy');
+        if (submitBtn) {
+            submitBtn.disabled = !selectedDoiTuong;
+        }
+    }
+}
+
 // Auto-inject tooltip icons next to form labels for criteria fields
 document.addEventListener('DOMContentLoaded', function() {
+    annotateCriteriaGroupLabels();
+
     Object.keys(TIEU_CHI_TOOLTIPS).forEach(function(fieldName) {
         var tooltip = TIEU_CHI_TOOLTIPS[fieldName];
         if (!tooltip) return;
@@ -421,6 +587,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
+
+    applyCriteriaVisibilityByGroup();
+
+    // Re-apply after initial auto-fill in app.js and after any async UI changes
+    setTimeout(applyCriteriaVisibilityByGroup, 0);
+    setTimeout(applyCriteriaVisibilityByGroup, 120);
+
+    var dtSelect = document.getElementById('doi_tuong_select');
+    if (dtSelect) {
+        dtSelect.addEventListener('change', applyCriteriaVisibilityByGroup);
+    }
+
+    var dhSelect = document.getElementById('loai_danh_hieu_select');
+    if (dhSelect) {
+        dhSelect.addEventListener('change', function() {
+            setTimeout(applyCriteriaVisibilityByGroup, 0);
+        });
+    }
+
+    var qnSelect = document.getElementById('quan_nhan_select');
+    if (qnSelect) {
+        qnSelect.addEventListener('change', function() {
+            setTimeout(applyCriteriaVisibilityByGroup, 0);
+        });
+    }
 });
 </script>
 {% endblock %}
