@@ -47,7 +47,7 @@ ROLE_DISPLAY = {
     Role.BAN_KEHOACH_TONGHOP: 'Ban Kế hoạch tổng hợp',
     Role.UY_BAN_KIEMTRA: 'Ủy ban Kiểm tra',
     Role.BAN_QUANLUC: 'Ban Quân lực',
-    Role.ADMIN: 'Cơ quan Tuyên huấn (Admin)',
+    Role.ADMIN: 'Ban thư ký Hội đồng thi đua khen thưởng',
 }
 
 

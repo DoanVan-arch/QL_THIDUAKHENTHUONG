@@ -82,7 +82,7 @@ with app.app_context():
     # Seed admin & department users if empty
     if User.query.count() == 0:
         users_data = [
-            ('admin', 'Cơ quan Tuyên huấn', Role.ADMIN, None),
+            ('admin', 'Ban thư ký Hội đồng thi đua khen thưởng', Role.ADMIN, None),
             ('phong_khoahoc', 'Phòng Khoa học quân sự', Role.PHONG_KHOAHOC, None),
             ('phong_daotao', 'Phòng Đào tạo', Role.PHONG_DAOTAO, None),
             ('tt_phong_chinhtri', 'Thủ trưởng Phòng Chính trị', Role.THU_TRUONG_PHONG_CHINHTRI, None),

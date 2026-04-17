@@ -98,6 +98,14 @@
                             <a href="{{ url_for('nomination.edit_nomination', id=dx.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            <form method="POST" action="{{ url_for('nomination.delete_nomination', id=dx.id) }}"
+                                  class="d-inline"
+                                  onsubmit="return confirm('Xóa đề xuất này? Thao tác không thể hoàn tác.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa đề xuất">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
                             {% endif %}
                             {% if dx.trang_thai == 'Chờ duyệt' %}
                             <form method="POST" action="{{ url_for('nomination.revoke_nomination', id=dx.id) }}"

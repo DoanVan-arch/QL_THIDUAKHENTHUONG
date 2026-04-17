@@ -94,7 +94,7 @@ def in_scope(dept: PhongDuyet, doi_tuong: str):
 
 def ensure_department_users():
     required = {
-        'admin': (Role.ADMIN, 'Co quan Tuyen huan'),
+        'admin': (Role.ADMIN, 'Ban thu ky Hoi dong thi dua khen thuong'),
         'phong_khoahoc': (Role.PHONG_KHOAHOC, 'Phong Khoa hoc'),
         'phong_daotao': (Role.PHONG_DAOTAO, 'Phong Dao tao'),
         'tt_phong_chinhtri': (Role.THU_TRUONG_PHONG_CHINHTRI, 'Thu truong Phong Chinh tri'),

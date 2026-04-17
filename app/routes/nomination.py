@@ -6,6 +6,7 @@ from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu
 from app.models.evaluation import NhomTieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
+from app.models.notification import ThongBao
 from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload
 from datetime import datetime
@@ -92,6 +93,31 @@ def list_nominations():
         .paginate(page=page, per_page=10, error_out=False)
 
     return render_template('nomination/list.html', nominations=nominations)
+
+
+@nomination_bp.route('/<int:id>/delete', methods=['POST'])
+@login_required
+@unit_user_required
+def delete_nomination(id):
+    de_xuat = DeXuat.query.get_or_404(id)
+
+    if de_xuat.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền thao tác.', 'danger')
+        return redirect(url_for('nomination.list_nominations'))
+
+    if de_xuat.trang_thai not in (TrangThaiDeXuat.NHAP.value, TrangThaiDeXuat.TU_CHOI.value):
+        flash('Chỉ được xóa đề xuất ở trạng thái Nháp hoặc Từ chối.', 'warning')
+        return redirect(url_for('nomination.list_nominations'))
+
+    chi_tiet_ids = [ct.id for ct in de_xuat.chi_tiets]
+    if chi_tiet_ids:
+        ThongBao.query.filter(ThongBao.chi_tiet_id.in_(chi_tiet_ids)).delete(synchronize_session=False)
+    ThongBao.query.filter_by(de_xuat_id=de_xuat.id).delete(synchronize_session=False)
+
+    db.session.delete(de_xuat)
+    db.session.commit()
+    flash('Đã xóa đề xuất.', 'success')
+    return redirect(url_for('nomination.list_nominations'))
 
 
 @nomination_bp.route('/create', methods=['GET', 'POST'])
@@ -321,6 +347,22 @@ def add_nomination_item(id):
     qn = QuanNhan.query.get(quan_nhan_id) if quan_nhan_id else None
     doi_tuong = request.form.get('doi_tuong', '').strip() or (qn.doi_tuong if qn else None)
 
+    # Validate score/rating paired fields: must fill both sides together
+    pair_rules = [
+        ('diem_kiem_tra_tin_hoc', 'kiem_tra_tin_hoc', 'kỹ năng số'),
+        ('diem_kiem_tra_dieu_lenh', 'kiem_tra_dieu_lenh', 'điều lệnh'),
+        ('diem_dia_ly_quan_su', 'dia_ly_quan_su', 'địa hình quân sự'),
+        ('diem_ban_sung', 'ban_sung', 'bắn súng'),
+        ('diem_the_luc', 'the_luc', 'thể lực'),
+        ('diem_kiem_tra_chinh_tri', 'kiem_tra_chinh_tri', 'chính trị'),
+    ]
+    for diem_field, xeploai_field, label in pair_rules:
+        diem_val = request.form.get(diem_field, '').strip()
+        xeploai_val = request.form.get(xeploai_field, '').strip()
+        if (diem_val and not xeploai_val) or (xeploai_val and not diem_val):
+            flash(f'Tiêu chí {label}: phải nhập đầy đủ cả Điểm và Xếp loại.', 'danger')
+            return redirect(url_for('nomination.edit_nomination', id=id))
+
     chi_tiet = DeXuatChiTiet(
         de_xuat_id=de_xuat.id,
         quan_nhan_id=quan_nhan_id,
@@ -468,6 +510,8 @@ def delete_nomination_item(id):
     if de_xuat.don_vi_id != current_user.don_vi_id or not de_xuat.is_editable:
         flash('Không có quyền thao tác.', 'danger')
         return redirect(url_for('nomination.list_nominations'))
+
+    ThongBao.query.filter_by(chi_tiet_id=chi_tiet.id).delete(synchronize_session=False)
 
     db.session.delete(chi_tiet)
     db.session.commit()
