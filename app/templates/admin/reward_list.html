@@ -55,7 +55,7 @@
 </div>
 {% endif %}
 
-{% if can_admin_action %}
+{% if can_view_pending_final %}
 <div class="card-section mb-3">
     <div class="card-header-custom">
         <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Bảng 1: Danh sách chờ phê duyệt cuối</h6>
@@ -81,14 +81,12 @@
                         <th>STT</th>
                         <th>Đơn vị</th>
                         <th>Cá nhân</th>
-                        <th>CCCD</th>
-                        <th>Cấp bậc</th>
-                        <th>Chức vụ</th>
-                        <th>Đối tượng</th>
+                        <th>Thông tin cá nhân</th>
+                        <th>Tóm tắt tiêu chí</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
                         <th>Ngày gửi</th>
-                        <th class="text-center">Đồng ý / Không đồng ý</th>
+                        <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -100,14 +98,36 @@
                         <td>{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
                         <td>{{ qn.ho_ten if qn else dx.don_vi.ten_don_vi }}</td>
-                        <td>{{ qn.can_cuoc_cong_dan if qn and qn.can_cuoc_cong_dan else '-' }}</td>
-                        <td>{{ qn.cap_bac if qn and qn.cap_bac else '-' }}</td>
-                        <td>{{ qn.chuc_vu if qn and qn.chuc_vu else '-' }}</td>
-                        <td>{{ ct.doi_tuong or '-' }}</td>
+                        <td>
+                            {% if qn %}
+                            <div><strong>CCCD:</strong> {{ qn.can_cuoc_cong_dan or '-' }}</div>
+                            <div><strong>Ngày sinh:</strong> {{ qn.ngay_sinh.strftime('%d/%m/%Y') if qn.ngay_sinh else '-' }}</div>
+                            <div><strong>Cấp bậc:</strong> {{ qn.cap_bac or '-' }}</div>
+                            <div><strong>Chức vụ:</strong> {{ qn.chuc_vu or '-' }}</div>
+                            <div><strong>Chức danh:</strong> {{ qn.chuc_danh or '-' }}</div>
+                            <div><strong>Đối tượng:</strong> {{ ct.doi_tuong or qn.doi_tuong or '-' }}</div>
+                            <div><strong>ĐV trực thuộc:</strong> {{ qn.don_vi_truc_thuoc or '-' }}</div>
+                            <div><strong>Học hàm/Học vị:</strong> {{ qn.hoc_ham or '-' }} / {{ qn.hoc_vi or '-' }}</div>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div><strong>HTNV:</strong> {{ ct.muc_do_hoan_thanh or '-' }}</div>
+                            <div><strong>Phiếu tín nhiệm:</strong> {{ ct.phieu_tin_nhiem or '-' }}</div>
+                            <div><strong>Xếp loại đảng viên:</strong> {{ ct.xep_loai_dang_vien or '-' }}</div>
+                            <div><strong>KQ đoàn thể:</strong> {{ ct.ket_qua_doan_the or '-' }}</div>
+                            <div><strong>Điểm NCKH:</strong> {{ ct.diem_nckh if ct.diem_nckh is not none else '-' }}</div>
+                            <div><strong>Thành tích khác:</strong> {{ ct.thanh_tich_ca_nhan_khac or '-' }}</div>
+                        </td>
                         <td>{{ ct.loai_danh_hieu }}</td>
                         <td>{{ dx.nam_hoc }}</td>
                         <td>{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>
                         <td class="text-center">
+                            {% if item.is_rewarded %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã phê duyệt</span>
+                            {% else %}
+                            {% if can_admin_action %}
                             <form method="POST" action="{{ url_for('admin.final_approve_individual', ct_id=ct.id) }}" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button class="btn btn-sm btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>Đồng ý</button>
@@ -115,6 +135,10 @@
                             <button class="btn btn-sm btn-outline-danger ms-1" type="button" onclick="openRejectModal({{ dx.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi)|e }}')">
                                 <i class="bi bi-x-lg me-1"></i>Không đồng ý
                             </button>
+                            {% else %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chờ Ban thư ký xử lý</span>
+                            {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -208,6 +232,14 @@
                 </thead>
                 <tbody>
                     {% for kt in rewards.items %}
+                    {% set prev = rewards.items[loop.index0 - 1] if loop.index0 > 0 else None %}
+                    {% if not prev or prev.don_vi_id != kt.don_vi_id or prev.nam_hoc != kt.nam_hoc %}
+                    <tr class="table-light">
+                        <td colspan="10" class="fw-semibold text-navy">
+                            Nhóm: {{ kt.don_vi.ten_don_vi }} - Năm học {{ kt.nam_hoc }}
+                        </td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <td>{{ (rewards.page - 1) * rewards.per_page + loop.index }}</td>
                         <td class="fw-semibold">{{ kt.ho_ten }}</td>

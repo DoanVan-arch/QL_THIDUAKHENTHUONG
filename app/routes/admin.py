@@ -57,6 +57,24 @@ def _is_auto_scope_approved(dept_name, doi_tuong):
         return doi_tuong in BAN_QUANLUC_DOI_TUONG
     return False
 
+
+def _is_individual_dept_approved(de_xuat_id, ct, dept_name):
+    """Check one individual's approval for one department, honoring auto-scope rules."""
+    is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
+    pd = PheDuyet.query.filter_by(de_xuat_id=de_xuat_id, phong_duyet=dept_name).first()
+
+    if not pd:
+        return is_auto
+
+    if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
+        return False
+
+    kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
+    if not kq:
+        return is_auto
+
+    return kq.ket_qua == KetQuaDuyet.DONG_Y.value
+
 # Đối tượng thuộc diện Ban Quân lực quản lý
 BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp']
 
@@ -385,18 +403,9 @@ def final_approve_individual(ct_id):
         flash('Cá nhân này đã được phê duyệt cuối.', 'warning')
         return redirect(url_for('admin.tracking_detail', ct_id=ct_id))
 
-    # Verify all 6 departments approved this individual
+    # Verify all departments approved this individual (including auto-scope)
     for dept_name in DEPT_NAMES:
-        pd = PheDuyet.query.filter_by(
-            de_xuat_id=de_xuat.id, phong_duyet=dept_name
-        ).first()
-        if not pd:
-            flash(f'{dept_name} chưa duyệt đề xuất này.', 'warning')
-            return redirect(url_for('admin.tracking_detail', ct_id=ct_id))
-        kq = KetQuaDuyetChiTiet.query.filter_by(
-            phe_duyet_id=pd.id, chi_tiet_id=ct.id
-        ).first()
-        if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
+        if not _is_individual_dept_approved(de_xuat.id, ct, dept_name):
             flash(f'{dept_name} chưa đồng ý cho cá nhân này.', 'warning')
             return redirect(url_for('admin.tracking_detail', ct_id=ct_id))
 
@@ -462,12 +471,19 @@ def final_approve_from_tracking(id):
         flash('Đề xuất này chưa được tất cả các cơ quan phê duyệt.', 'warning')
         return redirect(url_for('admin.approval_tracking'))
 
-    # Verify all 6 departments approved
+    # Verify departments approved this nomination, honoring auto-scope
     for dept_name in DEPT_NAMES:
         pd = PheDuyet.query.filter_by(
             de_xuat_id=id, phong_duyet=dept_name
         ).first()
-        if not pd or pd.ket_qua != KetQuaDuyet.DONG_Y.value:
+        if not pd:
+            # acceptable only if all individuals are auto-scope for this department
+            has_in_scope = any(not _is_auto_scope_approved(dept_name, ct.doi_tuong) for ct in de_xuat.chi_tiets)
+            if has_in_scope:
+                flash(f'{dept_name} chưa phê duyệt xong.', 'warning')
+                return redirect(url_for('admin.approval_tracking'))
+            continue
+        if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
             flash(f'{dept_name} chưa phê duyệt xong.', 'warning')
             return redirect(url_for('admin.approval_tracking'))
 
@@ -487,20 +503,10 @@ def final_approve_from_tracking(id):
     # Create KhenThuong records for each approved individual
     now = datetime.utcnow()
     for ct in de_xuat.chi_tiets:
-        # Check that this individual was approved by all departments
+        # Check that this individual was approved by all departments (auto-scope aware)
         all_approved = True
         for dept_name in DEPT_NAMES:
-            pd = PheDuyet.query.filter_by(
-                de_xuat_id=id, phong_duyet=dept_name
-            ).first()
-            if pd:
-                kq = KetQuaDuyetChiTiet.query.filter_by(
-                    phe_duyet_id=pd.id, chi_tiet_id=ct.id
-                ).first()
-                if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
-                    all_approved = False
-                    break
-            else:
+            if not _is_individual_dept_approved(id, ct, dept_name):
                 all_approved = False
                 break
 
@@ -580,13 +586,19 @@ def batch_final_approve():
         if not de_xuat or de_xuat.trang_thai != TrangThaiDeXuat.DA_DUYET.value:
             continue
 
-        # Verify all 6 departments approved
+        # Verify departments approved, honoring auto-scope
         all_ok = True
         for dept_name in DEPT_NAMES:
             pd = PheDuyet.query.filter_by(
                 de_xuat_id=dx_id, phong_duyet=dept_name
             ).first()
-            if not pd or pd.ket_qua != KetQuaDuyet.DONG_Y.value:
+            if not pd:
+                has_in_scope = any(not _is_auto_scope_approved(dept_name, ct.doi_tuong) for ct in de_xuat.chi_tiets)
+                if has_in_scope:
+                    all_ok = False
+                    break
+                continue
+            if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
                 all_ok = False
                 break
 
@@ -609,17 +621,7 @@ def batch_final_approve():
         for ct in de_xuat.chi_tiets:
             all_approved = True
             for dept_name in DEPT_NAMES:
-                pd = PheDuyet.query.filter_by(
-                    de_xuat_id=dx_id, phong_duyet=dept_name
-                ).first()
-                if pd:
-                    kq = KetQuaDuyetChiTiet.query.filter_by(
-                        phe_duyet_id=pd.id, chi_tiet_id=ct.id
-                    ).first()
-                    if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
-                        all_approved = False
-                        break
-                else:
+                if not _is_individual_dept_approved(dx_id, ct, dept_name):
                     all_approved = False
                     break
 
@@ -699,7 +701,7 @@ def reward_list():
     danh_hieu_filter = request.args.get('danh_hieu', '')
     search_query = request.args.get('q', '').strip()
 
-    query = KhenThuong.query
+    query = KhenThuong.query.join(DonVi, KhenThuong.don_vi_id == DonVi.id)
 
     if nam_hoc_filter:
         query = query.filter(KhenThuong.nam_hoc == nam_hoc_filter)
@@ -710,7 +712,13 @@ def reward_list():
     if search_query:
         query = query.filter(KhenThuong.ho_ten.ilike(f'%{search_query}%'))
 
-    rewards = query.order_by(KhenThuong.ngay_duyet.desc())\
+    rewards = query.order_by(
+        KhenThuong.nam_hoc.desc(),
+        DonVi.thu_tu,
+        DonVi.ten_don_vi,
+        KhenThuong.ho_ten.asc(),
+        KhenThuong.ngay_duyet.desc(),
+    )\
         .paginate(page=page, per_page=20, error_out=False)
 
     # Get filter options
@@ -732,9 +740,7 @@ def reward_list():
     for dh in danh_hieu_list:
         stats_by_danh_hieu[dh] = KhenThuong.query.filter_by(loai_danh_hieu=dh).count()
 
-    pending_final_nominations = []
-    if current_user.is_admin:
-        pending_final_nominations = _get_pending_final_individuals()
+    pending_final_nominations = _get_pending_final_individuals()
 
     # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
@@ -788,6 +794,7 @@ def reward_list():
                            total_rewards=total_rewards,
                            stats_by_danh_hieu=stats_by_danh_hieu,
                            can_admin_action=current_user.is_admin,
+                           can_view_pending_final=(current_user.is_admin or current_user.is_reward_viewer),
                            pending_final_nominations=pending_final_nominations,
                            cstd_non_consecutive=cstd_non_consecutive,
                            cstd_consecutive=cstd_consecutive)
@@ -795,32 +802,56 @@ def reward_list():
 
 def _get_pending_final_individuals():
     pending = []
-    nominations_waiting = DeXuat.query.filter_by(
-        trang_thai=TrangThaiDeXuat.DA_DUYET.value
+    nominations_waiting = DeXuat.query.filter(
+        DeXuat.trang_thai.in_([
+            TrangThaiDeXuat.CHO_DUYET.value,
+            TrangThaiDeXuat.DANG_DUYET.value,
+            TrangThaiDeXuat.DA_DUYET.value,
+            TrangThaiDeXuat.PHE_DUYET_CUOI.value,
+        ])
     ).order_by(DeXuat.ngay_gui.desc()).all()
 
     for dx in nominations_waiting:
         for ct in dx.chi_tiets:
-            if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
+            existing_reward = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first()
+            if existing_reward and dx.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
                 continue
             all_dept_ok = True
             for dept_name in DEPT_NAMES:
                 pd = PheDuyet.query.filter_by(de_xuat_id=dx.id, phong_duyet=dept_name).first()
+                is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
                 if not pd:
+                    if is_auto:
+                        continue
                     all_dept_ok = False
                     break
+
+                if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
+                    all_dept_ok = False
+                    break
+
                 kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
-                if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
+                if not kq:
+                    if is_auto:
+                        continue
+                    all_dept_ok = False
+                    break
+
+                if kq.ket_qua != KetQuaDuyet.DONG_Y.value:
                     all_dept_ok = False
                     break
             if all_dept_ok:
-                pending.append({'dx': dx, 'ct': ct})
+                pending.append({
+                    'dx': dx,
+                    'ct': ct,
+                    'is_rewarded': existing_reward is not None,
+                })
     return pending
 
 
 @admin_bp.route('/reward-list/pending-final/export-excel')
 @login_required
-@admin_required
+@admin_or_reward_viewer_required
 def export_pending_final_excel():
     items = _get_pending_final_individuals()
 
@@ -870,7 +901,7 @@ def export_pending_final_excel():
 
 @admin_bp.route('/reward-list/pending-final/export-word')
 @login_required
-@admin_required
+@admin_or_reward_viewer_required
 def export_pending_final_word():
     items = _get_pending_final_individuals()
 
@@ -1071,7 +1102,7 @@ def export_reward_list():
     cell_date.alignment = center_align
 
     ws.merge_cells(f'N{sig_row+1}:S{sig_row+1}')
-    cell_signer = ws.cell(row=sig_row + 1, column=14, value='CƠ QUAN TUYÊN HUẤN')
+    cell_signer = ws.cell(row=sig_row + 1, column=14, value='BAN THƯ KÝ HỘI ĐỒNG THI ĐUA KHEN THƯỞNG')
     cell_signer.font = Font(name='Times New Roman', bold=True, size=11)
     cell_signer.alignment = center_align
 
