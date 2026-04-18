@@ -82,7 +82,7 @@
                         <th>Đơn vị</th>
                         <th>Cá nhân</th>
                         <th>Thông tin cá nhân</th>
-                        <th>Tóm tắt tiêu chí</th>
+                        <th>Chi tiết tiêu chí</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
                         <th>Ngày gửi</th>
@@ -102,12 +102,18 @@
                             {% if qn %}
                             <div><strong>CCCD:</strong> {{ qn.can_cuoc_cong_dan or '-' }}</div>
                             <div><strong>Ngày sinh:</strong> {{ qn.ngay_sinh.strftime('%d/%m/%Y') if qn.ngay_sinh else '-' }}</div>
+                            <div><strong>Ngày nhập ngũ:</strong> {{ qn.ngay_nhap_ngu or '-' }}</div>
                             <div><strong>Cấp bậc:</strong> {{ qn.cap_bac or '-' }}</div>
                             <div><strong>Chức vụ:</strong> {{ qn.chuc_vu or '-' }}</div>
                             <div><strong>Chức danh:</strong> {{ qn.chuc_danh or '-' }}</div>
                             <div><strong>Đối tượng:</strong> {{ ct.doi_tuong or qn.doi_tuong or '-' }}</div>
                             <div><strong>ĐV trực thuộc:</strong> {{ qn.don_vi_truc_thuoc or '-' }}</div>
                             <div><strong>Học hàm/Học vị:</strong> {{ qn.hoc_ham or '-' }} / {{ qn.hoc_vi or '-' }}</div>
+                            <div><strong>Trình độ học vấn:</strong> {{ qn.trinh_do_hoc_van or '-' }}</div>
+                            <div><strong>Ngoại ngữ:</strong> {{ qn.ngoai_ngu or '-' }}</div>
+                            <div><strong>Vai trò:</strong>
+                                {{ 'Chỉ huy' if qn.la_chi_huy else '' }}{{ ' - ' if qn.la_chi_huy and qn.la_bi_thu else '' }}{{ 'Bí thư' if qn.la_bi_thu else '' }}{{ '-' if not qn.la_chi_huy and not qn.la_bi_thu else '' }}
+                            </div>
                             {% else %}
                             -
                             {% endif %}
@@ -117,8 +123,28 @@
                             <div><strong>Phiếu tín nhiệm:</strong> {{ ct.phieu_tin_nhiem or '-' }}</div>
                             <div><strong>Xếp loại đảng viên:</strong> {{ ct.xep_loai_dang_vien or '-' }}</div>
                             <div><strong>KQ đoàn thể:</strong> {{ ct.ket_qua_doan_the or '-' }}</div>
-                            <div><strong>Điểm NCKH:</strong> {{ ct.diem_nckh if ct.diem_nckh is not none else '-' }}</div>
-                            <div><strong>Thành tích khác:</strong> {{ ct.thanh_tich_ca_nhan_khac or '-' }}</div>
+                            <details>
+                                <summary class="text-navy" style="cursor:pointer;">Xem đầy đủ tiêu chí</summary>
+                                <div class="mt-1"><strong>KT điều lệnh:</strong> {{ ct.kiem_tra_dieu_lenh or '-' }} ({{ ct.diem_kiem_tra_dieu_lenh or '-' }})</div>
+                                <div><strong>Bắn súng:</strong> {{ ct.ban_sung or '-' }} ({{ ct.diem_ban_sung or '-' }})</div>
+                                <div><strong>Thể lực:</strong> {{ ct.the_luc or '-' }} ({{ ct.diem_the_luc or '-' }})</div>
+                                <div><strong>KT chính trị:</strong> {{ ct.kiem_tra_chinh_tri or '-' }} ({{ ct.diem_kiem_tra_chinh_tri or '-' }})</div>
+                                <div><strong>Kỹ năng số:</strong> {{ ct.kiem_tra_tin_hoc or '-' }} ({{ ct.diem_kiem_tra_tin_hoc or '-' }})</div>
+                                <div><strong>Địa hình QS:</strong> {{ ct.dia_ly_quan_su or '-' }} ({{ ct.diem_dia_ly_quan_su or '-' }})</div>
+                                <div><strong>GV giỏi:</strong> {{ ct.danh_hieu_gv_gioi or '-' }}</div>
+                                <div><strong>Định mức giảng dạy:</strong> {{ ct.dinh_muc_giang_day or '-' }}</div>
+                                <div><strong>KT giảng:</strong> {{ ct.ket_qua_kiem_tra_giang or '-' }}</div>
+                                <div><strong>Tiến độ PGS:</strong> {{ ct.tien_do_pgs or '-' }}</div>
+                                <div><strong>LĐ khoa học:</strong> {{ ct.thoi_gian_lao_dong_kh or '-' }}</div>
+                                <div><strong>HV giỏi:</strong> {{ ct.danh_hieu_hv_gioi or '-' }}</div>
+                                <div><strong>Điểm tổng kết:</strong> {{ ct.diem_tong_ket or '-' }}</div>
+                                <div><strong>KQ thực hành:</strong> {{ ct.ket_qua_thuc_hanh or '-' }}</div>
+                                <div><strong>Chủ trì ĐV danh hiệu:</strong> {{ ct.chu_tri_don_vi_danh_hieu or '-' }}</div>
+                                <div><strong>Điểm NCKH:</strong> {{ ct.diem_nckh if ct.diem_nckh is not none else '-' }}</div>
+                                <div><strong>Nội dung NCKH:</strong> {{ ct.nckh_noi_dung or '-' }}</div>
+                                <div><strong>Thành tích khác:</strong> {{ ct.thanh_tich_ca_nhan_khac or '-' }}</div>
+                                <div><strong>Ghi chú:</strong> {{ ct.ghi_chu or '-' }}</div>
+                            </details>
                         </td>
                         <td>{{ ct.loai_danh_hieu }}</td>
                         <td>{{ dx.nam_hoc }}</td>
