@@ -387,18 +387,9 @@
                     <i class="bi bi-paperclip me-1"></i>Minh chứng theo tiêu chí bắt buộc
                 </div>
                 <div class="mb-2">
-                    <small class="text-muted fst-italic">Các tiêu chí có tích "Yêu cầu minh chứng" ở admin sẽ hiện ô tải ảnh tại đây (hỗ trợ nhiều ảnh).</small>
+                    <small class="text-muted fst-italic">Chọn danh hiệu + đối tượng, hệ thống sẽ tự hiện các ô tải minh chứng đúng theo tiêu chí động đã tích ở Admin.</small>
                 </div>
-                <div class="row g-3">
-                    {% for ef in evidence_fields %}
-                    <div class="col-md-6">
-                        <label class="form-label">{{ ef.ten }}</label>
-                        <input type="file" class="form-control"
-                               name="minh_chung_{{ ef.ma_truong }}"
-                               accept="image/*,.pdf" multiple>
-                    </div>
-                    {% endfor %}
-                </div>
+                <div class="row g-3" id="dynamic-evidence-container"></div>
             </div>
             {% endif %}
 
@@ -427,6 +418,61 @@ var TIEU_CHI_TOOLTIPS = {{ tieu_chi_tooltips | default({}) | tojson }};
 // Criteria metadata from admin group config
 var CRITERIA_META = {{ criteria_meta | default({}) | tojson }};
 var NHOM_META = {{ nhom_meta | default({}) | tojson }};
+var EVIDENCE_FIELDS = {{ evidence_fields | default([]) | tojson }};
+
+function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria) {
+    var section = document.getElementById('dynamic-evidence-section');
+    var container = document.getElementById('dynamic-evidence-container');
+    if (!section || !container) return;
+
+    container.innerHTML = '';
+
+    if (!selectedDoiTuong || !selectedDanhHieu) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    var activeFields = [];
+    (EVIDENCE_FIELDS || []).forEach(function(ef) {
+        var fieldName = ef.ma_truong;
+        if (!fieldName || currentCriteria.indexOf(fieldName) < 0) return;
+
+        var meta = CRITERIA_META[fieldName] || null;
+        if (!meta) return;
+
+        var applyList = meta.doi_tuong_ap_dung || [];
+        if (applyList.indexOf(selectedDoiTuong) < 0) return;
+
+        activeFields.push(ef);
+    });
+
+    if (!activeFields.length) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    activeFields.forEach(function(ef) {
+        var col = document.createElement('div');
+        col.className = 'col-md-6';
+
+        var label = document.createElement('label');
+        label.className = 'form-label';
+        label.textContent = ef.ten + ' - Minh chứng (1 hoặc nhiều file)';
+
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.className = 'form-control';
+        input.name = 'minh_chung_' + ef.ma_truong;
+        input.accept = 'image/*,.pdf';
+        input.multiple = true;
+
+        col.appendChild(label);
+        col.appendChild(input);
+        container.appendChild(col);
+    });
+
+    section.classList.remove('hidden');
+}
 
 function annotateCriteriaGroupLabels() {
     Object.keys(CRITERIA_META || {}).forEach(function(fieldName) {
@@ -467,6 +513,8 @@ function applyCriteriaVisibilityByGroup() {
     if (selectedDanhHieu && DANH_HIEU_TIEU_CHI[selectedDanhHieu]) {
         currentCriteria = DANH_HIEU_TIEU_CHI[selectedDanhHieu];
     }
+
+    renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
 
     var allCriteriaFields = Object.keys(CRITERIA_META || {});
     Object.keys(DANH_HIEU_TIEU_CHI || {}).forEach(function(dh) {
