@@ -407,7 +407,7 @@ def add_nomination_item(id):
     db.session.flush()
 
     # Handle file uploads for evidence
-    evidence_fields = ['nckh_minh_chung', 'minh_chung_chung']
+    evidence_fields = ['minh_chung_chung']
     for field_name in evidence_fields:
         file = request.files.get(field_name)
         if file and file.filename:
@@ -416,6 +416,20 @@ def add_nomination_item(id):
                 mc = MinhChung(
                     chi_tiet_id=chi_tiet.id,
                     loai_minh_chung=field_name,
+                    duong_dan=path,
+                    ten_file_goc=file.filename,
+                )
+                db.session.add(mc)
+
+    # NCKH evidence supports one or multiple files
+    nckh_files = request.files.getlist('nckh_minh_chung')
+    for file in nckh_files:
+        if file and file.filename:
+            path = save_upload(file, 'evidence')
+            if path:
+                mc = MinhChung(
+                    chi_tiet_id=chi_tiet.id,
+                    loai_minh_chung='nckh_minh_chung',
                     duong_dan=path,
                     ten_file_goc=file.filename,
                 )
