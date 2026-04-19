@@ -447,17 +447,21 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
     }
 
     var activeFields = [];
+    var alwaysCandidateFields = {
+        ket_qua_doan_the: true,
+        thanh_tich_ca_nhan_khac: true
+    };
     (EVIDENCE_FIELDS || []).forEach(function(ef) {
         var fieldName = ef.ma_truong;
         if (!fieldName) return;
 
-        var criterionInput = document.querySelector('[name="' + fieldName + '"]');
-        if (!criterionInput) return;
-        var criterionWrap = criterionInput.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
-        if (!criterionWrap || criterionWrap.classList.contains('hidden')) return;
+        if (currentCriteria.indexOf(fieldName) < 0 && !alwaysCandidateFields[fieldName]) return;
 
         var meta = CRITERIA_META[fieldName] || null;
-        if (!meta) return;
+        if (!meta) {
+            activeFields.push(ef);
+            return;
+        }
 
         var applyList = meta.doi_tuong_ap_dung || [];
         if (applyList.length > 0 && applyList.indexOf(selectedDoiTuong) < 0) return;
@@ -471,17 +475,26 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
     }
 
     activeFields.forEach(function(ef) {
+        var inputName = 'minh_chung_' + ef.ma_truong;
+        if (ef.ma_truong === 'ket_qua_doan_the') {
+            inputName = 'minh_chung_doan_the';
+        } else if (ef.ma_truong === 'thanh_tich_ca_nhan_khac') {
+            inputName = 'minh_chung_thanh_tich_khac';
+        } else if (ef.ma_truong === 'nckh_noi_dung') {
+            inputName = 'nckh_minh_chung';
+        }
+
         var col = document.createElement('div');
         col.className = 'col-md-6';
 
         var label = document.createElement('label');
         label.className = 'form-label';
-        label.textContent = ef.ten + ' - Minh chứng (1 hoặc nhiều file)';
+        label.textContent = ef.ten + ' - Minh chứng bắt buộc (ít nhất 1 file)';
 
         var input = document.createElement('input');
         input.type = 'file';
         input.className = 'form-control';
-        input.name = 'minh_chung_' + ef.ma_truong;
+        input.name = inputName;
         input.accept = 'image/*,.pdf';
         input.multiple = true;
 
