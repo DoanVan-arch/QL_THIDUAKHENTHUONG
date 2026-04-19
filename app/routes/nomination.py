@@ -28,6 +28,15 @@ def _get_evidence_required_fields():
     return [{'ma_truong': tc.ma_truong, 'ten': tc.ten, 'nhom': tc.nhom} for tc in rows]
 
 
+def _evidence_input_names_for_field(field_key):
+    mapping = {
+        'ket_qua_doan_the': ['minh_chung_doan_the', 'minh_chung_ket_qua_doan_the'],
+        'thanh_tich_ca_nhan_khac': ['minh_chung_thanh_tich_khac', 'minh_chung_thanh_tich_ca_nhan_khac'],
+        'nckh_noi_dung': ['nckh_minh_chung', 'minh_chung_files', 'minh_chung_files_cstt'],
+    }
+    return mapping.get(field_key, [f'minh_chung_{field_key}'])
+
+
 @nomination_bp.route('/history')
 @login_required
 @unit_user_required
@@ -361,6 +370,26 @@ def add_nomination_item(id):
         xeploai_val = request.form.get(xeploai_field, '').strip()
         if (diem_val and not xeploai_val) or (xeploai_val and not diem_val):
             flash(f'Tiêu chí {label}: phải nhập đầy đủ cả Điểm và Xếp loại.', 'danger')
+            return redirect(url_for('nomination.edit_nomination', id=id))
+
+    # Validate required evidence upload for criteria flagged in admin
+    for ef in _get_evidence_required_fields():
+        field_key = ef['ma_truong']
+        field_value = request.form.get(field_key, '')
+        if field_value is None:
+            continue
+        if not str(field_value).strip():
+            continue
+
+        has_evidence_file = False
+        for input_name in _evidence_input_names_for_field(field_key):
+            files = request.files.getlist(input_name)
+            if any((f and f.filename) for f in files):
+                has_evidence_file = True
+                break
+
+        if not has_evidence_file:
+            flash(f'Tiêu chí "{ef["ten"]}" bắt buộc phải tải lên ít nhất 1 file minh chứng.', 'danger')
             return redirect(url_for('nomination.edit_nomination', id=id))
 
     chi_tiet = DeXuatChiTiet(
