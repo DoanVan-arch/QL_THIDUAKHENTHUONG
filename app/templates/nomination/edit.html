@@ -420,6 +420,20 @@ var CRITERIA_META = {{ criteria_meta | default({}) | tojson }};
 var NHOM_META = {{ nhom_meta | default({}) | tojson }};
 var EVIDENCE_FIELDS = {{ evidence_fields | default([]) | tojson }};
 
+function ensureBuiltInEvidenceFields() {
+    var requiredBuiltIns = [
+        { ma_truong: 'ket_qua_doan_the', ten: 'Hoàn thành nhiệm vụ, khen thưởng của tổ chức quần chúng' },
+        { ma_truong: 'thanh_tich_ca_nhan_khac', ten: 'Thành tích cá nhân khác' }
+    ];
+
+    requiredBuiltIns.forEach(function(item) {
+        var exists = (EVIDENCE_FIELDS || []).some(function(x) { return x.ma_truong === item.ma_truong; });
+        if (!exists) {
+            EVIDENCE_FIELDS.push(item);
+        }
+    });
+}
+
 function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria) {
     var section = document.getElementById('dynamic-evidence-section');
     var container = document.getElementById('dynamic-evidence-container');
@@ -435,13 +449,18 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
     var activeFields = [];
     (EVIDENCE_FIELDS || []).forEach(function(ef) {
         var fieldName = ef.ma_truong;
-        if (!fieldName || currentCriteria.indexOf(fieldName) < 0) return;
+        if (!fieldName) return;
+
+        var criterionInput = document.querySelector('[name="' + fieldName + '"]');
+        if (!criterionInput) return;
+        var criterionWrap = criterionInput.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
+        if (!criterionWrap || criterionWrap.classList.contains('hidden')) return;
 
         var meta = CRITERIA_META[fieldName] || null;
         if (!meta) return;
 
         var applyList = meta.doi_tuong_ap_dung || [];
-        if (applyList.indexOf(selectedDoiTuong) < 0) return;
+        if (applyList.length > 0 && applyList.indexOf(selectedDoiTuong) < 0) return;
 
         activeFields.push(ef);
     });
@@ -513,8 +532,6 @@ function applyCriteriaVisibilityByGroup() {
     if (selectedDanhHieu && DANH_HIEU_TIEU_CHI[selectedDanhHieu]) {
         currentCriteria = DANH_HIEU_TIEU_CHI[selectedDanhHieu];
     }
-
-    renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
 
     var allCriteriaFields = Object.keys(CRITERIA_META || {});
     Object.keys(DANH_HIEU_TIEU_CHI || {}).forEach(function(dh) {
@@ -604,11 +621,14 @@ function applyCriteriaVisibilityByGroup() {
         if (submitBtn) {
             submitBtn.disabled = !selectedDoiTuong;
         }
+
+        renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
     }
 }
 
 // Auto-inject tooltip icons next to form labels for criteria fields
 document.addEventListener('DOMContentLoaded', function() {
+    ensureBuiltInEvidenceFields();
     annotateCriteriaGroupLabels();
 
     Object.keys(TIEU_CHI_TOOLTIPS).forEach(function(fieldName) {
