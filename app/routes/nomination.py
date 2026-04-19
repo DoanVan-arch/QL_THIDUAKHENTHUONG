@@ -372,25 +372,7 @@ def add_nomination_item(id):
             flash(f'Tiêu chí {label}: phải nhập đầy đủ cả Điểm và Xếp loại.', 'danger')
             return redirect(url_for('nomination.edit_nomination', id=id))
 
-    # Validate required evidence upload for criteria flagged in admin
-    for ef in _get_evidence_required_fields():
-        field_key = ef['ma_truong']
-        field_value = request.form.get(field_key, '')
-        if field_value is None:
-            continue
-        if not str(field_value).strip():
-            continue
-
-        has_evidence_file = False
-        for input_name in _evidence_input_names_for_field(field_key):
-            files = request.files.getlist(input_name)
-            if any((f and f.filename) for f in files):
-                has_evidence_file = True
-                break
-
-        if not has_evidence_file:
-            flash(f'Tiêu chí "{ef["ten"]}" bắt buộc phải tải lên ít nhất 1 file minh chứng.', 'danger')
-            return redirect(url_for('nomination.edit_nomination', id=id))
+    # Evidence upload is optional: do not force validation here.
 
     chi_tiet = DeXuatChiTiet(
         de_xuat_id=de_xuat.id,
