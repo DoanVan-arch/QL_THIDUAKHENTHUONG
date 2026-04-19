@@ -441,8 +441,9 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
 
     container.innerHTML = '';
 
-    if (!selectedDoiTuong || !selectedDanhHieu) {
-        section.classList.add('hidden');
+    if (!selectedDoiTuong) {
+        section.classList.remove('hidden');
+        container.innerHTML = '<div class="col-12"><small class="text-muted fst-italic">Vui lòng chọn đối tượng để hiển thị ô minh chứng theo tiêu chí.</small></div>';
         return;
     }
 
@@ -489,7 +490,7 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
 
         var label = document.createElement('label');
         label.className = 'form-label';
-        label.textContent = ef.ten + ' - Minh chứng bắt buộc (ít nhất 1 file)';
+        label.textContent = ef.ten + ' - Minh chứng (1 hoặc nhiều file)';
 
         var input = document.createElement('input');
         input.type = 'file';
@@ -615,6 +616,11 @@ function applyCriteriaVisibilityByGroup() {
         var basicSection = dtSelect ? dtSelect.closest('.form-section') : null;
         formEl.querySelectorAll('.form-section').forEach(function(section) {
             if (section === basicSection) {
+                section.classList.remove('hidden');
+                return;
+            }
+
+            if (section.id === 'dynamic-evidence-section') {
                 section.classList.remove('hidden');
                 return;
             }
