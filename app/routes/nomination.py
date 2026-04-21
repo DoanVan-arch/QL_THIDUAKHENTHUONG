@@ -265,8 +265,10 @@ def edit_nomination(id):
     muc_do_list = [e.value for e in MucDoHoanThanh]
 
     # Build tooltips from TieuChi DB: {ma_truong: huong_dan}
-    tieu_chi_db = TieuChi.query.filter_by(is_active=True).all()
+    tieu_chi_db = TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu, TieuChi.ten).all()
     tieu_chi_tooltips = {tc.ma_truong: tc.huong_dan for tc in tieu_chi_db if tc.huong_dan}
+    # Full list for dynamic rendering in template (fields not already hardcoded in HTML)
+    tieu_chi_list = [{'ma_truong': tc.ma_truong, 'ten': tc.ten, 'nhom': tc.nhom} for tc in tieu_chi_db]
 
     diem_field_labels = {
         'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
@@ -277,6 +279,25 @@ def edit_nomination(id):
         'diem_kiem_tra_chinh_tri': 'Điểm chính trị',
         'diem_tong_ket': 'Điểm tổng kết',
         'diem_nckh': 'Điểm NCKH',
+    }
+
+    # Map each score field (and its rating partner) to its nhom group code.
+    # This lets fieldVisibility() check NhomTieuChi.doi_tuong_ap_dung for score fields.
+    diem_nhom_map = {
+        'diem_kiem_tra_tin_hoc':   'chung',
+        'kiem_tra_tin_hoc':        'chung',
+        'diem_kiem_tra_dieu_lenh': 'chung',
+        'kiem_tra_dieu_lenh':      'chung',
+        'diem_dia_ly_quan_su':     'chung',
+        'dia_ly_quan_su':          'chung',
+        'diem_ban_sung':           'chung',
+        'ban_sung':                'chung',
+        'diem_the_luc':            'chung',
+        'the_luc':                 'chung',
+        'diem_kiem_tra_chinh_tri': 'chung',
+        'kiem_tra_chinh_tri':      'chung',
+        'diem_tong_ket':           'hoc_vien',
+        'diem_nckh':               'nckh',
     }
 
     score_rules = {}
@@ -325,11 +346,13 @@ def edit_nomination(id):
                            doi_tuong_list=doi_tuong_list,
                            muc_do_list=muc_do_list,
                            tieu_chi_tooltips=tieu_chi_tooltips,
+                           tieu_chi_list=tieu_chi_list,
                            criteria_meta=criteria_meta,
                            nhom_meta=nhom_meta,
                            evidence_fields=_get_evidence_required_fields(),
                            score_rules=score_rules,
-                           diem_field_labels=diem_field_labels)
+                           diem_field_labels=diem_field_labels,
+                           diem_nhom_map=diem_nhom_map)
 
 
 @nomination_bp.route('/<int:id>/add-item', methods=['POST'])
