@@ -119,6 +119,15 @@
             <div class="form-section">
                 <div class="form-section-title">Thông tin cơ bản</div>
                 <div class="row g-3">
+                     <div class="col-md-4">
+                        <label class="form-label">Danh hiệu đề xuất <span class="text-danger">*</span></label>
+                        <select class="form-select" name="loai_danh_hieu" id="loai_danh_hieu_select" onchange="onDanhHieuChange()" required>
+                            <option value="">-- Chọn --</option>
+                            {% for dh in danh_hieu_list %}
+                            <option value="{{ dh }}">{{ dh }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="col-md-5">
                         <label class="form-label">Chọn cá nhân <span class="text-danger">*</span></label>
                         <input type="text" class="form-control mb-2" id="quan_nhan_search"
@@ -139,15 +148,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Danh hiệu đề xuất <span class="text-danger">*</span></label>
-                        <select class="form-select" name="loai_danh_hieu" id="loai_danh_hieu_select" onchange="onDanhHieuChange()" required>
-                            <option value="">-- Chọn --</option>
-                            {% for dh in danh_hieu_list %}
-                            <option value="{{ dh }}">{{ dh }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                   
                     <div class="col-md-3">
                         <label class="form-label">Đối tượng <span class="text-danger">*</span></label>
                         <select class="form-select" name="doi_tuong" id="doi_tuong_select" onchange="onDoiTuongSelectChange()" required>
@@ -161,8 +162,8 @@
             </div>
 
             <!-- Common fields - always visible -->
-            <div class="form-section">
-                <div class="form-section-title">Tiêu chí theo cấu hình danh hiệu</div>
+            <div class="form-section" id="section-common-fields">
+                <div class="form-section-title">Tiêu chí điểm và tiêu chí chung</div>
                 <div class="mb-2">
                     <small class="text-muted fst-italic">
                         Nhãn nhóm của từng tiêu chí được lấy từ cấu hình "Nhóm tiêu chí" bên Admin.
@@ -300,7 +301,11 @@
                 <div class="row g-3">
                     <div class="col-md-4" id="group-danh-hieu-hv">
                         <label class="form-label">Danh hiệu học viên giỏi</label>
-                        <input type="text" class="form-control" name="danh_hieu_hv_gioi">
+                        <select class="form-select" name="danh_hieu_hv_gioi">
+                            <option value="">-- Chọn --</option>
+                            <option value="true">Có</option>
+                            <option value="false">Không</option>
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Điểm tổng kết</label>
@@ -326,39 +331,31 @@
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label">Nội dung kết quả NCKH</label>
-                        <textarea class="form-control" name="nckh_noi_dung" rows="3"
-                                  placeholder="Mô tả kết quả nghiên cứu khoa học..."></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Ảnh minh chứng NCKH (1 hoặc nhiều file)</label>
-                        <input type="file" class="form-control" name="nckh_minh_chung" accept="image/*,.pdf" multiple>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Minh chứng bổ sung (nhiều file)</label>
-                        <input type="file" class="form-control" name="minh_chung_files" accept="image/*,.pdf" multiple>
+                        <div class="border rounded p-2" style="max-height: 280px; overflow:auto;">
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Tham gia nghiên cứu đề tài, sáng kiến khoa học các cấp đúng tiến độ, nghiệm thu đạt khá trở lên hoặc hướng dẫn học viên nghiên cứu đề tài, sáng kiến khoa học đạt giải Ba cấp hệ, tiểu đoàn trở lên." id="nckh_1"><label class="form-check-label" for="nckh_1">Tham gia nghiên cứu đề tài, sáng kiến khoa học các cấp đúng tiến độ, nghiệm thu đạt khá trở lên hoặc hướng dẫn học viên nghiên cứu đề tài, sáng kiến khoa học đạt giải Ba cấp hệ, tiểu đoàn trở lên.</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Tham gia biên soạn giáo trình, tài liệu dạy học đúng tiến độ, đảm bảo chất lượng, được nghiệm thu." id="nckh_2"><label class="form-check-label" for="nckh_2">Tham gia biên soạn giáo trình, tài liệu dạy học đúng tiến độ, đảm bảo chất lượng, được nghiệm thu.</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Có sáng kiến được ứng dụng hiệu quả trong giảng dạy và các mặt công tác, được hội đồng khoa học cấp đầu mối trực thuộc Nhà trường nghiệm thu đạt khá trở lên." id="nckh_3"><label class="form-check-label" for="nckh_3">Có sáng kiến được ứng dụng hiệu quả trong giảng dạy và các mặt công tác, được hội đồng khoa học cấp đầu mối trực thuộc Nhà trường nghiệm thu đạt khá trở lên.</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Chỉ đạo, hướng dẫn, tổ chức thực hiện hoặc phát hiện, mạnh dạn đề xuất giải pháp công tác mang tính đột phá, đem lại hiệu quả cao trong thực tế; hoặc có tham mưu, đề xuất đổi mới công tác, lĩnh vực chuyên môn được các cấp ghi nhận, tập thể đơn vị thừa nhận." id="nckh_4"><label class="form-check-label" for="nckh_4">Chỉ đạo, hướng dẫn, tổ chức thực hiện hoặc phát hiện, mạnh dạn đề xuất giải pháp công tác mang tính đột phá, đem lại hiệu quả cao trong thực tế; hoặc có tham mưu, đề xuất đổi mới công tác, lĩnh vực chuyên môn được các cấp ghi nhận, tập thể đơn vị thừa nhận.</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Học viên Sau đại học tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên." id="nckh_5"><label class="form-check-label" for="nckh_5">Học viên Sau đại học tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên.</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Học viên Văn bằng 2 tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên." id="nckh_6"><label class="form-check-label" for="nckh_6">Học viên Văn bằng 2 tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên.</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Học viên năm thứ I tối thiểu phải có 01 bài đăng Website hoặc 01 bài đăng Bản tin thi đua của Nhà trường." id="nckh_7"><label class="form-check-label" for="nckh_7">Học viên năm thứ I tối thiểu phải có 01 bài đăng Website hoặc 01 bài đăng Bản tin thi đua của Nhà trường.</label></div>
+                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Học viên năm thứ II tối thiểu phải nghiên cứu chuyên đề khoa học đạt giải Nhì cấp hệ, tiểu đoàn trở lên." id="nckh_8"><label class="form-check-label" for="nckh_8">Học viên năm thứ II tối thiểu phải nghiên cứu chuyên đề khoa học đạt giải Nhì cấp hệ, tiểu đoàn trở lên.</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="nckh_noi_dung" value="Học viên năm thứ III trở lên tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên." id="nckh_9"><label class="form-check-label" for="nckh_9">Học viên năm thứ III trở lên tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên.</label></div>
+                        </div>
+                        <input type="hidden" name="nckh_noi_dung_text" id="nckh_noi_dung_text">
                     </div>
                 </div>
             </div>
 
-            <!-- Scientific Research - CSTT simplified form -->
-            <div class="form-section hidden" id="nckh-section-cstt">
+            <div class="form-section">
                 <div class="form-section-title" style="color: #DC3545;">
-                    <i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học (CSTT)
-                </div>
-                <div class="mb-2">
-                    <small class="text-info fst-italic">
-                        <i class="bi bi-info-circle me-1"></i>Hoàn thành tốt nhiệm vụ NCKH theo đúng mức quy định của từng đối tượng
-                    </small>
+                    <i class="bi bi-journal-text me-1"></i>Điểm khoa học
                 </div>
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">Điểm khoa học</label>
                         <input type="number" step="0.01" class="form-control" name="diem_nckh"
                                placeholder="Nhập điểm khoa học">
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label">Minh chứng bổ sung (nhiều file)</label>
-                        <input type="file" class="form-control" name="minh_chung_files_cstt" accept="image/*,.pdf" multiple>
                     </div>
                 </div>
             </div>
@@ -393,6 +390,21 @@
             </div>
             {% endif %}
 
+            <div class="form-section" id="score-reason-section">
+                <div class="form-section-title" style="color: #dc3545;">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Trường hợp vận dụng quy định điểm nhưng chưa đạt
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted fst-italic">Nếu có ít nhất một tiêu chí điểm thấp hơn mức quy định, bắt buộc nhập một lý do chung.</small>
+                </div>
+                <div id="score-reason-container" class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Lý do chung khi chưa đạt điểm</label>
+                        <textarea class="form-control" name="ly_do_chua_dat_diem" rows="2" placeholder="Nhập lý do chung cho các tiêu chí điểm chưa đạt"></textarea>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notes -->
             <div class="mb-3">
                 <label class="form-label">Ghi chú thêm</label>
@@ -419,6 +431,8 @@ var TIEU_CHI_TOOLTIPS = {{ tieu_chi_tooltips | default({}) | tojson }};
 var CRITERIA_META = {{ criteria_meta | default({}) | tojson }};
 var NHOM_META = {{ nhom_meta | default({}) | tojson }};
 var EVIDENCE_FIELDS = {{ evidence_fields | default([]) | tojson }};
+var SCORE_RULES = {{ score_rules | default({}) | tojson }};
+var DIEM_FIELD_LABELS = {{ diem_field_labels | default({}) | tojson }};
 
 function ensureBuiltInEvidenceFields() {
     var requiredBuiltIns = [
@@ -455,6 +469,7 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
     (EVIDENCE_FIELDS || []).forEach(function(ef) {
         var fieldName = ef.ma_truong;
         if (!fieldName) return;
+        if (fieldName === 'nckh_noi_dung') return;
 
         if (currentCriteria.indexOf(fieldName) < 0 && !alwaysCandidateFields[fieldName]) return;
 
@@ -507,21 +522,99 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
     section.classList.remove('hidden');
 }
 
+// Score field → paired xep_loai field
+var SCORE_PAIR = {
+    'diem_kiem_tra_tin_hoc':   'kiem_tra_tin_hoc',
+    'diem_kiem_tra_dieu_lenh': 'kiem_tra_dieu_lenh',
+    'diem_dia_ly_quan_su':     'dia_ly_quan_su',
+    'diem_ban_sung':           'ban_sung',
+    'diem_the_luc':            'the_luc',
+    'diem_kiem_tra_chinh_tri': 'kiem_tra_chinh_tri',
+    'diem_tong_ket':           null,
+    'diem_nckh':               null,
+};
+
+// Fields that are never criteria-controlled (always render if section is visible)
+var NON_CRITERIA_FIELDS = {
+    csrf_token: true, quan_nhan_id: true, loai_danh_hieu: true,
+    doi_tuong: true, ghi_chu_item: true, ly_do_chua_dat_diem: true,
+    nckh_noi_dung_text: true, muc_do_hoan_thanh: true,
+    phieu_tin_nhiem: true, xep_loai_dang_vien: true,
+    ket_qua_doan_the: true, minh_chung_doan_the: true,
+    chu_tri_don_vi_danh_hieu: true,
+};
+
+function renderScoreWarnings(selectedDanhHieu) {
+    // Remove all old warnings first
+    document.querySelectorAll('.score-threshold-warning').forEach(function(el) { el.remove(); });
+
+    if (!selectedDanhHieu || !SCORE_RULES[selectedDanhHieu]) return;
+
+    (SCORE_RULES[selectedDanhHieu] || []).forEach(function(rule) {
+        var field = rule.tieu_chi_field;
+        var input = document.querySelector('[name="' + field + '"]');
+        if (!input) return;
+
+        var raw = (input.value || '').trim();
+        var minVal = parseFloat(String(rule.min_diem).replace(',', '.'));
+
+        var wrap = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
+        if (!wrap) return;
+
+        var existing = wrap.querySelector('.score-threshold-warning');
+        if (existing) existing.remove();
+
+        if (!raw) return;
+        var currentVal = parseFloat(raw.replace(',', '.'));
+        if (isNaN(currentVal) || isNaN(minVal)) return;
+
+        if (currentVal < minVal) {
+            var warn = document.createElement('div');
+            warn.className = 'score-threshold-warning text-danger mt-1';
+            warn.style.fontSize = '0.8rem';
+            warn.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa đạt mức quy định: <strong>' + rule.min_diem + '</strong>';
+            input.after(warn);
+        }
+    });
+}
+
+function renderScoreReasonSection(selectedDanhHieu) {
+    var section = document.getElementById('score-reason-section');
+    if (!section) return;
+
+    if (!selectedDanhHieu || !SCORE_RULES[selectedDanhHieu]) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    var rules = SCORE_RULES[selectedDanhHieu] || [];
+    if (!rules.length) { section.classList.add('hidden'); return; }
+
+    var hasBelowThreshold = false;
+    rules.forEach(function(rule) {
+        var input = document.querySelector('[name="' + rule.tieu_chi_field + '"]');
+        if (!input) return;
+        var raw = (input.value || '').trim();
+        if (!raw) return;
+        var v = parseFloat(raw.replace(',', '.'));
+        var m = parseFloat(String(rule.min_diem).replace(',', '.'));
+        if (!isNaN(v) && !isNaN(m) && v < m) hasBelowThreshold = true;
+    });
+
+    section.classList.toggle('hidden', !hasBelowThreshold);
+}
+
 function annotateCriteriaGroupLabels() {
     Object.keys(CRITERIA_META || {}).forEach(function(fieldName) {
         var input = document.querySelector('[name="' + fieldName + '"]');
         if (!input) return;
-
         var container = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
         if (!container) return;
-
         var label = container.querySelector('.form-label');
         if (!label) return;
 
         var oldBadge = label.querySelector('.criteria-group-badge');
-        if (oldBadge) {
-            oldBadge.remove();
-        }
+        if (oldBadge) oldBadge.remove();
 
         var meta = CRITERIA_META[fieldName] || {};
         var groupName = (meta.nhom_ten || meta.nhom || '').trim();
@@ -535,114 +628,104 @@ function annotateCriteriaGroupLabels() {
     });
 }
 
+// Determine if a field (by name) should be visible given current danh_hieu + doi_tuong.
+// Returns: 'show' | 'hide' | 'no_opinion' (field not managed here)
+function fieldVisibility(fieldName, selectedDanhHieu, selectedDoiTuong, currentCriteria) {
+    if (NON_CRITERIA_FIELDS[fieldName]) return 'no_opinion';
+
+    // Step 1: check if field belongs to selected danh_hieu (if one is chosen)
+    if (selectedDanhHieu && currentCriteria.length > 0) {
+        if (currentCriteria.indexOf(fieldName) < 0) return 'hide';
+    }
+
+    // Step 2: check doi_tuong_ap_dung via CRITERIA_META
+    var meta = CRITERIA_META[fieldName] || null;
+    if (meta) {
+        var applyList = meta.doi_tuong_ap_dung || [];
+        // Empty list = applies to all
+        if (applyList.length > 0 && selectedDoiTuong && applyList.indexOf(selectedDoiTuong) < 0) {
+            return 'hide';
+        }
+        return selectedDoiTuong ? 'show' : 'hide';
+    }
+
+    // Step 3: score fields — show for all doi_tuong (they have no nhom restriction by default)
+    if (DIEM_FIELD_LABELS && DIEM_FIELD_LABELS[fieldName] !== undefined) {
+        return selectedDoiTuong ? 'show' : 'hide';
+    }
+
+    // Paired xep_loai fields: follow the same logic as their diem_ partner
+    var pairedScoreField = null;
+    Object.keys(SCORE_PAIR).forEach(function(df) {
+        if (SCORE_PAIR[df] === fieldName) pairedScoreField = df;
+    });
+    if (pairedScoreField) {
+        return selectedDoiTuong ? 'show' : 'hide';
+    }
+
+    return 'no_opinion';
+}
+
 function applyCriteriaVisibilityByGroup() {
     var dtSelect = document.getElementById('doi_tuong_select');
     var selectedDoiTuong = dtSelect ? (dtSelect.value || '') : '';
     var formEl = dtSelect ? dtSelect.closest('form') : null;
+    if (!formEl) return;
 
-    var currentCriteria = [];
     var dhSelect = document.getElementById('loai_danh_hieu_select');
     var selectedDanhHieu = dhSelect ? (dhSelect.value || '') : '';
-    if (selectedDanhHieu && DANH_HIEU_TIEU_CHI[selectedDanhHieu]) {
-        currentCriteria = DANH_HIEU_TIEU_CHI[selectedDanhHieu];
-    }
+    var currentCriteria = (selectedDanhHieu && DANH_HIEU_TIEU_CHI[selectedDanhHieu])
+        ? DANH_HIEU_TIEU_CHI[selectedDanhHieu] : [];
 
-    var allCriteriaFields = Object.keys(CRITERIA_META || {});
+    // Build full field list: union of CRITERIA_META keys + all danh_hieu criteria + score fields
+    var allFields = Object.keys(CRITERIA_META || {}).slice();
     Object.keys(DANH_HIEU_TIEU_CHI || {}).forEach(function(dh) {
-        var arr = DANH_HIEU_TIEU_CHI[dh] || [];
-        arr.forEach(function(fieldName) {
-            if (allCriteriaFields.indexOf(fieldName) < 0) {
-                allCriteriaFields.push(fieldName);
-            }
+        (DANH_HIEU_TIEU_CHI[dh] || []).forEach(function(f) {
+            if (allFields.indexOf(f) < 0) allFields.push(f);
         });
     });
+    Object.keys(DIEM_FIELD_LABELS || {}).forEach(function(f) {
+        if (allFields.indexOf(f) < 0) allFields.push(f);
+    });
+    Object.keys(SCORE_PAIR).forEach(function(df) {
+        var pair = SCORE_PAIR[df];
+        if (pair && allFields.indexOf(pair) < 0) allFields.push(pair);
+    });
 
-    // Hide/show individual criterion fields
-    allCriteriaFields.forEach(function(fieldName) {
+    // Apply visibility per field
+    allFields.forEach(function(fieldName) {
         var input = document.querySelector('[name="' + fieldName + '"]');
         if (!input) return;
+        var wrap = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
+        if (!wrap) return;
 
-        var container = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
-        if (!container) return;
-
-        var inDanhHieu = !selectedDanhHieu || currentCriteria.indexOf(fieldName) >= 0;
-        if (!inDanhHieu) {
-            container.classList.add('hidden');
-            return;
-        }
-
-        if (!selectedDoiTuong) {
-            container.classList.add('hidden');
-            return;
-        }
-
-        var meta = CRITERIA_META[fieldName] || null;
-        if (!meta) {
-            // Nếu tiêu chí chưa map nhóm thì ẩn để tránh nhập nhầm.
-            container.classList.add('hidden');
-            return;
-        }
-
-        var applyList = meta.doi_tuong_ap_dung || [];
-        // Chế độ strict: chỉ hiện khi nhóm có cấu hình chứa đúng đối tượng đang chọn.
-        var shouldShow = applyList.indexOf(selectedDoiTuong) >= 0;
-        container.classList.toggle('hidden', !shouldShow);
+        var vis = fieldVisibility(fieldName, selectedDanhHieu, selectedDoiTuong, currentCriteria);
+        if (vis === 'hide') wrap.classList.add('hidden');
+        else if (vis === 'show') wrap.classList.remove('hidden');
+        // 'no_opinion': leave as-is
     });
 
-    // Force-hide all criterion-like fields before selecting doi_tuong
-    if (formEl) {
-        var nonCriteriaNames = {
-            csrf_token: true,
-            quan_nhan_id: true,
-            loai_danh_hieu: true,
-            doi_tuong: true,
-            ghi_chu_item: true
-        };
+    // Manage section-level visibility
+    var basicSection = dtSelect.closest('.form-section');
+    formEl.querySelectorAll('.form-section').forEach(function(sec) {
+        if (sec === basicSection) { sec.classList.remove('hidden'); return; }
+        if (sec.id === 'dynamic-evidence-section') { sec.classList.remove('hidden'); return; }
+        if (sec.id === 'score-reason-section') return; // managed by renderScoreReasonSection
 
-        formEl.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
-            var name = el.getAttribute('name') || '';
-            if (!name || nonCriteriaNames[name]) return;
+        if (!selectedDoiTuong) { sec.classList.add('hidden'); return; }
 
-            var fieldWrap = el.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');
-            if (!fieldWrap) return;
+        var visCount = sec.querySelectorAll(
+            '.col-md-4:not(.hidden), .col-md-6:not(.hidden), .col-md-8:not(.hidden), .col-md-12:not(.hidden)'
+        ).length;
+        sec.classList.toggle('hidden', visCount === 0);
+    });
 
-            // Unknown fields are treated as criteria and hidden unless doi_tuong is selected
-            if (!selectedDoiTuong) {
-                fieldWrap.classList.add('hidden');
-            }
-        });
+    var submitBtn = formEl.querySelector('button[type="submit"].btn-navy');
+    if (submitBtn) submitBtn.disabled = !selectedDoiTuong;
 
-        // Hide empty sections (or all criteria sections before choosing doi_tuong)
-        var basicSection = dtSelect ? dtSelect.closest('.form-section') : null;
-        formEl.querySelectorAll('.form-section').forEach(function(section) {
-            if (section === basicSection) {
-                section.classList.remove('hidden');
-                return;
-            }
-
-            if (section.id === 'dynamic-evidence-section') {
-                section.classList.remove('hidden');
-                return;
-            }
-
-            if (!selectedDoiTuong) {
-                section.classList.add('hidden');
-                return;
-            }
-
-            var visibleFieldCount = section.querySelectorAll(
-                '.col-md-4:not(.hidden), .col-md-6:not(.hidden), .col-md-8:not(.hidden), .col-md-12:not(.hidden)'
-            ).length;
-            section.classList.toggle('hidden', visibleFieldCount === 0);
-        });
-
-        var submitBtn = formEl.querySelector('button[type="submit"].btn-navy');
-        if (submitBtn) {
-            submitBtn.disabled = !selectedDoiTuong;
-        }
-
-        renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
-    }
+    renderScoreWarnings(selectedDanhHieu);
+    renderScoreReasonSection(selectedDanhHieu);
+    renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
 }
 
 // Auto-inject tooltip icons next to form labels for criteria fields
@@ -697,6 +780,31 @@ document.addEventListener('DOMContentLoaded', function() {
     if (qnSelect) {
         qnSelect.addEventListener('change', function() {
             setTimeout(applyCriteriaVisibilityByGroup, 0);
+        });
+    }
+
+    Object.keys(DIEM_FIELD_LABELS || {}).forEach(function(fieldName) {
+        var scoreInput = document.querySelector('[name="' + fieldName + '"]');
+        if (!scoreInput) return;
+        scoreInput.addEventListener('input', function() {
+            var dh = document.getElementById('loai_danh_hieu_select');
+            var selectedDanhHieu = dh ? (dh.value || '') : '';
+            renderScoreWarnings(selectedDanhHieu);
+            renderScoreReasonSection(selectedDanhHieu);
+        });
+    });
+
+    var form = document.querySelector('form[action*="/add-item"]');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var nckhText = form.querySelector('#nckh_noi_dung_text');
+            if (nckhText) {
+                var values = Array.prototype.map.call(
+                    form.querySelectorAll('input[type="checkbox"][name="nckh_noi_dung"]:checked'),
+                    function(opt) { return opt.value; }
+                ).filter(function(v) { return v; });
+                nckhText.value = values.join('; ');
+            }
         });
     }
 });

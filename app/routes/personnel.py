@@ -4,7 +4,7 @@ from app.extensions import db
 from app.models.user import Role
 from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
-from app.models.catalog import ChucVuOption, CapBacOption
+from app.models.catalog import ChucVuOption, CapBacOption, DoiTuongOption
 from app.models.evaluation import DanhGiaHangNam
 from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload, delete_upload
@@ -83,7 +83,7 @@ def list_personnel():
                            sort_by=sort_by,
                            cap_bac_list=_get_cap_bac_list(),
                            chuc_vu_list=[x.ten for x in _get_chuc_vu_options()],
-                           doi_tuong_list=[e.value for e in DoiTuong])
+                           doi_tuong_list=_get_doi_tuong_list())
 
 
 def _get_chuc_vu_options():
@@ -93,6 +93,11 @@ def _get_chuc_vu_options():
 def _get_cap_bac_list():
     db_values = [x.ten for x in CapBacOption.query.filter_by(is_active=True).order_by(CapBacOption.thu_tu, CapBacOption.ten).all()]
     return db_values if db_values else [e.value for e in CapBac]
+
+
+def _get_doi_tuong_list():
+    db_values = [x.ten for x in DoiTuongOption.query.filter_by(is_active=True).order_by(DoiTuongOption.thu_tu, DoiTuongOption.ten).all()]
+    return db_values if db_values else [e.value for e in DoiTuong]
 
 
 @personnel_bp.route('/create', methods=['GET', 'POST'])
@@ -116,7 +121,7 @@ def create_personnel():
             don_vi_id=current_user.don_vi_id,
             ho_ten=request.form.get('ho_ten', '').strip(),
             cap_bac=request.form.get('cap_bac', '').strip() or None,
-            chuc_danh=request.form.get('chuc_danh', '').strip() or None,
+            chuc_danh=None,
             chuc_vu=request.form.get('chuc_vu', '').strip() or None,
             don_vi_truc_thuoc=request.form.get('don_vi_truc_thuoc', '').strip() or None,
             can_cuoc_cong_dan=request.form.get('can_cuoc_cong_dan', '').strip() or None,
@@ -137,7 +142,7 @@ def create_personnel():
                                    cap_bac_list=_get_cap_bac_list(),
                                    hoc_ham_list=[e.value for e in HocHam],
                                    hoc_vi_list=[e.value for e in HocVi],
-                                   doi_tuong_list=[e.value for e in DoiTuong],
+                                   doi_tuong_list=_get_doi_tuong_list(),
                                    chuc_vu_options=_get_chuc_vu_options())
 
         db.session.add(qn)
@@ -149,7 +154,7 @@ def create_personnel():
                            cap_bac_list=_get_cap_bac_list(),
                            hoc_ham_list=[e.value for e in HocHam],
                            hoc_vi_list=[e.value for e in HocVi],
-                           doi_tuong_list=[e.value for e in DoiTuong],
+                           doi_tuong_list=_get_doi_tuong_list(),
                            chuc_vu_options=_get_chuc_vu_options())
 
 
@@ -178,7 +183,7 @@ def edit_personnel(id):
     if request.method == 'POST':
         qn.ho_ten = request.form.get('ho_ten', '').strip()
         qn.cap_bac = request.form.get('cap_bac', '').strip() or None
-        qn.chuc_danh = request.form.get('chuc_danh', '').strip() or None
+        qn.chuc_danh = None
         qn.chuc_vu = request.form.get('chuc_vu', '').strip() or None
         qn.don_vi_truc_thuoc = request.form.get('don_vi_truc_thuoc', '').strip() or None
         qn.can_cuoc_cong_dan = request.form.get('can_cuoc_cong_dan', '').strip() or None
@@ -211,7 +216,7 @@ def edit_personnel(id):
                            cap_bac_list=_get_cap_bac_list(),
                            hoc_ham_list=[e.value for e in HocHam],
                            hoc_vi_list=[e.value for e in HocVi],
-                           doi_tuong_list=[e.value for e in DoiTuong],
+                           doi_tuong_list=_get_doi_tuong_list(),
                            chuc_vu_options=_get_chuc_vu_options())
 
 
@@ -344,7 +349,7 @@ def download_personnel_template():
     lookup.sheet_state = 'hidden'
 
     cap_bac_values = _get_cap_bac_list()
-    doi_tuong_values = [e.value for e in DoiTuong]
+    doi_tuong_values = _get_doi_tuong_list()
     hoc_ham_values = [e.value for e in HocHam]
     hoc_vi_values = [e.value for e in HocVi]
     chuc_vu_values = [x.ten for x in _get_chuc_vu_options()]
@@ -363,14 +368,14 @@ def download_personnel_template():
             lookup[f'{col}{idx}'] = value
 
     headers = [
-        'ho_ten', 'cap_bac', 'doi_tuong', 'chuc_danh', 'chuc_vu', 'can_cuoc_cong_dan',
+        'ho_ten', 'cap_bac', 'doi_tuong', 'chuc_vu', 'can_cuoc_cong_dan',
         'don_vi_truc_thuoc',
         'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
         'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
     ]
     ws.append(headers)
     ws.append([
-        'Nguyễn Văn A', 'Trung úy', 'Giảng viên', 'Giảng viên', 'Trợ lý', '012345678901',
+        'Nguyễn Văn A', 'Trung úy', 'Giảng viên', 'Trợ lý', '012345678901',
         'Đại đội 1', '1990-01-15', '09/2015', 'Không', 'Thạc sĩ', '12/12',
         'Anh B2', 1, 0,
     ])
@@ -437,7 +442,7 @@ def import_personnel_excel():
 
     required_cols = ['ho_ten']
     optional_cols = [
-        'cap_bac', 'doi_tuong', 'chuc_danh', 'chuc_vu', 'can_cuoc_cong_dan',
+        'cap_bac', 'doi_tuong', 'chuc_vu', 'can_cuoc_cong_dan',
         'don_vi_truc_thuoc',
         'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
         'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
@@ -503,7 +508,7 @@ def import_personnel_excel():
                 ho_ten=ho_ten,
                 cap_bac=cap_bac_val,
                 doi_tuong=doi_tuong_val,
-                chuc_danh=str(row[headers['chuc_danh']]).strip() if headers.get('chuc_danh') is not None and row[headers['chuc_danh']] is not None else None,
+                chuc_danh=None,
                 chuc_vu=str(row[headers['chuc_vu']]).strip() if headers.get('chuc_vu') is not None and row[headers['chuc_vu']] is not None else None,
                 can_cuoc_cong_dan=cccd or None,
                 don_vi_truc_thuoc=str(row[headers['don_vi_truc_thuoc']]).strip() if headers.get('don_vi_truc_thuoc') is not None and row[headers['don_vi_truc_thuoc']] is not None else None,

@@ -4,9 +4,11 @@ from app.extensions import db
 from app.models.personnel import QuanNhan, DoiTuong, MucDoHoanThanh
 from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi
 from app.models.evaluation import NhomTieuChi
+from app.models.evaluation import DiemQuyDinhDanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
 from app.models.notification import ThongBao
+from app.models.catalog import DoiTuongOption
 from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload
 from datetime import datetime
@@ -28,11 +30,16 @@ def _get_evidence_required_fields():
     return [{'ma_truong': tc.ma_truong, 'ten': tc.ten, 'nhom': tc.nhom} for tc in rows]
 
 
+def _get_doi_tuong_list():
+    db_values = [x.ten for x in DoiTuongOption.query.filter_by(is_active=True).order_by(DoiTuongOption.thu_tu, DoiTuongOption.ten).all()]
+    return db_values if db_values else [e.value for e in DoiTuong]
+
+
 def _evidence_input_names_for_field(field_key):
     mapping = {
         'ket_qua_doan_the': ['minh_chung_doan_the', 'minh_chung_ket_qua_doan_the'],
         'thanh_tich_ca_nhan_khac': ['minh_chung_thanh_tich_khac', 'minh_chung_thanh_tich_ca_nhan_khac'],
-        'nckh_noi_dung': ['nckh_minh_chung', 'minh_chung_files', 'minh_chung_files_cstt'],
+        'nckh_noi_dung': ['nckh_minh_chung'],
     }
     return mapping.get(field_key, [f'minh_chung_{field_key}'])
 
@@ -254,12 +261,31 @@ def edit_nomination(id):
     danh_hieu_list = [dh.ten_danh_hieu for dh in danh_hieu_db]
     # Build a mapping of danh_hieu -> criteria fields for JS
     danh_hieu_tieu_chi = {dh.ten_danh_hieu: dh.tieu_chi for dh in danh_hieu_db}
-    doi_tuong_list = [e.value for e in DoiTuong]
+    doi_tuong_list = _get_doi_tuong_list()
     muc_do_list = [e.value for e in MucDoHoanThanh]
 
     # Build tooltips from TieuChi DB: {ma_truong: huong_dan}
     tieu_chi_db = TieuChi.query.filter_by(is_active=True).all()
     tieu_chi_tooltips = {tc.ma_truong: tc.huong_dan for tc in tieu_chi_db if tc.huong_dan}
+
+    diem_field_labels = {
+        'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
+        'diem_kiem_tra_dieu_lenh': 'Điểm điều lệnh',
+        'diem_dia_ly_quan_su': 'Điểm địa hình quân sự',
+        'diem_ban_sung': 'Điểm bắn súng',
+        'diem_the_luc': 'Điểm thể lực',
+        'diem_kiem_tra_chinh_tri': 'Điểm chính trị',
+        'diem_tong_ket': 'Điểm tổng kết',
+        'diem_nckh': 'Điểm NCKH',
+    }
+
+    score_rules = {}
+    rows = DiemQuyDinhDanhHieu.query.filter_by(is_active=True).all()
+    for r in rows:
+        score_rules.setdefault(r.loai_danh_hieu, []).append({
+            'tieu_chi_field': r.tieu_chi_field,
+            'min_diem': r.min_diem,
+        })
 
     # Build criteria/group metadata to keep unit UI aligned with admin group configuration
     nhom_meta = {}
@@ -301,7 +327,9 @@ def edit_nomination(id):
                            tieu_chi_tooltips=tieu_chi_tooltips,
                            criteria_meta=criteria_meta,
                            nhom_meta=nhom_meta,
-                           evidence_fields=_get_evidence_required_fields())
+                           evidence_fields=_get_evidence_required_fields(),
+                           score_rules=score_rules,
+                           diem_field_labels=diem_field_labels)
 
 
 @nomination_bp.route('/<int:id>/add-item', methods=['POST'])
@@ -372,6 +400,31 @@ def add_nomination_item(id):
             flash(f'Tiêu chí {label}: phải nhập đầy đủ cả Điểm và Xếp loại.', 'danger')
             return redirect(url_for('nomination.edit_nomination', id=id))
 
+    # Validate score threshold rules per award type
+    rules = DiemQuyDinhDanhHieu.query.filter_by(loai_danh_hieu=loai_danh_hieu, is_active=True).all()
+    below_threshold_fields = []
+    for rule in rules:
+        field_name = rule.tieu_chi_field
+        raw_val = request.form.get(field_name, '').strip()
+        if not raw_val:
+            continue
+        try:
+            val = float(raw_val.replace(',', '.'))
+            min_val = float(str(rule.min_diem).replace(',', '.'))
+        except ValueError:
+            continue
+
+        if val < min_val:
+            below_threshold_fields.append(f'{field_name} (< {rule.min_diem})')
+
+    combined_score_reason = request.form.get('ly_do_chua_dat_diem', '').strip()
+    if below_threshold_fields and not combined_score_reason:
+        flash(
+            'Có tiêu chí điểm chưa đạt mức quy định. Vui lòng nhập một lý do chung.',
+            'danger'
+        )
+        return redirect(url_for('nomination.edit_nomination', id=id))
+
     # Evidence upload is optional: do not force validation here.
 
     chi_tiet = DeXuatChiTiet(
@@ -408,10 +461,16 @@ def add_nomination_item(id):
         diem_tong_ket=request.form.get('diem_tong_ket', '').strip() or None,
         ket_qua_thuc_hanh=request.form.get('ket_qua_thuc_hanh', '').strip() or None,
         # NCKH
-        nckh_noi_dung=request.form.get('nckh_noi_dung', '').strip() or None,
+        nckh_noi_dung=(request.form.get('nckh_noi_dung_text', '').strip() or '; '.join([x.strip() for x in request.form.getlist('nckh_noi_dung') if x and x.strip()]) or None),
         diem_nckh=float(request.form.get('diem_nckh')) if request.form.get('diem_nckh', '').strip() else None,
         thanh_tich_ca_nhan_khac=request.form.get('thanh_tich_ca_nhan_khac', '').strip() or None,
-        ghi_chu=request.form.get('ghi_chu_item', '').strip() or None,
+        ghi_chu=(
+            (request.form.get('ghi_chu_item', '').strip() or '') +
+            (
+                ' | Lý do chưa đạt điểm (' + ', '.join(below_threshold_fields) + '): ' + combined_score_reason
+                if below_threshold_fields and combined_score_reason else ''
+            )
+        ).strip() or None,
     )
 
     db.session.add(chi_tiet)
@@ -449,6 +508,9 @@ def add_nomination_item(id):
     # Dynamic evidence files by configured criteria requiring evidence
     for ef in _get_evidence_required_fields():
         field_key = ef['ma_truong']
+        # NCKH evidence is handled separately via nckh_minh_chung; skip here to avoid duplication.
+        if field_key == 'nckh_noi_dung':
+            continue
         files = request.files.getlist(f'minh_chung_{field_key}')
         for file in files:
             if file and file.filename:
@@ -461,34 +523,6 @@ def add_nomination_item(id):
                         ten_file_goc=file.filename,
                     )
                     db.session.add(mc)
-
-    # Handle multiple evidence files
-    evidence_files = request.files.getlist('minh_chung_files')
-    for file in evidence_files:
-        if file and file.filename:
-            path = save_upload(file, 'evidence')
-            if path:
-                mc = MinhChung(
-                    chi_tiet_id=chi_tiet.id,
-                    loai_minh_chung='minh_chung_bo_sung',
-                    duong_dan=path,
-                    ten_file_goc=file.filename,
-                )
-                db.session.add(mc)
-
-    # Handle CSTT evidence files
-    cstt_files = request.files.getlist('minh_chung_files_cstt')
-    for file in cstt_files:
-        if file and file.filename:
-            path = save_upload(file, 'evidence')
-            if path:
-                mc = MinhChung(
-                    chi_tiet_id=chi_tiet.id,
-                    loai_minh_chung='minh_chung_bo_sung',
-                    duong_dan=path,
-                    ten_file_goc=file.filename,
-                )
-                db.session.add(mc)
 
     # Handle evidence files for ket_qua_doan_the
     doan_the_files = request.files.getlist('minh_chung_doan_the')
