@@ -318,9 +318,42 @@
                 </div>
             </div>
 
+            <!-- Dynamic extra criteria fields from admin (fields not already hardcoded above) -->
+            {%- set hardcoded_fields = [
+                'muc_do_hoan_thanh','phieu_tin_nhiem',
+                'diem_kiem_tra_dieu_lenh','kiem_tra_dieu_lenh',
+                'diem_ban_sung','ban_sung',
+                'diem_the_luc','the_luc',
+                'diem_kiem_tra_chinh_tri','kiem_tra_chinh_tri',
+                'diem_kiem_tra_tin_hoc','kiem_tra_tin_hoc',
+                'diem_dia_ly_quan_su','dia_ly_quan_su',
+                'xep_loai_dang_vien','ket_qua_doan_the','minh_chung_doan_the','chu_tri_don_vi_danh_hieu',
+                'danh_hieu_gv_gioi','dinh_muc_giang_day','thoi_gian_lao_dong_kh','ket_qua_kiem_tra_giang',
+                'tien_do_pgs',
+                'danh_hieu_hv_gioi','diem_tong_ket','ket_qua_thuc_hanh',
+                'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
+                'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
+                'ly_do_chua_dat_diem','ghi_chu_item'
+            ] -%}
+            {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
+            {%- if extra_tc %}
+            <div class="form-section hidden" id="section-extra-criteria">
+                <div class="form-section-title" style="color: #6c757d;">
+                    <i class="bi bi-list-check me-1"></i>Tiêu chí bổ sung
+                </div>
+                <div class="row g-3">
+                    {% for tc in extra_tc %}
+                    <div class="col-md-6">
+                        <label class="form-label">{{ tc.ten }}</label>
+                        <input type="text" class="form-control" name="{{ tc.ma_truong }}">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {%- endif %}
+
             <!-- Scientific Research - CSTĐ full form -->
-            <div class="form-section" id="nckh-section-cstd">
-                <div class="form-section-title" style="color: #DC3545;">
+            <div class="form-section" id="nckh-section-cstd">                <div class="form-section-title" style="color: #DC3545;">
                     <i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học
                 </div>
                 <div class="mb-2">
@@ -433,6 +466,8 @@ var NHOM_META = {{ nhom_meta | default({}) | tojson }};
 var EVIDENCE_FIELDS = {{ evidence_fields | default([]) | tojson }};
 var SCORE_RULES = {{ score_rules | default({}) | tojson }};
 var DIEM_FIELD_LABELS = {{ diem_field_labels | default({}) | tojson }};
+// Map each score/rating field to its nhom group code (for doi_tuong_ap_dung check)
+var DIEM_NHOM_MAP = {{ diem_nhom_map | default({}) | tojson }};
 
 function ensureBuiltInEvidenceFields() {
     var requiredBuiltIns = [
@@ -649,8 +684,16 @@ function fieldVisibility(fieldName, selectedDanhHieu, selectedDoiTuong, currentC
         return selectedDoiTuong ? 'show' : 'hide';
     }
 
-    // Step 3: score fields — show for all doi_tuong (they have no nhom restriction by default)
-    if (DIEM_FIELD_LABELS && DIEM_FIELD_LABELS[fieldName] !== undefined) {
+    // Step 3: score fields — check nhom's doi_tuong_ap_dung via DIEM_NHOM_MAP
+    var diemNhom = DIEM_NHOM_MAP[fieldName];
+    if (diemNhom !== undefined) {
+        var nhomInfo = NHOM_META[diemNhom] || null;
+        if (nhomInfo) {
+            var applyList = nhomInfo.doi_tuong_ap_dung || [];
+            if (applyList.length > 0 && selectedDoiTuong && applyList.indexOf(selectedDoiTuong) < 0) {
+                return 'hide';
+            }
+        }
         return selectedDoiTuong ? 'show' : 'hide';
     }
 
@@ -660,6 +703,16 @@ function fieldVisibility(fieldName, selectedDanhHieu, selectedDoiTuong, currentC
         if (SCORE_PAIR[df] === fieldName) pairedScoreField = df;
     });
     if (pairedScoreField) {
+        var pNhom = DIEM_NHOM_MAP[pairedScoreField];
+        if (pNhom !== undefined) {
+            var pNhomInfo = NHOM_META[pNhom] || null;
+            if (pNhomInfo) {
+                var pApplyList = pNhomInfo.doi_tuong_ap_dung || [];
+                if (pApplyList.length > 0 && selectedDoiTuong && pApplyList.indexOf(selectedDoiTuong) < 0) {
+                    return 'hide';
+                }
+            }
+        }
         return selectedDoiTuong ? 'show' : 'hide';
     }
 
