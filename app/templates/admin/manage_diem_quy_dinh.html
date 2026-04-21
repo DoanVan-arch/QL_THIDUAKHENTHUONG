@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Quản lý mức điểm theo danh hiệu{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-sliders me-2"></i>Quản lý mức điểm theo danh hiệu</h4>
+        <small class="text-muted">Áp dụng cho các tiêu chí tên có chữ Điểm</small>
+    </div>
+    <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#addModal">
+        <i class="bi bi-plus-lg me-1"></i> Thêm quy định
+    </button>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Danh hiệu</th>
+                        <th>Tiêu chí điểm</th>
+                        <th>Mức điểm tối thiểu</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rules %}
+                    <tr>
+                        <td class="fw-semibold">{{ r.loai_danh_hieu }}</td>
+                        <td>{{ diem_field_labels.get(r.tieu_chi_field, r.tieu_chi_field) }}</td>
+                        <td>{{ r.min_diem }}</td>
+                        <td>
+                            {% if r.is_active %}
+                            <span class="badge bg-success">Đang dùng</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Ẩn</span>
+                            {% endif %}
+                        </td>
+                        <td class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-navy" data-bs-toggle="modal" data-bs-target="#edit{{ r.id }}"><i class="bi bi-pencil"></i></button>
+                            <form method="POST" action="{{ url_for('admin.toggle_diem_quy_dinh', id=r.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-warning" type="submit"><i class="bi bi-arrow-repeat"></i></button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin.delete_diem_quy_dinh', id=r.id) }}" onsubmit="return confirm('Xóa quy định này?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="edit{{ r.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="POST" action="{{ url_for('admin.edit_diem_quy_dinh', id=r.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <div class="modal-header modal-header-navy">
+                                        <h6 class="modal-title">Sửa quy định điểm</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-2">
+                                            <label class="form-label">Danh hiệu</label>
+                                            <select class="form-select" name="loai_danh_hieu" required>
+                                                {% for dh in danh_hieus %}
+                                                <option value="{{ dh.ten_danh_hieu }}" {% if dh.ten_danh_hieu == r.loai_danh_hieu %}selected{% endif %}>{{ dh.ten_danh_hieu }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Tiêu chí điểm</label>
+                                            <select class="form-select" name="tieu_chi_field" required>
+                                                {% for field in diem_fields %}
+                                                <option value="{{ field }}" {% if field == r.tieu_chi_field %}selected{% endif %}>{{ diem_field_labels.get(field, field) }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="form-label">Mức điểm tối thiểu</label>
+                                            <input class="form-control" name="min_diem" value="{{ r.min_diem }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                        <button type="submit" class="btn btn-navy">Lưu</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.create_diem_quy_dinh') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title">Thêm quy định điểm</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Danh hiệu</label>
+                        <select class="form-select" name="loai_danh_hieu" required>
+                            <option value="">-- Chọn --</option>
+                            {% for dh in danh_hieus %}
+                            <option value="{{ dh.ten_danh_hieu }}">{{ dh.ten_danh_hieu }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Tiêu chí điểm</label>
+                        <select class="form-select" name="tieu_chi_field" required>
+                            <option value="">-- Chọn --</option>
+                            {% for field in diem_fields %}
+                            <option value="{{ field }}">{{ diem_field_labels.get(field, field) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Mức điểm tối thiểu</label>
+                        <input class="form-control" name="min_diem" placeholder="VD: 8.0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy">Thêm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

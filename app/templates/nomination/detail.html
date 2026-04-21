@@ -271,7 +271,9 @@
                 <div class="col-md-3"><small class="text-muted">Tiến độ PGS:</small> {{ ct.tien_do_pgs }}</div>
                 {% endif %}
                 {% if ct.danh_hieu_hv_gioi %}
-                <div class="col-md-3"><small class="text-muted">HV giỏi:</small> {{ ct.danh_hieu_hv_gioi }}</div>
+                <div class="col-md-3"><small class="text-muted">HV giỏi:</small>
+                    {% if ct.danh_hieu_hv_gioi == 'true' %}Có{% elif ct.danh_hieu_hv_gioi == 'false' %}Không{% else %}{{ ct.danh_hieu_hv_gioi }}{% endif %}
+                </div>
                 {% endif %}
                 {% if ct.diem_tong_ket %}
                 <div class="col-md-3"><small class="text-muted">Điểm TK:</small> {{ ct.diem_tong_ket }}</div>

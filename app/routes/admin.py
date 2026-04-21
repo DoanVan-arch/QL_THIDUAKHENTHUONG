@@ -11,10 +11,10 @@ from app.models.unit import DonVi, LoaiDonVi
 from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
 from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDanhHieu, DanhHieu, TieuChi
-from app.models.evaluation import NhomTieuChi, DanhGiaHangNam
+from app.models.evaluation import NhomTieuChi, DanhGiaHangNam, DiemQuyDinhDanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
-from app.models.catalog import ChucVuOption, CapBacOption
+from app.models.catalog import ChucVuOption, CapBacOption, DoiTuongOption
 from app.utils.decorators import admin_required, admin_or_reward_viewer_required
 from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
@@ -118,6 +118,33 @@ ALL_FIELDS = [
     'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
     'thanh_tich_ca_nhan_khac',
 ]
+
+DIEM_FIELDS = [
+    'diem_kiem_tra_tin_hoc',
+    'diem_kiem_tra_dieu_lenh',
+    'diem_dia_ly_quan_su',
+    'diem_ban_sung',
+    'diem_the_luc',
+    'diem_kiem_tra_chinh_tri',
+    'diem_tong_ket',
+    'diem_nckh',
+]
+
+DIEM_FIELD_LABELS = {
+    'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
+    'diem_kiem_tra_dieu_lenh': 'Điểm điều lệnh',
+    'diem_dia_ly_quan_su': 'Điểm địa hình quân sự',
+    'diem_ban_sung': 'Điểm bắn súng',
+    'diem_the_luc': 'Điểm thể lực',
+    'diem_kiem_tra_chinh_tri': 'Điểm chính trị',
+    'diem_tong_ket': 'Điểm tổng kết',
+    'diem_nckh': 'Điểm NCKH',
+}
+
+
+def _get_doi_tuong_option_list():
+    rows = DoiTuongOption.query.filter_by(is_active=True).order_by(DoiTuongOption.thu_tu, DoiTuongOption.ten).all()
+    return [x.ten for x in rows] or [e.value for e in DoiTuong]
 
 
 @admin_bp.route('/tracking')
@@ -1584,7 +1611,7 @@ def all_personnel():
     personnel = query.paginate(page=page, per_page=30, error_out=False)
 
     units = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu, DonVi.ten_don_vi).all()
-    doi_tuong_list = [e.value for e in DoiTuong]
+    doi_tuong_list = _get_doi_tuong_option_list()
 
     return render_template('admin/all_personnel.html',
                            personnel=personnel,
@@ -1619,7 +1646,7 @@ def admin_personnel_edit(id):
     if request.method == 'POST':
         qn.ho_ten = request.form.get('ho_ten', '').strip()
         qn.cap_bac = request.form.get('cap_bac', '').strip() or None
-        qn.chuc_danh = request.form.get('chuc_danh', '').strip() or None
+        qn.chuc_danh = None
         qn.chuc_vu = request.form.get('chuc_vu', '').strip() or None
         qn.don_vi_truc_thuoc = request.form.get('don_vi_truc_thuoc', '').strip() or None
         qn.can_cuoc_cong_dan = request.form.get('can_cuoc_cong_dan', '').strip() or None
@@ -1652,8 +1679,188 @@ def admin_personnel_edit(id):
                            cap_bac_list=[x.ten for x in CapBacOption.query.filter_by(is_active=True).order_by(CapBacOption.thu_tu, CapBacOption.ten).all()] or [e.value for e in CapBac],
                            hoc_ham_list=[e.value for e in HocHam],
                            hoc_vi_list=[e.value for e in HocVi],
-                           doi_tuong_list=[e.value for e in DoiTuong],
+                           doi_tuong_list=_get_doi_tuong_option_list(),
                            chuc_vu_options=ChucVuOption.query.filter_by(is_active=True).order_by(ChucVuOption.thu_tu, ChucVuOption.ten).all())
+
+
+@admin_bp.route('/doi-tuong')
+@login_required
+@admin_required
+def manage_doi_tuong():
+    if DoiTuongOption.query.count() == 0:
+        defaults = [e.value for e in DoiTuong]
+        for idx, ten in enumerate(defaults, start=1):
+            db.session.add(DoiTuongOption(ten=ten, thu_tu=idx, is_active=True))
+        db.session.commit()
+    items = DoiTuongOption.query.order_by(DoiTuongOption.thu_tu, DoiTuongOption.ten).all()
+    return render_template('admin/manage_doi_tuong.html', items=items)
+
+
+@admin_bp.route('/doi-tuong/create', methods=['POST'])
+@login_required
+@admin_required
+def create_doi_tuong():
+    ten = request.form.get('ten', '').strip()
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    if not ten:
+        flash('Tên đối tượng không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_doi_tuong'))
+    if DoiTuongOption.query.filter_by(ten=ten).first():
+        flash('Đối tượng đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_doi_tuong'))
+    db.session.add(DoiTuongOption(ten=ten, thu_tu=thu_tu, is_active=True))
+    db.session.commit()
+    flash('Đã thêm đối tượng.', 'success')
+    return redirect(url_for('admin.manage_doi_tuong'))
+
+
+@admin_bp.route('/doi-tuong/<int:id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_doi_tuong(id):
+    item = DoiTuongOption.query.get_or_404(id)
+    ten = request.form.get('ten', '').strip()
+    thu_tu = request.form.get('thu_tu', 0, type=int)
+    if not ten:
+        flash('Tên đối tượng không được để trống.', 'danger')
+        return redirect(url_for('admin.manage_doi_tuong'))
+    dup = DoiTuongOption.query.filter(DoiTuongOption.ten == ten, DoiTuongOption.id != id).first()
+    if dup:
+        flash('Tên đối tượng đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_doi_tuong'))
+    item.ten = ten
+    item.thu_tu = thu_tu
+    db.session.commit()
+    flash('Đã cập nhật đối tượng.', 'success')
+    return redirect(url_for('admin.manage_doi_tuong'))
+
+
+@admin_bp.route('/doi-tuong/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_doi_tuong(id):
+    item = DoiTuongOption.query.get_or_404(id)
+    item.is_active = not item.is_active
+    db.session.commit()
+    flash('Đã cập nhật trạng thái đối tượng.', 'success')
+    return redirect(url_for('admin.manage_doi_tuong'))
+
+
+@admin_bp.route('/doi-tuong/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_doi_tuong(id):
+    item = DoiTuongOption.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Đã xóa đối tượng.', 'success')
+    return redirect(url_for('admin.manage_doi_tuong'))
+
+
+@admin_bp.route('/diem-quy-dinh')
+@login_required
+@admin_required
+def manage_diem_quy_dinh():
+    rules = DiemQuyDinhDanhHieu.query.order_by(
+        DiemQuyDinhDanhHieu.loai_danh_hieu,
+        DiemQuyDinhDanhHieu.tieu_chi_field,
+    ).all()
+    danh_hieus = DanhHieu.query.filter_by(is_active=True).order_by(DanhHieu.thu_tu, DanhHieu.ten_danh_hieu).all()
+    return render_template('admin/manage_diem_quy_dinh.html',
+                           rules=rules,
+                           danh_hieus=danh_hieus,
+                           diem_fields=DIEM_FIELDS,
+                           diem_field_labels=DIEM_FIELD_LABELS)
+
+
+@admin_bp.route('/diem-quy-dinh/create', methods=['POST'])
+@login_required
+@admin_required
+def create_diem_quy_dinh():
+    loai_danh_hieu = request.form.get('loai_danh_hieu', '').strip()
+    tieu_chi_field = request.form.get('tieu_chi_field', '').strip()
+    min_diem = request.form.get('min_diem', '').strip()
+
+    if not loai_danh_hieu or not tieu_chi_field or not min_diem:
+        flash('Vui lòng nhập đầy đủ thông tin quy định điểm.', 'danger')
+        return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+    if tieu_chi_field not in DIEM_FIELDS:
+        flash('Tiêu chí điểm không hợp lệ.', 'danger')
+        return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+    dup = DiemQuyDinhDanhHieu.query.filter_by(
+        loai_danh_hieu=loai_danh_hieu,
+        tieu_chi_field=tieu_chi_field
+    ).first()
+    if dup:
+        flash('Quy định cho danh hiệu + tiêu chí này đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+    db.session.add(DiemQuyDinhDanhHieu(
+        loai_danh_hieu=loai_danh_hieu,
+        tieu_chi_field=tieu_chi_field,
+        min_diem=min_diem,
+        is_active=True,
+    ))
+    db.session.commit()
+    flash('Đã thêm quy định điểm.', 'success')
+    return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+
+@admin_bp.route('/diem-quy-dinh/<int:id>/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_diem_quy_dinh(id):
+    row = DiemQuyDinhDanhHieu.query.get_or_404(id)
+    loai_danh_hieu = request.form.get('loai_danh_hieu', '').strip()
+    tieu_chi_field = request.form.get('tieu_chi_field', '').strip()
+    min_diem = request.form.get('min_diem', '').strip()
+
+    if not loai_danh_hieu or not tieu_chi_field or not min_diem:
+        flash('Vui lòng nhập đầy đủ thông tin quy định điểm.', 'danger')
+        return redirect(url_for('admin.manage_diem_quy_dinh'))
+    if tieu_chi_field not in DIEM_FIELDS:
+        flash('Tiêu chí điểm không hợp lệ.', 'danger')
+        return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+    dup = DiemQuyDinhDanhHieu.query.filter(
+        DiemQuyDinhDanhHieu.loai_danh_hieu == loai_danh_hieu,
+        DiemQuyDinhDanhHieu.tieu_chi_field == tieu_chi_field,
+        DiemQuyDinhDanhHieu.id != id,
+    ).first()
+    if dup:
+        flash('Quy định cho danh hiệu + tiêu chí này đã tồn tại.', 'warning')
+        return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+    row.loai_danh_hieu = loai_danh_hieu
+    row.tieu_chi_field = tieu_chi_field
+    row.min_diem = min_diem
+    db.session.commit()
+    flash('Đã cập nhật quy định điểm.', 'success')
+    return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+
+@admin_bp.route('/diem-quy-dinh/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_diem_quy_dinh(id):
+    row = DiemQuyDinhDanhHieu.query.get_or_404(id)
+    row.is_active = not row.is_active
+    db.session.commit()
+    flash('Đã cập nhật trạng thái quy định điểm.', 'success')
+    return redirect(url_for('admin.manage_diem_quy_dinh'))
+
+
+@admin_bp.route('/diem-quy-dinh/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_diem_quy_dinh(id):
+    row = DiemQuyDinhDanhHieu.query.get_or_404(id)
+    db.session.delete(row)
+    db.session.commit()
+    flash('Đã xóa quy định điểm.', 'success')
+    return redirect(url_for('admin.manage_diem_quy_dinh'))
 
 
 @admin_bp.route('/cap-bac')
@@ -1883,7 +2090,7 @@ TIEU_CHI_OPTIONS = [
     ('ket_qua_kiem_tra_giang', 'Kết quả kiểm tra giảng'),
     ('tien_do_pgs', 'Tiến độ PGS'),
     ('thoi_gian_lao_dong_kh', 'Thời gian lao động khoa học'),
-    ('danh_hieu_hv_gioi', 'Danh hiệu HV giỏi'),
+    ('danh_hieu_hv_gioi', 'Danh hiệu HV giỏi (true/false)'),
     ('diem_tong_ket', 'Điểm tổng kết'),
     ('ket_qua_thuc_hanh', 'Kết quả thực hành'),
     ('diem_nckh', 'Điểm NCKH'),
@@ -2098,7 +2305,7 @@ def manage_nhom_tieu_chi():
     try:
         _ensure_default_nhom_tieu_chi()
         groups = NhomTieuChi.query.order_by(NhomTieuChi.thu_tu, NhomTieuChi.ten_nhom).all()
-        doi_tuong_list = [e.value for e in DoiTuong]
+        doi_tuong_list = _get_doi_tuong_option_list()
         return render_template('admin/manage_nhom_tieu_chi.html',
                                groups=groups,
                                doi_tuong_list=doi_tuong_list,
@@ -2108,7 +2315,7 @@ def manage_nhom_tieu_chi():
         flash('Thiếu bảng nhóm tiêu chí. Vui lòng chạy: flask db upgrade', 'danger')
         return render_template('admin/manage_nhom_tieu_chi.html',
                                groups=[],
-                               doi_tuong_list=[e.value for e in DoiTuong],
+                               doi_tuong_list=_get_doi_tuong_option_list(),
                                migration_missing=True)
 
 

@@ -67,3 +67,18 @@ class DanhGiaHangNam(db.Model):
     quan_nhan = relationship('QuanNhan')
     don_vi = relationship('DonVi')
     nguoi_cap_nhat = relationship('User')
+
+
+class DiemQuyDinhDanhHieu(db.Model):
+    __tablename__ = 'diem_quy_dinh_danh_hieu'
+    __table_args__ = (
+        UniqueConstraint('loai_danh_hieu', 'tieu_chi_field', name='uq_diem_rule_danh_hieu_field'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    loai_danh_hieu = Column(String(100), nullable=False, index=True)
+    tieu_chi_field = Column(String(100), nullable=False, index=True)
+    min_diem = Column(String(20), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

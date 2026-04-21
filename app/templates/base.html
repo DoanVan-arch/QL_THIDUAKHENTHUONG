@@ -92,6 +92,9 @@
                 <a href="{{ url_for('admin.manage_chuc_vu') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_chuc_vu'] %}active{% endif %}">
                     <i class="bi bi-list-ul"></i> <span>Danh mục chức vụ</span>
                 </a>
+                <a href="{{ url_for('admin.manage_doi_tuong') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_doi_tuong'] %}active{% endif %}">
+                    <i class="bi bi-diagram-2"></i> <span>Danh mục đối tượng</span>
+                </a>
                 <a href="{{ url_for('admin.manage_cap_bac') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_cap_bac'] %}active{% endif %}">
                     <i class="bi bi-collection"></i> <span>Danh mục cấp bậc</span>
                 </a>
@@ -100,6 +103,9 @@
                 </a>
                 <a href="{{ url_for('admin.manage_tieu_chi') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_tieu_chi', 'admin.edit_tieu_chi'] %}active{% endif %}">
                     <i class="bi bi-list-check"></i> <span>Quản lý tiêu chí</span>
+                </a>
+                <a href="{{ url_for('admin.manage_diem_quy_dinh') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_diem_quy_dinh'] %}active{% endif %}">
+                    <i class="bi bi-sliders"></i> <span>Quy định mức điểm</span>
                 </a>
                 <a href="{{ url_for('admin.manage_nhom_tieu_chi') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_nhom_tieu_chi'] %}active{% endif %}">
                     <i class="bi bi-diagram-3"></i> <span>Nhóm tiêu chí</span>

@@ -105,7 +105,6 @@
                             <div><strong>Ngày nhập ngũ:</strong> {{ qn.ngay_nhap_ngu or '-' }}</div>
                             <div><strong>Cấp bậc:</strong> {{ qn.cap_bac or '-' }}</div>
                             <div><strong>Chức vụ:</strong> {{ qn.chuc_vu or '-' }}</div>
-                            <div><strong>Chức danh:</strong> {{ qn.chuc_danh or '-' }}</div>
                             <div><strong>Đối tượng:</strong> {{ ct.doi_tuong or qn.doi_tuong or '-' }}</div>
                             <div><strong>ĐV trực thuộc:</strong> {{ qn.don_vi_truc_thuoc or '-' }}</div>
                             <div><strong>Học hàm/Học vị:</strong> {{ qn.hoc_ham or '-' }} / {{ qn.hoc_vi or '-' }}</div>
@@ -136,7 +135,7 @@
                                 <div><strong>KT giảng:</strong> {{ ct.ket_qua_kiem_tra_giang or '-' }}</div>
                                 <div><strong>Tiến độ PGS:</strong> {{ ct.tien_do_pgs or '-' }}</div>
                                 <div><strong>LĐ khoa học:</strong> {{ ct.thoi_gian_lao_dong_kh or '-' }}</div>
-                                <div><strong>HV giỏi:</strong> {{ ct.danh_hieu_hv_gioi or '-' }}</div>
+                                <div><strong>HV giỏi:</strong> {% if ct.danh_hieu_hv_gioi == 'true' %}Có{% elif ct.danh_hieu_hv_gioi == 'false' %}Không{% else %}{{ ct.danh_hieu_hv_gioi or '-' }}{% endif %}</div>
                                 <div><strong>Điểm tổng kết:</strong> {{ ct.diem_tong_ket or '-' }}</div>
                                 <div><strong>KQ thực hành:</strong> {{ ct.ket_qua_thuc_hanh or '-' }}</div>
                                 <div><strong>Chủ trì ĐV danh hiệu:</strong> {{ ct.chu_tri_don_vi_danh_hieu or '-' }}</div>
