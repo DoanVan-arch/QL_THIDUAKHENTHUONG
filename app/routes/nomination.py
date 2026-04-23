@@ -261,6 +261,8 @@ def edit_nomination(id):
     danh_hieu_list = [dh.ten_danh_hieu for dh in danh_hieu_db]
     # Build a mapping of danh_hieu -> criteria fields for JS
     danh_hieu_tieu_chi = {dh.ten_danh_hieu: dh.tieu_chi for dh in danh_hieu_db}
+    # Build a mapping of danh_hieu -> pham_vi ('Cá nhân' or 'Đơn vị') for JS
+    danh_hieu_pham_vi = {dh.ten_danh_hieu: (dh.pham_vi or 'Cá nhân') for dh in danh_hieu_db}
     doi_tuong_list = _get_doi_tuong_list()
     muc_do_list = [e.value for e in MucDoHoanThanh]
 
@@ -268,7 +270,9 @@ def edit_nomination(id):
     tieu_chi_db = TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu, TieuChi.ten).all()
     tieu_chi_tooltips = {tc.ma_truong: tc.huong_dan for tc in tieu_chi_db if tc.huong_dan}
     # Full list for dynamic rendering in template (fields not already hardcoded in HTML)
-    tieu_chi_list = [{'ma_truong': tc.ma_truong, 'ten': tc.ten, 'nhom': tc.nhom} for tc in tieu_chi_db]
+    tieu_chi_list = [{'ma_truong': tc.ma_truong, 'ten': tc.ten, 'nhom': tc.nhom,
+                      'loai_input': tc.loai_input or 'textbox',
+                      'gia_tri_chon': tc.gia_tri_chon or []} for tc in tieu_chi_db]
 
     diem_field_labels = {
         'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
@@ -343,6 +347,7 @@ def edit_nomination(id):
                            already_nominated_ids=already_nominated_ids,
                            danh_hieu_list=danh_hieu_list,
                            danh_hieu_tieu_chi=danh_hieu_tieu_chi,
+                           danh_hieu_pham_vi=danh_hieu_pham_vi,
                            doi_tuong_list=doi_tuong_list,
                            muc_do_list=muc_do_list,
                            tieu_chi_tooltips=tieu_chi_tooltips,
@@ -370,6 +375,20 @@ def add_nomination_item(id):
     if not loai_danh_hieu:
         flash('Vui lòng chọn danh hiệu đề xuất.', 'danger')
         return redirect(url_for('nomination.edit_nomination', id=id))
+
+    # Determine pham_vi for the selected danh_hieu
+    dh_obj = DanhHieu.query.filter_by(ten_danh_hieu=loai_danh_hieu, is_active=True).first()
+    is_tap_the = dh_obj and (dh_obj.pham_vi or 'Cá nhân') == 'Đơn vị'
+
+    if is_tap_the:
+        ten_don_vi_de_xuat = request.form.get('ten_don_vi_de_xuat', '').strip()
+        if not ten_don_vi_de_xuat:
+            flash('Vui lòng nhập tên đơn vị đề xuất.', 'danger')
+            return redirect(url_for('nomination.edit_nomination', id=id))
+    else:
+        if not quan_nhan_id:
+            flash('Vui lòng chọn quân nhân đề xuất.', 'danger')
+            return redirect(url_for('nomination.edit_nomination', id=id))
 
     # --- Duplicate prevention ---
     if quan_nhan_id:
@@ -456,6 +475,7 @@ def add_nomination_item(id):
         loai_danh_hieu=loai_danh_hieu,
         doi_tuong=doi_tuong,
         nam_hoc=de_xuat.nam_hoc,
+        ten_don_vi_de_xuat=request.form.get('ten_don_vi_de_xuat', '').strip() or None,
         muc_do_hoan_thanh=request.form.get('muc_do_hoan_thanh', '').strip() or None,
         kiem_tra_tin_hoc=request.form.get('kiem_tra_tin_hoc', '').strip() or None,
         diem_kiem_tra_tin_hoc=request.form.get('diem_kiem_tra_tin_hoc', '').strip() or None,

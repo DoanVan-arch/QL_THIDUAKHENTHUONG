@@ -80,36 +80,73 @@
                 <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
                     <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
                 </a>
-                <a href="{{ url_for('admin.manage_users') }}" class="sidebar-link {% if request.endpoint == 'admin.manage_users' %}active{% endif %}">
-                    <i class="bi bi-person-gear"></i> <span>Quản lý tài khoản</span>
-                </a>
-                <a href="{{ url_for('admin.manage_units') }}" class="sidebar-link {% if request.endpoint == 'admin.manage_units' %}active{% endif %}">
-                    <i class="bi bi-building"></i> <span>Quản lý đơn vị</span>
-                </a>
                 <a href="{{ url_for('admin.all_personnel') }}" class="sidebar-link {% if request.endpoint in ['admin.all_personnel', 'admin.admin_personnel_detail', 'admin.admin_personnel_edit'] %}active{% endif %}">
                     <i class="bi bi-people"></i> <span>Hồ sơ cá nhân</span>
                 </a>
-                <a href="{{ url_for('admin.manage_chuc_vu') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_chuc_vu'] %}active{% endif %}">
-                    <i class="bi bi-list-ul"></i> <span>Danh mục chức vụ</span>
-                </a>
-                <a href="{{ url_for('admin.manage_doi_tuong') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_doi_tuong'] %}active{% endif %}">
-                    <i class="bi bi-diagram-2"></i> <span>Danh mục đối tượng</span>
-                </a>
-                <a href="{{ url_for('admin.manage_cap_bac') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_cap_bac'] %}active{% endif %}">
-                    <i class="bi bi-collection"></i> <span>Danh mục cấp bậc</span>
-                </a>
-                <a href="{{ url_for('admin.manage_danh_hieu') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_danh_hieu', 'admin.edit_danh_hieu'] %}active{% endif %}">
-                    <i class="bi bi-bookmark-star"></i> <span>Quản lý danh hiệu</span>
-                </a>
-                <a href="{{ url_for('admin.manage_tieu_chi') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_tieu_chi', 'admin.edit_tieu_chi'] %}active{% endif %}">
-                    <i class="bi bi-list-check"></i> <span>Quản lý tiêu chí</span>
-                </a>
-                <a href="{{ url_for('admin.manage_diem_quy_dinh') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_diem_quy_dinh'] %}active{% endif %}">
-                    <i class="bi bi-sliders"></i> <span>Quy định mức điểm</span>
-                </a>
-                <a href="{{ url_for('admin.manage_nhom_tieu_chi') }}" class="sidebar-link {% if request.endpoint in ['admin.manage_nhom_tieu_chi'] %}active{% endif %}">
-                    <i class="bi bi-diagram-3"></i> <span>Nhóm tiêu chí</span>
-                </a>
+                <!-- Collapsible group: DANH MỤC -->
+                {% set danh_muc_active = request.endpoint in ['admin.manage_chuc_vu', 'admin.manage_doi_tuong', 'admin.manage_cap_bac', 'admin.manage_users', 'admin.manage_units'] %}
+                <div id="danh-muc-group">
+                    <button class="sidebar-link sidebar-group-toggle w-100 text-start border-0 bg-transparent {% if danh_muc_active %}active{% endif %}"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#danh-muc-collapse"
+                            aria-expanded="{{ 'true' if danh_muc_active else 'false' }}"
+                            aria-controls="danh-muc-collapse">
+                        <i class="bi bi-folder2-open"></i>
+                        <span>Danh mục</span>
+                        <i class="bi bi-chevron-down ms-auto sidebar-chevron"></i>
+                    </button>
+                    <div class="collapse {% if danh_muc_active %}show{% endif %}" id="danh-muc-collapse">
+                        <div class="sidebar-subgroup">
+                            <a href="{{ url_for('admin.manage_users') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_users'] %}active{% endif %}">
+                                <i class="bi bi-person-gear"></i> <span>Quản lý tài khoản</span>
+                            </a>
+                            <a href="{{ url_for('admin.manage_units') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_units'] %}active{% endif %}">
+                                <i class="bi bi-building"></i> <span>Quản lý đơn vị</span>
+                            </a>
+                            <a href="{{ url_for('admin.manage_chuc_vu') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_chuc_vu'] %}active{% endif %}">
+                                <i class="bi bi-list-ul"></i> <span>Danh mục chức vụ</span>
+                            </a>
+                            <a href="{{ url_for('admin.manage_doi_tuong') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_doi_tuong'] %}active{% endif %}">
+                                <i class="bi bi-diagram-2"></i> <span>Danh mục đối tượng</span>
+                            </a>
+                            <a href="{{ url_for('admin.manage_cap_bac') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_cap_bac'] %}active{% endif %}">
+                                <i class="bi bi-collection"></i> <span>Danh mục cấp bậc</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collapsible group: TIÊU CHÍ -->
+                {% set tieu_chi_active = request.endpoint in ['admin.manage_danh_hieu', 'admin.edit_danh_hieu', 'admin.manage_tieu_chi', 'admin.edit_tieu_chi', 'admin.manage_diem_quy_dinh', 'admin.manage_nhom_tieu_chi'] %}
+                <div id="tieu-chi-group">
+                    <button class="sidebar-link sidebar-group-toggle w-100 text-start border-0 bg-transparent {% if tieu_chi_active %}active{% endif %}"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#tieu-chi-collapse"
+                            aria-expanded="{{ 'true' if tieu_chi_active else 'false' }}"
+                            aria-controls="tieu-chi-collapse">
+                        <i class="bi bi-card-checklist"></i>
+                        <span>Tiêu chí</span>
+                        <i class="bi bi-chevron-down ms-auto sidebar-chevron"></i>
+                    </button>
+                    <div class="collapse {% if tieu_chi_active %}show{% endif %}" id="tieu-chi-collapse">
+                        <div class="sidebar-subgroup">
+                            <a href="{{ url_for('admin.manage_danh_hieu') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_danh_hieu', 'admin.edit_danh_hieu'] %}active{% endif %}">
+                                <i class="bi bi-bookmark-star"></i> <span>Quản lý danh hiệu</span>
+                            </a>
+                            <a href="{{ url_for('admin.manage_tieu_chi') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_tieu_chi', 'admin.edit_tieu_chi'] %}active{% endif %}">
+                                <i class="bi bi-list-check"></i> <span>Quản lý tiêu chí</span>
+                            </a>
+                            <a href="{{ url_for('admin.manage_diem_quy_dinh') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_diem_quy_dinh'] %}active{% endif %}">
+                                <i class="bi bi-sliders"></i> <span>Quy định mức điểm</span>
+                            </a>
+                            <a href="{{ url_for('admin.manage_nhom_tieu_chi') }}" class="sidebar-link sidebar-sublink {% if request.endpoint in ['admin.manage_nhom_tieu_chi'] %}active{% endif %}">
+                                <i class="bi bi-diagram-3"></i> <span>Nhóm tiêu chí</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 <a href="{{ url_for('admin.list_annual_evaluations') }}" class="sidebar-link {% if request.endpoint in ['admin.list_annual_evaluations'] %}active{% endif %}">
                     <i class="bi bi-clipboard2-data"></i> <span>Đánh giá hằng năm</span>
                 </a>

@@ -71,9 +71,9 @@
                     {% for ct in de_xuat.chi_tiets %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td class="fw-semibold">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}</td>
+                        <td class="fw-semibold">{{ ct.ten_don_vi_de_xuat if ct.ten_don_vi_de_xuat else (ct.quan_nhan.ho_ten if ct.quan_nhan else '-') }}</td>
                         <td>{{ ct.quan_nhan.cap_bac if ct.quan_nhan else '-' }}</td>
-                        <td>{{ ct.doi_tuong or '-' }}</td>
+                        <td>{{ ct.doi_tuong or ('-' if ct.quan_nhan else 'Tập thể') }}</td>
                         <td><span class="badge bg-navy">{{ ct.loai_danh_hieu }}</span></td>
                         <td>
                             {% if ct.minh_chungs %}
@@ -128,12 +128,14 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-5">
+                    <!-- Personnel block (cá nhân nominations only) -->
+                    <div id="block-ca-nhan" class="col-md-8 row g-3 p-0 m-0">
+                    <div class="col-md-7">
                         <label class="form-label">Chọn cá nhân <span class="text-danger">*</span></label>
                         <input type="text" class="form-control mb-2" id="quan_nhan_search"
                                placeholder="Tìm theo họ tên, cấp bậc, chức vụ..."
                                oninput="filterPersonnelOptions(this)">
-                        <select class="form-select" name="quan_nhan_id" id="quan_nhan_select" onchange="onPersonnelSelect(this)" required>
+                        <select class="form-select" name="quan_nhan_id" id="quan_nhan_select" onchange="onPersonnelSelect(this)">
                             <option value="">-- Chọn quân nhân --</option>
                             {% for p in personnel %}
                             {% set is_nominated = p.id in already_nominated_ids %}
@@ -148,15 +150,22 @@
                             {% endfor %}
                         </select>
                     </div>
-                   
-                    <div class="col-md-3">
+                    <div class="col-md-5">
                         <label class="form-label">Đối tượng <span class="text-danger">*</span></label>
-                        <select class="form-select" name="doi_tuong" id="doi_tuong_select" onchange="onDoiTuongSelectChange()" required>
+                        <select class="form-select" name="doi_tuong" id="doi_tuong_select" onchange="onDoiTuongSelectChange()">
                             <option value="">-- Chọn đối tượng --</option>
                             {% for dt in doi_tuong_list %}
                             <option value="{{ dt }}">{{ dt }}</option>
                             {% endfor %}
                         </select>
+                    </div>
+                    </div>
+
+                    <!-- Don vi block (tap_the nominations only) -->
+                    <div id="block-tap-the" class="col-md-8" style="display:none;">
+                        <label class="form-label">Tên đơn vị đề xuất <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ten_don_vi_de_xuat" id="ten_don_vi_de_xuat"
+                               placeholder="VD: Đại đội 1, Phòng Đào tạo...">
                     </div>
                 </div>
             </div>
@@ -240,14 +249,7 @@
                         <label class="form-label">Xếp loại đảng viên hằng năm</label>
                         <input type="text" class="form-control" name="xep_loai_dang_vien">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Hoàn thành nhiệm vụ, khen thưởng của tổ chức quần chúng</label>
-                        <input type="text" class="form-control" name="ket_qua_doan_the" placeholder="Nếu còn trong độ tuổi sinh hoạt đoàn">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Minh chứng đoàn thể (nhiều file)</label>
-                        <input type="file" class="form-control" name="minh_chung_doan_the" accept="image/*,.pdf" multiple>
-                    </div>
+                    
                     <div class="col-md-6">
                         <label class="form-label">Chủ trì đơn vị đạt danh hiệu thi đua</label>
                         <input type="text" class="form-control" name="chu_tri_don_vi_danh_hieu" placeholder="Nếu là chỉ huy/bí thư">
@@ -333,7 +335,7 @@
                 'danh_hieu_hv_gioi','diem_tong_ket','ket_qua_thuc_hanh',
                 'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
                 'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
-                'ly_do_chua_dat_diem','ghi_chu_item'
+                'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc'
             ] -%}
             {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
             {%- if extra_tc %}
@@ -345,7 +347,16 @@
                     {% for tc in extra_tc %}
                     <div class="col-md-6">
                         <label class="form-label">{{ tc.ten }}</label>
+                        {% if tc.loai_input == 'combobox' and tc.gia_tri_chon %}
+                        <select class="form-select" name="{{ tc.ma_truong }}">
+                            <option value="">-- Chọn --</option>
+                            {% for opt in tc.gia_tri_chon %}
+                            <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
                         <input type="text" class="form-control" name="{{ tc.ma_truong }}">
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -378,6 +389,16 @@
                         <input type="hidden" name="nckh_noi_dung_text" id="nckh_noi_dung_text">
                     </div>
                 </div>
+                <div class="row g-3">
+                 <div class="col-md-12">
+                        <label class="form-label">Mô tả chi tiết thành tích khoa học</label>
+                        <input type="text" class="form-control" name="mo_ta_khoa_hoc" id="mo_ta_khoa_hoc" placeholder="Nhập mô tả chi tiết về thành tích nghiên cứu khoa học...">
+                </div>
+                <!-- <div class="col-md-12">
+                        <label class="form-label">Ảnh minh chứng nghiên cứu khoa học (nhiều file) nếu có</label>
+                        <input type="file" class="form-control" name="minh_chung_nckh" id="minh_chung_nckh" accept="image/*,.pdf" multiple>
+                </div> -->
+                </div>
             </div>
 
             <div class="form-section">
@@ -392,7 +413,26 @@
                     </div>
                 </div>
             </div>
-
+             <!-- Thành tích quần chúng khác -->
+            <div class="form-section">
+                <div class="form-section-title" style="color: #E67E22;">
+                    <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức quần chúng như đoàn, phụ nữ (nếu có)
+                </div>
+                <div class="row g-3">
+                   <div class="col-md-6">
+                        <label class="form-label">Mức độ Hoàn thành nhiệm vụ của tổ chức quần chúng</label>
+                        <input type="text" class="form-control" name="ket_qua_doan_the" id="ket_qua_doan_the" placeholder="Nếu tham gia tổ chức quần chúng nào đó...">
+                    </div>
+                     <div class="col-md-6">
+                        <label class="form-label">Hình thức khen thưởng của tổ chức quần chúng</label>
+                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_qc" id="hinh_thuc_khen_thuong_qc" placeholder="Nếu tham gia tổ chức quần chúng nào đó...">
+                    </div>
+                    <!-- <div class="col-md-6">
+                        <label class="form-label">Minh chứng  (nhiều file) nếu có</label>
+                        <input type="file" class="form-control" name="minh_chung_doan_the" id="minh_chung_doan_the" accept="image/*,.pdf" multiple>
+                    </div> -->
+                </div>
+            </div>
             <!-- Thành tích cá nhân khác -->
             <div class="form-section">
                 <div class="form-section-title" style="color: #E67E22;">
@@ -404,15 +444,15 @@
                         <textarea class="form-control" name="thanh_tich_ca_nhan_khac" rows="3"
                                   placeholder="Nhập các thành tích cá nhân khác ngoài tiêu chí trên (nếu có)..."></textarea>
                     </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Ảnh minh chứng thành tích khác (nhiều file)</label>
+                    <!-- <div class="col-md-12">
+                        <label class="form-label">Ảnh minh chứng thành tích khác (nhiều file) nếu có</label>
                         <input type="file" class="form-control" name="minh_chung_thanh_tich_khac" accept="image/*,.pdf" multiple>
-                    </div>
+                    </div> -->
                 </div>
             </div>
 
-            <!-- {% if evidence_fields %}
-            <div class="form-section" id="dynamic-evidence-section">
+            {% if evidence_fields %}
+            <div class="form-section hidden" id="dynamic-evidence-section">
                 <div class="form-section-title" style="color: #6c757d;">
                     <i class="bi bi-paperclip me-1"></i>Minh chứng theo tiêu chí bắt buộc
                 </div>
@@ -421,7 +461,7 @@
                 </div>
                 <div class="row g-3" id="dynamic-evidence-container"></div>
             </div>
-            {% endif %} -->
+            {% endif %}
 
             <div class="form-section" id="score-reason-section">
                 <div class="form-section-title" style="color: #dc3545;">
@@ -456,6 +496,7 @@
 <script>
 // Danh hiệu -> tiêu chí mapping from DB
 var DANH_HIEU_TIEU_CHI = {{ danh_hieu_tieu_chi | default({}) | tojson }};
+var DANH_HIEU_PHAM_VI = {{ danh_hieu_pham_vi | default({}) | tojson }};
 
 // Tiêu chí tooltips from DB: {field_name: tooltip_text}
 var TIEU_CHI_TOOLTIPS = {{ tieu_chi_tooltips | default({}) | tojson }};
@@ -573,10 +614,24 @@ var SCORE_PAIR = {
 var NON_CRITERIA_FIELDS = {
     csrf_token: true, quan_nhan_id: true, loai_danh_hieu: true,
     doi_tuong: true, ghi_chu_item: true, ly_do_chua_dat_diem: true,
-    nckh_noi_dung_text: true, muc_do_hoan_thanh: true,
-    phieu_tin_nhiem: true, xep_loai_dang_vien: true,
-    ket_qua_doan_the: true, minh_chung_doan_the: true,
+    nckh_noi_dung_text: true,
+};
+
+// Fields that ARE criteria-controlled but not managed via CRITERIA_META/DIEM_NHOM_MAP.
+// They will be shown/hidden based on whether their ma_truong is in currentCriteria.
+// If currentCriteria is empty (no danh_hieu selected), they follow doi_tuong presence.
+var OPTIONAL_CRITERIA_FIELDS = {
+    muc_do_hoan_thanh: true,
+    phieu_tin_nhiem: true,
+    xep_loai_dang_vien: true,
+    ket_qua_doan_the: true,
+    minh_chung_doan_the: true,      // follows ket_qua_doan_the
     chu_tri_don_vi_danh_hieu: true,
+    diem_nckh: true,
+    nckh_noi_dung: true,
+    nckh_minh_chung: true,          // follows nckh_noi_dung
+    thanh_tich_ca_nhan_khac: true,
+    minh_chung_thanh_tich_khac: true, // follows thanh_tich_ca_nhan_khac
 };
 
 function renderScoreWarnings(selectedDanhHieu) {
@@ -663,14 +718,48 @@ function annotateCriteriaGroupLabels() {
     });
 }
 
+// Resolve "companion" fields: some fields follow their parent field visibility.
+// e.g. minh_chung_doan_the follows ket_qua_doan_the
+var FIELD_COMPANION_MAP = {
+    'minh_chung_doan_the': 'ket_qua_doan_the',
+    'nckh_minh_chung': 'nckh_noi_dung',
+    'minh_chung_thanh_tich_khac': 'thanh_tich_ca_nhan_khac',
+};
+
 // Determine if a field (by name) should be visible given current danh_hieu + doi_tuong.
 // Returns: 'show' | 'hide' | 'no_opinion' (field not managed here)
 function fieldVisibility(fieldName, selectedDanhHieu, selectedDoiTuong, currentCriteria) {
     if (NON_CRITERIA_FIELDS[fieldName]) return 'no_opinion';
 
+    // Resolve companion fields: they follow their parent
+    var resolvedName = FIELD_COMPANION_MAP[fieldName] || fieldName;
+
+    // Step 0: OPTIONAL_CRITERIA_FIELDS — controlled by currentCriteria when a danh_hieu is selected
+    if (OPTIONAL_CRITERIA_FIELDS[fieldName]) {
+        if (!selectedDoiTuong && !selectedDanhHieu) return 'hide';
+        if (selectedDanhHieu) {
+            // Must be in currentCriteria (hide if empty or not listed)
+            return currentCriteria.indexOf(resolvedName) >= 0 ? 'show' : 'hide';
+        }
+        // No danh_hieu selected yet → show if doi_tuong is chosen
+        return selectedDoiTuong ? 'show' : 'hide';
+    }
+
     // Step 1: check if field belongs to selected danh_hieu (if one is chosen)
-    if (selectedDanhHieu && currentCriteria.length > 0) {
-        if (currentCriteria.indexOf(fieldName) < 0) return 'hide';
+    // For score fields (keys in SCORE_PAIR), their paired base field must be in currentCriteria.
+    // For base fields of score pairs (values in SCORE_PAIR), check themselves in currentCriteria.
+    // If a danh_hieu is selected but has NO criteria (tap_the), hide all criteria fields.
+    if (selectedDanhHieu) {
+        // Get the effective name to check in currentCriteria:
+        // diem_X → check SCORE_PAIR[fieldName] (base field) if it exists
+        var checkName = resolvedName;
+        if (SCORE_PAIR[fieldName] !== undefined && SCORE_PAIR[fieldName] !== null) {
+            // This is a diem_* field — it should show only if base field is in criteria
+            checkName = SCORE_PAIR[fieldName];
+        }
+        // If danh_hieu has criteria defined, enforce membership check
+        // If criteria is empty (tap_the with no criteria configured), hide all criteria fields
+        if (currentCriteria.indexOf(checkName) < 0 && currentCriteria.indexOf(fieldName) < 0) return 'hide';
     }
 
     // Step 2: check doi_tuong_ap_dung via CRITERIA_META
@@ -721,16 +810,18 @@ function fieldVisibility(fieldName, selectedDanhHieu, selectedDoiTuong, currentC
 
 function applyCriteriaVisibilityByGroup() {
     var dtSelect = document.getElementById('doi_tuong_select');
-    var selectedDoiTuong = dtSelect ? (dtSelect.value || '') : '';
-    var formEl = dtSelect ? dtSelect.closest('form') : null;
-    if (!formEl) return;
-
     var dhSelect = document.getElementById('loai_danh_hieu_select');
     var selectedDanhHieu = dhSelect ? (dhSelect.value || '') : '';
+    var phamVi = (selectedDanhHieu && DANH_HIEU_PHAM_VI[selectedDanhHieu]) || 'Cá nhân';
+    var isTapThe = (phamVi === 'Đơn vị');
+    // For tap_the, doi_tuong is not used — use a placeholder to pass visibility checks in Steps 2/3
+    var selectedDoiTuong = isTapThe ? '__tap_the__' : (dtSelect ? (dtSelect.value || '') : '');
+    var formEl = dtSelect ? dtSelect.closest('form') : null;
+    if (!formEl) return;
     var currentCriteria = (selectedDanhHieu && DANH_HIEU_TIEU_CHI[selectedDanhHieu])
         ? DANH_HIEU_TIEU_CHI[selectedDanhHieu] : [];
 
-    // Build full field list: union of CRITERIA_META keys + all danh_hieu criteria + score fields
+    // Build full field list: union of CRITERIA_META keys + all danh_hieu criteria + score fields + optional fields
     var allFields = Object.keys(CRITERIA_META || {}).slice();
     Object.keys(DANH_HIEU_TIEU_CHI || {}).forEach(function(dh) {
         (DANH_HIEU_TIEU_CHI[dh] || []).forEach(function(f) {
@@ -743,6 +834,10 @@ function applyCriteriaVisibilityByGroup() {
     Object.keys(SCORE_PAIR).forEach(function(df) {
         var pair = SCORE_PAIR[df];
         if (pair && allFields.indexOf(pair) < 0) allFields.push(pair);
+    });
+    // Add optional criteria fields so they also get visibility-managed
+    Object.keys(OPTIONAL_CRITERIA_FIELDS).forEach(function(f) {
+        if (allFields.indexOf(f) < 0) allFields.push(f);
     });
 
     // Apply visibility per field
@@ -782,6 +877,28 @@ function applyCriteriaVisibilityByGroup() {
 }
 
 // Auto-inject tooltip icons next to form labels for criteria fields
+// Toggle between cá nhân blocks and tập thể block based on selected danh hiệu pham_vi
+function togglePhamViBlocks() {
+    var dhSelect = document.getElementById('loai_danh_hieu_select');
+    var selectedDanhHieu = dhSelect ? (dhSelect.value || '') : '';
+    var phamVi = (selectedDanhHieu && DANH_HIEU_PHAM_VI[selectedDanhHieu]) || 'Cá nhân';
+    var isTapThe = (phamVi === 'Đơn vị');
+
+    var blockCaNhan = document.getElementById('block-ca-nhan');
+    var blockTapThe = document.getElementById('block-tap-the');
+
+    if (blockCaNhan) blockCaNhan.style.display = isTapThe ? 'none' : '';
+    if (blockTapThe) blockTapThe.style.display = isTapThe ? '' : 'none';
+
+    // For tap_the: doi_tuong_select value doesn't matter — reset it to avoid affecting criteria visibility
+    var dtSelect = document.getElementById('doi_tuong_select');
+    if (dtSelect && isTapThe) {
+        // Fake a non-empty doi_tuong so criteria visibility logic is triggered correctly
+        // (but criteria will be hidden anyway since tieu_chi is empty for tap_the)
+        dtSelect.value = '';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     ensureBuiltInEvidenceFields();
     annotateCriteriaGroupLabels();
@@ -812,6 +929,7 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
 
     applyCriteriaVisibilityByGroup();
+    togglePhamViBlocks();
 
     // Re-apply after initial auto-fill in app.js and after any async UI changes
     setTimeout(applyCriteriaVisibilityByGroup, 0);
@@ -825,6 +943,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var dhSelect = document.getElementById('loai_danh_hieu_select');
     if (dhSelect) {
         dhSelect.addEventListener('change', function() {
+            togglePhamViBlocks();
             setTimeout(applyCriteriaVisibilityByGroup, 0);
         });
     }

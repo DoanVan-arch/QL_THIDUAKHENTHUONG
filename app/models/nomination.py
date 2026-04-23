@@ -15,6 +15,8 @@ class TieuChi(db.Model):
     huong_dan = Column(Text, nullable=True)                        # tooltip / guidance text
     nhom = Column(String(50), nullable=False, default='chung')     # category: chung, giang_vien, hoc_vien, nckh, khac
     co_minh_chung = Column(Boolean, default=False)                 # requires evidence upload?
+    loai_input = Column(String(20), nullable=False, default='textbox')  # 'textbox' | 'combobox'
+    _gia_tri_chon = Column('gia_tri_chon', Text, nullable=True)    # JSON list of options for combobox
     _phong_duyet = Column('phong_duyet', Text, nullable=True)      # JSON list of department role strings
     thu_tu = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
@@ -36,6 +38,26 @@ class TieuChi(db.Model):
             self._phong_duyet = json.dumps(value, ensure_ascii=False)
         else:
             self._phong_duyet = value
+
+    @property
+    def gia_tri_chon(self):
+        if self._gia_tri_chon:
+            try:
+                return json.loads(self._gia_tri_chon)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+
+    @gia_tri_chon.setter
+    def gia_tri_chon(self, value):
+        if isinstance(value, list):
+            self._gia_tri_chon = json.dumps(value, ensure_ascii=False)
+        elif isinstance(value, str) and value.strip():
+            # Accept newline-separated string from textarea
+            items = [v.strip() for v in value.splitlines() if v.strip()]
+            self._gia_tri_chon = json.dumps(items, ensure_ascii=False)
+        else:
+            self._gia_tri_chon = None
 
     # Convenience: map of nhom display names
     NHOM_CHOICES = {
@@ -178,6 +200,9 @@ class DeXuatChiTiet(db.Model):
     nckh_minh_chung = Column(String(255), nullable=True)
 
     thanh_tich_ca_nhan_khac = Column(Text, nullable=True)
+
+    # For collective (tap_the/don_vi) nominations — unit name being proposed
+    ten_don_vi_de_xuat = Column(String(255), nullable=True)
 
     ghi_chu = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
