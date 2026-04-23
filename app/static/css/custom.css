@@ -646,3 +646,50 @@ body {
     margin: 0 0.35rem;
     opacity: 0.5;
 }
+
+/* ---- Sidebar collapsible groups ---- */
+.sidebar-group-toggle {
+    color: rgba(255, 255, 255, 0.85);
+    padding: 0.55rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+    border-radius: 6px;
+}
+
+.sidebar-group-toggle:hover,
+.sidebar-group-toggle.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.sidebar-chevron {
+    font-size: 0.7rem;
+    transition: transform 0.25s ease;
+}
+
+.sidebar-group-toggle[aria-expanded="true"] .sidebar-chevron {
+    transform: rotate(180deg);
+}
+
+.sidebar-subgroup {
+    padding-left: 1rem;
+    border-left: 2px solid rgba(255, 255, 255, 0.15);
+    margin-left: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.sidebar-sublink {
+    font-size: 0.83rem;
+    padding-top: 0.42rem;
+    padding-bottom: 0.42rem;
+    opacity: 0.9;
+}
+
+.sidebar-sublink.active {
+    opacity: 1;
+}

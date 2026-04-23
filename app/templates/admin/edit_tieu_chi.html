@@ -58,6 +58,19 @@
                                   placeholder="Nội dung hiển thị khi di chuột vào tiêu chí trên form đề xuất">{{ tc.huong_dan or '' }}</textarea>
                         <small class="text-muted">Nội dung này sẽ hiển thị dưới dạng tooltip trên form đề xuất khen thưởng</small>
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Loại nhập liệu</label>
+                        <select class="form-select" name="loai_input" id="edit_loai_input"
+                                onchange="toggleGiaTriChon(this, 'edit_gtc_wrap')">
+                            <option value="textbox" {% if tc.loai_input != 'combobox' %}selected{% endif %}>Textbox (mặc định)</option>
+                            <option value="combobox" {% if tc.loai_input == 'combobox' %}selected{% endif %}>Combobox (kèm giá trị chọn)</option>
+                        </select>
+                    </div>
+                    <div class="col-12" id="edit_gtc_wrap" {% if tc.loai_input != 'combobox' %}style="display:none;"{% endif %}>
+                        <label class="form-label">Giá trị lựa chọn <span class="text-muted small">(mỗi dòng một giá trị)</span></label>
+                        <textarea class="form-control" name="gia_tri_chon" rows="5"
+                                  placeholder="VD:&#10;Xuất sắc&#10;Tốt&#10;Khá&#10;Trung bình">{{ tc.gia_tri_chon | join('\n') if tc.gia_tri_chon else '' }}</textarea>
+                    </div>
                     <div class="col-12">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="co_minh_chung" value="1" 
@@ -95,4 +108,14 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleGiaTriChon(selectEl, wrapId) {
+    var wrap = document.getElementById(wrapId);
+    if (!wrap) return;
+    wrap.style.display = selectEl.value === 'combobox' ? '' : 'none';
+}
+</script>
 {% endblock %}

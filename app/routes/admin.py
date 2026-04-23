@@ -2440,6 +2440,8 @@ def create_tieu_chi():
     huong_dan = request.form.get('huong_dan', '').strip() or None
     nhom = request.form.get('nhom', 'chung').strip()
     co_minh_chung = request.form.get('co_minh_chung') == '1'
+    loai_input = request.form.get('loai_input', 'textbox').strip()
+    gia_tri_chon_raw = request.form.get('gia_tri_chon', '').strip()
     phong_duyet = request.form.getlist('phong_duyet')
     thu_tu = request.form.get('thu_tu', 0, type=int)
 
@@ -2457,9 +2459,12 @@ def create_tieu_chi():
         huong_dan=huong_dan,
         nhom=nhom,
         co_minh_chung=co_minh_chung,
+        loai_input=loai_input,
         thu_tu=thu_tu,
     )
     tc.phong_duyet = phong_duyet
+    if loai_input == 'combobox':
+        tc.gia_tri_chon = gia_tri_chon_raw
     db.session.add(tc)
     db.session.commit()
     flash(f'Đã thêm tiêu chí: {ten}', 'success')
@@ -2481,6 +2486,8 @@ def edit_tieu_chi(id):
         huong_dan = request.form.get('huong_dan', '').strip() or None
         nhom = request.form.get('nhom', 'chung').strip()
         co_minh_chung = request.form.get('co_minh_chung') == '1'
+        loai_input = request.form.get('loai_input', 'textbox').strip()
+        gia_tri_chon_raw = request.form.get('gia_tri_chon', '').strip()
         phong_duyet = request.form.getlist('phong_duyet')
         thu_tu = request.form.get('thu_tu', 0, type=int)
 
@@ -2498,8 +2505,13 @@ def edit_tieu_chi(id):
         tc.huong_dan = huong_dan
         tc.nhom = nhom
         tc.co_minh_chung = co_minh_chung
+        tc.loai_input = loai_input
         tc.phong_duyet = phong_duyet
         tc.thu_tu = thu_tu
+        if loai_input == 'combobox':
+            tc.gia_tri_chon = gia_tri_chon_raw
+        else:
+            tc._gia_tri_chon = None
         db.session.commit()
         flash(f'Đã cập nhật tiêu chí: {ten}', 'success')
         return redirect(url_for('admin.manage_tieu_chi'))

@@ -127,6 +127,27 @@
                             <label class="form-check-label" for="la_bi_thu">Bí thư cấp ủy / chi bộ</label>
                         </div>
                     </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="la_dang_vien" id="la_dang_vien"
+                                   {% if qn.la_dang_vien %}checked{% endif %}>
+                            <label class="form-check-label" for="la_dang_vien">Đảng viên</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="la_doan_vien" id="la_doan_vien"
+                                   {% if qn.la_doan_vien %}checked{% endif %}>
+                            <label class="form-check-label" for="la_doan_vien">Đoàn viên</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="la_hoi_vien_phu_nu" id="la_hoi_vien_phu_nu"
+                                   {% if qn.la_hoi_vien_phu_nu %}checked{% endif %}>
+                            <label class="form-check-label" for="la_hoi_vien_phu_nu">Hội viên Hội phụ nữ cơ sở</label>
+                        </div>
+                    </div>
                 </div>
             </div>
 

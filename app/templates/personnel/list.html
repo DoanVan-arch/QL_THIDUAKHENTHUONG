@@ -27,7 +27,7 @@
 <div class="card-section" id="filterBar">
     <div class="card-body-custom">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <input type="text" class="form-control" name="search" value="{{ search }}"
                        placeholder="Tìm kiếm theo họ tên...">
             </div>
@@ -52,6 +52,14 @@
                     <option value="">-- Đối tượng --</option>
                     {% for dt in doi_tuong_list %}
                     <option value="{{ dt }}" {% if doi_tuong_filter == dt %}selected{% endif %}>{{ dt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="don_vi_truc_thuoc">
+                    <option value="">-- Đơn vị trực thuộc --</option>
+                    {% for dvtt in don_vi_truc_thuoc_list %}
+                    <option value="{{ dvtt }}" {% if don_vi_truc_thuoc_filter == dvtt %}selected{% endif %}>{{ dvtt }}</option>
                     {% endfor %}
                 </select>
             </div>

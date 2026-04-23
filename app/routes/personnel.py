@@ -31,6 +31,7 @@ def list_personnel():
     cap_bac_filter = request.args.get('cap_bac', '').strip()
     chuc_vu_filter = request.args.get('chuc_vu', '').strip()
     doi_tuong_filter = request.args.get('doi_tuong', '').strip()
+    don_vi_truc_thuoc_filter = request.args.get('don_vi_truc_thuoc', '').strip()
     sort_by = request.args.get('sort_by', 'chuc_vu_order').strip()
     page = request.args.get('page', 1, type=int)
 
@@ -43,6 +44,8 @@ def list_personnel():
         query = query.filter(QuanNhan.chuc_vu == chuc_vu_filter)
     if doi_tuong_filter:
         query = query.filter(QuanNhan.doi_tuong == doi_tuong_filter)
+    if don_vi_truc_thuoc_filter:
+        query = query.filter(QuanNhan.don_vi_truc_thuoc == don_vi_truc_thuoc_filter)
 
     chuc_vu_alias = aliased(ChucVuOption)
     query = query.outerjoin(
@@ -74,16 +77,26 @@ def list_personnel():
 
     personnel = query.paginate(page=page, per_page=20, error_out=False)
 
+    # Distinct don_vi_truc_thuoc values for this don_vi (for filter dropdown)
+    don_vi_truc_thuoc_list = [
+        row[0] for row in db.session.query(QuanNhan.don_vi_truc_thuoc)
+        .filter(QuanNhan.don_vi_id == current_user.don_vi_id, QuanNhan.is_active == True,
+                QuanNhan.don_vi_truc_thuoc.isnot(None), QuanNhan.don_vi_truc_thuoc != '')
+        .distinct().order_by(QuanNhan.don_vi_truc_thuoc).all()
+    ]
+
     return render_template('personnel/list.html',
                            personnel=personnel,
                            search=search,
                            cap_bac_filter=cap_bac_filter,
                            chuc_vu_filter=chuc_vu_filter,
                            doi_tuong_filter=doi_tuong_filter,
+                           don_vi_truc_thuoc_filter=don_vi_truc_thuoc_filter,
                            sort_by=sort_by,
                            cap_bac_list=_get_cap_bac_list(),
                            chuc_vu_list=[x.ten for x in _get_chuc_vu_options()],
-                           doi_tuong_list=_get_doi_tuong_list())
+                           doi_tuong_list=_get_doi_tuong_list(),
+                           don_vi_truc_thuoc_list=don_vi_truc_thuoc_list)
 
 
 def _get_chuc_vu_options():
@@ -134,6 +147,9 @@ def create_personnel():
             ngoai_ngu=request.form.get('ngoai_ngu', '').strip() or None,
             la_chi_huy='la_chi_huy' in request.form,
             la_bi_thu='la_bi_thu' in request.form,
+            la_dang_vien='la_dang_vien' in request.form,
+            la_doan_vien='la_doan_vien' in request.form,
+            la_hoi_vien_phu_nu='la_hoi_vien_phu_nu' in request.form,
         )
 
         if not qn.ho_ten:
@@ -195,6 +211,9 @@ def edit_personnel(id):
         qn.ngay_nhap_ngu = request.form.get('ngay_nhap_ngu', '').strip() or None
         qn.la_chi_huy = 'la_chi_huy' in request.form
         qn.la_bi_thu = 'la_bi_thu' in request.form
+        qn.la_dang_vien = 'la_dang_vien' in request.form
+        qn.la_doan_vien = 'la_doan_vien' in request.form
+        qn.la_hoi_vien_phu_nu = 'la_hoi_vien_phu_nu' in request.form
 
         ns_str = request.form.get('ngay_sinh', '').strip()
         if ns_str:
@@ -372,12 +391,13 @@ def download_personnel_template():
         'don_vi_truc_thuoc',
         'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
         'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
+        'la_dang_vien', 'la_doan_vien', 'la_hoi_vien_phu_nu',
     ]
     ws.append(headers)
     ws.append([
         'Nguyễn Văn A', 'Trung úy', 'Giảng viên', 'Trợ lý', '012345678901',
         'Đại đội 1', '1990-01-15', '09/2015', 'Không', 'Thạc sĩ', '12/12',
-        'Anh B2', 1, 0,
+        'Anh B2', 1, 0, 0, 0, 0,
     ])
 
     max_row = 500
@@ -389,6 +409,9 @@ def download_personnel_template():
         ('E', f"=DanhMuc!$E$1:$E${max(1, len(chuc_vu_values))}"),
         ('N', "=DanhMuc!$F$1:$F$2"),
         ('O', "=DanhMuc!$F$1:$F$2"),
+        ('P', "=DanhMuc!$F$1:$F$2"),
+        ('Q', "=DanhMuc!$F$1:$F$2"),
+        ('R', "=DanhMuc!$F$1:$F$2"),
     ]
     for col, formula in validations:
         dv = DataValidation(type='list', formula1=formula, allow_blank=True)
@@ -446,6 +469,7 @@ def import_personnel_excel():
         'don_vi_truc_thuoc',
         'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
         'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
+        'la_dang_vien', 'la_doan_vien', 'la_hoi_vien_phu_nu',
     ]
     missing = [c for c in required_cols if c not in headers]
     if missing:
@@ -520,6 +544,9 @@ def import_personnel_excel():
                 ngoai_ngu=str(row[headers['ngoai_ngu']]).strip() if headers.get('ngoai_ngu') is not None and row[headers['ngoai_ngu']] is not None else None,
                 la_chi_huy=_parse_bool(row[headers['la_chi_huy']]) if headers.get('la_chi_huy') is not None else False,
                 la_bi_thu=_parse_bool(row[headers['la_bi_thu']]) if headers.get('la_bi_thu') is not None else False,
+                la_dang_vien=_parse_bool(row[headers['la_dang_vien']]) if headers.get('la_dang_vien') is not None else False,
+                la_doan_vien=_parse_bool(row[headers['la_doan_vien']]) if headers.get('la_doan_vien') is not None else False,
+                la_hoi_vien_phu_nu=_parse_bool(row[headers['la_hoi_vien_phu_nu']]) if headers.get('la_hoi_vien_phu_nu') is not None else False,
             )
             db.session.add(qn)
             created += 1
