@@ -112,6 +112,30 @@ class User(db.Model, UserMixin):
             Role.UY_BAN_KIEMTRA,
         )
 
+    @property
+    def is_hoi_dong_member(self):
+        return self.role in (
+            Role.BAN_TUYENHUAN,
+            Role.BAN_CANBO,
+            Role.BAN_CTCQ,
+            Role.BAN_BAOVE_ANNINH,
+            Role.BAN_TOCHUC,
+            Role.BAN_KEHOACH_TONGHOP,
+        )
+
+    @property
+    def hoi_dong_vai_tro(self):
+        """Return the vai_tro string used in HoiDongBieuQuyet, or None."""
+        _map = {
+            Role.BAN_TUYENHUAN: 'ban_tuyenHuan',
+            Role.BAN_CANBO: 'ban_canBo',
+            Role.BAN_CTCQ: 'ban_congTacQuanChung',
+            Role.BAN_BAOVE_ANNINH: 'ban_baoVeAnNinh',
+            Role.BAN_TOCHUC: 'ban_toChuc',
+            Role.BAN_KEHOACH_TONGHOP: 'ban_keHoachTongHop',
+        }
+        return _map.get(self.role)
+
 
 @login_manager.user_loader
 def load_user(user_id):

@@ -185,7 +185,11 @@ function filterPersonnelOptions(inputEl) {
         }
     }
 
-    if (selectedValue) {
+    // Auto-select first visible match when keyword is non-empty
+    if (keyword && firstVisibleValue) {
+        qnSelect.value = firstVisibleValue;
+        onPersonnelSelect(qnSelect);
+    } else if (selectedValue) {
         const selectedOption = Array.prototype.find.call(qnSelect.options, function (opt) {
             return opt.value === selectedValue;
         });

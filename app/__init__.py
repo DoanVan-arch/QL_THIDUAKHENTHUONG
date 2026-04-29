@@ -23,6 +23,7 @@ def create_app(config_class=None):
     from app.routes.nomination import nomination_bp
     from app.routes.approval import approval_bp
     from app.routes.admin import admin_bp
+    from app.routes.hoi_dong import hoi_dong_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -30,6 +31,7 @@ def create_app(config_class=None):
     app.register_blueprint(nomination_bp, url_prefix='/nomination')
     app.register_blueprint(approval_bp, url_prefix='/approval')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(hoi_dong_bp, url_prefix='/hoi-dong')
 
     @app.route('/uploads/<path:filename>')
     @login_required

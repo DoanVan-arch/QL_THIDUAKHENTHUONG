@@ -4,7 +4,7 @@
 {% block content %}
 {% set status_class = {
     'Chờ duyệt': 'badge-pending', 'Đang duyệt': 'badge-reviewing',
-    'Đã duyệt': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
+    'Hội đồng xét duyệt': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
     'Từ chối': 'badge-rejected'
 } %}
 
@@ -25,6 +25,7 @@
                 <option value="Chờ duyệt" {% if status_filter == 'Chờ duyệt' %}selected{% endif %}>Chờ duyệt</option>
                 <option value="Đang duyệt" {% if status_filter == 'Đang duyệt' %}selected{% endif %}>Đang duyệt</option>
                 <option value="Đã duyệt" {% if status_filter == 'Đã duyệt' %}selected{% endif %}>Đã duyệt</option>
+                <option value="Hội đồng xét duyệt" {% if status_filter == 'Hội đồng xét duyệt' %}selected{% endif %}>Hội đồng xét duyệt</option>
                 <option value="Phê duyệt cuối" {% if status_filter == 'Phê duyệt cuối' %}selected{% endif %}>Phê duyệt cuối</option>
                 <option value="Từ chối" {% if status_filter == 'Từ chối' %}selected{% endif %}>Từ chối</option>
             </select>

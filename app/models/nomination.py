@@ -111,7 +111,7 @@ class TrangThaiDeXuat(enum.Enum):
     NHAP = 'Nháp'
     CHO_DUYET = 'Chờ duyệt'
     DANG_DUYET = 'Đang duyệt'
-    DA_DUYET = 'Đã duyệt'
+    HOI_DONG = 'Hội đồng xét duyệt'
     PHE_DUYET_CUOI = 'Phê duyệt cuối'
     TU_CHOI = 'Từ chối'
 
@@ -205,6 +205,10 @@ class DeXuatChiTiet(db.Model):
     ten_don_vi_de_xuat = Column(String(255), nullable=True)
 
     ghi_chu = Column(Text, nullable=True)
+
+    # Admin pre-approval flag (Bảng 1 → Bảng 2 transition)
+    admin_approved = Column(db.Boolean, default=False, nullable=False, server_default='0')
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

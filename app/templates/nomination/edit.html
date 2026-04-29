@@ -1,6 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Chỉnh sửa đề xuất - {{ de_xuat.nam_hoc }}{% endblock %}
 
+{%- macro tc_input(name, placeholder='', tmap=tieu_chi_input_map) -%}
+{%- set cfg = tmap.get(name, {}) -%}
+{%- if cfg.get('loai_input') == 'combobox' and cfg.get('gia_tri_chon') -%}
+<select class="form-select" name="{{ name }}">
+    <option value="">-- Chọn --</option>
+    {%- for opt in cfg['gia_tri_chon'] -%}
+    <option value="{{ opt }}">{{ opt }}</option>
+    {%- endfor -%}
+</select>
+{%- else -%}
+<input type="text" class="form-control" name="{{ name }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}>
+{%- endif -%}
+{%- endmacro -%}
+
 {% block content %}
 <div class="page-header">
     <div>
@@ -34,7 +48,16 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="col-md-3">
                 <label class="form-label">Năm học</label>
-                <input type="text" class="form-control" name="nam_hoc" value="{{ de_xuat.nam_hoc }}">
+                <select class="form-select" name="nam_hoc">
+                    {% set nam_hoc_opts = [] %}
+                    {# include current value in the list so it's always selectable #}
+                    {% for nh in nam_hoc_options if nam_hoc_options is defined %}
+                    <option value="{{ nh }}"{% if nh == de_xuat.nam_hoc %} selected{% endif %}>{{ nh }}</option>
+                    {% endfor %}
+                    {% if de_xuat.nam_hoc and (nam_hoc_options is not defined or de_xuat.nam_hoc not in nam_hoc_options) %}
+                    <option value="{{ de_xuat.nam_hoc }}" selected>{{ de_xuat.nam_hoc }}</option>
+                    {% endif %}
+                </select>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Ghi chú</label>
@@ -198,7 +221,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Kết quả kiểm tra điều lệnh - Xếp loại</label>
-                        <input type="text" class="form-control" name="kiem_tra_dieu_lenh" placeholder="VD: Giỏi">
+                        {{ tc_input('kiem_tra_dieu_lenh', 'VD: Giỏi') }}
                     </div>
 
                     <div class="col-md-6">
@@ -207,7 +230,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Kết quả kiểm tra bắn súng - Xếp loại</label>
-                        <input type="text" class="form-control" name="ban_sung" placeholder="VD: Khá">
+                        {{ tc_input('ban_sung', 'VD: Khá') }}
                     </div>
 
                     <div class="col-md-6">
@@ -216,7 +239,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Kết quả kiểm tra thể lực - Xếp loại</label>
-                        <input type="text" class="form-control" name="the_luc" placeholder="VD: Giỏi">
+                        {{ tc_input('the_luc', 'VD: Giỏi') }}
                     </div>
 
                     <div class="col-md-6">
@@ -225,7 +248,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Kết quả kiểm tra chính trị - Xếp loại</label>
-                        <input type="text" class="form-control" name="kiem_tra_chinh_tri" placeholder="VD: Giỏi">
+                        {{ tc_input('kiem_tra_chinh_tri', 'VD: Giỏi') }}
                     </div>
 
                     <div class="col-md-6">
@@ -234,7 +257,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Kết quả thi đánh giá kiến thức, kỹ năng số - Xếp loại</label>
-                        <input type="text" class="form-control" name="kiem_tra_tin_hoc" placeholder="VD: Khá">
+                        {{ tc_input('kiem_tra_tin_hoc', 'VD: Khá') }}
                     </div>
 
                     <div class="col-md-6">
@@ -243,16 +266,16 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Kết quả kiểm tra địa hình quân sự - Xếp loại</label>
-                        <input type="text" class="form-control" name="dia_ly_quan_su" placeholder="VD: Khá">
+                        {{ tc_input('dia_ly_quan_su', 'VD: Khá') }}
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Xếp loại đảng viên hằng năm</label>
-                        <input type="text" class="form-control" name="xep_loai_dang_vien">
+                        {{ tc_input('xep_loai_dang_vien') }}
                     </div>
                     
                     <div class="col-md-6">
                         <label class="form-label">Chủ trì đơn vị đạt danh hiệu thi đua</label>
-                        <input type="text" class="form-control" name="chu_tri_don_vi_danh_hieu" placeholder="Nếu là chỉ huy/bí thư">
+                        {{ tc_input('chu_tri_don_vi_danh_hieu', 'Nếu là chỉ huy/bí thư') }}
                     </div>
                 </div>
             </div>
@@ -265,19 +288,19 @@
                 <div class="row g-3">
                     <div class="col-md-6" id="group-danh-hieu-gv">
                         <label class="form-label">Danh hiệu Giảng viên giỏi</label>
-                        <input type="text" class="form-control" name="danh_hieu_gv_gioi">
+                        {{ tc_input('danh_hieu_gv_gioi') }}
                     </div>
                     <div class="col-md-6" id="group-dinh-muc">
                         <label class="form-label">Định mức giảng dạy</label>
-                        <input type="text" class="form-control" name="dinh_muc_giang_day">
+                        {{ tc_input('dinh_muc_giang_day') }}
                     </div>
                     <div class="col-md-6" id="group-lao-dong-kh">
                         <label class="form-label">Thời gian lao động khoa học sau quy đổi</label>
-                        <input type="text" class="form-control" name="thoi_gian_lao_dong_kh">
+                        {{ tc_input('thoi_gian_lao_dong_kh') }}
                     </div>
                     <div class="col-md-6" id="group-kiem-tra-giang">
                         <label class="form-label">Kết quả kiểm tra giảng năm học</label>
-                        <input type="text" class="form-control" name="ket_qua_kiem_tra_giang">
+                        {{ tc_input('ket_qua_kiem_tra_giang') }}
                     </div>
                 </div>
             </div>
@@ -290,7 +313,7 @@
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label">Thực hiện tiến độ chức danh PGS</label>
-                        <input type="text" class="form-control" name="tien_do_pgs">
+                        {{ tc_input('tien_do_pgs') }}
                     </div>
                 </div>
             </div>
@@ -315,7 +338,7 @@
                     </div>
                     <div class="col-md-4" id="group-thuc-hanh">
                         <label class="form-label">Kết quả kiểm tra đánh giá năng lực thực hành</label>
-                        <input type="text" class="form-control" name="ket_qua_thuc_hanh">
+                        {{ tc_input('ket_qua_thuc_hanh') }}
                     </div>
                 </div>
             </div>
@@ -433,6 +456,25 @@
                     </div> -->
                 </div>
             </div>
+             <div class="form-section">
+                <div class="form-section-title" style="color: #E67E22;">
+                    <i class="bi bi-star me-1"></i>Thành tích cá nhân hội phụ nữ (nếu có)
+                </div>
+                <div class="row g-3">
+                   <div class="col-md-6">
+                        <label class="form-label">Xếp loại hội phụ nữ</label>
+                        <input type="text" class="form-control" name="ket_qua_phu_nu" id="ket_qua_hoi_phu_nu" placeholder="Nếu tham gia hội phụ nữ nào đó...">
+                    </div>
+                     <div class="col-md-6">
+                        <label class="form-label">Hình thức khen thưởng của tổ chức quần chúng</label>
+                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_pn" id="hinh_thuc_khen_thuong_pn" placeholder="Nếu tham gia tổ chức quần chúng nào đó...">
+                    </div>
+                    <!-- <div class="col-md-6">
+                        <label class="form-label">Minh chứng  (nhiều file) nếu có</label>
+                        <input type="file" class="form-control" name="minh_chung_doan_the" id="minh_chung_doan_the" accept="image/*,.pdf" multiple>
+                    </div> -->
+                </div>
+            </div>
             <!-- Thành tích cá nhân khác -->
             <div class="form-section">
                 <div class="form-section-title" style="color: #E67E22;">
@@ -451,7 +493,6 @@
                 </div>
             </div>
 
-            {% if evidence_fields %}
             <div class="form-section hidden" id="dynamic-evidence-section">
                 <div class="form-section-title" style="color: #6c757d;">
                     <i class="bi bi-paperclip me-1"></i>Minh chứng theo tiêu chí bắt buộc
@@ -461,7 +502,6 @@
                 </div>
                 <div class="row g-3" id="dynamic-evidence-container"></div>
             </div>
-            {% endif %}
 
             <div class="form-section" id="score-reason-section">
                 <div class="form-section-title" style="color: #dc3545;">
@@ -531,9 +571,9 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
 
     container.innerHTML = '';
 
-    if (!selectedDoiTuong) {
-        section.classList.remove('hidden');
-        container.innerHTML = '<div class="col-12"><small class="text-muted fst-italic">Vui lòng chọn đối tượng để hiển thị ô minh chứng theo tiêu chí.</small></div>';
+    // For tap_the or no danh_hieu selected: hide evidence section
+    if (!selectedDanhHieu || !selectedDoiTuong || selectedDoiTuong === '__tap_the__') {
+        section.classList.add('hidden');
         return;
     }
 
@@ -547,10 +587,18 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
         if (!fieldName) return;
         if (fieldName === 'nckh_noi_dung') return;
 
-        if (currentCriteria.indexOf(fieldName) < 0 && !alwaysCandidateFields[fieldName]) return;
+        // Always-candidate fields show whenever a danh hiệu + đối tượng is selected
+        if (alwaysCandidateFields[fieldName]) {
+            activeFields.push(ef);
+            return;
+        }
 
+        // For other fields: check doi_tuong_ap_dung via CRITERIA_META
+        // No longer require the field to be in currentCriteria —
+        // co_minh_chung=True means evidence is required whenever the field is applicable.
         var meta = CRITERIA_META[fieldName] || null;
         if (!meta) {
+            // Not in CRITERIA_META → built-in hardcoded field; show if danh hiệu selected
             activeFields.push(ef);
             return;
         }
@@ -809,6 +857,9 @@ function fieldVisibility(fieldName, selectedDanhHieu, selectedDoiTuong, currentC
 }
 
 function applyCriteriaVisibilityByGroup() {
+    // Always sync the cá nhân / tập thể blocks first
+    togglePhamViBlocks();
+
     var dtSelect = document.getElementById('doi_tuong_select');
     var dhSelect = document.getElementById('loai_danh_hieu_select');
     var selectedDanhHieu = dhSelect ? (dhSelect.value || '') : '';

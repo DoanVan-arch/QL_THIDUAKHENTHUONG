@@ -8,3 +8,4 @@ from app.models.reward import KhenThuong
 from app.models.notification import ThongBao
 from app.models.catalog import ChucVuOption, CapBacOption, DoiTuongOption
 from app.models.evaluation import NhomTieuChi, DanhGiaHangNam, DiemQuyDinhDanhHieu
+from app.models.hoi_dong import HoiDongBieuQuyet

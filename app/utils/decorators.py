@@ -58,3 +58,14 @@ def admin_or_reward_viewer_required(f):
         Role.BAN_KEHOACH_TONGHOP,
         Role.UY_BAN_KIEMTRA,
     )(f)
+
+
+def hoi_dong_required(f):
+    return role_required(
+        Role.BAN_TUYENHUAN,
+        Role.BAN_CANBO,
+        Role.BAN_CTCQ,
+        Role.BAN_BAOVE_ANNINH,
+        Role.BAN_TOCHUC,
+        Role.BAN_KEHOACH_TONGHOP,
+    )(f)

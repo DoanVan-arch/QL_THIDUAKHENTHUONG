@@ -14,6 +14,7 @@ from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDa
 from app.models.evaluation import NhomTieuChi, DanhGiaHangNam, DiemQuyDinhDanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
+from app.models.hoi_dong import HoiDongBieuQuyet, HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY
 from app.models.catalog import ChucVuOption, CapBacOption, DoiTuongOption
 from app.utils.decorators import admin_required, admin_or_reward_viewer_required
 from app.utils.file_upload import save_upload, delete_upload
@@ -187,7 +188,7 @@ def approval_tracking():
         'total': all_query.count(),
         'pending': all_query.filter(DeXuat.trang_thai == TrangThaiDeXuat.CHO_DUYET.value).count(),
         'reviewing': all_query.filter(DeXuat.trang_thai == TrangThaiDeXuat.DANG_DUYET.value).count(),
-        'dept_approved': all_query.filter(DeXuat.trang_thai == TrangThaiDeXuat.DA_DUYET.value).count(),
+        'dept_approved': all_query.filter(DeXuat.trang_thai == TrangThaiDeXuat.HOI_DONG.value).count(),
         'final_approved': all_query.filter(DeXuat.trang_thai == TrangThaiDeXuat.PHE_DUYET_CUOI.value).count(),
         'rejected': all_query.filter(DeXuat.trang_thai == TrangThaiDeXuat.TU_CHOI.value).count(),
     }
@@ -413,65 +414,50 @@ def tracking_detail(ct_id):
                            can_final_approve=can_final_approve,
                            already_approved=already_approved,
                            all_field_labels=all_field_labels,
-                           all_fields=all_fields)
+                           all_fields=all_fields,
+                           hoi_dong_votes=HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id).all(),
+                           HOI_DONG_VAI_TRO=HOI_DONG_VAI_TRO,
+                           HOI_DONG_VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY)
 
 
 @admin_bp.route('/tracking/chi-tiet/<int:ct_id>/final-approve', methods=['POST'])
 @login_required
 @admin_required
 def final_approve_individual(ct_id):
-    """Final approval for a single individual - creates one KhenThuong record."""
+    """Admin pre-approves a single individual (Bảng 1 → Bảng 2).
+    Does NOT create KhenThuong yet; marks ct.admin_approved = True.
+    When all individuals in the nomination are admin-approved → moves to PHE_DUYET_CUOI
+    for Hội đồng voting (Bảng 2).
+    """
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
     de_xuat = ct.de_xuat
 
-    # Check if already approved
-    existing = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first()
-    if existing:
-        flash('Cá nhân này đã được phê duyệt cuối.', 'warning')
-        return redirect(url_for('admin.tracking_detail', ct_id=ct_id))
+    # Check if already admin-approved
+    if ct.admin_approved:
+        flash('Cá nhân này đã được phê duyệt (chờ Hội đồng biểu quyết).', 'warning')
+        return redirect(url_for('admin.reward_list'))
 
     # Verify all departments approved this individual (including auto-scope)
     for dept_name in DEPT_NAMES:
         if not _is_individual_dept_approved(de_xuat.id, ct, dept_name):
             flash(f'{dept_name} chưa đồng ý cho cá nhân này.', 'warning')
-            return redirect(url_for('admin.tracking_detail', ct_id=ct_id))
+            return redirect(url_for('admin.reward_list'))
 
     now = datetime.utcnow()
     ghi_chu = request.form.get('ghi_chu', '').strip() or None
 
-    # Create KhenThuong record for this individual
-    khen_thuong = KhenThuong(
-        de_xuat_id=de_xuat.id,
-        chi_tiet_id=ct.id,
-        quan_nhan_id=ct.quan_nhan_id,
-        don_vi_id=de_xuat.don_vi_id,
-        ho_ten=ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi,
-        cap_bac=ct.quan_nhan.cap_bac if ct.quan_nhan else None,
-        chuc_vu=ct.quan_nhan.chuc_vu if ct.quan_nhan else None,
-        doi_tuong=ct.doi_tuong,
-        loai_danh_hieu=ct.loai_danh_hieu,
-        nam_hoc=de_xuat.nam_hoc,
-        nguoi_duyet_id=current_user.id,
-        ngay_duyet=now,
-        ghi_chu=ghi_chu,
-    )
-    db.session.add(khen_thuong)
+    # Mark this individual as admin pre-approved
+    ct.admin_approved = True
 
-    # Check if ALL individuals in this nomination now have KhenThuong records
-    # If so, update nomination status to 'Phê duyệt cuối'
+    # Check if ALL individuals in this nomination are now admin-approved
     all_ct_ids = {c.id for c in de_xuat.chi_tiets}
-    approved_ct_ids = set(
-        row[0] for row in db.session.query(KhenThuong.chi_tiet_id).filter(
-            KhenThuong.de_xuat_id == de_xuat.id
-        ).all()
-    )
-    # Include the one we just created (not yet committed)
-    approved_ct_ids.add(ct.id)
+    already_approved = {c.id for c in de_xuat.chi_tiets if c.admin_approved}
+    # Include the one we just approved (not yet committed)
+    already_approved.add(ct.id)
 
-    if all_ct_ids <= approved_ct_ids:
-        # All individuals approved -> mark nomination as final
+    if all_ct_ids <= already_approved:
+        # All individuals admin-approved → move to PHE_DUYET_CUOI for Hội đồng voting
         de_xuat.trang_thai = TrangThaiDeXuat.PHE_DUYET_CUOI.value
-        # Update admin PheDuyet record
         admin_pd = PheDuyet.query.filter_by(
             de_xuat_id=de_xuat.id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
         ).first()
@@ -483,19 +469,22 @@ def final_approve_individual(ct_id):
 
     db.session.commit()
     ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
-    flash(f'Đã phê duyệt cuối cho "{ho_ten}" và lưu vào danh sách khen thưởng.', 'success')
-    return redirect(url_for('admin.approval_tracking'))
+    flash(f'Đã đồng ý cho "{ho_ten}". Khi toàn bộ đề xuất được duyệt sẽ chuyển sang Hội đồng biểu quyết.', 'success')
+    return redirect(url_for('admin.reward_list'))
 
 
 @admin_bp.route('/tracking/<int:id>/final-approve', methods=['POST'])
 @login_required
 @admin_required
 def final_approve_from_tracking(id):
-    """Final approval for entire nomination - creates KhenThuong records for all approved individuals."""
+    """Admin pre-approves entire nomination at once (Bảng 1 → Bảng 2).
+    Marks all individuals as admin_approved and moves nomination to PHE_DUYET_CUOI
+    for Hội đồng voting. Does NOT create KhenThuong yet.
+    """
     de_xuat = DeXuat.query.get_or_404(id)
 
-    if de_xuat.trang_thai != TrangThaiDeXuat.DA_DUYET.value:
-        flash('Đề xuất này chưa được tất cả các cơ quan phê duyệt.', 'warning')
+    if de_xuat.trang_thai != TrangThaiDeXuat.HOI_DONG.value:
+        flash('Đề xuất này chưa qua giai đoạn Hội đồng xét duyệt.', 'warning')
         return redirect(url_for('admin.approval_tracking'))
 
     # Verify departments approved this nomination, honoring auto-scope
@@ -514,55 +503,84 @@ def final_approve_from_tracking(id):
             flash(f'{dept_name} chưa phê duyệt xong.', 'warning')
             return redirect(url_for('admin.approval_tracking'))
 
+    now = datetime.utcnow()
+    ghi_chu = request.form.get('ghi_chu', '').strip() or None
+
+    # Mark all individuals as admin pre-approved
+    for ct in de_xuat.chi_tiets:
+        ct.admin_approved = True
+
     # Update admin PheDuyet record
     admin_pd = PheDuyet.query.filter_by(
         de_xuat_id=id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
     ).first()
-
     if admin_pd:
         admin_pd.ket_qua = KetQuaDuyet.DONG_Y.value
         admin_pd.nguoi_duyet_id = current_user.id
-        admin_pd.ngay_duyet = datetime.utcnow()
-        admin_pd.ghi_chu = request.form.get('ghi_chu', '').strip() or None
+        admin_pd.ngay_duyet = now
+        admin_pd.ghi_chu = ghi_chu
 
     de_xuat.trang_thai = TrangThaiDeXuat.PHE_DUYET_CUOI.value
+    db.session.commit()
+    flash('Đã phê duyệt đề xuất. Chuyển sang Hội đồng biểu quyết (Bảng 2).', 'success')
+    return redirect(url_for('admin.approval_tracking'))
 
-    # Create KhenThuong records for each approved individual
-    now = datetime.utcnow()
+
+@admin_bp.route('/reward-list/confirm-khen-thuong/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def confirm_khen_thuong(id):
+    """Final step: After all 6 Hội đồng roles voted DONG_Y, Admin creates KhenThuong records.
+    This moves nomination from PHE_DUYET_CUOI to fully finalized (KhenThuong records exist).
+    """
+    de_xuat = DeXuat.query.get_or_404(id)
+
+    if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+        flash('Đề xuất này không ở giai đoạn chờ xác nhận khen thưởng.', 'warning')
+        return redirect(url_for('admin.reward_list'))
+
+    # Check that all 6 Hội đồng roles voted DONG_Y for all chi_tiets
+    from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y
     for ct in de_xuat.chi_tiets:
-        # Check that this individual was approved by all departments (auto-scope aware)
-        all_approved = True
-        for dept_name in DEPT_NAMES:
-            if not _is_individual_dept_approved(id, ct, dept_name):
-                all_approved = False
-                break
+        for vai_tro in HOI_DONG_VAI_TRO:
+            bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+            if not bq or bq.ket_qua != KET_QUA_DONG_Y:
+                name = ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or 'Đơn vị'
+                from app.models.hoi_dong import HOI_DONG_VAI_TRO_DISPLAY
+                vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
+                flash(f'{vt_name} chưa biểu quyết đồng ý cho "{name}".', 'warning')
+                return redirect(url_for('admin.reward_list'))
 
-        if all_approved:
-            # Check if record already exists
-            existing = KhenThuong.query.filter_by(
-                de_xuat_id=de_xuat.id, chi_tiet_id=ct.id
-            ).first()
-            if not existing:
-                khen_thuong = KhenThuong(
-                    de_xuat_id=de_xuat.id,
-                    chi_tiet_id=ct.id,
-                    quan_nhan_id=ct.quan_nhan_id,
-                    don_vi_id=de_xuat.don_vi_id,
-                    ho_ten=ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi,
-                    cap_bac=ct.quan_nhan.cap_bac if ct.quan_nhan else None,
-                    chuc_vu=ct.quan_nhan.chuc_vu if ct.quan_nhan else None,
-                    doi_tuong=ct.doi_tuong,
-                    loai_danh_hieu=ct.loai_danh_hieu,
-                    nam_hoc=de_xuat.nam_hoc,
-                    nguoi_duyet_id=current_user.id,
-                    ngay_duyet=now,
-                    ghi_chu=request.form.get('ghi_chu', '').strip() or None,
-                )
-                db.session.add(khen_thuong)
+    now = datetime.utcnow()
+    ghi_chu = request.form.get('ghi_chu', '').strip() or None
+
+    # Create KhenThuong for each individual
+    for ct in de_xuat.chi_tiets:
+        existing = KhenThuong.query.filter_by(de_xuat_id=de_xuat.id, chi_tiet_id=ct.id).first()
+        if not existing:
+            khen_thuong = KhenThuong(
+                de_xuat_id=de_xuat.id,
+                chi_tiet_id=ct.id,
+                quan_nhan_id=ct.quan_nhan_id,
+                don_vi_id=de_xuat.don_vi_id,
+                ho_ten=ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi,
+                cap_bac=ct.quan_nhan.cap_bac if ct.quan_nhan else None,
+                chuc_vu=ct.quan_nhan.chuc_vu if ct.quan_nhan else None,
+                doi_tuong=ct.doi_tuong,
+                loai_danh_hieu=ct.loai_danh_hieu,
+                nam_hoc=de_xuat.nam_hoc,
+                nguoi_duyet_id=current_user.id,
+                ngay_duyet=now,
+                ghi_chu=ghi_chu,
+            )
+            db.session.add(khen_thuong)
 
     db.session.commit()
-    flash('Đã phê duyệt cuối cùng và lưu kết quả khen thưởng.', 'success')
-    return redirect(url_for('admin.approval_tracking'))
+    flash(f'Đã xác nhận khen thưởng cho đề xuất của {de_xuat.don_vi.ten_don_vi}.', 'success')
+    return redirect(url_for('admin.reward_list'))
+
+
+
 
 
 @admin_bp.route('/tracking/<int:id>/reject', methods=['POST'])
@@ -610,7 +628,7 @@ def batch_final_approve():
 
     for dx_id in ids:
         de_xuat = DeXuat.query.get(dx_id)
-        if not de_xuat or de_xuat.trang_thai != TrangThaiDeXuat.DA_DUYET.value:
+        if not de_xuat or de_xuat.trang_thai != TrangThaiDeXuat.HOI_DONG.value:
             continue
 
         # Verify departments approved, honoring auto-scope
@@ -688,7 +706,8 @@ def batch_final_approve():
 @login_required
 @admin_required
 def revoke_final_approval(id):
-    """Revoke final approval - undo 'Phê duyệt cuối' back to 'Đã duyệt', delete KhenThuong records."""
+    """Revoke final approval — deletes KhenThuong records, clears Hội đồng votes,
+    resets admin_approved flags, and moves nomination back to HOI_DONG (Bảng 1)."""
     de_xuat = DeXuat.query.get_or_404(id)
 
     if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
@@ -697,6 +716,13 @@ def revoke_final_approval(id):
 
     # Delete all KhenThuong records for this nomination
     KhenThuong.query.filter_by(de_xuat_id=id).delete()
+
+    # Delete all Hội đồng biểu quyết records for this nomination
+    HoiDongBieuQuyet.query.filter_by(de_xuat_id=id).delete()
+
+    # Reset per-individual admin_approved flags so they re-appear in Bảng 1
+    for ct in de_xuat.chi_tiets:
+        ct.admin_approved = False
 
     # Reset admin PheDuyet back to pending
     admin_pd = PheDuyet.query.filter_by(
@@ -709,8 +735,8 @@ def revoke_final_approval(id):
         admin_pd.ly_do = None
         admin_pd.ghi_chu = None
 
-    # Revert status back to 'Đã duyệt' (all 6 depts still approved)
-    de_xuat.trang_thai = TrangThaiDeXuat.DA_DUYET.value
+    # Revert status back to HOI_DONG (Bảng 1) — all 13 depts still approved
+    de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
 
     db.session.commit()
     flash(f'Đã thu hồi phê duyệt cuối cho đề xuất của {de_xuat.don_vi.ten_don_vi}.', 'success')
@@ -721,7 +747,11 @@ def revoke_final_approval(id):
 @login_required
 @admin_or_reward_viewer_required
 def reward_list():
-    """View all finalized awards (KhenThuong records)."""
+    """View award pipeline:
+      Bảng 1: HOI_DONG status, all dept approved → Admin pre-approves
+      Bảng 2: PHE_DUYET_CUOI status → 6 Hội đồng roles vote, then Admin confirms
+      Bảng 3: Finalized KhenThuong records
+    """
     page = request.args.get('page', 1, type=int)
     nam_hoc_filter = request.args.get('nam_hoc', '')
     unit_filter = request.args.get('unit', '')
@@ -767,7 +797,11 @@ def reward_list():
     for dh in danh_hieu_list:
         stats_by_danh_hieu[dh] = KhenThuong.query.filter_by(loai_danh_hieu=dh).count()
 
+    # Bảng 1: individuals at HOI_DONG stage, all dept approved, not yet admin_approved
     pending_final_nominations = _get_pending_final_individuals()
+
+    # Bảng 2: nominations at PHE_DUYET_CUOI stage + Hội đồng vote status
+    phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items()
 
     # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
@@ -823,25 +857,23 @@ def reward_list():
                            can_admin_action=current_user.is_admin,
                            can_view_pending_final=(current_user.is_admin or current_user.is_reward_viewer),
                            pending_final_nominations=pending_final_nominations,
+                           phe_duyet_cuoi_items=phe_duyet_cuoi_items,
+                           HOI_DONG_VAI_TRO=HOI_DONG_VAI_TRO,
+                           HOI_DONG_VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY,
                            cstd_non_consecutive=cstd_non_consecutive,
                            cstd_consecutive=cstd_consecutive)
 
 
 def _get_pending_final_individuals():
+    """Bảng 1: Individuals at HOI_DONG status, all dept approved, not yet admin_approved."""
     pending = []
-    nominations_waiting = DeXuat.query.filter(
-        DeXuat.trang_thai.in_([
-            TrangThaiDeXuat.CHO_DUYET.value,
-            TrangThaiDeXuat.DANG_DUYET.value,
-            TrangThaiDeXuat.DA_DUYET.value,
-            TrangThaiDeXuat.PHE_DUYET_CUOI.value,
-        ])
+    nominations_waiting = DeXuat.query.filter_by(
+        trang_thai=TrangThaiDeXuat.HOI_DONG.value
     ).order_by(DeXuat.ngay_gui.desc()).all()
 
     for dx in nominations_waiting:
         for ct in dx.chi_tiets:
-            existing_reward = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first()
-            if existing_reward and dx.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+            if ct.admin_approved:
                 continue
             all_dept_ok = True
             for dept_name in DEPT_NAMES:
@@ -868,12 +900,38 @@ def _get_pending_final_individuals():
                     all_dept_ok = False
                     break
             if all_dept_ok:
-                pending.append({
-                    'dx': dx,
-                    'ct': ct,
-                    'is_rewarded': existing_reward is not None,
-                })
+                pending.append({'dx': dx, 'ct': ct})
     return pending
+
+
+def _get_phe_duyet_cuoi_items():
+    """Bảng 2: nominations at PHE_DUYET_CUOI status with per-individual Hội đồng vote summary."""
+    from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y
+    nominations = DeXuat.query.filter_by(
+        trang_thai=TrangThaiDeXuat.PHE_DUYET_CUOI.value
+    ).order_by(DeXuat.ngay_gui.desc()).all()
+
+    result = []
+    for dx in nominations:
+        items = []
+        all_done = True  # all 6 roles voted DONG_Y for all chi_tiets
+        for ct in dx.chi_tiets:
+            votes = {}  # vai_tro -> HoiDongBieuQuyet
+            ct_done = True
+            for vai_tro in HOI_DONG_VAI_TRO:
+                bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+                votes[vai_tro] = bq
+                if not bq or bq.ket_qua != KET_QUA_DONG_Y:
+                    ct_done = False
+            if not ct_done:
+                all_done = False
+            # Check if KhenThuong already confirmed for this individual
+            is_confirmed = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
+            items.append({'ct': ct, 'votes': votes, 'is_confirmed': is_confirmed})
+        result.append({'dx': dx, 'chi_tiets': items, 'all_voted_dong_y': all_done})
+    return result
+
+
 
 
 @admin_bp.route('/reward-list/pending-final/export-excel')

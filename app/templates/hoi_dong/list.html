@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Hội đồng thi đua khen thưởng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-people-fill me-2"></i>Hội đồng thi đua khen thưởng</h4>
+        <small class="text-muted">Biểu quyết với tư cách: <strong>{{ VAI_TRO_DISPLAY.get(vai_tro, vai_tro) }}</strong></small>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for category, message in messages %}
+<div class="alert alert-{{ 'danger' if category == 'danger' else ('warning' if category == 'warning' else 'success') }} alert-dismissible fade show">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endwith %}
+
+{% if not nominations %}
+<div class="card-section">
+    <div class="card-body-custom text-center py-5 text-muted">
+        <i class="bi bi-check2-circle" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-0">Không có đề xuất nào đang ở giai đoạn Hội đồng xét duyệt.</p>
+    </div>
+</div>
+{% else %}
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        <table class="table table-custom mb-0">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Đơn vị</th>
+                    <th>Năm học</th>
+                    <th>Số cá nhân/ĐV</th>
+                    <th>Đã biểu quyết</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dx in nominations %}
+                {% set my_ct_votes = vote_summary.get(dx.id, {}) %}
+                {% set voted_count = my_ct_votes.values() | selectattr('ket_qua') | list | length %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="fw-semibold">{{ dx.don_vi.ten_don_vi }}</td>
+                    <td>{{ dx.nam_hoc }}</td>
+                    <td>{{ dx.chi_tiets | length }}</td>
+                    <td>
+                        {% if voted_count == dx.chi_tiets | length %}
+                        <span class="badge bg-success"><i class="bi bi-check-all me-1"></i>Đã biểu quyết đủ</span>
+                        {% elif voted_count > 0 %}
+                        <span class="badge bg-warning text-dark">{{ voted_count }}/{{ dx.chi_tiets | length }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Chưa biểu quyết</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('hoi_dong.detail', id=dx.id) }}" class="btn btn-sm btn-outline-navy">
+                            <i class="bi bi-person-check me-1"></i>Biểu quyết
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

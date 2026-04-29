@@ -25,6 +25,20 @@ DEPT_NAMES = [
 nomination_bp = Blueprint('nomination', __name__)
 
 
+def _get_nam_hoc_options():
+    """Return a list of academic year strings centred around the current school year.
+
+    School year N–(N+1) starts in September of year N.
+    In April 2026 the current school year is 2025-2026 (started Sep 2025).
+    We return: (current-1), current, (current+1), (current+2).
+    """
+    now = datetime.now()
+    year = now.year
+    # If before August, the school year that started last September is "current"
+    start = (year - 1) if now.month < 8 else year
+    return [f'{start + i}-{start + i + 1}' for i in range(-1, 3)]
+
+
 def _get_evidence_required_fields():
     rows = TieuChi.query.filter_by(is_active=True, co_minh_chung=True).order_by(TieuChi.thu_tu, TieuChi.ten).all()
     return [{'ma_truong': tc.ma_truong, 'ten': tc.ten, 'nhom': tc.nhom} for tc in rows]
@@ -162,7 +176,7 @@ def create_nomination():
         flash('Đã tạo đề xuất mới. Vui lòng thêm cá nhân vào đề xuất.', 'success')
         return redirect(url_for('nomination.edit_nomination', id=de_xuat.id))
 
-    return render_template('nomination/create.html')
+    return render_template('nomination/create.html', nam_hoc_options=_get_nam_hoc_options())
 
 
 @nomination_bp.route('/<int:id>')
@@ -274,6 +288,16 @@ def edit_nomination(id):
                       'loai_input': tc.loai_input or 'textbox',
                       'gia_tri_chon': tc.gia_tri_chon or []} for tc in tieu_chi_db]
 
+    # Map for template rendering: field → {loai_input, gia_tri_chon}
+    # Used to render hardcoded fields as combobox when configured so in admin
+    tieu_chi_input_map = {
+        tc.ma_truong: {
+            'loai_input': tc.loai_input or 'textbox',
+            'gia_tri_chon': tc.gia_tri_chon or [],
+        }
+        for tc in tieu_chi_db
+    }
+
     diem_field_labels = {
         'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
         'diem_kiem_tra_dieu_lenh': 'Điểm điều lệnh',
@@ -352,12 +376,14 @@ def edit_nomination(id):
                            muc_do_list=muc_do_list,
                            tieu_chi_tooltips=tieu_chi_tooltips,
                            tieu_chi_list=tieu_chi_list,
+                           tieu_chi_input_map=tieu_chi_input_map,
                            criteria_meta=criteria_meta,
                            nhom_meta=nhom_meta,
                            evidence_fields=_get_evidence_required_fields(),
                            score_rules=score_rules,
                            diem_field_labels=diem_field_labels,
-                           diem_nhom_map=diem_nhom_map)
+                           diem_nhom_map=diem_nhom_map,
+                           nam_hoc_options=_get_nam_hoc_options())
 
 
 @nomination_bp.route('/<int:id>/add-item', methods=['POST'])

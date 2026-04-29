@@ -262,6 +262,46 @@
         </div>
     </div>
 </div>
+
+{# Hội đồng vote results #}
+{% if hoi_dong_votes %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>Kết quả biểu quyết Hội đồng</h6>
+    </div>
+    <div class="card-body-custom p-0">
+        <table class="table table-sm mb-0" style="font-size:0.82rem;">
+            <thead class="table-light">
+                <tr>
+                    <th>Đơn vị</th>
+                    <th class="text-center">Kết quả</th>
+                    <th>Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set votes_by_role = {} %}
+                {% for bq in hoi_dong_votes %}{% set _ = votes_by_role.update({bq.vai_tro: bq}) %}{% endfor %}
+                {% for vt in HOI_DONG_VAI_TRO %}
+                {% set bq = votes_by_role.get(vt) %}
+                <tr>
+                    <td>{{ HOI_DONG_VAI_TRO_DISPLAY.get(vt, vt) }}</td>
+                    <td class="text-center">
+                        {% if bq %}
+                        <span class="badge {{ 'bg-success' if bq.ket_qua == 'Đồng ý' else 'bg-danger' }}">
+                            {{ bq.ket_qua }}
+                        </span>
+                        {% else %}
+                        <span class="text-muted">Chưa biểu quyết</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ bq.ghi_chu if bq and bq.ghi_chu else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 {% endif %}
 
 <style>
