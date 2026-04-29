@@ -11,7 +11,7 @@
 
 {% set status_class = {
     'Nháp': 'badge-draft', 'Chờ duyệt': 'badge-pending',
-    'Đang duyệt': 'badge-reviewing', 'Đã duyệt': 'badge-approved',
+    'Đang duyệt': 'badge-reviewing', 'Hội đồng xét duyệt': 'badge-approved',
     'Phê duyệt cuối': 'badge-final', 'Từ chối': 'badge-rejected'
 } %}
 
@@ -48,7 +48,7 @@
                             <a href="{{ url_for('admin.final_review_detail', id=dx.id) }}" class="btn btn-sm btn-outline-navy me-1">
                                 <i class="bi bi-eye"></i> Xem
                             </a>
-                            {% if dx.trang_thai == 'Đã duyệt' %}
+                            {% if dx.trang_thai == 'Hội đồng xét duyệt' %}
                             <form method="POST" action="{{ url_for('admin.final_approve', id=dx.id) }}" style="display:inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-success me-1"

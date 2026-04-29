@@ -107,7 +107,7 @@ def admin_dashboard():
     total_nominations = DeXuat.query.count()
 
     awaiting_final = DeXuat.query.filter_by(
-        trang_thai=TrangThaiDeXuat.DA_DUYET.value
+        trang_thai=TrangThaiDeXuat.HOI_DONG.value
     ).count()
 
     final_approved = DeXuat.query.filter_by(

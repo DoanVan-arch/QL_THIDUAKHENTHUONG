@@ -6,7 +6,7 @@
 
 {% set status_class = {
     'Chờ duyệt': 'badge-pending', 'Đang duyệt': 'badge-reviewing',
-    'Đã duyệt': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
+    'Hội đồng xét duyệt': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
     'Từ chối': 'badge-rejected'
 } %}
 
@@ -134,7 +134,7 @@
                 {# Check if any nomination in this unit is ready for final approval #}
                 {% set ns_unit = namespace(has_ready=false) %}
                 {% for nom_data in ug.nominations %}
-                    {% if nom_data.dx.trang_thai == 'Đã duyệt' %}
+                    {% if nom_data.dx.trang_thai == 'Hội đồng xét duyệt' %}
                         {% set ns_unit.has_ready = true %}
                     {% endif %}
                 {% endfor %}
@@ -160,7 +160,7 @@
                 <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-light" style="font-size:0.82rem;">
                     <small class="fw-semibold text-muted">{{ dx.nam_hoc }}</small>
                     <span class="badge-status {{ sc }}" style="font-size:0.72rem;">{{ dx.trang_thai }}</span>
-                    {% if dx.trang_thai == 'Đã duyệt' %}
+                    {% if dx.trang_thai == 'Hội đồng xét duyệt' %}
                     <span class="badge bg-gold text-dark ms-1" style="font-size:0.72rem;">
                         <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
                     </span>
@@ -291,7 +291,7 @@
                 <div class="d-flex align-items-center gap-2 px-3 py-2 border-top" style="font-size:0.82rem;">
                     <small class="text-muted">{{ dx.nam_hoc }}</small>
                     <span class="badge-status {{ sc }}" style="font-size:0.72rem;">{{ dx.trang_thai }}</span>
-                    {% if dx.trang_thai == 'Đã duyệt' %}
+                    {% if dx.trang_thai == 'Hội đồng xét duyệt' %}
                     <span class="badge bg-gold text-dark ms-1" title="Sẵn sàng phê duyệt cuối" style="font-size:0.72rem;">
                         <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
                     </span>
@@ -380,7 +380,7 @@
 <!-- Nomination ID data for batch approve -->
 <script type="application/json" id="nominationData">
 {% if unit_groups %}
-[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Đã duyệt' %}{"id": {{ nom_data.dx.id }}, "unit": "{{ ug.unit_name }}", "name": "{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
+[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Hội đồng xét duyệt' %}{"id": {{ nom_data.dx.id }}, "unit": "{{ ug.unit_name }}", "name": "{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
 {% else %}
 []
 {% endif %}

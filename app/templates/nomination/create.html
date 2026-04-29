@@ -22,7 +22,12 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Năm học <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" name="nam_hoc" placeholder="VD: 2025-2026" required>
+                    <select class="form-select" name="nam_hoc" required>
+                        <option value="">-- Chọn năm học --</option>
+                        {% for nh in nam_hoc_options %}
+                        <option value="{{ nh }}"{% if loop.index == 2 %} selected{% endif %}>{{ nh }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-md-8">
                     <label class="form-label">Ghi chú</label>

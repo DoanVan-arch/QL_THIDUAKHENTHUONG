@@ -318,7 +318,7 @@ def pending_list():
                 PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
             ).all()
             if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept):
-                de_xuat.trang_thai = TrangThaiDeXuat.DA_DUYET.value
+                de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
                 existing_admin = PheDuyet.query.filter_by(
                     de_xuat_id=de_xuat.id,
                     phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
@@ -570,7 +570,7 @@ def submit_review(id):
         ).all()
 
         if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept_approvals):
-            de_xuat.trang_thai = TrangThaiDeXuat.DA_DUYET.value
+            de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
             existing_admin = PheDuyet.query.filter_by(
                 de_xuat_id=id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
             ).first()
@@ -662,7 +662,7 @@ def toggle_item(pd_id, ct_id):
                 PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
             ).all()
             if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept):
-                de_xuat.trang_thai = TrangThaiDeXuat.DA_DUYET.value
+                de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
                 existing_admin = PheDuyet.query.filter_by(
                     de_xuat_id=de_xuat.id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
                 ).first()
@@ -778,7 +778,7 @@ def batch_approve():
                 PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
             ).all()
             if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept):
-                de_xuat.trang_thai = TrangThaiDeXuat.DA_DUYET.value
+                de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
                 existing_admin = PheDuyet.query.filter_by(
                     de_xuat_id=de_xuat.id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
                 ).first()
@@ -980,7 +980,7 @@ def revoke_review(pd_id):
 
     # If admin Tuyên huấn PheDuyet was already created (status was 'Đã duyệt'),
     # delete it since not all 6 depts approve anymore
-    if old_status == TrangThaiDeXuat.DA_DUYET.value:
+    if old_status == TrangThaiDeXuat.HOI_DONG.value:
         admin_pd = PheDuyet.query.filter_by(
             de_xuat_id=de_xuat.id,
             phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
