@@ -118,7 +118,7 @@
                             <div><strong>Trình độ học vấn:</strong> {{ qn.trinh_do_hoc_van or '-' }}</div>
                             <div><strong>Ngoại ngữ:</strong> {{ qn.ngoai_ngu or '-' }}</div>
                             <div><strong>Vai trò:</strong>
-                                {{ 'Chỉ huy' if qn.la_chi_huy else '' }}{{ ' - ' if qn.la_chi_huy and qn.la_bi_thu else '' }}{{ 'Bí thư' if qn.la_bi_thu else '' }}{{ '-' if not qn.la_chi_huy and not qn.la_bi_thu else '' }}
+                                {{ 'Cấp trưởng' if qn.la_chi_huy else '' }}{{ ' - ' if qn.la_chi_huy and qn.la_bi_thu else '' }}{{ 'Bí thư' if qn.la_bi_thu else '' }}{{ '-' if not qn.la_chi_huy and not qn.la_bi_thu else '' }}
                             </div>
                             {% else %}
                             -
@@ -595,7 +595,7 @@ function openRejectModal(deXuatId, unitName) {
         const votes = data.votes;
 
         const roles = p.la_chi_huy || p.la_bi_thu
-            ? [p.la_chi_huy ? 'Chỉ huy' : '', p.la_bi_thu ? 'Bí thư' : ''].filter(Boolean).join(' – ')
+            ? [p.la_chi_huy ? 'Cấp trưởng' : '', p.la_bi_thu ? 'Bí thư' : ''].filter(Boolean).join(' – ')
             : '—';
 
         let personalRows = `

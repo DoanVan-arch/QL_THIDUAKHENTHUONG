@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>{{ (personnel.page - 1) * personnel.per_page + loop.index }}</td>
                         <td>
                             <span class="fw-500">{{ qn.ho_ten }}</span>
-                            {% if qn.la_chi_huy %}<span class="badge bg-primary ms-1" style="font-size:0.65rem">CHỈ HUY</span>{% endif %}
+                            {% if qn.la_chi_huy %}<span class="badge bg-primary ms-1" style="font-size:0.65rem">Cấp trưởng</span>{% endif %}
                             {% if qn.la_bi_thu %}<span class="badge bg-info ms-1" style="font-size:0.65rem">BÍ THƯ</span>{% endif %}
                         </td>
                         <td><span class="badge bg-light text-dark">{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</span></td>

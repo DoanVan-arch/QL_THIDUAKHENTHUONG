@@ -673,7 +673,7 @@ def submit_nomination(id):
         if ct.quan_nhan and (ct.quan_nhan.la_chi_huy or ct.quan_nhan.la_bi_thu):
             if not has_unit_award:
                 flash(
-                    'Có chỉ huy/bí thư trong danh sách đề xuất - cần phải có đề xuất "Đơn vị quyết thắng" đi kèm.',
+                    'Có Cấp trưởng/bí thư trong danh sách đề xuất - cần phải có đề xuất "Đơn vị quyết thắng" đi kèm.',
                     'danger'
                 )
                 return redirect(url_for('nomination.edit_nomination', id=id))
