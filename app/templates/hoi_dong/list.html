@@ -225,7 +225,7 @@
         const votes = data.votes;
 
         const roles = p.la_chi_huy || p.la_bi_thu
-            ? [p.la_chi_huy ? 'Chỉ huy' : '', p.la_bi_thu ? 'Bí thư' : ''].filter(Boolean).join(' – ')
+            ? [p.la_chi_huy ? 'Cấp trưởng' : '', p.la_bi_thu ? 'Bí thư' : ''].filter(Boolean).join(' – ')
             : '—';
 
         let personalRows = `
