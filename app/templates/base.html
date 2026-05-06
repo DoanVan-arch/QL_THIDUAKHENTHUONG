@@ -36,6 +36,12 @@
                 <a href="{{ url_for('personnel.annual_evaluations') }}" class="sidebar-link {% if request.endpoint in ['personnel.annual_evaluations'] %}active{% endif %}">
                     <i class="bi bi-clipboard-data"></i> <span>Đánh giá hằng năm</span>
                 </a>
+                <a href="{{ url_for('personnel.incoming_transfers') }}" class="sidebar-link {% if request.endpoint in ['personnel.incoming_transfers','personnel.transfer_personnel'] %}active{% endif %}">
+                    <i class="bi bi-arrow-left-right"></i> <span>Chuyển đơn vị</span>
+                    {% if pending_transfer_count|default(0) > 0 %}
+                    <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size:0.65rem;">{{ pending_transfer_count }}</span>
+                    {% endif %}
+                </a>
                 <a href="{{ url_for('nomination.list_nominations') }}" class="sidebar-link {% if request.endpoint == 'nomination.list_nominations' %}active{% endif %}">
                     <i class="bi bi-award"></i> <span>Đề xuất khen thưởng</span>
                 </a>

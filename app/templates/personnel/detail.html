@@ -16,6 +16,9 @@
         <a href="{{ url_for('personnel.edit_personnel', id=qn.id) }}" class="btn btn-outline-navy btn-sm">
             <i class="bi bi-pencil me-1"></i> Sửa
         </a>
+        <a href="{{ url_for('personnel.transfer_personnel', id=qn.id) }}" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-arrow-left-right me-1"></i> Chuyển đơn vị
+        </a>
         <form id="deleteForm{{ qn.id }}" method="POST" action="{{ url_for('personnel.delete_personnel', id=qn.id) }}" style="display:inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('deleteForm{{ qn.id }}', '{{ qn.ho_ten }}')">

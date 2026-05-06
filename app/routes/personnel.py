@@ -1,11 +1,13 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import Role
+from app.models.unit import DonVi
 from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
 from app.models.catalog import ChucVuOption, CapBacOption, DoiTuongOption
 from app.models.evaluation import DanhGiaHangNam
+from app.models.transfer import ChuyenDonVi, TrangThaiChuyen
 from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
@@ -736,3 +738,166 @@ def save_annual_evaluations():
 
     flash(f'Đã lưu {saved} đánh giá năm học {nam_hoc}.', 'success')
     return redirect(url_for('personnel.annual_evaluations', nam_hoc=nam_hoc))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CHUYỂN ĐƠN VỊ
+# ─────────────────────────────────────────────────────────────────────────────
+
+@personnel_bp.route('/<int:id>/transfer', methods=['GET', 'POST'])
+@login_required
+@unit_user_required
+def transfer_personnel(id):
+    """Source unit initiates a transfer request."""
+    qn = QuanNhan.query.get_or_404(id)
+    if qn.don_vi_id != current_user.don_vi_id:
+        flash('Bạn không có quyền thao tác với quân nhân này.', 'danger')
+        return redirect(url_for('personnel.list_personnel'))
+
+    # Block if there is already a pending transfer for this person
+    existing = ChuyenDonVi.query.filter_by(
+        quan_nhan_id=id, trang_thai=TrangThaiChuyen.PENDING
+    ).first()
+    if existing:
+        flash('Quân nhân này đang có yêu cầu chuyển đơn vị chờ xác nhận.', 'warning')
+        return redirect(url_for('personnel.detail_personnel', id=id))
+
+    all_units = DonVi.query.filter(
+        DonVi.is_active == True,
+        DonVi.id != current_user.don_vi_id
+    ).order_by(DonVi.ten_don_vi).all()
+
+    if request.method == 'POST':
+        don_vi_dich_id = request.form.get('don_vi_dich_id', type=int)
+        ly_do = request.form.get('ly_do', '').strip()
+
+        if not don_vi_dich_id:
+            flash('Vui lòng chọn đơn vị tiếp nhận.', 'warning')
+            return render_template('personnel/transfer.html', qn=qn, all_units=all_units)
+
+        don_vi_dich = DonVi.query.get(don_vi_dich_id)
+        if not don_vi_dich:
+            flash('Đơn vị tiếp nhận không tồn tại.', 'danger')
+            return render_template('personnel/transfer.html', qn=qn, all_units=all_units)
+
+        chuyen = ChuyenDonVi(
+            quan_nhan_id=id,
+            don_vi_nguon_id=current_user.don_vi_id,
+            don_vi_dich_id=don_vi_dich_id,
+            nguoi_tao_id=current_user.id,
+            trang_thai=TrangThaiChuyen.PENDING,
+            ly_do=ly_do,
+        )
+        db.session.add(chuyen)
+        db.session.commit()
+        flash(f'Đã gửi yêu cầu chuyển {qn.ho_ten} sang {don_vi_dich.ten_don_vi}. Chờ đơn vị tiếp nhận xác nhận.', 'success')
+        return redirect(url_for('personnel.detail_personnel', id=id))
+
+    return render_template('personnel/transfer.html', qn=qn, all_units=all_units)
+
+
+@personnel_bp.route('/transfers/incoming')
+@login_required
+@unit_user_required
+def incoming_transfers():
+    """Target unit views pending incoming transfer requests."""
+    pending = ChuyenDonVi.query.filter_by(
+        don_vi_dich_id=current_user.don_vi_id,
+        trang_thai=TrangThaiChuyen.PENDING,
+    ).order_by(ChuyenDonVi.ngay_tao.desc()).all()
+
+    history = ChuyenDonVi.query.filter(
+        ChuyenDonVi.don_vi_dich_id == current_user.don_vi_id,
+        ChuyenDonVi.trang_thai != TrangThaiChuyen.PENDING,
+    ).order_by(ChuyenDonVi.ngay_xu_ly.desc()).limit(20).all()
+
+    outgoing = ChuyenDonVi.query.filter_by(
+        don_vi_nguon_id=current_user.don_vi_id,
+    ).order_by(ChuyenDonVi.ngay_tao.desc()).limit(20).all()
+
+    return render_template(
+        'personnel/transfers.html',
+        pending=pending,
+        history=history,
+        outgoing=outgoing,
+        TrangThaiChuyen=TrangThaiChuyen,
+    )
+
+
+@personnel_bp.route('/transfers/<int:transfer_id>/confirm', methods=['POST'])
+@login_required
+@unit_user_required
+def confirm_transfer(transfer_id):
+    """Target unit confirms the transfer — moves QuanNhan to their unit."""
+    chuyen = ChuyenDonVi.query.get_or_404(transfer_id)
+
+    if chuyen.don_vi_dich_id != current_user.don_vi_id:
+        flash('Bạn không có quyền xác nhận yêu cầu này.', 'danger')
+        return redirect(url_for('personnel.incoming_transfers'))
+
+    if chuyen.trang_thai != TrangThaiChuyen.PENDING:
+        flash('Yêu cầu này đã được xử lý rồi.', 'warning')
+        return redirect(url_for('personnel.incoming_transfers'))
+
+    ghi_chu = request.form.get('ghi_chu', '').strip()
+
+    # Move the personnel record to the new unit
+    qn = chuyen.quan_nhan
+    qn.don_vi_id = chuyen.don_vi_dich_id
+
+    chuyen.trang_thai = TrangThaiChuyen.CONFIRMED
+    chuyen.nguoi_xac_nhan_id = current_user.id
+    chuyen.ngay_xu_ly = datetime.utcnow()
+    chuyen.ghi_chu = ghi_chu
+
+    db.session.commit()
+    flash(f'Đã xác nhận tiếp nhận {qn.ho_ten} vào đơn vị.', 'success')
+    return redirect(url_for('personnel.incoming_transfers'))
+
+
+@personnel_bp.route('/transfers/<int:transfer_id>/reject', methods=['POST'])
+@login_required
+@unit_user_required
+def reject_transfer(transfer_id):
+    """Target unit rejects the transfer request."""
+    chuyen = ChuyenDonVi.query.get_or_404(transfer_id)
+
+    if chuyen.don_vi_dich_id != current_user.don_vi_id:
+        flash('Bạn không có quyền xử lý yêu cầu này.', 'danger')
+        return redirect(url_for('personnel.incoming_transfers'))
+
+    if chuyen.trang_thai != TrangThaiChuyen.PENDING:
+        flash('Yêu cầu này đã được xử lý rồi.', 'warning')
+        return redirect(url_for('personnel.incoming_transfers'))
+
+    ghi_chu = request.form.get('ghi_chu', '').strip()
+
+    chuyen.trang_thai = TrangThaiChuyen.REJECTED
+    chuyen.nguoi_xac_nhan_id = current_user.id
+    chuyen.ngay_xu_ly = datetime.utcnow()
+    chuyen.ghi_chu = ghi_chu
+
+    db.session.commit()
+    flash(f'Đã từ chối yêu cầu chuyển {chuyen.quan_nhan.ho_ten}.', 'info')
+    return redirect(url_for('personnel.incoming_transfers'))
+
+
+@personnel_bp.route('/transfers/<int:transfer_id>/cancel', methods=['POST'])
+@login_required
+@unit_user_required
+def cancel_transfer(transfer_id):
+    """Source unit cancels their own pending transfer request."""
+    chuyen = ChuyenDonVi.query.get_or_404(transfer_id)
+
+    if chuyen.don_vi_nguon_id != current_user.don_vi_id:
+        flash('Bạn không có quyền hủy yêu cầu này.', 'danger')
+        return redirect(url_for('personnel.incoming_transfers'))
+
+    if chuyen.trang_thai != TrangThaiChuyen.PENDING:
+        flash('Yêu cầu này đã được xử lý, không thể hủy.', 'warning')
+        return redirect(url_for('personnel.incoming_transfers'))
+
+    db.session.delete(chuyen)
+    db.session.commit()
+    flash('Đã hủy yêu cầu chuyển đơn vị.', 'success')
+    return redirect(url_for('personnel.incoming_transfers'))

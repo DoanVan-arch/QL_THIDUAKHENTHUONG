@@ -50,7 +50,35 @@
     {% endif %}
 </div>
 
-{% set display_fields = allowed_fields|reject('equalto', 'nckh_minh_chung')|list %}
+<!-- Year filter (server-side) -->
+<div class="card-section mb-3">
+    <div class="card-body-custom py-2">
+        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label mb-0 me-1 fw-semibold">Năm học:</label>
+            <select class="form-select form-select-sm {% if not nam_hoc_filter %}border-warning{% endif %}"
+                    name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
+                <option value="">-- Chọn năm học --</option>
+                {% for nh in nam_hoc_list %}
+                <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
+                {% endfor %}
+            </select>
+            {% if nam_hoc_filter %}
+            <a href="{{ url_for('approval.pending_list') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Xóa lọc
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if not nam_hoc_filter %}
+<div class="card-section">
+    <div class="card-body-custom text-center py-5 text-muted">
+        <i class="bi bi-calendar3" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-0">Vui lòng <strong>chọn năm học</strong> để xem danh sách chờ phê duyệt.</p>
+    </div>
+</div>
+{% else %}
 {% set show_evidence = 'nckh_minh_chung' in allowed_fields %}
 
 {% if pending_reviews %}
@@ -854,9 +882,7 @@ document.addEventListener('DOMContentLoaded', function () {
         container.insertBefore(alertDiv, container.firstChild);
         setTimeout(() => alertDiv.remove(), 4000);
     }
-});
-</script>
-{% endblock %}
+
     const toggleFilterBar = document.getElementById('toggleFilterBar');
     const filterBar = document.getElementById('filterBar');
     if (toggleFilterBar && filterBar) {
@@ -864,3 +890,7 @@ document.addEventListener('DOMContentLoaded', function () {
             filterBar.classList.toggle('d-none');
         });
     }
+});
+</script>
+{% endif %}{# end nam_hoc_filter #}
+{% endblock %}

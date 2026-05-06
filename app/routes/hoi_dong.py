@@ -13,29 +13,56 @@ hoi_dong_bp = Blueprint('hoi_dong', __name__)
 @login_required
 @hoi_dong_required
 def list_nominations():
-    """List all nominations at PHE_DUYET_CUOI stage (Bảng 2) for Hội đồng voting."""
-    nominations = DeXuat.query.filter_by(
+    """Flat per-individual list of all PHE_DUYET_CUOI individuals for Hội đồng voting,
+    sorted by DanhHieu.thu_tu then unit name."""
+    from app.models.nomination import DanhHieu
+    from app.models.unit import DonVi
+
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+
+    # Get available nam_hoc options
+    nam_hoc_list = [n[0] for n in db.session.query(DeXuat.nam_hoc).filter_by(
         trang_thai=TrangThaiDeXuat.PHE_DUYET_CUOI.value
-    ).order_by(DeXuat.ngay_gui.desc()).all()
+    ).distinct().order_by(DeXuat.nam_hoc.desc()).all()]
 
-    vai_tro = current_user.hoi_dong_vai_tro
+    rows = []
+    if nam_hoc_filter:
+        q = DeXuat.query.filter_by(trang_thai=TrangThaiDeXuat.PHE_DUYET_CUOI.value)\
+            .filter(DeXuat.nam_hoc == nam_hoc_filter)\
+            .join(DonVi, DeXuat.don_vi_id == DonVi.id).order_by(DonVi.ten_don_vi)
+        nominations = q.all()
 
-    # For each nomination, build per-individual vote status for current user's vai_tro
-    vote_summary = {}  # de_xuat_id -> {ct_id -> bieu_quyet or None}
-    for dx in nominations:
-        ct_votes = {}
-        for ct in dx.chi_tiets:
-            bq = HoiDongBieuQuyet.query.filter_by(
-                chi_tiet_id=ct.id, vai_tro=vai_tro
-            ).first()
-            ct_votes[ct.id] = bq
-        vote_summary[dx.id] = ct_votes
+        vai_tro = current_user.hoi_dong_vai_tro
+        danh_hieu_order = {dh.ten_danh_hieu: dh.thu_tu for dh in DanhHieu.query.all()}
+
+        for dx in nominations:
+            for ct in dx.chi_tiets:
+                my_vote = HoiDongBieuQuyet.query.filter_by(
+                    chi_tiet_id=ct.id, vai_tro=vai_tro
+                ).first()
+                all_votes = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id).all()
+                dong_y_count = sum(1 for v in all_votes if v.ket_qua == KET_QUA_DONG_Y)
+                rows.append({
+                    'dx': dx,
+                    'ct': ct,
+                    'my_vote': my_vote,
+                    'dong_y_count': dong_y_count,
+                    'total_vai_tro': len(HOI_DONG_VAI_TRO),
+                    '_sort_award': danh_hieu_order.get(ct.loai_danh_hieu, 999),
+                    '_sort_unit': dx.don_vi.ten_don_vi if dx.don_vi else '',
+                })
+        rows.sort(key=lambda r: (r['_sort_award'], r['_sort_unit']))
+    else:
+        vai_tro = current_user.hoi_dong_vai_tro
 
     return render_template('hoi_dong/list.html',
-                           nominations=nominations,
-                           vote_summary=vote_summary,
+                           rows=rows,
                            vai_tro=vai_tro,
-                           VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY)
+                           VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY,
+                           KET_QUA_DONG_Y=KET_QUA_DONG_Y,
+                           KET_QUA_KHONG_DONG_Y=KET_QUA_KHONG_DONG_Y,
+                           nam_hoc_filter=nam_hoc_filter,
+                           nam_hoc_list=nam_hoc_list)
 
 
 @hoi_dong_bp.route('/<int:id>')
@@ -51,6 +78,15 @@ def detail(id):
 
     vai_tro = current_user.hoi_dong_vai_tro
 
+    # Sort chi_tiets by DanhHieu.thu_tu then name
+    from app.models.nomination import DanhHieu
+    danh_hieu_order = {dh.ten_danh_hieu: dh.thu_tu for dh in DanhHieu.query.all()}
+    sorted_chi_tiets = sorted(
+        de_xuat.chi_tiets,
+        key=lambda ct: (danh_hieu_order.get(ct.loai_danh_hieu, 999),
+                        ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '')
+    )
+
     # Build vote map: ct_id -> {vai_tro -> HoiDongBieuQuyet}
     all_votes = HoiDongBieuQuyet.query.filter_by(de_xuat_id=id).all()
     vote_map = {}  # ct_id -> {vai_tro: bq}
@@ -62,6 +98,7 @@ def detail(id):
 
     return render_template('hoi_dong/detail.html',
                            de_xuat=de_xuat,
+                           sorted_chi_tiets=sorted_chi_tiets,
                            vai_tro=vai_tro,
                            all_vai_tro=HOI_DONG_VAI_TRO,
                            VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY,
@@ -119,7 +156,11 @@ def cast_vote(id, ct_id):
 
     name = ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or 'Đơn vị'
     flash(f'Đã biểu quyết "{ket_qua}" cho {name}.', 'success')
-    return redirect(url_for('hoi_dong.detail', id=id))
+    # Redirect back to the referring page (list or detail), default to list
+    ref = request.referrer or ''
+    if f'/hoi-dong/{id}' in ref and 'vote' not in ref:
+        return redirect(url_for('hoi_dong.detail', id=id))
+    return redirect(url_for('hoi_dong.list_nominations'))
 
 
 @hoi_dong_bp.route('/<int:id>/vote-all', methods=['POST'])
