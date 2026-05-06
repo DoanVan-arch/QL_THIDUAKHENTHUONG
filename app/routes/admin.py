@@ -431,6 +431,103 @@ def tracking_detail(ct_id):
                            HOI_DONG_VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY)
 
 
+@admin_bp.route('/api/chi-tiet/<int:ct_id>')
+@login_required
+def api_chi_tiet_detail(ct_id):
+    """JSON API: return full individual info + criteria for offcanvas detail panel.
+    Accessible to admin, reward_viewer, and hoi_dong roles."""
+    from app.models.hoi_dong import HoiDongBieuQuyet as _BQ, HOI_DONG_VAI_TRO as _VT, HOI_DONG_VAI_TRO_DISPLAY as _VT_DISPLAY
+    ct = DeXuatChiTiet.query.get_or_404(ct_id)
+    qn = ct.quan_nhan
+    dx = ct.de_xuat
+
+    # Personal info
+    personal = {
+        'ho_ten': qn.ho_ten if qn else (ct.ten_don_vi_de_xuat or '—'),
+        'can_cuoc_cong_dan': qn.can_cuoc_cong_dan if qn else None,
+        'ngay_sinh': qn.ngay_sinh.strftime('%d/%m/%Y') if qn and qn.ngay_sinh else None,
+        'ngay_nhap_ngu': qn.ngay_nhap_ngu if qn else None,
+        'cap_bac': qn.cap_bac if qn else None,
+        'chuc_vu': qn.chuc_vu if qn else None,
+        'doi_tuong': ct.doi_tuong or (qn.doi_tuong if qn else None),
+        'don_vi_truc_thuoc': qn.don_vi_truc_thuoc if qn else None,
+        'hoc_ham': qn.hoc_ham if qn else None,
+        'hoc_vi': qn.hoc_vi if qn else None,
+        'trinh_do_hoc_van': qn.trinh_do_hoc_van if qn else None,
+        'ngoai_ngu': qn.ngoai_ngu if qn else None,
+        'la_chi_huy': qn.la_chi_huy if qn else None,
+        'la_bi_thu': qn.la_bi_thu if qn else None,
+        'la_doan_vien': qn.la_doan_vien if qn else None,
+        'la_hoi_vien_phu_nu': qn.la_hoi_vien_phu_nu if qn else None,
+    }
+
+    # Nomination info
+    nomination = {
+        'don_vi': dx.don_vi.ten_don_vi if dx.don_vi else '—',
+        'nam_hoc': dx.nam_hoc,
+        'ngay_gui': dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else None,
+        'loai_danh_hieu': ct.loai_danh_hieu,
+        'trang_thai': dx.trang_thai,
+    }
+
+    # Criteria
+    criteria_fields = [
+        ('muc_do_hoan_thanh', 'Hoàn thành nhiệm vụ', None),
+        ('phieu_tin_nhiem', 'Phiếu tín nhiệm', None),
+        ('xep_loai_dang_vien', 'Xếp loại đảng viên', None),
+        ('ket_qua_doan_the', 'Kết quả đoàn thể', None),
+        ('kiem_tra_chinh_tri', 'Kiểm tra chính trị', 'diem_kiem_tra_chinh_tri'),
+        ('kiem_tra_dieu_lenh', 'Kiểm tra điều lệnh', 'diem_kiem_tra_dieu_lenh'),
+        ('kiem_tra_tin_hoc', 'Kỹ năng số', 'diem_kiem_tra_tin_hoc'),
+        ('dia_ly_quan_su', 'Địa hình quân sự', 'diem_dia_ly_quan_su'),
+        ('ban_sung', 'Bắn súng', 'diem_ban_sung'),
+        ('the_luc', 'Thể lực', 'diem_the_luc'),
+        ('danh_hieu_gv_gioi', 'Danh hiệu GV giỏi', None),
+        ('dinh_muc_giang_day', 'Định mức giảng dạy', None),
+        ('ket_qua_kiem_tra_giang', 'KT kiểm tra giảng', None),
+        ('tien_do_pgs', 'Tiến độ PGS', None),
+        ('thoi_gian_lao_dong_kh', 'Thời gian LĐ khoa học', None),
+        ('danh_hieu_hv_gioi', 'Danh hiệu HV giỏi', None),
+        ('diem_tong_ket', 'Điểm tổng kết', None),
+        ('ket_qua_thuc_hanh', 'Kết quả thực hành', None),
+        ('diem_nckh', 'Điểm NCKH', None),
+        ('nckh_noi_dung', 'Nội dung NCKH', None),
+        ('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV danh hiệu', None),
+        ('thanh_tich_ca_nhan_khac', 'Thành tích cá nhân khác', None),
+        ('ghi_chu', 'Ghi chú', None),
+    ]
+
+    criteria = []
+    for field, label, score_field in criteria_fields:
+        val = getattr(ct, field, None)
+        if val is None or val == '':
+            continue
+        # Display boolean-ish strings
+        if val == 'true':
+            val = 'Có'
+        elif val == 'false':
+            val = 'Không'
+        score = getattr(ct, score_field, None) if score_field else None
+        criteria.append({'label': label, 'value': str(val), 'score': str(score) if score is not None else None})
+
+    # Hội đồng votes
+    votes = []
+    for vai_tro in _VT:
+        bq = _BQ.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+        votes.append({
+            'vai_tro': _VT_DISPLAY.get(vai_tro, vai_tro),
+            'ket_qua': bq.ket_qua if bq else None,
+            'ghi_chu': bq.ghi_chu if bq else None,
+        })
+
+    return jsonify({
+        'personal': personal,
+        'nomination': nomination,
+        'criteria': criteria,
+        'votes': votes,
+    })
+
+
 @admin_bp.route('/tracking/chi-tiet/<int:ct_id>/final-approve', methods=['POST'])
 @login_required
 @admin_required

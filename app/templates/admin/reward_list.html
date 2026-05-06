@@ -229,7 +229,15 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <td>{{ loop.index }}</td>
                     <td><span class="badge bg-secondary">{{ ct.loai_danh_hieu }}</span></td>
                     <td>{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
-                    <td><strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong></td>
+                    <td>
+                        <strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong>
+                        <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet"
+                                data-ct-id="{{ ct.id }}"
+                                title="Xem chi tiết cá nhân & tiêu chí"
+                                style="padding:0.1rem 0.35rem; font-size:0.7rem;">
+                            <i class="bi bi-info-circle"></i>
+                        </button>
+                    </td>
                     <td>{{ dx.nam_hoc }}</td>
                     {% for vt in HOI_DONG_VAI_TRO %}
                     {% set bq = row.votes.get(vt) %}
@@ -405,8 +413,13 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <td>{{ kt.nam_hoc }}</td>
                         <td><span class="text-ellipsis-sm" title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
                         <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
+                                    data-ct-id="{{ kt.chi_tiet_id }}"
+                                    title="Xem chi tiết cá nhân & tiêu chí">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
                             <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
-                               class="btn btn-sm btn-outline-navy me-1" title="Xem chi tiết">
+                               class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
                                 <i class="bi bi-eye"></i>
                             </a>
                             {% if can_admin_action %}
@@ -550,5 +563,134 @@ function openRejectModal(deXuatId, unitName) {
     var modal = new bootstrap.Modal(document.getElementById('rejectModal'));
     modal.show();
 }
+</script>
+
+<!-- ===== Chi Tiết Offcanvas ===== -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="chiTietOffcanvas" style="width:480px;">
+    <div class="offcanvas-header" style="background:var(--navy-primary);color:#fff;">
+        <h6 class="offcanvas-title mb-0"><i class="bi bi-person-lines-fill me-2"></i>Chi tiết cá nhân</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0" id="chiTietBody">
+        <div class="text-center py-5 text-muted" id="chiTietLoading">
+            <div class="spinner-border spinner-border-sm me-2"></div>Đang tải...
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const API_URL = '{{ url_for("admin.api_chi_tiet_detail", ct_id=0) }}'.replace('/0', '/');
+
+    function badge(val) {
+        if (val === 'Đồng ý') return '<span class="badge bg-success">Đồng ý</span>';
+        if (val === 'Không đồng ý') return '<span class="badge bg-danger">Không đồng ý</span>';
+        return '<span class="text-muted">—</span>';
+    }
+
+    function renderDetail(data) {
+        const p = data.personal;
+        const n = data.nomination;
+        const criteria = data.criteria;
+        const votes = data.votes;
+
+        const roles = p.la_chi_huy || p.la_bi_thu
+            ? [p.la_chi_huy ? 'Chỉ huy' : '', p.la_bi_thu ? 'Bí thư' : ''].filter(Boolean).join(' – ')
+            : '—';
+
+        let personalRows = `
+            <tr><th>Đơn vị</th><td>${n.don_vi}</td></tr>
+            <tr><th>Năm học</th><td>${n.nam_hoc || '—'}</td></tr>
+            <tr><th>Danh hiệu</th><td><strong>${n.loai_danh_hieu}</strong></td></tr>
+            <tr><th>CCCD</th><td>${p.can_cuoc_cong_dan || '—'}</td></tr>
+            <tr><th>Ngày sinh</th><td>${p.ngay_sinh || '—'}</td></tr>
+            <tr><th>Ngày nhập ngũ</th><td>${p.ngay_nhap_ngu || '—'}</td></tr>
+            <tr><th>Cấp bậc</th><td>${p.cap_bac || '—'}</td></tr>
+            <tr><th>Chức vụ</th><td>${p.chuc_vu || '—'}</td></tr>
+            <tr><th>Đối tượng</th><td>${p.doi_tuong || '—'}</td></tr>
+            <tr><th>ĐV trực thuộc</th><td>${p.don_vi_truc_thuoc || '—'}</td></tr>
+            <tr><th>Học hàm / Học vị</th><td>${p.hoc_ham || '—'} / ${p.hoc_vi || '—'}</td></tr>
+            <tr><th>Trình độ học vấn</th><td>${p.trinh_do_hoc_van || '—'}</td></tr>
+            <tr><th>Ngoại ngữ</th><td>${p.ngoai_ngu || '—'}</td></tr>
+            <tr><th>Vai trò</th><td>${roles}</td></tr>
+            <tr><th>Đoàn viên</th><td>${p.la_doan_vien ? 'Có' : 'Không'}</td></tr>
+            <tr><th>Hội viên phụ nữ</th><td>${p.la_hoi_vien_phu_nu ? 'Có' : 'Không'}</td></tr>
+        `;
+
+        let criteriaRows = criteria.length ? criteria.map(c => {
+            const scoreStr = c.score ? ` <span class="badge bg-light text-dark border ms-1">${c.score}</span>` : '';
+            return `<tr><th>${c.label}</th><td>${c.value}${scoreStr}</td></tr>`;
+        }).join('') : '<tr><td colspan="2" class="text-muted text-center">Không có tiêu chí</td></tr>';
+
+        let voteRows = votes.map(v => `
+            <tr><th style="font-weight:500;">${v.vai_tro}</th>
+            <td>${badge(v.ket_qua)}${v.ghi_chu ? ` <small class="text-muted ms-1">${v.ghi_chu}</small>` : ''}</td></tr>
+        `).join('');
+
+        return `
+        <div class="p-3 border-bottom" style="background:#f8f9fa;">
+            <h6 class="mb-0 text-navy fw-bold">${p.ho_ten}</h6>
+            <small class="text-muted">${p.cap_bac || ''} ${p.chuc_vu ? '— ' + p.chuc_vu : ''}</small>
+        </div>
+        <div class="accordion accordion-flush" id="detailAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button py-2" type="button" data-bs-toggle="collapse" data-bs-target="#accPersonal">
+                        <i class="bi bi-person me-2 text-navy"></i><strong>Thông tin cá nhân</strong>
+                    </button>
+                </h2>
+                <div id="accPersonal" class="accordion-collapse collapse show" data-bs-parent="#detailAccordion">
+                    <div class="accordion-body p-0">
+                        <table class="table table-sm mb-0" style="font-size:0.82rem;">
+                            <tbody>${personalRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#accCriteria">
+                        <i class="bi bi-clipboard-data me-2 text-navy"></i><strong>Tiêu chí xét duyệt</strong>
+                    </button>
+                </h2>
+                <div id="accCriteria" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
+                    <div class="accordion-body p-0">
+                        <table class="table table-sm mb-0" style="font-size:0.82rem;">
+                            <tbody>${criteriaRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#accVotes">
+                        <i class="bi bi-people me-2 text-navy"></i><strong>Biểu quyết Hội đồng</strong>
+                    </button>
+                </h2>
+                <div id="accVotes" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
+                    <div class="accordion-body p-0">
+                        <table class="table table-sm mb-0" style="font-size:0.82rem;">
+                            <tbody>${voteRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-chi-tiet');
+        if (!btn) return;
+        const ctId = btn.dataset.ctId;
+        const body = document.getElementById('chiTietBody');
+        body.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Đang tải...</div>';
+        const offcanvas = new bootstrap.Offcanvas(document.getElementById('chiTietOffcanvas'));
+        offcanvas.show();
+        fetch(API_URL + ctId)
+            .then(r => r.json())
+            .then(data => { body.innerHTML = renderDetail(data); })
+            .catch(() => { body.innerHTML = '<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>'; });
+    });
+})();
 </script>
 {% endblock %}
