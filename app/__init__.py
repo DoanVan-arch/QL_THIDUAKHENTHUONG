@@ -50,11 +50,18 @@ def create_app(config_class=None):
     def inject_notification_count():
         from flask_login import current_user
         count = 0
+        pending_transfers = 0
         if current_user.is_authenticated and current_user.is_unit_user:
             from app.models.notification import ThongBao
+            from app.models.transfer import ChuyenDonVi, TrangThaiChuyen
             count = ThongBao.query.filter_by(
                 user_id=current_user.id, da_doc=False
             ).count()
-        return dict(unread_notification_count=count)
+            if current_user.don_vi_id:
+                pending_transfers = ChuyenDonVi.query.filter_by(
+                    don_vi_dich_id=current_user.don_vi_id,
+                    trang_thai=TrangThaiChuyen.PENDING,
+                ).count()
+        return dict(unread_notification_count=count, pending_transfer_count=pending_transfers)
 
     return app

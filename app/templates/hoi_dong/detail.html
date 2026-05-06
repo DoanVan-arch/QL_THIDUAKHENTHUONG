@@ -31,7 +31,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="ket_qua" value="{{ KET_QUA_DONG_Y }}">
             <button type="submit" class="btn btn-sm btn-success me-1"
-                    onclick="return confirm('Đồng ý tất cả {{ de_xuat.chi_tiets|length }} cá nhân/đơn vị?')">
+                    onclick="return confirm('Đồng ý tất cả {{ sorted_chi_tiets|length }} cá nhân/đơn vị?')">
                 <i class="bi bi-check-all me-1"></i>Đồng ý tất cả
             </button>
         </form>
@@ -61,7 +61,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for ct in de_xuat.chi_tiets %}
+                {% for ct in sorted_chi_tiets %}
                 {% set ct_votes = vote_map.get(ct.id, {}) %}
                 {% set my_vote = my_votes.get(ct.id) %}
                 <tr>
@@ -150,7 +150,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for ct in de_xuat.chi_tiets %}
+                {% for ct in sorted_chi_tiets %}
                 {% set ct_votes = vote_map.get(ct.id, {}) %}
                 {% set dong_y = ct_votes.values() | selectattr('ket_qua', 'equalto', KET_QUA_DONG_Y) | list | length %}
                 {% set khong = ct_votes.values() | selectattr('ket_qua', 'equalto', KET_QUA_KHONG_DONG_Y) | list | length %}

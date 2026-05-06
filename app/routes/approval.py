@@ -276,10 +276,26 @@ def _notify_rejections(phe_duyet):
 @department_required
 def pending_list():
     phong_name = ROLE_TO_PHONG.get(current_user.role, '')
-    pending_reviews = PheDuyet.query.filter_by(
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+
+    # Get available nam_hoc options for the dropdown
+    from app.models.nomination import DeXuat as _DeXuat
+    nam_hoc_list = [n[0] for n in db.session.query(_DeXuat.nam_hoc).join(
+        PheDuyet, PheDuyet.de_xuat_id == _DeXuat.id
+    ).filter(
+        PheDuyet.phong_duyet == phong_name,
+        PheDuyet.ket_qua == KetQuaDuyet.CHO_DUYET.value
+    ).distinct().order_by(_DeXuat.nam_hoc.desc()).all()]
+
+    q = PheDuyet.query.filter_by(
         phong_duyet=phong_name,
         ket_qua=KetQuaDuyet.CHO_DUYET.value
-    ).order_by(PheDuyet.created_at.desc()).all()
+    )
+    if nam_hoc_filter:
+        q = q.join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id).filter(
+            _DeXuat.nam_hoc == nam_hoc_filter
+        )
+    pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
 
     # Ensure per-item records exist for all chi_tiets
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items
@@ -385,7 +401,9 @@ def pending_list():
                            out_of_scope_ct_ids=out_of_scope_ct_ids,
                            group_gate_by_pd=group_gate_by_pd,
                            group_gate_by_ct=group_gate_by_ct,
-                           managed_dept_columns=managed_dept_columns)
+                           managed_dept_columns=managed_dept_columns,
+                           nam_hoc_filter=nam_hoc_filter,
+                           nam_hoc_list=nam_hoc_list)
 
 
 @approval_bp.route('/review/<int:id>', methods=['GET'])

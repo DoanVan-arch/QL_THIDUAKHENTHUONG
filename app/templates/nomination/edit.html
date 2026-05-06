@@ -167,6 +167,8 @@
                                     data-hocvi="{{ p.hoc_vi or '' }}"
                                     data-capbac="{{ p.cap_bac or '' }}"
                                     data-chucvu="{{ p.chuc_vu or '' }}"
+                                    data-ladoanvien="{{ '1' if p.la_doan_vien else '0' }}"
+                                    data-lahoivienphunu="{{ '1' if p.la_hoi_vien_phu_nu else '0' }}"
                                     {% if is_nominated %}disabled{% endif %}>
                                 {{ p.ho_ten }} - {{ p.cap_bac or '' }} - {{ p.chuc_vu or '' }}{% if is_nominated %} (Đã đề xuất){% endif %}
                             </option>
@@ -437,18 +439,18 @@
                 </div>
             </div>
              <!-- Thành tích quần chúng khác -->
-            <div class="form-section">
+            <div class="form-section" id="section-doan-the">
                 <div class="form-section-title" style="color: #E67E22;">
-                    <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức quần chúng như đoàn, phụ nữ (nếu có)
+                    <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn(nếu có)
                 </div>
                 <div class="row g-3">
                    <div class="col-md-6">
-                        <label class="form-label">Mức độ Hoàn thành nhiệm vụ của tổ chức quần chúng</label>
-                        <input type="text" class="form-control" name="ket_qua_doan_the" id="ket_qua_doan_the" placeholder="Nếu tham gia tổ chức quần chúng nào đó...">
+                        <label class="form-label">Mức độ Hoàn thành nhiệm vụ của tổ chức đoàn</label>
+                        <input type="text" class="form-control" name="ket_qua_doan_the" id="ket_qua_doan_the" placeholder="Nếu tham gia tổ chức đoàn...">
                     </div>
                      <div class="col-md-6">
-                        <label class="form-label">Hình thức khen thưởng của tổ chức quần chúng</label>
-                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_qc" id="hinh_thuc_khen_thuong_qc" placeholder="Nếu tham gia tổ chức quần chúng nào đó...">
+                        <label class="form-label">Hình thức khen thưởng của tổ chức đoàn</label>
+                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_qc" id="hinh_thuc_khen_thuong_qc" placeholder="Nếu tham gia tổ chức đoàn...">
                     </div>
                     <!-- <div class="col-md-6">
                         <label class="form-label">Minh chứng  (nhiều file) nếu có</label>
@@ -456,18 +458,18 @@
                     </div> -->
                 </div>
             </div>
-             <div class="form-section">
+             <div class="form-section" id="section-phu-nu">
                 <div class="form-section-title" style="color: #E67E22;">
                     <i class="bi bi-star me-1"></i>Thành tích cá nhân hội phụ nữ (nếu có)
                 </div>
                 <div class="row g-3">
                    <div class="col-md-6">
                         <label class="form-label">Xếp loại hội phụ nữ</label>
-                        <input type="text" class="form-control" name="ket_qua_phu_nu" id="ket_qua_hoi_phu_nu" placeholder="Nếu tham gia hội phụ nữ nào đó...">
+                        <input type="text" class="form-control" name="ket_qua_phu_nu" id="ket_qua_hoi_phu_nu" placeholder="Nếu tham gia hội phụ nữ...">
                     </div>
                      <div class="col-md-6">
-                        <label class="form-label">Hình thức khen thưởng của tổ chức quần chúng</label>
-                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_pn" id="hinh_thuc_khen_thuong_pn" placeholder="Nếu tham gia tổ chức quần chúng nào đó...">
+                        <label class="form-label">Hình thức khen thưởng của hội phụ nữ</label>
+                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_pn" id="hinh_thuc_khen_thuong_pn" placeholder="Nếu có khen thưởng hội phụ nữ...">
                     </div>
                     <!-- <div class="col-md-6">
                         <label class="form-label">Minh chứng  (nhiều file) nếu có</label>
@@ -954,6 +956,19 @@ document.addEventListener('DOMContentLoaded', function() {
     ensureBuiltInEvidenceFields();
     annotateCriteriaGroupLabels();
 
+    // Initially hide Đoàn/Phụ nữ sections until a person is selected
+    var _secDoan = document.getElementById('section-doan-the');
+    var _secPN = document.getElementById('section-phu-nu');
+    var _qnSel = document.getElementById('quan_nhan_select');
+    if (_qnSel && _qnSel.value) {
+        var _opt = _qnSel.options[_qnSel.selectedIndex];
+        if (_secDoan) _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1');
+        if (_secPN) _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1');
+    } else {
+        if (_secDoan) _secDoan.classList.add('hidden');
+        if (_secPN) _secPN.classList.add('hidden');
+    }
+
     Object.keys(TIEU_CHI_TOOLTIPS).forEach(function(fieldName) {
         var tooltip = TIEU_CHI_TOOLTIPS[fieldName];
         if (!tooltip) return;
@@ -1003,6 +1018,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (qnSelect) {
         qnSelect.addEventListener('change', function() {
             setTimeout(applyCriteriaVisibilityByGroup, 0);
+            // Toggle Đoàn/Phụ nữ sections based on selected person's membership flags
+            var opt = qnSelect.options[qnSelect.selectedIndex];
+            var secDoan = document.getElementById('section-doan-the');
+            var secPN = document.getElementById('section-phu-nu');
+            if (opt && opt.value) {
+                var isDoan = opt.getAttribute('data-ladoanvien') === '1';
+                var isPN = opt.getAttribute('data-lahoivienphunu') === '1';
+                if (secDoan) secDoan.classList.toggle('hidden', !isDoan);
+                if (secPN) secPN.classList.toggle('hidden', !isPN);
+            } else {
+                // No person selected: hide both
+                if (secDoan) secDoan.classList.add('hidden');
+                if (secPN) secPN.classList.add('hidden');
+            }
         });
     }
 

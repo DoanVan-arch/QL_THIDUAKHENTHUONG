@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Quản lý chuyển đơn vị{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-arrow-left-right me-2"></i>Chuyển đơn vị</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('personnel.list_personnel') }}">Quân nhân</a></li>
+                <li class="breadcrumb-item active">Chuyển đơn vị</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- ── Tiếp nhận chờ xác nhận ─────────────────────────────────────── -->
+<div class="card-section mb-3">
+    <div class="card-header-custom d-flex align-items-center justify-content-between">
+        <h6 class="mb-0">
+            <i class="bi bi-inbox me-2"></i>Yêu cầu tiếp nhận chờ xác nhận
+            {% if pending %}
+            <span class="badge bg-danger ms-1">{{ pending|length }}</span>
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body-custom">
+        {% if pending %}
+        <div class="table-responsive">
+            <table class="table table-sm table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Quân nhân</th>
+                        <th>Cấp bậc / Chức vụ</th>
+                        <th>Đơn vị nguồn</th>
+                        <th>Lý do</th>
+                        <th>Ngày gửi</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in pending %}
+                {% set qn = c.quan_nhan %}
+                <tr>
+                    <td>
+                        <strong>{{ qn.ho_ten }}</strong>
+                        {% if qn.can_cuoc_cong_dan %}
+                        <div class="text-muted small">CCCD: {{ qn.can_cuoc_cong_dan }}</div>
+                        {% endif %}
+                        {% if qn.doi_tuong %}
+                        <div class="text-muted small">{{ qn.doi_tuong }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ qn.cap_bac or '—' }}<br>
+                        <span class="text-muted small">{{ qn.chuc_vu or '—' }}</span>
+                    </td>
+                    <td>{{ c.don_vi_nguon.ten_don_vi }}</td>
+                    <td class="small">{{ c.ly_do or '—' }}</td>
+                    <td class="small">{{ c.ngay_tao.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td class="text-center">
+                        <!-- Confirm -->
+                        <button type="button" class="btn btn-sm btn-success me-1"
+                                data-bs-toggle="modal" data-bs-target="#confirmModal{{ c.id }}">
+                            <i class="bi bi-check-lg"></i> Xác nhận
+                        </button>
+                        <!-- Reject -->
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                data-bs-toggle="modal" data-bs-target="#rejectModal{{ c.id }}">
+                            <i class="bi bi-x-lg"></i> Từ chối
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Confirm modals -->
+        {% for c in pending %}
+        <div class="modal fade" id="confirmModal{{ c.id }}" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title"><i class="bi bi-check-circle me-1"></i>Xác nhận tiếp nhận</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="{{ url_for('personnel.confirm_transfer', transfer_id=c.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <p class="small mb-2">Tiếp nhận <strong>{{ c.quan_nhan.ho_ten }}</strong> từ <em>{{ c.don_vi_nguon.ten_don_vi }}</em>?</p>
+                            <div>
+                                <label class="form-label small">Ghi chú (tùy chọn)</label>
+                                <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-sm btn-success">Xác nhận</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reject modals -->
+        <div class="modal fade" id="rejectModal{{ c.id }}" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title"><i class="bi bi-x-circle me-1"></i>Từ chối tiếp nhận</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="{{ url_for('personnel.reject_transfer', transfer_id=c.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <p class="small mb-2">Từ chối tiếp nhận <strong>{{ c.quan_nhan.ho_ten }}</strong>?</p>
+                            <div>
+                                <label class="form-label small">Lý do từ chối <span class="text-danger">*</span></label>
+                                <textarea name="ghi_chu" class="form-control form-control-sm" rows="2" required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-sm btn-danger">Từ chối</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% else %}
+        <p class="text-muted small fst-italic mb-0">Không có yêu cầu tiếp nhận nào đang chờ.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Yêu cầu đã gửi đi ─────────────────────────────────────────── -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-send me-2"></i>Yêu cầu chuyển đi (đã gửi)</h6>
+    </div>
+    <div class="card-body-custom">
+        {% if outgoing %}
+        <div class="table-responsive">
+            <table class="table table-sm table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Quân nhân</th>
+                        <th>Đơn vị nhận</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày gửi</th>
+                        <th>Ngày xử lý</th>
+                        <th>Ghi chú</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in outgoing %}
+                <tr>
+                    <td><strong>{{ c.quan_nhan.ho_ten }}</strong></td>
+                    <td>{{ c.don_vi_dich.ten_don_vi }}</td>
+                    <td>
+                        {% if c.trang_thai == TrangThaiChuyen.PENDING %}
+                        <span class="badge bg-warning text-dark">Chờ xác nhận</span>
+                        {% elif c.trang_thai == TrangThaiChuyen.CONFIRMED %}
+                        <span class="badge bg-success">Đã xác nhận</span>
+                        {% else %}
+                        <span class="badge bg-danger">Từ chối</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">{{ c.ngay_tao.strftime('%d/%m/%Y') }}</td>
+                    <td class="small">{{ c.ngay_xu_ly.strftime('%d/%m/%Y') if c.ngay_xu_ly else '—' }}</td>
+                    <td class="small">{{ c.ghi_chu or '—' }}</td>
+                    <td class="text-center">
+                        {% if c.trang_thai == TrangThaiChuyen.PENDING %}
+                        <form method="POST" action="{{ url_for('personnel.cancel_transfer', transfer_id=c.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                    onclick="return confirm('Hủy yêu cầu chuyển đơn vị?')">
+                                <i class="bi bi-x"></i> Hủy
+                            </button>
+                        </form>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted small fst-italic mb-0">Chưa có yêu cầu chuyển nào được gửi đi.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Lịch sử tiếp nhận ─────────────────────────────────────────── -->
+{% if history %}
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Lịch sử tiếp nhận (20 gần nhất)</h6>
+    </div>
+    <div class="card-body-custom">
+        <div class="table-responsive">
+            <table class="table table-sm table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>Quân nhân</th>
+                        <th>Đơn vị nguồn</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày xử lý</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in history %}
+                <tr>
+                    <td><strong>{{ c.quan_nhan.ho_ten }}</strong></td>
+                    <td>{{ c.don_vi_nguon.ten_don_vi }}</td>
+                    <td>
+                        {% if c.trang_thai == TrangThaiChuyen.CONFIRMED %}
+                        <span class="badge bg-success">Đã xác nhận</span>
+                        {% else %}
+                        <span class="badge bg-danger">Từ chối</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">{{ c.ngay_xu_ly.strftime('%d/%m/%Y') if c.ngay_xu_ly else '—' }}</td>
+                    <td class="small">{{ c.ghi_chu or '—' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -159,10 +159,14 @@ def approval_tracking():
     search_query = request.args.get('q', '').strip()
     scope_filter = request.args.get('scope', '')  # 'quan_luc' or 'can_bo'
     view_mode = request.args.get('view', 'compact')  # 'compact' or 'detail'
+    nam_hoc_filter = request.args.get('nam_hoc', '')
 
     query = DeXuat.query.filter(
         DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value
     )
+
+    if nam_hoc_filter:
+        query = query.filter(DeXuat.nam_hoc == nam_hoc_filter)
 
     if status_filter:
         query = query.filter(DeXuat.trang_thai == status_filter)
@@ -170,9 +174,14 @@ def approval_tracking():
     if unit_filter:
         query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
 
-    nominations = query.order_by(DeXuat.ngay_gui.desc()).all()
+    nominations = query.order_by(DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()).all()
 
     status_list = [e.value for e in TrangThaiDeXuat if e != TrangThaiDeXuat.NHAP]
+
+    # Get nam_hoc options
+    nam_hoc_list = [n[0] for n in db.session.query(DeXuat.nam_hoc).filter(
+        DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value
+    ).distinct().order_by(DeXuat.nam_hoc.desc()).all()]
 
     # Get unit names for filter dropdown
     unit_names_query = db.session.query(DonVi.ten_don_vi).join(
@@ -315,6 +324,8 @@ def approval_tracking():
                            view_mode=view_mode,
                            status_list=status_list,
                            unit_names=unit_names,
+                           nam_hoc_list=nam_hoc_list,
+                           nam_hoc_filter=nam_hoc_filter,
                            danh_hieu_list=danh_hieu_list,
                            stats=stats,
                            dept_names=DEPT_NAMES,
@@ -580,6 +591,55 @@ def confirm_khen_thuong(id):
     return redirect(url_for('admin.reward_list'))
 
 
+@admin_bp.route('/reward-list/confirm-khen-thuong-ct/<int:ct_id>', methods=['POST'])
+@login_required
+@admin_required
+def confirm_khen_thuong_ct(ct_id):
+    """Confirm KhenThuong for a single DeXuatChiTiet (per-individual confirm in Bảng 2)."""
+    from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y, HOI_DONG_VAI_TRO_DISPLAY
+    ct = DeXuatChiTiet.query.get_or_404(ct_id)
+    de_xuat = ct.de_xuat
+
+    if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+        flash('Đề xuất không ở giai đoạn chờ xác nhận khen thưởng.', 'warning')
+        return redirect(url_for('admin.reward_list'))
+
+    # Verify all 6 roles voted DONG_Y for this individual
+    for vai_tro in HOI_DONG_VAI_TRO:
+        bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+        if not bq or bq.ket_qua != KET_QUA_DONG_Y:
+            vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
+            flash(f'{vt_name} chưa biểu quyết đồng ý cho cá nhân này.', 'warning')
+            return redirect(url_for('admin.reward_list'))
+
+    existing = KhenThuong.query.filter_by(de_xuat_id=de_xuat.id, chi_tiet_id=ct.id).first()
+    if existing:
+        flash('Cá nhân này đã được xác nhận khen thưởng rồi.', 'info')
+        return redirect(url_for('admin.reward_list'))
+
+    now = datetime.utcnow()
+    kt = KhenThuong(
+        de_xuat_id=de_xuat.id,
+        chi_tiet_id=ct.id,
+        quan_nhan_id=ct.quan_nhan_id,
+        don_vi_id=de_xuat.don_vi_id,
+        ho_ten=ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi,
+        cap_bac=ct.quan_nhan.cap_bac if ct.quan_nhan else None,
+        chuc_vu=ct.quan_nhan.chuc_vu if ct.quan_nhan else None,
+        doi_tuong=ct.doi_tuong,
+        loai_danh_hieu=ct.loai_danh_hieu,
+        nam_hoc=de_xuat.nam_hoc,
+        nguoi_duyet_id=current_user.id,
+        ngay_duyet=now,
+    )
+    db.session.add(kt)
+    db.session.commit()
+
+    name = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
+    flash(f'Đã xác nhận khen thưởng cho {name}.', 'success')
+    return redirect(url_for('admin.reward_list'))
+
+
 
 
 
@@ -758,12 +818,23 @@ def reward_list():
     danh_hieu_filter = request.args.get('danh_hieu', '')
     search_query = request.args.get('q', '').strip()
 
-    query = KhenThuong.query.join(DonVi, KhenThuong.don_vi_id == DonVi.id)
+    from app.models.nomination import DanhHieu as _DanhHieu
+    from sqlalchemy import text as _text
+    _dh_alias = db.aliased(_DanhHieu)
+    # Collation mismatch between danh_hieu.ten_danh_hieu and khen_thuong.loai_danh_hieu:
+    # force both sides to the same collation in the JOIN condition.
+    _join_cond = _text(
+        'danh_hieu_1.ten_danh_hieu COLLATE utf8mb4_unicode_ci'
+        ' = khen_thuong.loai_danh_hieu COLLATE utf8mb4_unicode_ci'
+    )
+    query = KhenThuong.query\
+        .join(DonVi, KhenThuong.don_vi_id == DonVi.id)\
+        .outerjoin(_dh_alias, _join_cond)
 
     if nam_hoc_filter:
         query = query.filter(KhenThuong.nam_hoc == nam_hoc_filter)
     if unit_filter:
-        query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
+        query = query.filter(DonVi.ten_don_vi == unit_filter)
     if danh_hieu_filter:
         query = query.filter(KhenThuong.loai_danh_hieu == danh_hieu_filter)
     if search_query:
@@ -771,10 +842,9 @@ def reward_list():
 
     rewards = query.order_by(
         KhenThuong.nam_hoc.desc(),
-        DonVi.thu_tu,
+        _text('danh_hieu_1.thu_tu'),
         DonVi.ten_don_vi,
         KhenThuong.ho_ten.asc(),
-        KhenThuong.ngay_duyet.desc(),
     )\
         .paginate(page=page, per_page=20, error_out=False)
 
@@ -798,10 +868,10 @@ def reward_list():
         stats_by_danh_hieu[dh] = KhenThuong.query.filter_by(loai_danh_hieu=dh).count()
 
     # Bảng 1: individuals at HOI_DONG stage, all dept approved, not yet admin_approved
-    pending_final_nominations = _get_pending_final_individuals()
+    pending_final_nominations = _get_pending_final_individuals(nam_hoc=nam_hoc_filter)
 
     # Bảng 2: nominations at PHE_DUYET_CUOI stage + Hội đồng vote status
-    phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items()
+    phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter)
 
     # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
@@ -864,12 +934,13 @@ def reward_list():
                            cstd_consecutive=cstd_consecutive)
 
 
-def _get_pending_final_individuals():
+def _get_pending_final_individuals(nam_hoc=None):
     """Bảng 1: Individuals at HOI_DONG status, all dept approved, not yet admin_approved."""
     pending = []
-    nominations_waiting = DeXuat.query.filter_by(
-        trang_thai=TrangThaiDeXuat.HOI_DONG.value
-    ).order_by(DeXuat.ngay_gui.desc()).all()
+    q = DeXuat.query.filter_by(trang_thai=TrangThaiDeXuat.HOI_DONG.value)
+    if nam_hoc:
+        q = q.filter(DeXuat.nam_hoc == nam_hoc)
+    nominations_waiting = q.order_by(DeXuat.ngay_gui.desc()).all()
 
     for dx in nominations_waiting:
         for ct in dx.chi_tiets:
@@ -904,32 +975,46 @@ def _get_pending_final_individuals():
     return pending
 
 
-def _get_phe_duyet_cuoi_items():
-    """Bảng 2: nominations at PHE_DUYET_CUOI status with per-individual Hội đồng vote summary."""
-    from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y
-    nominations = DeXuat.query.filter_by(
-        trang_thai=TrangThaiDeXuat.PHE_DUYET_CUOI.value
-    ).order_by(DeXuat.ngay_gui.desc()).all()
+def _get_phe_duyet_cuoi_items(nam_hoc=None):
+    """Bảng 2: nominations at PHE_DUYET_CUOI — returns a flat list of per-individual rows,
+    sorted by DanhHieu.thu_tu (award type order) then by unit name."""
+    from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y
+    from app.models.nomination import DanhHieu
+    q = DeXuat.query.filter_by(trang_thai=TrangThaiDeXuat.PHE_DUYET_CUOI.value)\
+        .join(DonVi, DeXuat.don_vi_id == DonVi.id)
+    if nam_hoc:
+        q = q.filter(DeXuat.nam_hoc == nam_hoc)
+    nominations = q.order_by(DonVi.ten_don_vi).all()
 
-    result = []
+    # Build award-type order map
+    danh_hieu_order = {
+        dh.ten_danh_hieu: dh.thu_tu
+        for dh in DanhHieu.query.all()
+    }
+
+    rows = []
     for dx in nominations:
-        items = []
-        all_done = True  # all 6 roles voted DONG_Y for all chi_tiets
         for ct in dx.chi_tiets:
-            votes = {}  # vai_tro -> HoiDongBieuQuyet
-            ct_done = True
+            votes = {}
+            ct_all_dong_y = True
             for vai_tro in HOI_DONG_VAI_TRO:
                 bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
                 votes[vai_tro] = bq
                 if not bq or bq.ket_qua != KET_QUA_DONG_Y:
-                    ct_done = False
-            if not ct_done:
-                all_done = False
-            # Check if KhenThuong already confirmed for this individual
+                    ct_all_dong_y = False
             is_confirmed = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
-            items.append({'ct': ct, 'votes': votes, 'is_confirmed': is_confirmed})
-        result.append({'dx': dx, 'chi_tiets': items, 'all_voted_dong_y': all_done})
-    return result
+            rows.append({
+                'dx': dx,
+                'ct': ct,
+                'votes': votes,
+                'all_voted_dong_y': ct_all_dong_y,
+                'is_confirmed': is_confirmed,
+                '_sort_award': danh_hieu_order.get(ct.loai_danh_hieu, 999),
+                '_sort_unit': dx.don_vi.ten_don_vi if dx.don_vi else '',
+            })
+
+    rows.sort(key=lambda r: (r['_sort_award'], r['_sort_unit']))
+    return rows
 
 
 

@@ -82,6 +82,15 @@
             {# Preserve view mode #}
             <input type="hidden" name="view" value="{{ view_mode }}">
             <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
+            {# Năm học — required to show data #}
+            <select class="form-select form-select-sm {% if not nam_hoc_filter %}border-warning{% endif %}"
+                    name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
+                <option value="">-- Chọn năm học --</option>
+                {% for nh in nam_hoc_list %}
+                <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
+                {% endfor %}
+            </select>
+            {% if nam_hoc_filter %}
             <select class="form-select form-select-sm" name="status" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Tất cả trạng thái</option>
                 {% for s in status_list %}
@@ -111,7 +120,8 @@
                     <i class="bi bi-search"></i>
                 </button>
             </div>
-            {% if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
+            {% endif %}
+            {% if nam_hoc_filter or status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
             <a href="{{ url_for('admin.approval_tracking', view=view_mode) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-x-lg me-1"></i>Xóa lọc
             </a>
@@ -120,7 +130,14 @@
     </div>
 </div>
 
-{% if unit_groups %}
+{% if not nam_hoc_filter %}
+<div class="card-section">
+    <div class="card-body-custom text-center py-5 text-muted">
+        <i class="bi bi-calendar3" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-0">Vui lòng <strong>chọn năm học</strong> để xem danh sách theo dõi phê duyệt.</p>
+    </div>
+</div>
+{% elif unit_groups %}
 <div class="accordion" id="trackingAccordion">
     {% for ug in unit_groups %}
     {% set ug_index = loop.index %}
@@ -364,17 +381,19 @@
 </div>
 
 {% else %}
+{% if nam_hoc_filter %}
 <div class="card-section">
     <div class="empty-state">
         <i class="bi bi-eye d-block"></i>
-        <p>Không có đề xuất nào{{ ' phù hợp bộ lọc' if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query else '' }}</p>
+        <p>Không có đề xuất nào{{ ' phù hợp bộ lọc' if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query else ' trong năm học ' ~ nam_hoc_filter }}</p>
         {% if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
-        <a href="{{ url_for('admin.approval_tracking') }}" class="btn btn-sm btn-outline-navy">
+        <a href="{{ url_for('admin.approval_tracking', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-outline-navy">
             <i class="bi bi-x-lg me-1"></i>Xóa bộ lọc
         </a>
         {% endif %}
     </div>
 </div>
+{% endif %}
 {% endif %}
 
 <!-- Nomination ID data for batch approve -->
