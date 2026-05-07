@@ -11,6 +11,15 @@
     </div>
     {% if pending_reviews %}
         <div class="d-flex gap-2 align-items-center flex-wrap">
+            <!-- View mode toggle -->
+            <div class="btn-group btn-group-sm" role="group" id="viewModeGroup" title="Chế độ hiển thị">
+                <button type="button" class="btn btn-outline-navy" id="btnViewCompact" title="Rút gọn – chỉ hiện thao tác">
+                    <i class="bi bi-list-ul me-1"></i>Rút gọn
+                </button>
+                <button type="button" class="btn btn-outline-navy" id="btnViewFull" title="Đầy đủ – hiện tất cả tiêu chí">
+                    <i class="bi bi-table me-1"></i>Đầy đủ
+                </button>
+            </div>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
                 <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
             </button>
@@ -192,15 +201,15 @@
                                 <th>Danh hiệu</th>
                                 {% if display_fields %}
                                 {% for field in display_fields %}
-                                <th><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
+                                <th class="col-criteria"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
                                 {% endfor %}
                                 {% endif %}
                                 {% if show_evidence %}
-                                <th style="width:60px;">MC</th>
+                                <th class="col-evidence" style="width:60px;">MC</th>
                                 {% endif %}
                                 {% if is_ttr_role %}
                                     {% for gdept in gate_dept_fields %}
-                                    <th class="text-center bg-light" colspan="{{ gdept.fields|length }}" style="font-size:0.72rem; border-left:2px solid #dee2e6;">
+                                    <th class="text-center bg-light col-gate-criteria" colspan="{{ gdept.fields|length }}" style="font-size:0.72rem; border-left:2px solid #dee2e6;">
                                         {{ gdept.dept }}
                                     </th>
                                     {% endfor %}
@@ -216,10 +225,10 @@
                                 <th style="width:40px;" class="text-center">CT</th>
                             </tr>
                             {% if is_ttr_role and gate_dept_fields %}
-                            <tr class="table-light" style="font-size:0.72rem;">
+                            <tr class="table-light col-gate-criteria" style="font-size:0.72rem;">
                                 <th colspan="5"></th>
-                                {% if display_fields %}{% for f in display_fields %}<th></th>{% endfor %}{% endif %}
-                                {% if show_evidence %}<th></th>{% endif %}
+                                {% if display_fields %}{% for f in display_fields %}<th class="col-criteria"></th>{% endfor %}{% endif %}
+                                {% if show_evidence %}<th class="col-evidence"></th>{% endif %}
                                 {% for gdept in gate_dept_fields %}
                                     {% for field in gdept.fields %}
                                     <th class="text-center {% if not loop.first %}{% else %}border-left-dept{% endif %}" title="{{ field_labels[field] if field in field_labels else field }}">
@@ -274,7 +283,7 @@
                                     {% endif %}
                                 </td>
                                 {% for field in display_fields %}
-                                <td>
+                                <td class="col-criteria">
                                     {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}
                                         <small class="text-muted">-</small>
                                     {% elif field == 'nckh_noi_dung' %}
@@ -292,7 +301,7 @@
                                 </td>
                                 {% endfor %}
                                 {% if show_evidence %}
-                                <td class="text-center">
+                                <td class="col-evidence text-center">
                                     {% if ct.minh_chungs %}
                                     <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
                                             data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}"
@@ -308,7 +317,7 @@
                                     {# Gate sub-dept criteria columns #}
                                     {% for gdept in gate_dept_fields %}
                                         {% for field in gdept.fields %}
-                                        <td class="text-center {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.8rem;">
+                                        <td class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.8rem;">
                                             {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
                                             {% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
                                         </td>
@@ -500,11 +509,51 @@
     .stat-mini i { font-size: 1rem; }
     .unit-card.filtered-out { display: none !important; }
     .border-left-dept { border-left: 2px solid #dee2e6 !important; }
+
+    /* Compact view: hide criteria, evidence, and gate-criteria columns */
+    .view-compact .col-criteria,
+    .view-compact .col-evidence,
+    .view-compact .col-gate-criteria { display: none !important; }
+
+    /* Active state for view mode buttons */
+    #viewModeGroup .btn.active {
+        background: var(--navy-primary);
+        color: #fff;
+        border-color: var(--navy-primary);
+    }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    // ===================== VIEW MODE (COMPACT / FULL) =====================
+    const VM_KEY = 'pendingListViewMode';
+    const accordion = document.getElementById('approvalAccordion');
+    const btnCompact = document.getElementById('btnViewCompact');
+    const btnFull = document.getElementById('btnViewFull');
+
+    function applyViewMode(mode) {
+        if (!accordion) return;
+        if (mode === 'compact') {
+            accordion.classList.add('view-compact');
+            btnCompact && btnCompact.classList.add('active');
+            btnFull && btnFull.classList.remove('active');
+        } else {
+            accordion.classList.remove('view-compact');
+            btnFull && btnFull.classList.add('active');
+            btnCompact && btnCompact.classList.remove('active');
+        }
+        try { localStorage.setItem(VM_KEY, mode); } catch(e) {}
+    }
+
+    // Restore saved mode (default: full)
+    let savedMode = 'full';
+    try { savedMode = localStorage.getItem(VM_KEY) || 'full'; } catch(e) {}
+    applyViewMode(savedMode);
+
+    btnCompact && btnCompact.addEventListener('click', () => applyViewMode('compact'));
+    btnFull && btnFull.addEventListener('click', () => applyViewMode('full'));
 
     // ===================== UNIT FILTER =====================
     const unitFilter = document.getElementById('unitFilter');
