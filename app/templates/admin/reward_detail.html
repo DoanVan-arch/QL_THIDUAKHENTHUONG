@@ -213,7 +213,7 @@
     <div class="card-body-custom">
         <div class="d-flex flex-wrap gap-2">
             {% for mc in ct.minh_chungs %}
-            <a href="{{ url_for('static', filename='uploads/' + mc.duong_dan) }}"
+            <a href="{{ url_for('uploaded_file', filename=mc.duong_dan) }}"
                target="_blank" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-file-earmark me-1"></i>{{ mc.ten_file_goc or mc.loai_minh_chung }}
             </a>

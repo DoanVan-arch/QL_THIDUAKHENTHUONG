@@ -84,6 +84,7 @@ class QuanNhan(db.Model):
     hoc_vi = Column(String(50), default='Không')
     trinh_do_hoc_van = Column(String(50), nullable=True)
     ngoai_ngu = Column(String(100), nullable=True)
+    lop = Column(String(100), nullable=True)          # Lớp (chỉ dành cho học viên)
     la_chi_huy = Column(Boolean, default=False)
     la_bi_thu = Column(Boolean, default=False)
     la_dang_vien = Column(Boolean, default=False)

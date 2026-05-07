@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>{{ qn.cap_bac or '-' }}</td>
                         <td>{{ qn.chuc_vu or '-' }}</td>
                         <td>{{ qn.don_vi_truc_thuoc or '-' }}</td>
-                        <td>{{ qn.doi_tuong or '-' }}</td>
+                        <td>{{ qn.doi_tuong or '-' }}{% if qn.is_student and qn.lop %} <span class="text-muted small">({{ qn.lop }})</span>{% endif %}</td>
                         <td>{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</td>
                         <td>{{ qn.hoc_vi if qn.hoc_vi != 'Không' else '-' }}</td>
                         <td>

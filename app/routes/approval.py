@@ -40,6 +40,8 @@ def _managed_gate_columns(role):
         return [
             PhongDuyet.BAN_CNTT.value,
             PhongDuyet.BAN_TAC_HUAN.value,
+            PhongDuyet.BAN_KHAOTHI.value,
+            PhongDuyet.UY_BAN_KIEMTRA.value,
             PhongDuyet.BAN_QUANLUC.value,
         ]
     return []
@@ -55,6 +57,8 @@ _GROUP_CONFIRMATION = {
         PhongDuyet.BAN_TAC_HUAN.value,
         PhongDuyet.BAN_QUANLUC.value,
         PhongDuyet.BAN_CNTT.value,
+        PhongDuyet.BAN_KHAOTHI.value,
+        PhongDuyet.UY_BAN_KIEMTRA.value,
     },
 }
 

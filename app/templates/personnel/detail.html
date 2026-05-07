@@ -53,6 +53,12 @@
                         <small class="text-muted">Đối tượng</small>
                         <div>{{ qn.doi_tuong or '-' }}</div>
                     </div>
+                    {% if qn.is_student %}
+                    <div class="col-md-3">
+                        <small class="text-muted">Lớp</small>
+                        <div>{{ qn.lop or '-' }}</div>
+                    </div>
+                    {% endif %}
                     <div class="col-md-3">
                         <small class="text-muted">Đơn vị</small>
                         <div>{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</div>

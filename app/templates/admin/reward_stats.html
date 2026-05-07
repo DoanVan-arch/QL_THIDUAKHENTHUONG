@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Thống kê khen thưởng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-bar-chart me-2"></i>Thống kê khen thưởng</h4>
+        <small class="text-muted">Tìm kiếm cá nhân đạt danh hiệu nhiều năm</small>
+    </div>
+    <a href="{{ url_for('admin.reward_list') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Danh sách khen thưởng
+    </a>
+</div>
+
+<!-- Search Form -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-search me-2"></i>Điều kiện tìm kiếm</h6>
+    </div>
+    <div class="card-body-custom">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Loại danh hiệu</label>
+                <select class="form-select" name="danh_hieu" required>
+                    <option value="">-- Chọn danh hiệu --</option>
+                    {% for dh in danh_hieu_list %}
+                    <option value="{{ dh }}" {% if selected_danh_hieu == dh %}selected{% endif %}>{{ dh }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Số năm</label>
+                <input type="number" class="form-control" name="so_nam" min="1" max="20"
+                       value="{{ so_nam }}" placeholder="VD: 2" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Hình thức</label>
+                <div class="d-flex gap-3 mt-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="lien_tiep" id="r_lien_tiep"
+                               value="1" {% if lien_tiep %}checked{% endif %}>
+                        <label class="form-check-label" for="r_lien_tiep">Liên tiếp</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="lien_tiep" id="r_khong_lien_tiep"
+                               value="0" {% if not lien_tiep %}checked{% endif %}>
+                        <label class="form-check-label" for="r_khong_lien_tiep">Không liên tiếp</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-navy w-100">
+                    <i class="bi bi-search me-1"></i>Tìm kiếm
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if searched %}
+<!-- Results -->
+<div class="card-section">
+    <div class="card-header-custom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            Kết quả: <strong>{{ selected_danh_hieu }}</strong>
+            {{ so_nam }} năm {{ 'liên tiếp' if lien_tiep else '(không cần liên tiếp)' }}
+            <span class="badge bg-primary ms-2">{{ results|length }} người</span>
+        </h6>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if results %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ và tên</th>
+                        <th>Đơn vị</th>
+                        <th>Số lần / Chuỗi dài nhất</th>
+                        <th>Các năm</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in results %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            {% if item.qn %}
+                            <a href="{{ url_for('admin.admin_personnel_detail', id=item.qn.id) }}"
+                               class="text-decoration-none fw-500">{{ item.ho_ten }}</a>
+                            {% else %}
+                            {{ item.ho_ten }}
+                            {% endif %}
+                        </td>
+                        <td>{{ item.don_vi.ten_don_vi if item.don_vi else '-' }}</td>
+                        <td>
+                            <span class="badge bg-success">{{ item.count }}</span>
+                        </td>
+                        <td class="text-muted small">{{ item.years | join(', ') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+            Không tìm thấy ai đạt <strong>{{ selected_danh_hieu }}</strong>
+            {{ so_nam }} năm {{ 'liên tiếp' if lien_tiep else '' }}.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
