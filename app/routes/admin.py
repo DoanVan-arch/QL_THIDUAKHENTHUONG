@@ -16,6 +16,7 @@ from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetCh
 from app.models.reward import KhenThuong
 from app.models.hoi_dong import HoiDongBieuQuyet, HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY
 from app.models.catalog import ChucVuOption, CapBacOption, DoiTuongOption
+from app.models.notification import ThongBao
 from app.utils.decorators import admin_required, admin_or_reward_viewer_required
 from app.utils.file_upload import save_upload, delete_upload
 from datetime import datetime
@@ -65,8 +66,7 @@ _TTR_GATE_COLUMNS = {
         'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
     ],
     'Thủ trưởng Phòng TM-HC': [
-        'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí',
-        'Ủy ban Kiểm tra', 'Ban Quân lực',
+        'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Quân lực',
     ],
 }
 
@@ -809,7 +809,91 @@ def reject_from_tracking(id):
 
     de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
     db.session.commit()
+
+    # Notify unit account
+    unit_user = User.query.filter_by(don_vi_id=de_xuat.don_vi_id, role=Role.UNIT_USER).first()
+    if unit_user:
+        thong_bao = ThongBao(
+            user_id=unit_user.id,
+            de_xuat_id=de_xuat.id,
+            loai='tu_choi',
+            tieu_de=f'Ban Tuyên huấn (Admin) từ chối đề xuất năm học {de_xuat.nam_hoc}',
+            noi_dung=f'Lý do: {ly_do}',
+        )
+        db.session.add(thong_bao)
+        db.session.commit()
+
     flash('Đã từ chối đề xuất.', 'warning')
+    return redirect(url_for('admin.approval_tracking'))
+
+
+@admin_bp.route('/tracking/ct/<int:ct_id>/reject', methods=['POST'])
+@login_required
+@admin_required
+def reject_individual_from_tracking(ct_id):
+    """Admin rejects a single individual from tracking page, notifies unit."""
+    ct = DeXuatChiTiet.query.get_or_404(ct_id)
+    de_xuat = ct.de_xuat
+
+    ly_do = request.form.get('ly_do', '').strip()
+    if not ly_do:
+        flash('Vui lòng nhập lý do từ chối.', 'danger')
+        return redirect(url_for('admin.approval_tracking'))
+
+    # Mark this individual as rejected via admin PheDuyet chi_tiet record
+    # First ensure admin PheDuyet row exists
+    admin_pd = PheDuyet.query.filter_by(
+        de_xuat_id=de_xuat.id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
+    ).first()
+    if not admin_pd:
+        admin_pd = PheDuyet(
+            de_xuat_id=de_xuat.id,
+            phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
+            ket_qua=KetQuaDuyet.TU_CHOI.value,
+        )
+        db.session.add(admin_pd)
+        db.session.flush()
+
+    # Update or create per-individual record
+    kq_ct = KetQuaDuyetChiTiet.query.filter_by(
+        phe_duyet_id=admin_pd.id, chi_tiet_id=ct.id
+    ).first()
+    if kq_ct:
+        kq_ct.ket_qua = KetQuaDuyet.TU_CHOI.value
+        kq_ct.ly_do = ly_do
+    else:
+        kq_ct = KetQuaDuyetChiTiet(
+            phe_duyet_id=admin_pd.id,
+            chi_tiet_id=ct.id,
+            ket_qua=KetQuaDuyet.TU_CHOI.value,
+            ly_do=ly_do,
+        )
+        db.session.add(kq_ct)
+
+    # Reset admin_approved flag if it was set
+    ct.admin_approved = False
+
+    # Move nomination back to TU_CHOI state
+    de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
+    db.session.commit()
+
+    # Notify unit account
+    unit_user = User.query.filter_by(don_vi_id=de_xuat.don_vi_id, role=Role.UNIT_USER).first()
+    if unit_user:
+        ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
+        thong_bao = ThongBao(
+            user_id=unit_user.id,
+            de_xuat_id=de_xuat.id,
+            chi_tiet_id=ct.id,
+            loai='tu_choi',
+            tieu_de=f'Ban Tuyên huấn (Admin) từ chối: {ho_ten}',
+            noi_dung=f'Lý do: {ly_do}. Đề xuất năm học {de_xuat.nam_hoc}.',
+        )
+        db.session.add(thong_bao)
+        db.session.commit()
+
+    ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
+    flash(f'Đã từ chối "{ho_ten}" và gửi thông báo về đơn vị.', 'warning')
     return redirect(url_for('admin.approval_tracking'))
 
 
@@ -2033,8 +2117,20 @@ def all_personnel():
 @admin_required
 def admin_personnel_detail(id):
     qn = QuanNhan.query.get_or_404(id)
+
+    # Nomination history: all DeXuatChiTiet rows for this person
+    nominations_history = DeXuatChiTiet.query.filter_by(quan_nhan_id=qn.id)\
+        .join(DeXuat, DeXuatChiTiet.de_xuat_id == DeXuat.id)\
+        .order_by(DeXuat.nam_hoc.desc()).all()
+
+    # Reward history: all KhenThuong rows for this person
+    rewards_history = KhenThuong.query.filter_by(quan_nhan_id=qn.id)\
+        .order_by(KhenThuong.nam_hoc.desc()).all()
+
     return render_template('admin/personnel_detail.html', qn=qn,
-                           loai_chung_chi_list=[e.value for e in LoaiChungChi])
+                           loai_chung_chi_list=[e.value for e in LoaiChungChi],
+                           nominations_history=nominations_history,
+                           rewards_history=rewards_history)
 
 
 # ------------------------------------------------------------------

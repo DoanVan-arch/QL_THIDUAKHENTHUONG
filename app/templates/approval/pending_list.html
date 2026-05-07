@@ -80,6 +80,8 @@
 </div>
 {% else %}
 {% set show_evidence = 'nckh_minh_chung' in allowed_fields %}
+{% set display_fields = table_columns %}
+{% set is_ttr_role = managed_dept_columns|length > 0 %}
 
 {% if pending_reviews %}
 
@@ -160,6 +162,25 @@
         </div>
         <div id="unit-{{ pd.id }}" class="collapse show">
             <div class="p-0">
+                {# Gate banner for TTR roles #}
+                {% if is_ttr_role %}
+                {% set gate_pd = group_gate_by_pd[pd.id] if group_gate_by_pd is defined and pd.id in group_gate_by_pd else None %}
+                {% if gate_pd and not gate_pd.can_review %}
+                <div class="alert alert-warning py-2 px-3 m-2 mb-0 d-flex align-items-center gap-2" style="font-size:0.82rem;">
+                    <i class="bi bi-lock-fill text-warning"></i>
+                    <span>Chưa đủ điều kiện phê duyệt. Đang chờ:
+                        {% for dept in gate_pd.pending %}
+                        <span class="badge bg-warning text-dark me-1">{{ dept }}</span>
+                        {% endfor %}
+                    </span>
+                </div>
+                {% elif gate_pd and gate_pd.can_review %}
+                <div class="alert alert-success py-2 px-3 m-2 mb-0 d-flex align-items-center gap-2" style="font-size:0.82rem;">
+                    <i class="bi bi-unlock-fill text-success"></i>
+                    <span>Tất cả ban đã duyệt – bạn có thể phê duyệt.</span>
+                </div>
+                {% endif %}
+                {% endif %}
                 <div class="table-responsive">
                     <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
                         <thead>
@@ -169,13 +190,24 @@
                                 <th>Cấp bậc / Chức vụ</th>
                                 <th>Đối tượng</th>
                                 <th>Danh hiệu</th>
+                                {% if display_fields %}
                                 {% for field in display_fields %}
                                 <th><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
                                 {% endfor %}
+                                {% endif %}
                                 {% if show_evidence %}
                                 <th style="width:60px;">MC</th>
                                 {% endif %}
-                                {% if managed_dept_columns %}
+                                {% if is_ttr_role %}
+                                    {% for gdept in gate_dept_fields %}
+                                    <th class="text-center bg-light" colspan="{{ gdept.fields|length }}" style="font-size:0.72rem; border-left:2px solid #dee2e6;">
+                                        {{ gdept.dept }}
+                                    </th>
+                                    {% endfor %}
+                                    {% for mcol in managed_dept_columns %}
+                                    <th class="text-center" style="width:74px; font-size:0.72rem;"><small>{{ mcol }}</small></th>
+                                    {% endfor %}
+                                {% elif managed_dept_columns %}
                                     {% for mcol in managed_dept_columns %}
                                     <th style="width:74px;"><small>{{ mcol }}</small></th>
                                     {% endfor %}
@@ -183,6 +215,22 @@
                                 <th style="width:100px;" class="text-center">Đang chờ</th>
                                 <th style="width:40px;" class="text-center">CT</th>
                             </tr>
+                            {% if is_ttr_role and gate_dept_fields %}
+                            <tr class="table-light" style="font-size:0.72rem;">
+                                <th colspan="5"></th>
+                                {% if display_fields %}{% for f in display_fields %}<th></th>{% endfor %}{% endif %}
+                                {% if show_evidence %}<th></th>{% endif %}
+                                {% for gdept in gate_dept_fields %}
+                                    {% for field in gdept.fields %}
+                                    <th class="text-center {% if not loop.first %}{% else %}border-left-dept{% endif %}" title="{{ field_labels[field] if field in field_labels else field }}">
+                                        {{ field_labels[field] if field in field_labels else field }}
+                                    </th>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for mcol in managed_dept_columns %}<th></th>{% endfor %}
+                                <th colspan="2"></th>
+                            </tr>
+                            {% endif %}
                         </thead>
                         <tbody>
                             {% for ct in pd.de_xuat.chi_tiets %}
@@ -256,7 +304,31 @@
                                     {% endif %}
                                 </td>
                                 {% endif %}
-                                {% if managed_dept_columns %}
+                                {% if is_ttr_role %}
+                                    {# Gate sub-dept criteria columns #}
+                                    {% for gdept in gate_dept_fields %}
+                                        {% for field in gdept.fields %}
+                                        <td class="text-center {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.8rem;">
+                                            {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
+                                            {% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                                        </td>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {# Gate dept status badges #}
+                                    {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                                    {% for mcol in managed_dept_columns %}
+                                    {% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                                    <td class="text-center">
+                                        {% if gate_kq == 'Đồng ý' %}
+                                        <span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>
+                                        {% elif gate_kq == 'Từ chối' %}
+                                        <span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                {% elif managed_dept_columns %}
                                     {% for mcol in managed_dept_columns %}
                                     {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
                                     {% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
@@ -427,6 +499,7 @@
     }
     .stat-mini i { font-size: 1rem; }
     .unit-card.filtered-out { display: none !important; }
+    .border-left-dept { border-left: 2px solid #dee2e6 !important; }
 </style>
 
 <script>

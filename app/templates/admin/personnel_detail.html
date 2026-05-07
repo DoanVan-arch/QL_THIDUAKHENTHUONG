@@ -166,6 +166,125 @@
     </div>
 </div>
 
+<!-- Nomination History -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-file-earmark-text me-2"></i>Lịch sử đề xuất khen thưởng</h5>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if nominations_history %}
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th>Năm học</th>
+                        <th>Đơn vị</th>
+                        <th>Danh hiệu đề xuất</th>
+                        <th>Đối tượng</th>
+                        <th class="text-center">Trạng thái ĐX</th>
+                        <th class="text-center">Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ct in nominations_history %}
+                    {% set dx = ct.de_xuat %}
+                    <tr>
+                        <td>{{ dx.nam_hoc }}</td>
+                        <td>{{ dx.don_vi.ten_don_vi if dx.don_vi else '-' }}</td>
+                        <td>
+                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
+                            <span class="badge bg-warning text-dark">CSTD</span>
+                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
+                            <span class="badge bg-info text-dark">CSTT</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ ct.doi_tuong or '-' }}</small></td>
+                        <td class="text-center">
+                            {% set sc_map = {
+                                'Chờ duyệt': 'badge-pending',
+                                'Đang duyệt': 'badge-reviewing',
+                                'Hội đồng xét duyệt': 'badge-approved',
+                                'Phê duyệt cuối': 'badge-final',
+                                'Từ chối': 'badge-rejected'
+                            } %}
+                            {% set sc = sc_map[dx.trang_thai] if dx.trang_thai in sc_map else 'badge-draft' %}
+                            <span class="badge-status {{ sc }}" style="font-size:0.72rem;">{{ dx.trang_thai }}</span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}"
+                               class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết phê duyệt">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-3">
+            <i class="bi bi-file-earmark-text d-block"></i>
+            <small>Chưa có đề xuất khen thưởng nào</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Reward History -->
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h5><i class="bi bi-trophy me-2"></i>Lịch sử khen thưởng đã được duyệt</h5>
+    </div>
+    <div class="card-body-custom p-0">
+        {% if rewards_history %}
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th>Năm học</th>
+                        <th>Đơn vị</th>
+                        <th>Danh hiệu</th>
+                        <th>Ngày xác nhận</th>
+                        <th class="text-center">Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kt in rewards_history %}
+                    <tr>
+                        <td>{{ kt.nam_hoc }}</td>
+                        <td>{{ kt.don_vi.ten_don_vi if kt.don_vi else '-' }}</td>
+                        <td>
+                            {% if kt.loai_danh_hieu == 'Chiến sĩ thi đua' %}
+                            <span class="badge bg-warning text-dark">CSTD</span>
+                            {% elif kt.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
+                            <span class="badge bg-info text-dark">CSTT</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ kt.loai_danh_hieu or '-' }}</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ kt.created_at.strftime('%d/%m/%Y') if kt.created_at else '-' }}</small></td>
+                        <td class="text-center">
+                            <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
+                               class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết khen thưởng">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-3">
+            <i class="bi bi-trophy d-block"></i>
+            <small>Chưa có khen thưởng nào được xác nhận</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <!-- Add Certificate Modal -->
 <div class="modal fade" id="addCertModal" tabindex="-1">
     <div class="modal-dialog">
