@@ -1002,7 +1002,7 @@ def reward_stats():
                            searched=searched)
 
 
-
+@admin_bp.route('/reward-list')
 @login_required
 @admin_or_reward_viewer_required
 def reward_list():
