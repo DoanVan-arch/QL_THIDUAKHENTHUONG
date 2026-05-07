@@ -440,60 +440,75 @@
             </div>
              <!-- Thành tích quần chúng khác -->
           
-    <div class="form-section" id="section-doan-the">
-        <div class="form-section-title" style="color: #E67E22;">
-            <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn thể (nếu có)
+    <!-- Thành tích quần chúng khác -->
+<div class="form-section" id="section-doan-the" style="display: none;">
+    <div class="form-section-title" style="color: #E67E22;">
+        <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn thể (nếu có)
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Mức độ hoàn thành nhiệm vụ của tổ chức đoàn thể</label>
+            <input type="text" 
+                   class="form-control" 
+                   name="ket_qua_doan_the" 
+                   id="ket_qua_doan_the" 
+                   placeholder="Ví dụ: Hoàn thành tốt, Hoàn thành xuất sắc...">
         </div>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">Mức độ hoàn thành nhiệm vụ của tổ chức đoàn thể</label>
-                <input type="text" 
-                       class="form-control" 
-                       name="ket_qua_doan_the" 
-                       id="ket_qua_doan_the" 
-                       placeholder="Ví dụ: Hoàn thành tốt, Hoàn thành xuất sắc...">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Hình thức khen thưởng của tổ chức đoàn thể</label>
-                <input type="text" 
-                       class="form-control" 
-                       name="hinh_thuc_khen_thuong_qc" 
-                       id="hinh_thuc_khen_thuong_qc" 
-                       placeholder="Ví dụ: Giấy khen, Bằng khen, Cờ thi đua...">
-            </div>
-            <div class="col-md-12">
-                <label class="form-label">Minh chứng (nhiều file) - nếu có</label>
-                <input type="file" 
-                       class="form-control" 
-                       name="minh_chung_doan_the[]" 
-                       id="minh_chung_doan_the" 
-                       accept="image/*,.pdf" 
-                       multiple>
-                <small class="text-muted">Chấp nhận file ảnh (JPG, PNG) hoặc PDF</small>
-            </div>
+        <div class="col-md-6">
+            <label class="form-label">Hình thức khen thưởng của tổ chức đoàn thể</label>
+            <input type="text" 
+                   class="form-control" 
+                   name="hinh_thuc_khen_thuong_qc" 
+                   id="hinh_thuc_khen_thuong_qc" 
+                   placeholder="Ví dụ: Giấy khen, Bằng khen, Cờ thi đua...">
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Minh chứng (nhiều file) - nếu có</label>
+            <input type="file" 
+                   class="form-control" 
+                   name="minh_chung_doan_the[]" 
+                   id="minh_chung_doan_the" 
+                   accept="image/*,.pdf" 
+                   multiple>
+            <small class="text-muted d-block mt-1">Chấp nhận file ảnh (JPG, PNG) hoặc PDF</small>
         </div>
     </div>
+</div>
 
-             
-             <div class="form-section" id="section-phu-nu">
-                <div class="form-section-title" style="color: #E67E22;">
-                    <i class="bi bi-star me-1"></i>Thành tích cá nhân hội phụ nữ (nếu có)
-                </div>
-                <div class="row g-3">
-                   <div class="col-md-6">
-                        <label class="form-label">Xếp loại hội phụ nữ</label>
-                        <input type="text" class="form-control" name="ket_qua_phu_nu" id="ket_qua_hoi_phu_nu" placeholder="Nếu tham gia hội phụ nữ...">
-                    </div>
-                     <div class="col-md-6">
-                        <label class="form-label">Hình thức khen thưởng của hội phụ nữ</label>
-                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_pn" id="hinh_thuc_khen_thuong_pn" placeholder="Nếu có khen thưởng hội phụ nữ...">
-                    </div>
-                    <!-- <div class="col-md-6">
-                        <label class="form-label">Minh chứng  (nhiều file) nếu có</label>
-                        <input type="file" class="form-control" name="minh_chung_doan_the" id="minh_chung_doan_the" accept="image/*,.pdf" multiple>
-                    </div> -->
-                </div>
-            </div>
+<div class="form-section" id="section-phu-nu" style="display: none;">
+    <div class="form-section-title" style="color: #E67E22;">
+        <i class="bi bi-star me-1"></i>Thành tích cá nhân hội phụ nữ (nếu có)
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Xếp loại hội phụ nữ</label>
+            <input type="text" 
+                   class="form-control" 
+                   name="ket_qua_phu_nu" 
+                   id="ket_qua_hoi_phu_nu" 
+                   placeholder="Ví dụ: Hoàn thành tốt, Hoàn thành xuất sắc...">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hình thức khen thưởng của hội phụ nữ</label>
+            <input type="text" 
+                   class="form-control" 
+                   name="hinh_thuc_khen_thuong_pn" 
+                   id="hinh_thuc_khen_thuong_pn" 
+                   placeholder="Ví dụ: Giấy khen, Bằng khen, Cờ thi đua...">
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Minh chứng (nhiều file) - nếu có</label>
+            <input type="file" 
+                   class="form-control" 
+                   name="minh_chung_phu_nu[]" 
+                   id="minh_chung_phu_nu" 
+                   accept="image/*,.pdf" 
+                   multiple>
+            <small class="text-muted d-block mt-1">Chấp nhận file ảnh (JPG, PNG) hoặc PDF</small>
+        </div>
+    </div>
+</div>
+
         
             <!-- Thành tích cá nhân khác -->
             <div class="form-section">
