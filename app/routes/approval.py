@@ -40,8 +40,6 @@ def _managed_gate_columns(role):
         return [
             PhongDuyet.BAN_CNTT.value,
             PhongDuyet.BAN_TAC_HUAN.value,
-            PhongDuyet.BAN_KHAOTHI.value,
-            PhongDuyet.UY_BAN_KIEMTRA.value,
             PhongDuyet.BAN_QUANLUC.value,
         ]
     return []
@@ -54,11 +52,9 @@ _GROUP_CONFIRMATION = {
         PhongDuyet.BAN_CTCQ.value,
     },
     Role.THU_TRUONG_PHONG_TMHC: {
+        PhongDuyet.BAN_CNTT.value,
         PhongDuyet.BAN_TAC_HUAN.value,
         PhongDuyet.BAN_QUANLUC.value,
-        PhongDuyet.BAN_CNTT.value,
-        PhongDuyet.BAN_KHAOTHI.value,
-        PhongDuyet.UY_BAN_KIEMTRA.value,
     },
 }
 
@@ -375,6 +371,22 @@ def pending_list():
     field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
     managed_dept_columns = _managed_gate_columns(current_user.role)
 
+    # For Thủ trưởng roles: build ordered list of {dept_name, fields} for gate sub-departments
+    # so the template can show criteria columns grouped by department
+    gate_dept_fields = []  # [{'dept': dept_name, 'fields': [field, ...]}, ...]
+    if current_user.role in _GROUP_CONFIRMATION:
+        phong_fields_all = get_phong_fields()
+        field_labels_all = get_field_labels()
+        for gate_dept_name in managed_dept_columns:
+            gate_role = _PHONG_TO_ROLE.get(gate_dept_name)
+            fields = []
+            if gate_role:
+                raw_fields = phong_fields_all.get(gate_role, [])
+                # exclude long text/file fields and nckh_minh_chung
+                fields = [f for f in raw_fields if f not in _LONG_TEXT_FIELDS]
+            if fields:
+                gate_dept_fields.append({'dept': gate_dept_name, 'fields': fields})
+
     # Group gate status for Thủ trưởng roles
     group_gate_by_pd = {}
     group_gate_by_ct = {}
@@ -406,6 +418,7 @@ def pending_list():
                            group_gate_by_pd=group_gate_by_pd,
                            group_gate_by_ct=group_gate_by_ct,
                            managed_dept_columns=managed_dept_columns,
+                           gate_dept_fields=gate_dept_fields,
                            nam_hoc_filter=nam_hoc_filter,
                            nam_hoc_list=nam_hoc_list)
 

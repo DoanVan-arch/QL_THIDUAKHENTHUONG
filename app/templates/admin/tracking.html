@@ -182,6 +182,13 @@
                         <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
                     </span>
                     {% endif %}
+                    {% if dx.trang_thai in ['Hội đồng xét duyệt', 'Đang duyệt', 'Phê duyệt cuối'] %}
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-auto"
+                            onclick="openRejectNominationModal({{ dx.id }}, '{{ (ug.unit_name ~ ' - ' ~ dx.nam_hoc)|e }}')"
+                            title="Từ chối toàn bộ đề xuất này">
+                        <i class="bi bi-x-circle me-1"></i><small>Từ chối ĐX</small>
+                    </button>
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -288,6 +295,13 @@
                                             <i class="bi bi-shield-check"></i>
                                         </button>
                                         {% endif %}
+                                        {% if dx.trang_thai in ['Hội đồng xét duyệt', 'Đang duyệt', 'Phê duyệt cuối'] %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                                title="Từ chối cá nhân này"
+                                                onclick="openRejectIndividualModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi)|e }}')">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -312,6 +326,13 @@
                     <span class="badge bg-gold text-dark ms-1" title="Sẵn sàng phê duyệt cuối" style="font-size:0.72rem;">
                         <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
                     </span>
+                    {% endif %}
+                    {% if dx.trang_thai in ['Hội đồng xét duyệt', 'Đang duyệt', 'Phê duyệt cuối'] %}
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-auto"
+                            onclick="openRejectNominationModal({{ dx.id }}, '{{ (ug.unit_name ~ ' - ' ~ dx.nam_hoc)|e }}')"
+                            title="Từ chối toàn bộ đề xuất này">
+                        <i class="bi bi-x-circle me-1"></i><small>Từ chối ĐX</small>
+                    </button>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -395,6 +416,76 @@
 </div>
 {% endif %}
 {% endif %}
+
+<!-- Reject individual modal -->
+<div class="modal fade" id="rejectIndividualModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="rejectIndividualForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-danger text-white">
+                    <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối cá nhân</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Thao tác này sẽ từ chối cá nhân và gửi thông báo lý do về đơn vị.
+                    </div>
+                    <p class="mb-2" style="font-size:0.9rem;">
+                        Cá nhân: <strong id="rejectIndividualName"></strong>
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                        <textarea class="form-control form-control-sm" name="ly_do" rows="3"
+                                  placeholder="Nhập lý do từ chối để thông báo về đơn vị..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reject nomination modal -->
+<div class="modal fade" id="rejectNominationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="rejectNominationForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-danger text-white">
+                    <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối toàn bộ đề xuất</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger py-2 mb-3" style="font-size:0.85rem;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Thao tác này sẽ từ chối <strong>toàn bộ đề xuất</strong> và gửi thông báo lý do về đơn vị.
+                    </div>
+                    <p class="mb-2" style="font-size:0.9rem;">
+                        Đề xuất: <strong id="rejectNominationName"></strong>
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                        <textarea class="form-control form-control-sm" name="ly_do" rows="3"
+                                  placeholder="Nhập lý do từ chối để thông báo về đơn vị..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Nomination ID data for batch approve -->
 <script type="application/json" id="nominationData">
@@ -551,6 +642,26 @@ function openIndividualApproveModal(ctId, hoTen) {
         '{{ url_for("admin.final_approve_individual", ct_id=0) }}'.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
     document.getElementById('approveIndividualName').textContent = hoTen;
     new bootstrap.Modal(document.getElementById('individualApproveModal')).show();
+}
+
+// ===================== REJECT INDIVIDUAL =====================
+function openRejectIndividualModal(ctId, hoTen) {
+    const baseUrl = '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}';
+    document.getElementById('rejectIndividualForm').action =
+        baseUrl.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+    document.getElementById('rejectIndividualName').textContent = hoTen;
+    document.querySelector('#rejectIndividualForm textarea[name="ly_do"]').value = '';
+    new bootstrap.Modal(document.getElementById('rejectIndividualModal')).show();
+}
+
+// ===================== REJECT NOMINATION =====================
+function openRejectNominationModal(dxId, label) {
+    const baseUrl = '{{ url_for("admin.reject_from_tracking", id=0) }}';
+    document.getElementById('rejectNominationForm').action =
+        baseUrl.replace('/0/', '/' + dxId + '/').replace('/0', '/' + dxId);
+    document.getElementById('rejectNominationName').textContent = label;
+    document.querySelector('#rejectNominationForm textarea[name="ly_do"]').value = '';
+    new bootstrap.Modal(document.getElementById('rejectNominationModal')).show();
 }
 </script>
 {% endblock %}
