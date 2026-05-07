@@ -152,6 +152,7 @@ def create_personnel():
             la_dang_vien='la_dang_vien' in request.form,
             la_doan_vien='la_doan_vien' in request.form,
             la_hoi_vien_phu_nu='la_hoi_vien_phu_nu' in request.form,
+            lop=request.form.get('lop', '').strip() or None,
         )
 
         if not qn.ho_ten:
@@ -216,6 +217,7 @@ def edit_personnel(id):
         qn.la_dang_vien = 'la_dang_vien' in request.form
         qn.la_doan_vien = 'la_doan_vien' in request.form
         qn.la_hoi_vien_phu_nu = 'la_hoi_vien_phu_nu' in request.form
+        qn.lop = request.form.get('lop', '').strip() or None
 
         ns_str = request.form.get('ngay_sinh', '').strip()
         if ns_str:
@@ -325,7 +327,7 @@ def _parse_bool(value):
         return value
     if isinstance(value, (int, float)):
         return value == 1
-    return str(value).strip().lower() in {'1', 'true', 'yes', 'y', 'x'}
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'y', 'x', 'có', 'co'}
 
 
 def _parse_date(value):
@@ -374,7 +376,7 @@ def download_personnel_template():
     hoc_ham_values = [e.value for e in HocHam]
     hoc_vi_values = [e.value for e in HocVi]
     chuc_vu_values = [x.ten for x in _get_chuc_vu_options()]
-    bool_values = ['0', '1']
+    bool_values = ['Không', 'Có']
 
     data_sets = [
         ('A', cap_bac_values),
@@ -389,7 +391,7 @@ def download_personnel_template():
             lookup[f'{col}{idx}'] = value
 
     headers = [
-        'ho_ten', 'cap_bac', 'doi_tuong', 'chuc_vu', 'can_cuoc_cong_dan',
+        'ho_ten', 'cap_bac', 'doi_tuong', 'lop', 'chuc_vu', 'can_cuoc_cong_dan',
         'don_vi_truc_thuoc',
         'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
         'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
@@ -397,9 +399,9 @@ def download_personnel_template():
     ]
     ws.append(headers)
     ws.append([
-        'Nguyễn Văn A', 'Trung úy', 'Giảng viên', 'Trợ lý', '012345678901',
+        'Nguyễn Văn A', 'Trung úy', 'Giảng viên', '', 'Trợ lý', '012345678901',
         'Đại đội 1', '1990-01-15', '09/2015', 'Không', 'Thạc sĩ', '12/12',
-        'Anh B2', 1, 0, 0, 0, 0,
+        'Anh B2', 'Không', 'Không', 'Không', 'Không', 'Không',
     ])
 
     max_row = 500
@@ -467,7 +469,7 @@ def import_personnel_excel():
 
     required_cols = ['ho_ten']
     optional_cols = [
-        'cap_bac', 'doi_tuong', 'chuc_vu', 'can_cuoc_cong_dan',
+        'cap_bac', 'doi_tuong', 'lop', 'chuc_vu', 'can_cuoc_cong_dan',
         'don_vi_truc_thuoc',
         'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
         'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
@@ -535,6 +537,7 @@ def import_personnel_excel():
                 cap_bac=cap_bac_val,
                 doi_tuong=doi_tuong_val,
                 chuc_danh=None,
+                lop=str(row[headers['lop']]).strip() if headers.get('lop') is not None and row[headers['lop']] is not None else None,
                 chuc_vu=str(row[headers['chuc_vu']]).strip() if headers.get('chuc_vu') is not None and row[headers['chuc_vu']] is not None else None,
                 can_cuoc_cong_dan=cccd or None,
                 don_vi_truc_thuoc=str(row[headers['don_vi_truc_thuoc']]).strip() if headers.get('don_vi_truc_thuoc') is not None and row[headers['don_vi_truc_thuoc']] is not None else None,

@@ -73,6 +73,9 @@
                 <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
                     <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
                 </a>
+                <a href="{{ url_for('admin.reward_stats') }}" class="sidebar-link {% if request.endpoint == 'admin.reward_stats' %}active{% endif %}">
+                    <i class="bi bi-bar-chart"></i> <span>Thống kê khen thưởng</span>
+                </a>
                 {% endif %}
                 {% endif %}
 
@@ -80,6 +83,9 @@
                 <div class="sidebar-section-title">KHEN THƯỞNG</div>
                 <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
                     <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
+                </a>
+                <a href="{{ url_for('admin.reward_stats') }}" class="sidebar-link {% if request.endpoint == 'admin.reward_stats' %}active{% endif %}">
+                    <i class="bi bi-bar-chart"></i> <span>Thống kê khen thưởng</span>
                 </a>
                 {% endif %}
 
@@ -90,6 +96,9 @@
                 </a>
                 <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
                     <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
+                </a>
+                <a href="{{ url_for('admin.reward_stats') }}" class="sidebar-link {% if request.endpoint == 'admin.reward_stats' %}active{% endif %}">
+                    <i class="bi bi-bar-chart"></i> <span>Thống kê khen thưởng</span>
                 </a>
                 <a href="{{ url_for('admin.all_personnel') }}" class="sidebar-link {% if request.endpoint in ['admin.all_personnel', 'admin.admin_personnel_detail', 'admin.admin_personnel_edit'] %}active{% endif %}">
                     <i class="bi bi-people"></i> <span>Hồ sơ cá nhân</span>

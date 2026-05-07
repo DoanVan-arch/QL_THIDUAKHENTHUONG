@@ -900,7 +900,109 @@ def revoke_final_approval(id):
     return redirect(url_for('admin.reward_list'))
 
 
-@admin_bp.route('/reward-list')
+@admin_bp.route('/reward-stats')
+@login_required
+@admin_or_reward_viewer_required
+def reward_stats():
+    """Thống kê khen thưởng: tìm người đạt danh hiệu X trong N năm liên tiếp."""
+    danh_hieu_list = [d[0] for d in db.session.query(KhenThuong.loai_danh_hieu)
+                      .distinct().order_by(KhenThuong.loai_danh_hieu).all() if d[0]]
+
+    selected_danh_hieu = request.args.get('danh_hieu', '').strip()
+    so_nam = request.args.get('so_nam', '', type=str).strip()
+    lien_tiep = request.args.get('lien_tiep', '1') == '1'
+    results = []
+    searched = False
+
+    if selected_danh_hieu and so_nam:
+        try:
+            so_nam_int = int(so_nam)
+        except ValueError:
+            so_nam_int = 0
+
+        if so_nam_int >= 1:
+            searched = True
+
+            def _nam_hoc_start(nh):
+                try:
+                    return int(str(nh).split('-')[0])
+                except Exception:
+                    return 0
+
+            rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.ho_ten,
+                                    KhenThuong.don_vi_id, KhenThuong.nam_hoc).filter(
+                KhenThuong.loai_danh_hieu == selected_danh_hieu,
+                KhenThuong.quan_nhan_id.isnot(None)
+            ).all()
+
+            # Group by person
+            by_person = {}
+            names = {}
+            don_vi_ids = {}
+            for qn_id, ho_ten, dv_id, nam_hoc in rows:
+                by_person.setdefault(qn_id, set()).add(nam_hoc)
+                names[qn_id] = ho_ten
+                don_vi_ids[qn_id] = dv_id
+
+            for qn_id, years in by_person.items():
+                if len(years) < so_nam_int:
+                    continue
+                years_sorted = sorted(list(years), key=_nam_hoc_start)
+                starts = sorted([_nam_hoc_start(y) for y in years_sorted if _nam_hoc_start(y) > 0])
+
+                if lien_tiep:
+                    # Find max consecutive streak
+                    streak = 1
+                    max_streak = 1
+                    for i in range(1, len(starts)):
+                        if starts[i] == starts[i - 1] + 1:
+                            streak += 1
+                            max_streak = max(max_streak, streak)
+                        else:
+                            streak = 1
+                    if max_streak < so_nam_int:
+                        continue
+                    # Find the streak years
+                    streak_years = []
+                    cur = [starts[0]]
+                    for i in range(1, len(starts)):
+                        if starts[i] == starts[i - 1] + 1:
+                            cur.append(starts[i])
+                        else:
+                            if len(cur) >= so_nam_int:
+                                streak_years.extend(cur)
+                            cur = [starts[i]]
+                    if len(cur) >= so_nam_int:
+                        streak_years.extend(cur)
+                    display_years = [y for y in years_sorted if _nam_hoc_start(y) in streak_years]
+                    results.append({
+                        'qn': QuanNhan.query.get(qn_id),
+                        'ho_ten': names[qn_id],
+                        'years': display_years,
+                        'count': max_streak,
+                        'don_vi': DonVi.query.get(don_vi_ids[qn_id]),
+                    })
+                else:
+                    results.append({
+                        'qn': QuanNhan.query.get(qn_id),
+                        'ho_ten': names[qn_id],
+                        'years': years_sorted,
+                        'count': len(years_sorted),
+                        'don_vi': DonVi.query.get(don_vi_ids[qn_id]),
+                    })
+
+            results.sort(key=lambda x: (x['don_vi'].ten_don_vi if x['don_vi'] else '', x['ho_ten']))
+
+    return render_template('admin/reward_stats.html',
+                           danh_hieu_list=danh_hieu_list,
+                           selected_danh_hieu=selected_danh_hieu,
+                           so_nam=so_nam,
+                           lien_tiep=lien_tiep,
+                           results=results,
+                           searched=searched)
+
+
+
 @login_required
 @admin_or_reward_viewer_required
 def reward_list():
@@ -1832,7 +1934,14 @@ def all_personnel():
     doi_tuong = request.args.get('doi_tuong', '').strip()
     page = request.args.get('page', 1, type=int)
 
-    query = QuanNhan.query.filter_by(is_active=True).join(DonVi)
+    from sqlalchemy.sql.expression import collate as _collate
+    from sqlalchemy import case as _case
+    from app.models.catalog import ChucVuOption as _ChucVuOption
+    _chuc_vu_alias = db.aliased(_ChucVuOption)
+    query = QuanNhan.query.filter_by(is_active=True).join(DonVi)\
+        .outerjoin(_chuc_vu_alias,
+                   _collate(_chuc_vu_alias.ten, 'utf8mb4_unicode_ci') ==
+                   _collate(QuanNhan.chuc_vu, 'utf8mb4_unicode_ci'))
 
     if search:
         query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
@@ -1844,7 +1953,8 @@ def all_personnel():
     query = query.order_by(
         DonVi.thu_tu,
         DonVi.ten_don_vi,
-        case((QuanNhan.chuc_vu.is_(None), 1), else_=0),
+        _case((_chuc_vu_alias.thu_tu.is_(None), 1), else_=0),
+        _chuc_vu_alias.thu_tu.asc(),
         QuanNhan.chuc_vu.asc(),
         QuanNhan.ho_ten.asc()
     )

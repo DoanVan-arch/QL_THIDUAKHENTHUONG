@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td><span class="badge bg-light text-dark">{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</span></td>
                         <td>{{ qn.cap_bac or '-' }}</td>
                         <td>{{ qn.chuc_vu or '-' }}</td>
-                        <td>{{ qn.doi_tuong or '-' }}</td>
+                        <td>{{ qn.doi_tuong or '-' }}{% if qn.is_student and qn.lop %} <span class="text-muted small">({{ qn.lop }})</span>{% endif %}</td>
                         <td>{{ qn.hoc_vi if qn.hoc_vi and qn.hoc_vi != 'Không' else '-' }}</td>
                         <td class="text-center text-nowrap">
                             <a href="{{ url_for('admin.admin_personnel_detail', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Xem chi tiết">
