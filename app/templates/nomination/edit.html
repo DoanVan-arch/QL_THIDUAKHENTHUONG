@@ -360,7 +360,7 @@
                 'danh_hieu_hv_gioi','diem_tong_ket','ket_qua_thuc_hanh',
                 'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
                 'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
-                'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc'
+                'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc','ten_don_vi_de_xuat',
             ] -%}
             {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
             {%- if extra_tc %}
@@ -439,25 +439,42 @@
                 </div>
             </div>
              <!-- Thành tích quần chúng khác -->
-            <div class="form-section" id="section-doan-the">
-                <div class="form-section-title" style="color: #E67E22;">
-                    <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn(nếu có)
-                </div>
-                <div class="row g-3">
-                   <div class="col-md-6">
-                        <label class="form-label">Mức độ Hoàn thành nhiệm vụ của tổ chức đoàn</label>
-                        <input type="text" class="form-control" name="ket_qua_doan_the" id="ket_qua_doan_the" placeholder="Nếu tham gia tổ chức đoàn...">
-                    </div>
-                     <div class="col-md-6">
-                        <label class="form-label">Hình thức khen thưởng của tổ chức đoàn</label>
-                        <input type="text" class="form-control" name="hinh_thuc_khen_thuong_qc" id="hinh_thuc_khen_thuong_qc" placeholder="Nếu tham gia tổ chức đoàn...">
-                    </div>
-                    <!-- <div class="col-md-6">
-                        <label class="form-label">Minh chứng  (nhiều file) nếu có</label>
-                        <input type="file" class="form-control" name="minh_chung_doan_the" id="minh_chung_doan_the" accept="image/*,.pdf" multiple>
-                    </div> -->
-                </div>
+            @if($la_doan_vien)
+    <div class="form-section" id="section-doan-the">
+        <div class="form-section-title" style="color: #E67E22;">
+            <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn thể (nếu có)
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Mức độ hoàn thành nhiệm vụ của tổ chức đoàn thể</label>
+                <input type="text" 
+                       class="form-control" 
+                       name="ket_qua_doan_the" 
+                       id="ket_qua_doan_the" 
+                       placeholder="Ví dụ: Hoàn thành tốt, Hoàn thành xuất sắc...">
             </div>
+            <div class="col-md-6">
+                <label class="form-label">Hình thức khen thưởng của tổ chức đoàn thể</label>
+                <input type="text" 
+                       class="form-control" 
+                       name="hinh_thuc_khen_thuong_qc" 
+                       id="hinh_thuc_khen_thuong_qc" 
+                       placeholder="Ví dụ: Giấy khen, Bằng khen, Cờ thi đua...">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Minh chứng (nhiều file) - nếu có</label>
+                <input type="file" 
+                       class="form-control" 
+                       name="minh_chung_doan_the[]" 
+                       id="minh_chung_doan_the" 
+                       accept="image/*,.pdf" 
+                       multiple>
+                <small class="text-muted">Chấp nhận file ảnh (JPG, PNG) hoặc PDF</small>
+            </div>
+        </div>
+    </div>
+@endif
+             @if($la_hoi_vien_phu_nu)
              <div class="form-section" id="section-phu-nu">
                 <div class="form-section-title" style="color: #E67E22;">
                     <i class="bi bi-star me-1"></i>Thành tích cá nhân hội phụ nữ (nếu có)
@@ -477,6 +494,7 @@
                     </div> -->
                 </div>
             </div>
+            @endif
             <!-- Thành tích cá nhân khác -->
             <div class="form-section">
                 <div class="form-section-title" style="color: #E67E22;">

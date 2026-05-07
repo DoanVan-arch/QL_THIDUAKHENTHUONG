@@ -59,20 +59,54 @@ def _is_auto_scope_approved(dept_name, doi_tuong):
     return False
 
 
+# Gate columns each Thủ trưởng role waits for
+_TTR_GATE_COLUMNS = {
+    'Thủ trưởng Phòng Chính trị': [
+        'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
+    ],
+    'Thủ trưởng Phòng TM-HC': [
+        'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí',
+        'Ủy ban Kiểm tra', 'Ban Quân lực',
+    ],
+}
+
+
+def _is_thu_truong_gate_all_approved(de_xuat_id, ct, dept_name):
+    """For Thủ trưởng roles: auto-pass if all gate sub-departments approved this individual."""
+    gate_cols = _TTR_GATE_COLUMNS.get(dept_name)
+    if not gate_cols:
+        return False
+    for gate_dept in gate_cols:
+        if not _is_individual_dept_approved(de_xuat_id, ct, gate_dept):
+            return False
+    return True
+
+
 def _is_individual_dept_approved(de_xuat_id, ct, dept_name):
     """Check one individual's approval for one department, honoring auto-scope rules."""
     is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
+    if is_auto:
+        return True
+
+    # Thủ trưởng roles: approved if all their gate sub-depts approved
+    if dept_name in _TTR_GATE_COLUMNS:
+        pd = PheDuyet.query.filter_by(de_xuat_id=de_xuat_id, phong_duyet=dept_name).first()
+        if pd and pd.ket_qua == KetQuaDuyet.DONG_Y.value:
+            return True
+        # Check gate columns
+        return _is_thu_truong_gate_all_approved(de_xuat_id, ct, dept_name)
+
     pd = PheDuyet.query.filter_by(de_xuat_id=de_xuat_id, phong_duyet=dept_name).first()
 
     if not pd:
-        return is_auto
+        return False
 
     if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
         return False
 
     kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
     if not kq:
-        return is_auto
+        return False
 
     return kq.ket_qua == KetQuaDuyet.DONG_Y.value
 
@@ -229,8 +263,11 @@ def approval_tracking():
 
         chi_tiets_data = []
         for ct in dx.chi_tiets:
-            # Skip individuals already in KhenThuong (already final-approved)
+            # Skip individuals already in KhenThuong (fully finalized)
             if ct.id in approved_ct_ids:
+                continue
+            # Skip individuals already admin_approved (moved to Bảng 2 Hội đồng)
+            if ct.admin_approved:
                 continue
 
             # Filter by danh_hieu if specified
@@ -254,31 +291,44 @@ def approval_tracking():
             for dept_name in tracking_dept_names:
                 dept_data = dept_lookup.get(dept_name)
                 is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
+
+                # Thủ trưởng roles: check gate columns
+                is_ttr_gate_ok = False
+                if dept_name in _TTR_GATE_COLUMNS:
+                    is_ttr_gate_ok = _is_thu_truong_gate_all_approved(dx.id, ct, dept_name)
+
                 if dept_data:
                     kq = dept_data['items'].get(ct.id)
-                    if kq:
+                    if dept_data['phe_duyet'].ket_qua == KetQuaDuyet.DONG_Y.value:
+                        ct_dept_results[dept_name] = {
+                            'ket_qua': KetQuaDuyet.DONG_Y.value,
+                            'auto': is_auto,
+                        }
+                    elif kq:
                         ct_dept_results[dept_name] = {
                             'ket_qua': kq.ket_qua,
                             'auto': is_auto,
                         }
-                    elif is_auto:
+                    elif is_auto or is_ttr_gate_ok:
                         ct_dept_results[dept_name] = {
                             'ket_qua': KetQuaDuyet.DONG_Y.value,
                             'auto': True,
                         }
                     else:
                         ct_dept_results[dept_name] = None
-                    if dept_name in DEPT_NAMES and not is_auto and (not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value):
-                        all_dept_ok = False
                 else:
-                    if is_auto:
+                    if is_auto or is_ttr_gate_ok:
                         ct_dept_results[dept_name] = {
                             'ket_qua': KetQuaDuyet.DONG_Y.value,
                             'auto': True,
                         }
                     else:
                         ct_dept_results[dept_name] = None
-                    if dept_name in DEPT_NAMES and not is_auto:
+
+                if dept_name in DEPT_NAMES:
+                    dept_ok = (ct_dept_results[dept_name] is not None and
+                               ct_dept_results[dept_name].get('ket_qua') == KetQuaDuyet.DONG_Y.value)
+                    if not dept_ok:
                         all_dept_ok = False
 
             # Individual can be final-approved if all 6 depts approved this person
@@ -350,30 +400,25 @@ def tracking_detail(ct_id):
             phe_duyet_id=pd.id, chi_tiet_id=ct.id
         ).first()
         is_auto = _is_auto_scope_approved(pd.phong_duyet, ct.doi_tuong)
-        if not kq and is_auto:
+        is_ttr_gate_ok = _is_thu_truong_gate_all_approved(de_xuat.id, ct, pd.phong_duyet) if pd.phong_duyet in _TTR_GATE_COLUMNS else False
+        if not kq and (is_auto or is_ttr_gate_ok):
             kq = SimpleNamespace(ket_qua=KetQuaDuyet.DONG_Y.value, ly_do='Tự động duyệt theo phạm vi')
         dept_item_results[pd.phong_duyet] = {
             'phe_duyet': pd,
             'item_result': kq,
-            'is_auto': is_auto,
+            'is_auto': is_auto or is_ttr_gate_ok,
         }
 
-    # Check if all 6 departments approved THIS individual
+    # Check if all departments approved THIS individual
     all_dept_ok = True
     for dept_name in DEPT_NAMES:
-        if dept_name not in dept_item_results:
-            all_dept_ok = False
-            break
-        kq = dept_item_results[dept_name].get('item_result')
-        is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
-        if is_auto:
-            continue
-        if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
+        approved = _is_individual_dept_approved(de_xuat.id, ct, dept_name)
+        if not approved:
             all_dept_ok = False
             break
 
-    # Check if already in KhenThuong
-    already_approved = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
+    # Check if already admin_approved (in Bảng 2) or in KhenThuong
+    already_approved = ct.admin_approved or KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
 
     can_final_approve = all_dept_ok and not already_approved
 
@@ -1932,6 +1977,8 @@ def all_personnel():
     search = request.args.get('search', '').strip()
     don_vi_id = request.args.get('don_vi_id', '', type=str)
     doi_tuong = request.args.get('doi_tuong', '').strip()
+    cap_bac = request.args.get('cap_bac', '').strip()
+    chuc_vu = request.args.get('chuc_vu', '').strip()
     page = request.args.get('page', 1, type=int)
 
     from sqlalchemy.sql.expression import collate as _collate
@@ -1949,6 +1996,10 @@ def all_personnel():
         query = query.filter(QuanNhan.don_vi_id == int(don_vi_id))
     if doi_tuong:
         query = query.filter(QuanNhan.doi_tuong == doi_tuong)
+    if cap_bac:
+        query = query.filter(QuanNhan.cap_bac.ilike(f'%{cap_bac}%'))
+    if chuc_vu:
+        query = query.filter(QuanNhan.chuc_vu.ilike(f'%{chuc_vu}%'))
 
     query = query.order_by(
         DonVi.thu_tu,
@@ -1968,6 +2019,8 @@ def all_personnel():
                            search=search,
                            don_vi_id=don_vi_id,
                            doi_tuong_filter=doi_tuong,
+                           cap_bac_filter=cap_bac,
+                           chuc_vu_filter=chuc_vu,
                            units=units,
                            doi_tuong_list=doi_tuong_list)
 

@@ -16,12 +16,12 @@
 <div class="card-section" id="filterBar">
     <div class="card-body-custom">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label mb-1 small">Tìm theo họ tên</label>
                 <input type="text" class="form-control" name="search" value="{{ search }}"
                        placeholder="Nhập họ tên...">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label mb-1 small">Đơn vị</label>
                 <select class="form-select" name="don_vi_id">
                     <option value="">-- Tất cả đơn vị --</option>
@@ -32,7 +32,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label mb-1 small">Đối tượng</label>
                 <select class="form-select" name="doi_tuong">
                     <option value="">-- Tất cả --</option>
@@ -41,11 +41,21 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">Cấp bậc</label>
+                <input type="text" class="form-control" name="cap_bac" value="{{ cap_bac_filter }}"
+                       placeholder="Tìm cấp bậc...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">Chức vụ</label>
+                <input type="text" class="form-control" name="chuc_vu" value="{{ chuc_vu_filter }}"
+                       placeholder="Tìm chức vụ...">
+            </div>
             <div class="col-md-1">
                 <button type="submit" class="btn btn-navy w-100"><i class="bi bi-search"></i></button>
             </div>
-            <div class="col-md-1">
-                <a href="{{ url_for('admin.all_personnel') }}" class="btn btn-outline-secondary w-100" title="Bỏ lọc"><i class="bi bi-x-lg"></i></a>
+            <div class="col-auto">
+                <a href="{{ url_for('admin.all_personnel') }}" class="btn btn-outline-secondary" title="Bỏ lọc"><i class="bi bi-x-lg"></i></a>
             </div>
         </form>
     </div>
@@ -116,13 +126,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <ul class="pagination pagination-sm mb-0">
                     {% if personnel.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}">&laquo;</a>
+                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}">&laquo;</a>
                     </li>
                     {% endif %}
                     {% for p in personnel.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                     {% if p %}
                     <li class="page-item {{ 'active' if p == personnel.page }}">
-                        <a class="page-link" href="?page={{ p }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}">{{ p }}</a>
+                        <a class="page-link" href="?page={{ p }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}">{{ p }}</a>
                     </li>
                     {% else %}
                     <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -130,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endfor %}
                     {% if personnel.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}">&raquo;</a>
+                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}">&raquo;</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -141,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
         {% else %}
         <div class="empty-state">
             <i class="bi bi-people d-block"></i>
-            <p>{% if search or don_vi_id or doi_tuong_filter %}Không tìm thấy kết quả phù hợp{% else %}Chưa có quân nhân nào trong hệ thống{% endif %}</p>
+            <p>{% if search or don_vi_id or doi_tuong_filter or cap_bac_filter or chuc_vu_filter %}Không tìm thấy kết quả phù hợp{% else %}Chưa có quân nhân nào trong hệ thống{% endif %}</p>
         </div>
         {% endif %}
     </div>
