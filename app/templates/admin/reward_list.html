@@ -2,24 +2,34 @@
 {% block title %}Danh sách khen thưởng{% endblock %}
 
 {% block content %}
+{# ===== PAGE HEADER with global controls ===== #}
 <div class="page-header">
     <div>
         <h4><i class="bi bi-trophy me-2"></i>Danh sách khen thưởng</h4>
         <small class="text-muted">Cá nhân và đơn vị đã được phê duyệt khen thưởng</small>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        {# View toggle – affects all tables #}
+        <button id="btnToggleView" class="btn btn-outline-secondary btn-sm" onclick="toggleAllViews()">
+            <i class="bi bi-layout-text-sidebar-reverse me-1"></i><span id="lblToggleView">Thu gọn</span>
+        </button>
         <a href="{{ url_for('admin.reward_stats') }}" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-bar-chart me-1"></i>Thống kê
         </a>
+        {# PDF print – prints the current page with timestamp watermark #}
+        <button class="btn btn-outline-danger btn-sm" onclick="printPage()">
+            <i class="bi bi-file-earmark-pdf me-1"></i>In / PDF
+        </button>
+        {# Excel for Bảng 3 (main reward list) #}
         <a href="{{ url_for('admin.export_reward_list', nam_hoc=nam_hoc_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query) }}"
            class="btn btn-success btn-sm">
-            <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel Bảng 3
         </a>
     </div>
 </div>
 
 {% if cstd_non_consecutive or cstd_consecutive %}
-<div class="card-section mb-3">
+<div class="card-section mb-3 no-print">
     <div class="card-header-custom">
         <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Thống kê CSTD >= 3 lần</h6>
     </div>
@@ -59,30 +69,28 @@
 {% endif %}
 
 {% if can_view_pending_final and nam_hoc_filter %}
-<!-- ===== Bảng 1: HOI_DONG chờ Admin phê duyệt ===== -->
-<div class="card-section mb-3">
-    <div class="card-header-custom d-flex align-items-center justify-content-between"
-         style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#bang1Body" aria-expanded="false">
+{# ===== BẢNG 1: HOI_DONG chờ Admin phê duyệt ===== #}
+<div class="card-section mb-3 print-section" id="printBang1">
+    <div class="card-header-custom d-flex align-items-center justify-content-between">
         <h6 class="mb-0">
             <i class="bi bi-list-check me-2"></i>Bảng 1: Chờ Admin phê duyệt (chuyển sang Hội đồng)
             <span class="badge bg-warning text-dark ms-2">{{ pending_final_nominations|length }}</span>
         </h6>
-        <i class="bi bi-chevron-down" id="bang1Chevron"></i>
+        <div class="d-flex gap-2 align-items-center no-print">
+            <a href="{{ url_for('admin.export_pending_final_excel') }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+            </a>
+            <a href="{{ url_for('admin.export_pending_final_word') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-file-earmark-word me-1"></i>Word
+            </a>
+            <button class="btn btn-sm btn-outline-secondary" style="cursor:pointer;"
+                    data-bs-toggle="collapse" data-bs-target="#bang1Body" aria-expanded="false">
+                <i class="bi bi-chevron-down" id="bang1Chevron"></i>
+            </button>
+        </div>
     </div>
     <div class="collapse" id="bang1Body">
     <div class="card-body-custom py-2">
-        <div class="mb-2">
-            <strong>Cá nhân đủ điều kiện, chờ Admin phê duyệt:</strong>
-            <span class="badge bg-warning text-dark ms-1">{{ pending_final_nominations|length }}</span>
-            <span class="ms-2">
-                <a href="{{ url_for('admin.export_pending_final_excel') }}" class="btn btn-sm btn-outline-success me-1">
-                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
-                </a>
-                <a href="{{ url_for('admin.export_pending_final_word') }}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-file-earmark-word me-1"></i>Xuất Word
-                </a>
-            </span>
-        </div>
         {% if pending_final_nominations %}
         <div class="table-responsive">
             <table class="table table-sm table-custom mb-0">
@@ -91,12 +99,12 @@
                         <th>STT</th>
                         <th>Đơn vị</th>
                         <th>Cá nhân</th>
-                        <th>Thông tin cá nhân</th>
-                        <th>Chi tiết tiêu chí</th>
+                        <th class="col-b1-detail">Thông tin cá nhân</th>
+                        <th class="col-b1-detail">Chi tiết tiêu chí</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
-                        <th>Ngày gửi</th>
-                        <th class="text-center">Thao tác</th>
+                        <th class="col-b1-detail">Ngày gửi</th>
+                        <th class="text-center no-print">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -108,7 +116,7 @@
                         <td>{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
                         <td>{{ qn.ho_ten if qn else dx.don_vi.ten_don_vi }}</td>
-                        <td>
+                        <td class="col-b1-detail">
                             {% if qn %}
                             <div><strong>CCCD:</strong> {{ qn.can_cuoc_cong_dan or '-' }}</div>
                             <div><strong>Ngày sinh:</strong> {{ qn.ngay_sinh.strftime('%d/%m/%Y') if qn.ngay_sinh else '-' }}</div>
@@ -123,17 +131,15 @@
                             <div><strong>Vai trò:</strong>
                                 {{ 'Cấp trưởng' if qn.la_chi_huy else '' }}{{ ' - ' if qn.la_chi_huy and qn.la_bi_thu else '' }}{{ 'Bí thư' if qn.la_bi_thu else '' }}{{ '-' if not qn.la_chi_huy and not qn.la_bi_thu else '' }}
                             </div>
-                            {% else %}
-                            -
-                            {% endif %}
+                            {% else %}-{% endif %}
                         </td>
-                        <td>
+                        <td class="col-b1-detail">
                             <div><strong>HTNV:</strong> {{ ct.muc_do_hoan_thanh or '-' }}</div>
                             <div><strong>Phiếu tín nhiệm:</strong> {{ ct.phieu_tin_nhiem or '-' }}</div>
                             <div><strong>Xếp loại đảng viên:</strong> {{ ct.xep_loai_dang_vien or '-' }}</div>
                             <div><strong>KQ đoàn thể:</strong> {{ ct.ket_qua_doan_the or '-' }}</div>
                             <details>
-                                <summary class="text-navy" style="cursor:pointer;">Xem đầy đủ tiêu chí</summary>
+                                <summary class="text-navy no-print" style="cursor:pointer;">Xem đầy đủ tiêu chí</summary>
                                 <div class="mt-1"><strong>KT điều lệnh:</strong> {{ ct.kiem_tra_dieu_lenh or '-' }} ({{ ct.diem_kiem_tra_dieu_lenh or '-' }})</div>
                                 <div><strong>Bắn súng:</strong> {{ ct.ban_sung or '-' }} ({{ ct.diem_ban_sung or '-' }})</div>
                                 <div><strong>Thể lực:</strong> {{ ct.the_luc or '-' }} ({{ ct.diem_the_luc or '-' }})</div>
@@ -157,15 +163,15 @@
                         </td>
                         <td>{{ ct.loai_danh_hieu }}</td>
                         <td>{{ dx.nam_hoc }}</td>
-                        <td>{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>
-                        <td class="text-center">
+                        <td class="col-b1-detail">{{ dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '-' }}</td>
+                        <td class="text-center no-print">
                             {% if can_admin_action %}
                             <form method="POST" action="{{ url_for('admin.final_approve_individual', ct_id=ct.id) }}" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button class="btn btn-sm btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>Đồng ý</button>
                             </form>
                             {% else %}
-                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chờ Admin xử lý</span>
+                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chờ Admin</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -188,15 +194,20 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 });
 </script>
 
-<!-- ===== Bảng 2: PHE_DUYET_CUOI – Hội đồng biểu quyết ===== -->
-<div class="card-section mb-3">
-    <div class="card-header-custom">
+{# ===== BẢNG 2: PHE_DUYET_CUOI – Hội đồng biểu quyết ===== #}
+<div class="card-section mb-3 print-section" id="printBang2">
+    <div class="card-header-custom d-flex align-items-center justify-content-between">
         <h6 class="mb-0">
             <i class="bi bi-people me-2"></i>Bảng 2: XÉT DUYỆT CỦA CƠ QUAN THƯỜNG TRỰC
             {% if phe_duyet_cuoi_items %}
             <span class="badge bg-primary ms-2">{{ phe_duyet_cuoi_items|length }} cá nhân</span>
             {% endif %}
         </h6>
+        <div class="d-flex gap-2 align-items-center no-print">
+            <a href="{{ url_for('admin.export_bang2_excel') }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+            </a>
+        </div>
     </div>
     <div class="card-body-custom py-2">
         {% if phe_duyet_cuoi_items %}
@@ -210,7 +221,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <th>Cá nhân</th>
                         <th>Năm học</th>
                         {% for vt in HOI_DONG_VAI_TRO %}
-                        <th class="text-center" style="white-space:nowrap;font-size:0.75rem;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
+                        <th class="text-center col-b2-detail" style="white-space:nowrap;font-size:0.75rem;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
                         {% endfor %}
                         <th class="text-center">Thao tác</th>
                     </tr>
@@ -234,7 +245,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <td>{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
                     <td>
                         <strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong>
-                        <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet"
+                        <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet no-print"
                                 data-ct-id="{{ ct.id }}"
                                 title="Xem chi tiết cá nhân & tiêu chí"
                                 style="padding:0.1rem 0.35rem; font-size:0.7rem;">
@@ -242,40 +253,10 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         </button>
                     </td>
                     <td>{{ dx.nam_hoc }}</td>
+                    {# Ban columns – all read-only badges #}
                     {% for vt in HOI_DONG_VAI_TRO %}
                     {% set bq = row.votes.get(vt) %}
-                    <td class="text-center">
-                        {% if vt == current_user_vai_tro and not row.is_confirmed %}
-                        {# This column belongs to the logged-in Hội đồng member — show vote buttons #}
-                        <div class="d-flex flex-column align-items-center gap-1">
-                            {% if bq %}
-                                {% if bq.ket_qua == 'Đồng ý' %}
-                                <span class="badge bg-success mb-1" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i> Đồng ý</span>
-                                {% else %}
-                                <span class="badge bg-danger mb-1" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i> Không đồng ý</span>
-                                {% endif %}
-                            {% endif %}
-                            <div class="d-flex gap-1">
-                                <form method="POST" action="{{ url_for('admin.hoi_dong_vote_ct', ct_id=ct.id) }}" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="ket_qua" value="Đồng ý">
-                                    <button type="submit" class="btn btn-xs py-0 px-1 {% if bq and bq.ket_qua == 'Đồng ý' %}btn-success{% else %}btn-outline-success{% endif %}"
-                                            title="Biểu quyết Đồng ý" style="font-size:0.7rem;">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                </form>
-                                <form method="POST" action="{{ url_for('admin.hoi_dong_vote_ct', ct_id=ct.id) }}" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="ket_qua" value="Không đồng ý">
-                                    <button type="submit" class="btn btn-xs py-0 px-1 {% if bq and bq.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-danger{% endif %}"
-                                            title="Biểu quyết Không đồng ý" style="font-size:0.7rem;">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                        {% else %}
-                        {# Other columns — show read-only badge #}
+                    <td class="text-center col-b2-detail">
                         {% if bq %}
                             {% if bq.ket_qua == 'Đồng ý' %}
                             <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
@@ -285,29 +266,51 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         {% else %}
                         <span class="text-muted">—</span>
                         {% endif %}
-                        {% endif %}
                     </td>
                     {% endfor %}
-                    <td class="text-center">
+                    {# Thao tác: admin confirm + Hội đồng vote button #}
+                    <td class="text-center" style="white-space:nowrap;">
                         {% if row.is_confirmed %}
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</span>
-                        {% elif can_admin_action %}
-                        <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            {% if row.all_voted_dong_y %}
-                            <button class="btn btn-sm btn-success py-0" type="submit" title="Tất cả đã đồng ý – Xác nhận khen thưởng">
-                                <i class="bi bi-check2-circle me-1"></i>Xác nhận
-                            </button>
-                            {% else %}
-                            <button class="btn btn-sm btn-warning py-0 text-dark" type="submit"
-                                    title="Chưa đủ phiếu đồng ý – Admin có thể override xác nhận"
-                                    onclick="return confirm('Chưa đủ phiếu đồng ý từ Hội đồng. Bạn vẫn muốn xác nhận khen thưởng?')">
-                                <i class="bi bi-exclamation-circle me-1"></i>Override
+                        {% else %}
+                        <div class="d-flex gap-1 justify-content-center flex-wrap no-print">
+                            {# Vote button for Hội đồng member #}
+                            {% if current_user_vai_tro and not row.is_confirmed %}
+                            {% set my_vote = row.votes.get(current_user_vai_tro) %}
+                            <button type="button"
+                                    class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
+                                    style="font-size:0.75rem;"
+                                    title="Biểu quyết của tôi ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
+                                    onclick="openVoteModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '') | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}')">
+                                <i class="bi bi-hand-index me-1"></i>Biểu quyết
                             </button>
                             {% endif %}
-                        </form>
-                        {% else %}
-                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chờ biểu quyết</span>
+                            {# Admin confirm/override #}
+                            {% if can_admin_action %}
+                            <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if row.all_voted_dong_y %}
+                                <button class="btn btn-xs btn-success py-0" type="submit" title="Tất cả đã đồng ý – Xác nhận khen thưởng" style="font-size:0.75rem;">
+                                    <i class="bi bi-check2-circle me-1"></i>Xác nhận
+                                </button>
+                                {% else %}
+                                <button class="btn btn-xs btn-warning py-0 text-dark" type="submit"
+                                        title="Chưa đủ phiếu đồng ý – Override"
+                                        style="font-size:0.75rem;"
+                                        onclick="return confirm('Chưa đủ phiếu đồng ý từ Hội đồng. Bạn vẫn muốn xác nhận khen thưởng?')">
+                                    <i class="bi bi-exclamation-circle me-1"></i>Override
+                                </button>
+                                {% endif %}
+                            </form>
+                            {% endif %}
+                            {% if not current_user_vai_tro and not can_admin_action %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chờ biểu quyết</span>
+                            {% endif %}
+                        </div>
+                        {# Print-only: show vote summary text #}
+                        <span class="print-only small">
+                            {% if row.all_voted_dong_y %}Đồng ý{% else %}Chờ biểu quyết{% endif %}
+                        </span>
                         {% endif %}
                     </td>
                 </tr>
@@ -320,15 +323,22 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
         {% endif %}
     </div>
 </div>
-{% endif %}
+{% endif %}{# end can_view_pending_final #}
 
+{# ===== BẢNG 3 header + summary stats ===== #}
 {% if nam_hoc_filter %}
-<!-- Summary stats -->
-<div class="d-flex gap-3 mb-2 flex-wrap align-items-center">
+<div class="d-flex gap-3 mb-2 flex-wrap align-items-center no-print">
     <span class="fw-semibold text-navy"><i class="bi bi-trophy me-1"></i>Bảng 3: Danh sách khen thưởng đã xác nhận</span>
-    <button id="toggleRewardView" class="btn btn-sm btn-outline-secondary ms-auto" onclick="toggleRewardListView()">
-        <i class="bi bi-layout-text-sidebar-reverse me-1"></i><span id="toggleRewardLabel">Thu gọn</span>
-    </button>
+    <div class="ms-auto d-flex gap-2">
+        <a href="{{ url_for('admin.export_reward_list', nam_hoc=nam_hoc_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query) }}"
+           class="btn btn-sm btn-outline-success">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </a>
+    </div>
+</div>
+<div class="print-only mb-2">
+    <strong>Bảng 3: Danh sách khen thưởng đã xác nhận</strong>
+    {% if nam_hoc_filter %} — Năm học: {{ nam_hoc_filter }}{% endif %}
 </div>
 <div class="d-flex gap-3 mb-3 flex-wrap">
     <div class="stat-mini">
@@ -350,10 +360,10 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
     </div>
     {% endfor %}
 </div>
-{% endif %}{# end nam_hoc_filter for summary stats #}
+{% endif %}
 
-<!-- Filters -->
-<div class="card-section mb-3">
+{# ===== Filters ===== #}
+<div class="card-section mb-3 no-print">
     <div class="card-body-custom py-2">
         <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
             <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
@@ -401,7 +411,8 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 </div>
 {% else %}
 
-<div class="card-section">
+{# ===== BẢNG 3: Danh sách khen thưởng ===== #}
+<div class="card-section print-section" id="printBang3">
     <div class="card-body-custom p-0">
         {% if rewards.items %}
         <div class="table-responsive">
@@ -410,14 +421,14 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <tr>
                         <th style="width:40px;">STT</th>
                         <th style="min-width:150px;">Họ tên</th>
-                        <th class="col-detail">Cấp bậc</th>
-                        <th class="col-detail">Chức vụ</th>
-                        <th class="col-detail">Đối tượng</th>
+                        <th class="col-b3-detail">Cấp bậc</th>
+                        <th class="col-b3-detail">Chức vụ</th>
+                        <th class="col-b3-detail">Đối tượng</th>
                         <th>Đơn vị</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
-                        <th class="col-detail">Ngày duyệt</th>
-                        <th class="text-center" style="width:110px;">Thao tác</th>
+                        <th class="col-b3-detail">Ngày duyệt</th>
+                        <th class="text-center no-print" style="width:110px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -433,9 +444,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <tr>
                         <td>{{ (rewards.page - 1) * rewards.per_page + loop.index }}</td>
                         <td class="fw-semibold">{{ kt.ho_ten }}</td>
-                        <td class="col-detail"><small>{{ kt.cap_bac or '-' }}</small></td>
-                        <td class="col-detail"><small>{{ kt.chuc_vu or '-' }}</small></td>
-                        <td class="col-detail"><small>{{ kt.doi_tuong or '-' }}</small></td>
+                        <td class="col-b3-detail"><small>{{ kt.cap_bac or '-' }}</small></td>
+                        <td class="col-b3-detail"><small>{{ kt.chuc_vu or '-' }}</small></td>
+                        <td class="col-b3-detail"><small>{{ kt.doi_tuong or '-' }}</small></td>
                         <td>{{ kt.don_vi.ten_don_vi }}</td>
                         <td>
                             {% if kt.loai_danh_hieu == 'Chiến sĩ thi đua' %}
@@ -449,8 +460,12 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             {% endif %}
                         </td>
                         <td>{{ kt.nam_hoc }}</td>
-                        <td class="col-detail"><span class="text-ellipsis-sm" title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
-                        <td class="text-center">
+                        <td class="col-b3-detail">
+                            <span title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">
+                                {{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}
+                            </span>
+                        </td>
+                        <td class="text-center no-print">
                             <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
                                     data-ct-id="{{ kt.chi_tiet_id }}"
                                     title="Xem chi tiết cá nhân & tiêu chí">
@@ -475,7 +490,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
         </div>
 
         {% if rewards.pages > 1 %}
-        <div class="d-flex justify-content-center py-3">
+        <div class="d-flex justify-content-center py-3 no-print">
             <nav>
                 <ul class="pagination pagination-sm mb-0">
                     {% if rewards.has_prev %}
@@ -516,7 +531,46 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 </div>
 {% endif %}{# end nam_hoc_filter #}
 
-<!-- Revoke Confirmation Modal -->
+{# ===== Vote Modal for Bảng 2 ===== #}
+<div class="modal fade" id="voteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-navy text-white py-2">
+                <h6 class="modal-title mb-0"><i class="bi bi-hand-index me-2"></i>Biểu quyết</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1 small"><strong id="voteModalName"></strong></p>
+                <p class="mb-2 small text-muted">Ban: <span id="voteModalBan"></span></p>
+                <p class="mb-2 small">Biểu quyết hiện tại: <span id="voteModalCurrent"></span></p>
+                <form id="voteFormDongY" method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="ket_qua" value="Đồng ý">
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Ghi chú (tuỳ chọn)</label>
+                        <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteY" placeholder="Ghi chú...">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 mb-2">
+                        <i class="bi bi-check-lg me-1"></i>Đồng ý
+                    </button>
+                </form>
+                <form id="voteFormKhong" method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="ket_qua" value="Không đồng ý">
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Ghi chú (tuỳ chọn)</label>
+                        <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteK" placeholder="Ghi chú...">
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-x-lg me-1"></i>Không đồng ý
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ===== Revoke Modal ===== #}
 <div class="modal fade" id="revokeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -572,38 +626,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 </div>
 {% endif %}
 
-<style>
-    .stat-mini {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 0.4rem 0.75rem;
-        font-size: 0.82rem;
-    }
-    .stat-mini i { font-size: 1rem; }
-</style>
-
-<script>
-function openRevokeModal(deXuatId, unitName, namHoc) {
-    document.getElementById('revokeForm').action = '{{ url_for("admin.revoke_final_approval", id=0) }}'.replace('/0', '/' + deXuatId);
-    document.getElementById('revokeUnitName').textContent = unitName;
-    document.getElementById('revokeNamHoc').textContent = namHoc;
-    var modal = new bootstrap.Modal(document.getElementById('revokeModal'));
-    modal.show();
-}
-
-function openRejectModal(deXuatId, unitName) {
-    document.getElementById('rejectForm').action = '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0', '/' + deXuatId);
-    document.getElementById('rejectUnit').textContent = unitName;
-    var modal = new bootstrap.Modal(document.getElementById('rejectModal'));
-    modal.show();
-}
-</script>
-
-<!-- ===== Chi Tiết Offcanvas ===== -->
+{# ===== Chi Tiết Offcanvas ===== #}
 <div class="offcanvas offcanvas-end" tabindex="-1" id="chiTietOffcanvas" style="width:480px;">
     <div class="offcanvas-header" style="background:var(--navy-primary);color:#fff;">
         <h6 class="offcanvas-title mb-0"><i class="bi bi-person-lines-fill me-2"></i>Chi tiết cá nhân</h6>
@@ -616,7 +639,97 @@ function openRejectModal(deXuatId, unitName) {
     </div>
 </div>
 
+<style>
+    .stat-mini {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.82rem;
+    }
+    .stat-mini i { font-size: 1rem; }
+    .print-only { display: none; }
+
+    @media print {
+        .no-print { display: none !important; }
+        .print-only { display: block !important; }
+        .card-section { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
+        .collapse { display: block !important; }
+        body { font-size: 11pt; }
+        .badge { border: 1px solid #666; color: #000 !important; background: transparent !important; }
+        #printTimestamp { display: block !important; position: fixed; bottom: 10px; right: 10px;
+            font-size: 9pt; color: #666; }
+    }
+    /* compact mode – hides col-b1-detail, col-b2-detail, col-b3-detail */
+    body.rl-compact .col-b1-detail,
+    body.rl-compact .col-b2-detail,
+    body.rl-compact .col-b3-detail { display: none; }
+</style>
+
+{# Print timestamp watermark (only visible when printing) #}
+<div id="printTimestamp" style="display:none;"></div>
+
 <script>
+// ===== Vote Modal =====
+var VOTE_URL = '{{ url_for("admin.hoi_dong_vote_ct", ct_id=0) }}'.replace('/0', '/');
+function openVoteModal(ctId, name, ban, currentVote) {
+    document.getElementById('voteModalName').textContent = name;
+    document.getElementById('voteModalBan').textContent = ban;
+    var cur = currentVote ? currentVote : 'Chưa biểu quyết';
+    document.getElementById('voteModalCurrent').textContent = cur;
+    var url = VOTE_URL + ctId;
+    document.getElementById('voteFormDongY').action = url;
+    document.getElementById('voteFormKhong').action = url;
+    document.getElementById('voteNoteY').value = '';
+    document.getElementById('voteNoteK').value = '';
+    new bootstrap.Modal(document.getElementById('voteModal')).show();
+}
+
+// ===== Revoke / Reject =====
+function openRevokeModal(deXuatId, unitName, namHoc) {
+    document.getElementById('revokeForm').action = '{{ url_for("admin.revoke_final_approval", id=0) }}'.replace('/0', '/' + deXuatId);
+    document.getElementById('revokeUnitName').textContent = unitName;
+    document.getElementById('revokeNamHoc').textContent = namHoc;
+    new bootstrap.Modal(document.getElementById('revokeModal')).show();
+}
+function openRejectModal(deXuatId, unitName) {
+    document.getElementById('rejectForm').action = '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0', '/' + deXuatId);
+    document.getElementById('rejectUnit').textContent = unitName;
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+// ===== Compact / Full toggle =====
+(function() {
+    var KEY = 'rewardListViewMode';
+    var compact = localStorage.getItem(KEY) === 'compact';
+    function applyView() {
+        document.body.classList.toggle('rl-compact', compact);
+        var lbl = document.getElementById('lblToggleView');
+        if (lbl) lbl.textContent = compact ? 'Đầy đủ' : 'Thu gọn';
+    }
+    window.toggleAllViews = function() {
+        compact = !compact;
+        localStorage.setItem(KEY, compact ? 'compact' : 'full');
+        applyView();
+    };
+    document.addEventListener('DOMContentLoaded', applyView);
+})();
+
+// ===== PDF Print =====
+function printPage() {
+    var ts = document.getElementById('printTimestamp');
+    var now = new Date();
+    var pad = function(n){ return n < 10 ? '0' + n : n; };
+    ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' ngày '
+        + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
+    ts.style.display = 'block';
+    window.print();
+}
+
+// ===== Offcanvas chi tiết =====
 (function() {
     const API_URL = '{{ url_for("admin.api_chi_tiet_detail", ct_id=0) }}'.replace('/0', '/');
 
@@ -729,26 +842,6 @@ function openRejectModal(deXuatId, unitName) {
             .then(data => { body.innerHTML = renderDetail(data); })
             .catch(() => { body.innerHTML = '<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>'; });
     });
-})();
-</script>
-<script>
-// Compact/Full toggle for Bảng 3
-(function() {
-    var KEY = 'rewardListViewMode';
-    var compact = localStorage.getItem(KEY) === 'compact';
-    function applyView() {
-        document.querySelectorAll('.col-detail').forEach(function(el) {
-            el.style.display = compact ? 'none' : '';
-        });
-        var label = document.getElementById('toggleRewardLabel');
-        if (label) label.textContent = compact ? 'Đầy đủ' : 'Thu gọn';
-    }
-    window.toggleRewardListView = function() {
-        compact = !compact;
-        localStorage.setItem(KEY, compact ? 'compact' : 'full');
-        applyView();
-    };
-    document.addEventListener('DOMContentLoaded', applyView);
 })();
 </script>
 {% endblock %}
