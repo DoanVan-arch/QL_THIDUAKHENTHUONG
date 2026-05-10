@@ -782,6 +782,48 @@ def confirm_khen_thuong_ct(ct_id):
     return redirect(url_for('admin.reward_list'))
 
 
+@admin_bp.route('/reward-list/vote-ct/<int:ct_id>', methods=['POST'])
+@login_required
+def hoi_dong_vote_ct(ct_id):
+    """Hội đồng member casts a vote (đồng ý / không đồng ý) for one chi_tiet."""
+    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y
+    vai_tro = current_user.hoi_dong_vai_tro
+    if not vai_tro:
+        flash('Bạn không có quyền biểu quyết.', 'danger')
+        return redirect(url_for('admin.reward_list'))
+
+    ct = DeXuatChiTiet.query.get_or_404(ct_id)
+    if ct.de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+        flash('Đề xuất không ở giai đoạn biểu quyết của Hội đồng.', 'warning')
+        return redirect(url_for('admin.reward_list'))
+
+    ket_qua = request.form.get('ket_qua', '').strip()
+    if ket_qua not in (KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y):
+        flash('Kết quả biểu quyết không hợp lệ.', 'danger')
+        return redirect(url_for('admin.reward_list'))
+
+    ghi_chu = request.form.get('ghi_chu', '').strip() or None
+
+    existing = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct_id, vai_tro=vai_tro).first()
+    if existing:
+        existing.ket_qua = ket_qua
+        existing.ghi_chu = ghi_chu
+        existing.nguoi_bieu_quyet_id = current_user.id
+    else:
+        bq = HoiDongBieuQuyet(
+            de_xuat_id=ct.de_xuat_id,
+            chi_tiet_id=ct_id,
+            nguoi_bieu_quyet_id=current_user.id,
+            vai_tro=vai_tro,
+            ket_qua=ket_qua,
+            ghi_chu=ghi_chu,
+        )
+        db.session.add(bq)
+
+    db.session.commit()
+    name = ct.quan_nhan.ho_ten if ct.quan_nhan else ct.de_xuat.don_vi.ten_don_vi
+    flash(f'Đã ghi nhận biểu quyết "{ket_qua}" cho {name}.', 'success')
+    return redirect(url_for('admin.reward_list'))
 
 
 
@@ -1253,6 +1295,7 @@ def reward_list():
                            total_rewards=total_rewards,
                            stats_by_danh_hieu=stats_by_danh_hieu,
                            can_admin_action=current_user.is_admin,
+                           current_user_vai_tro=current_user.hoi_dong_vai_tro,
                            can_view_pending_final=(current_user.is_admin or current_user.is_reward_viewer),
                            pending_final_nominations=pending_final_nominations,
                            phe_duyet_cuoi_items=phe_duyet_cuoi_items,
