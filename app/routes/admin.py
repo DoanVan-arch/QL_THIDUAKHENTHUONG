@@ -1192,10 +1192,14 @@ def reward_list():
     from sqlalchemy import text as _text
 
     # Correlated subquery to get thu_tu from DanhHieu for ORDER BY.
-    # Avoids JOIN (which causes cartesian product warnings with the raw-text collation condition).
+    # Both columns use COLLATE utf8mb4_unicode_ci to avoid collation mismatch error 1267.
+    from sqlalchemy import collate as _collate
     _thu_tu_subq = (
         db.session.query(_DanhHieu.thu_tu)
-        .filter(_DanhHieu.ten_danh_hieu == KhenThuong.loai_danh_hieu)
+        .filter(
+            _collate(_DanhHieu.ten_danh_hieu, 'utf8mb4_unicode_ci') ==
+            _collate(KhenThuong.loai_danh_hieu, 'utf8mb4_unicode_ci')
+        )
         .correlate(KhenThuong)
         .scalar_subquery()
     )
