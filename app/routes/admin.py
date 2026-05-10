@@ -788,9 +788,13 @@ def hoi_dong_vote_ct(ct_id):
     """Hội đồng member casts a vote (đồng ý / không đồng ý) for one chi_tiet."""
     from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y
     vai_tro = current_user.hoi_dong_vai_tro
+    # Admin can vote using the vai_tro submitted in the form (or 'admin' as fallback)
     if not vai_tro:
-        flash('Bạn không có quyền biểu quyết.', 'danger')
-        return redirect(url_for('admin.reward_list'))
+        if current_user.is_admin:
+            vai_tro = request.form.get('vai_tro', 'admin').strip() or 'admin'
+        else:
+            flash('Bạn không có quyền biểu quyết.', 'danger')
+            return redirect(url_for('admin.reward_list'))
 
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
     if ct.de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
@@ -1248,6 +1252,14 @@ def reward_list():
     # Bảng 2: nominations at PHE_DUYET_CUOI stage + Hội đồng vote status
     phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter)
 
+    # Bảng "Không đồng ý": cá nhân PHE_DUYET_CUOI có ít nhất 1 phiếu Không đồng ý, chưa xác nhận
+    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_KHONG_DONG_Y
+    khong_dong_y_items = [r for r in phe_duyet_cuoi_items
+                          if not r['is_confirmed'] and any(
+                              v is not None and v.ket_qua == KET_QUA_KHONG_DONG_Y
+                              for v in r['votes'].values()
+                          )]
+
     # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
         KhenThuong.loai_danh_hieu == LoaiDanhHieu.CHIEN_SI_THI_DUA.value,
@@ -1304,6 +1316,7 @@ def reward_list():
                            can_view_pending_final=(current_user.is_admin or current_user.is_reward_viewer),
                            pending_final_nominations=pending_final_nominations,
                            phe_duyet_cuoi_items=phe_duyet_cuoi_items,
+                           khong_dong_y_items=khong_dong_y_items,
                            HOI_DONG_VAI_TRO=HOI_DONG_VAI_TRO,
                            HOI_DONG_VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY,
                            cstd_non_consecutive=cstd_non_consecutive,
@@ -1393,6 +1406,154 @@ def _get_phe_duyet_cuoi_items(nam_hoc=None):
     return rows
 
 
+
+
+@admin_bp.route('/tracking/export-excel')
+@login_required
+@admin_required
+def export_tracking_excel():
+    """Export bảng theo dõi quy trình phê duyệt ra Excel chi tiết."""
+    import datetime as _dt
+    status_filter = request.args.get('status', '')
+    unit_filter = request.args.get('unit', '')
+    danh_hieu_filter = request.args.get('danh_hieu', '')
+    search_query = request.args.get('q', '').strip()
+    scope_filter = request.args.get('scope', '')
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+    view_mode = request.args.get('view', 'detail')
+
+    query = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+    if nam_hoc_filter:
+        query = query.filter(DeXuat.nam_hoc == nam_hoc_filter)
+    if status_filter:
+        query = query.filter(DeXuat.trang_thai == status_filter)
+    if unit_filter:
+        query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
+    nominations = query.order_by(DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()).all()
+
+    approved_ct_ids = set(row[0] for row in db.session.query(KhenThuong.chi_tiet_id).all())
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Theo doi phe duyet'
+
+    from openpyxl.styles import Font as _Font, Alignment as _Align, PatternFill as _Fill, Border as _Border, Side as _Side
+    bold = _Font(name='Times New Roman', bold=True, size=11)
+    normal = _Font(name='Times New Roman', size=10)
+    center = _Align(horizontal='center', vertical='center', wrap_text=True)
+    left = _Align(horizontal='left', vertical='center', wrap_text=True)
+    thin = _Border(left=_Side(style='thin'), right=_Side(style='thin'),
+                   top=_Side(style='thin'), bottom=_Side(style='thin'))
+    navy_fill = _Fill(start_color='1F4E79', end_color='1F4E79', fill_type='solid')
+    white_bold = _Font(name='Times New Roman', bold=True, size=10, color='FFFFFF')
+    unit_fill = _Fill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')
+
+    # Title
+    col_count = 12 if view_mode == 'detail' else 8
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=col_count)
+    ws.cell(1, 1).value = 'THEO DÕI QUY TRÌNH PHÊ DUYỆT'
+    ws.cell(1, 1).font = _Font(name='Times New Roman', bold=True, size=13)
+    ws.cell(1, 1).alignment = center
+
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=col_count)
+    filter_info = []
+    if nam_hoc_filter: filter_info.append(f'Năm học: {nam_hoc_filter}')
+    if status_filter: filter_info.append(f'Trạng thái: {status_filter}')
+    if unit_filter: filter_info.append(f'Đơn vị: {unit_filter}')
+    ws.cell(2, 1).value = ('  |  '.join(filter_info) if filter_info else 'Tất cả dữ liệu') + \
+        f'  —  Xuất ngày: {_dt.datetime.now().strftime("%d/%m/%Y %H:%M")}'
+    ws.cell(2, 1).font = _Font(name='Times New Roman', italic=True, size=10)
+    ws.cell(2, 1).alignment = center
+
+    # Headers
+    if view_mode == 'detail':
+        headers = ['STT', 'Đơn vị', 'Họ và tên', 'CCCD', 'Cấp bậc', 'Chức vụ',
+                   'Đối tượng', 'Danh hiệu', 'Năm học', 'Trạng thái', 'Ngày gửi', 'Ghi chú']
+        widths =  [5,    28,     22,       14,      12,      20,
+                   16,        22,        12,      16,        12,       30]
+    else:
+        headers = ['STT', 'Đơn vị', 'Họ và tên', 'Danh hiệu', 'Năm học', 'Trạng thái', 'Ngày gửi', 'Ghi chú']
+        widths  = [5,     28,       22,           22,           12,        16,             12,          30]
+
+    for col_idx, (h, w) in enumerate(zip(headers, widths), 1):
+        c = ws.cell(row=3, column=col_idx, value=h)
+        c.font = white_bold
+        c.fill = navy_fill
+        c.alignment = center
+        c.border = thin
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+    row_num = 4
+    stt = 0
+    for dx in nominations:
+        unit_name = dx.don_vi.ten_don_vi if dx.don_vi else '—'
+        for ct in dx.chi_tiets:
+            if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter:
+                continue
+            if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG:
+                continue
+            if scope_filter == 'can_bo' and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG:
+                continue
+            qn = ct.quan_nhan
+            ho_ten = qn.ho_ten if qn else (ct.ten_don_vi_de_xuat or '—')
+            if search_query and search_query.lower() not in ho_ten.lower():
+                continue
+
+            stt += 1
+            trang_thai = dx.trang_thai
+            if ct.id in approved_ct_ids:
+                trang_thai = 'Đã khen thưởng'
+
+            if view_mode == 'detail':
+                row_data = [
+                    stt, unit_name, ho_ten,
+                    (qn.can_cuoc_cong_dan if qn else ''),
+                    (qn.cap_bac if qn else ''),
+                    (qn.chuc_vu if qn else ''),
+                    (ct.doi_tuong or ''),
+                    ct.loai_danh_hieu or '',
+                    dx.nam_hoc or '',
+                    trang_thai,
+                    dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '',
+                    ct.ghi_chu or '',
+                ]
+            else:
+                row_data = [
+                    stt, unit_name, ho_ten,
+                    ct.loai_danh_hieu or '',
+                    dx.nam_hoc or '',
+                    trang_thai,
+                    dx.ngay_gui.strftime('%d/%m/%Y') if dx.ngay_gui else '',
+                    ct.ghi_chu or '',
+                ]
+
+            for col_idx, val in enumerate(row_data, 1):
+                c = ws.cell(row=row_num, column=col_idx, value=val)
+                c.font = normal
+                c.border = thin
+                c.alignment = center if col_idx == 1 else left
+            row_num += 1
+
+    # Summary
+    ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=col_count)
+    c = ws.cell(row=row_num, column=1, value=f'Tổng cộng: {stt} cá nhân')
+    c.font = bold
+    c.alignment = left
+
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToWidth = 1
+    ws.freeze_panes = 'A4'
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    fname_parts = ['TheoDoiPheduyet']
+    if nam_hoc_filter:
+        fname_parts.append(nam_hoc_filter.replace('-', '_'))
+    fname_parts.append(_dt.datetime.now().strftime('%d%m%Y'))
+    return send_file(output, as_attachment=True,
+                     download_name='_'.join(fname_parts) + '.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 @admin_bp.route('/reward-list/pending-final/export-excel')
