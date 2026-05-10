@@ -91,6 +91,8 @@ class QuanNhan(db.Model):
     la_doan_vien = Column(Boolean, default=False)
     la_hoi_vien_phu_nu = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
+    is_chuyen_vung = Column(Boolean, default=False, nullable=False)
+    ngay_chuyen_vung = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

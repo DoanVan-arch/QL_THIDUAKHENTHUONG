@@ -277,7 +277,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     {# Thao tác: Hội đồng vote + Admin confirm #}
                     <td class="text-center" style="white-space:nowrap;">
                         {% if row.is_confirmed %}
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</span>
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
+                        {% elif row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý' %}
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bác</span>
                         {% else %}
                         <div class="d-flex gap-1 justify-content-center flex-wrap no-print">
                             {# Hội đồng member vote button #}
@@ -291,16 +293,25 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
                             </button>
                             {% endif %}
-                            {# Admin: nút Xác nhận chỉ hiện khi TẤT CẢ Hội đồng đã đồng ý #}
-                            {% if can_admin_action and row.all_voted_dong_y %}
+                            {# Admin: 2 nút Xác nhận khi TẤT CẢ Hội đồng đã biểu quyết (bất kể kết quả) #}
+                            {% if can_admin_action and row.all_voted %}
                             <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button class="btn btn-xs btn-success py-0" type="submit"
-                                        title="Tất cả đã đồng ý – Xác nhận khen thưởng"
-                                        style="font-size:0.75rem;">
-                                    <i class="bi bi-check2-circle me-1"></i>Xác nhận
+                                        title="Xác nhận Đồng ý — đưa vào Bảng 3"
+                                        style="font-size:0.75rem;"
+                                        onclick="return confirm('Xác nhận ĐỒNG Ý khen thưởng cho cá nhân này?')">
+                                    <i class="bi bi-check2-circle me-1"></i>Đồng ý
                                 </button>
                             </form>
+                            <button type="button"
+                                    class="btn btn-xs btn-danger py-0"
+                                    style="font-size:0.75rem;"
+                                    title="Xác nhận Không đồng ý — đưa vào Danh sách phản đối"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#kdyModal{{ ct.id }}">
+                                <i class="bi bi-x-circle me-1"></i>Không đồng ý
+                            </button>
                             {% elif can_admin_action %}
                             <span class="badge bg-light text-muted border" style="font-size:0.7rem;">
                                 <i class="bi bi-clock me-1"></i>Chờ biểu quyết
@@ -308,11 +319,40 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             {% endif %}
                         </div>
                         <span class="print-only small">
-                            {% if row.all_voted_dong_y %}Đồng ý{% else %}Chờ biểu quyết{% endif %}
+                            {% if row.all_voted_dong_y %}Đồng ý{% elif row.all_voted %}Chờ admin{% else %}Chờ biểu quyết{% endif %}
                         </span>
                         {% endif %}
                     </td>
                 </tr>
+
+                {# Modal Xác nhận Không đồng ý #}
+                {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %}
+                <div class="modal fade" id="kdyModal{{ ct.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-sm">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="modal-body">
+                                    <p class="small mb-2">Xác nhận <strong>Không đồng ý</strong> khen thưởng cho <strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong>?</p>
+                                    <p class="small text-muted mb-2">Cá nhân này sẽ chuyển vào danh sách Hội đồng phản đối.</p>
+                                    <div>
+                                        <label class="form-label small">Ghi chú lý do (tùy chọn)</label>
+                                        <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                    <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 {% endfor %}
                 </tbody>
             </table>
