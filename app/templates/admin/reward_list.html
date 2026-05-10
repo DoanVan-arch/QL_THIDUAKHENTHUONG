@@ -274,60 +274,39 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         {% endif %}
                     </td>
                     {% endfor %}
-                    {# Thao tác: admin confirm + Hội đồng vote button #}
+                    {# Thao tác: Hội đồng vote + Admin confirm #}
                     <td class="text-center" style="white-space:nowrap;">
                         {% if row.is_confirmed %}
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận</span>
                         {% else %}
                         <div class="d-flex gap-1 justify-content-center flex-wrap no-print">
-                            {# Vote button for Hội đồng member #}
-                            {% if current_user_vai_tro and not row.is_confirmed %}
+                            {# Hội đồng member vote button #}
+                            {% if current_user_vai_tro %}
                             {% set my_vote = row.votes.get(current_user_vai_tro) %}
                             <button type="button"
                                     class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
                                     style="font-size:0.75rem;"
-                                    title="Biểu quyết của tôi ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
+                                    title="Biểu quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
                                     onclick="openVoteModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '') | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}')">
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
                             </button>
                             {% endif %}
-                            {# Admin: can vote AND confirm #}
-                            {% if can_admin_action %}
-                            <button type="button"
-                                    class="btn btn-xs btn-outline-success py-0"
-                                    style="font-size:0.75rem;"
-                                    title="Admin: Đồng ý (biểu quyết thay mặt Admin)"
-                                    onclick="openVoteModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '') | e }}', 'Admin', '')">
-                                <i class="bi bi-check-lg me-1"></i>Đồng ý
-                            </button>
-                            <button type="button"
-                                    class="btn btn-xs btn-outline-danger py-0"
-                                    style="font-size:0.75rem;"
-                                    title="Admin: Không đồng ý"
-                                    onclick="openVoteModalKhong({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '') | e }}')">
-                                <i class="bi bi-x-lg me-1"></i>Không đồng ý
-                            </button>
+                            {# Admin: nút Xác nhận chỉ hiện khi TẤT CẢ Hội đồng đã đồng ý #}
+                            {% if can_admin_action and row.all_voted_dong_y %}
                             <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                {% if row.all_voted_dong_y %}
-                                <button class="btn btn-xs btn-success py-0" type="submit" title="Tất cả đã đồng ý – Xác nhận khen thưởng" style="font-size:0.75rem;">
+                                <button class="btn btn-xs btn-success py-0" type="submit"
+                                        title="Tất cả đã đồng ý – Xác nhận khen thưởng"
+                                        style="font-size:0.75rem;">
                                     <i class="bi bi-check2-circle me-1"></i>Xác nhận
                                 </button>
-                                {% else %}
-                                <button class="btn btn-xs btn-warning py-0 text-dark" type="submit"
-                                        title="Chưa đủ phiếu đồng ý – Override"
-                                        style="font-size:0.75rem;"
-                                        onclick="return confirm('Chưa đủ phiếu đồng ý từ Hội đồng. Bạn vẫn muốn xác nhận khen thưởng?')">
-                                    <i class="bi bi-exclamation-circle me-1"></i>Override
-                                </button>
-                                {% endif %}
                             </form>
-                            {% endif %}
-                            {% if not current_user_vai_tro and not can_admin_action %}
-                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chờ biểu quyết</span>
+                            {% elif can_admin_action %}
+                            <span class="badge bg-light text-muted border" style="font-size:0.7rem;">
+                                <i class="bi bi-clock me-1"></i>Chờ biểu quyết
+                            </span>
                             {% endif %}
                         </div>
-                        {# Print-only: show vote summary text #}
                         <span class="print-only small">
                             {% if row.all_voted_dong_y %}Đồng ý{% else %}Chờ biểu quyết{% endif %}
                         </span>
