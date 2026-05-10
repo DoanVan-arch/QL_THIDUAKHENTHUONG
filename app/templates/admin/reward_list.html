@@ -83,6 +83,9 @@
             <a href="{{ url_for('admin.export_pending_final_word') }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-file-earmark-word me-1"></i>Word
             </a>
+            <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBang1','Bảng 1 – Chờ phê duyệt cuối')">
+                <i class="bi bi-printer me-1"></i>In PDF
+            </button>
             <button class="btn btn-sm btn-outline-secondary" style="cursor:pointer;"
                     data-bs-toggle="collapse" data-bs-target="#bang1Body" aria-expanded="false">
                 <i class="bi bi-chevron-down" id="bang1Chevron"></i>
@@ -207,6 +210,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <a href="{{ url_for('admin.export_bang2_excel') }}" class="btn btn-sm btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
+            <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBang2','Bảng 2 – Xét duyệt Hội đồng')">
+                <i class="bi bi-printer me-1"></i>In PDF
+            </button>
         </div>
     </div>
     <div class="card-body-custom py-2">
@@ -285,8 +291,22 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
                             </button>
                             {% endif %}
-                            {# Admin confirm/override #}
+                            {# Admin: can vote AND confirm #}
                             {% if can_admin_action %}
+                            <button type="button"
+                                    class="btn btn-xs btn-outline-success py-0"
+                                    style="font-size:0.75rem;"
+                                    title="Admin: Đồng ý (biểu quyết thay mặt Admin)"
+                                    onclick="openVoteModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '') | e }}', 'Admin', '')">
+                                <i class="bi bi-check-lg me-1"></i>Đồng ý
+                            </button>
+                            <button type="button"
+                                    class="btn btn-xs btn-outline-danger py-0"
+                                    style="font-size:0.75rem;"
+                                    title="Admin: Không đồng ý"
+                                    onclick="openVoteModalKhong({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '') | e }}')">
+                                <i class="bi bi-x-lg me-1"></i>Không đồng ý
+                            </button>
                             <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 {% if row.all_voted_dong_y %}
@@ -330,6 +350,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 <div class="d-flex gap-3 mb-2 flex-wrap align-items-center no-print">
     <span class="fw-semibold text-navy"><i class="bi bi-trophy me-1"></i>Bảng 3: Danh sách khen thưởng đã xác nhận</span>
     <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBang3','Bảng 3 – Danh sách khen thưởng')">
+            <i class="bi bi-printer me-1"></i>In PDF
+        </button>
         <a href="{{ url_for('admin.export_reward_list', nam_hoc=nam_hoc_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query) }}"
            class="btn btn-sm btn-outline-success">
             <i class="bi bi-file-earmark-excel me-1"></i>Excel
@@ -531,6 +554,76 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 </div>
 {% endif %}{# end nam_hoc_filter #}
 
+{% if can_view_pending_final and nam_hoc_filter and khong_dong_y_items %}
+{# ===== BẢNG KHÔNG ĐỒNG Ý: cá nhân bị Hội đồng phản đối ===== #}
+<div class="card-section mb-3 print-section" id="printBangKDY" style="border-left:4px solid #dc3545;">
+    <div class="card-header-custom d-flex align-items-center justify-content-between" style="background:#fff5f5;">
+        <h6 class="mb-0 text-danger">
+            <i class="bi bi-x-circle me-2"></i>Danh sách Không đồng ý (Hội đồng phản đối)
+            <span class="badge bg-danger ms-2">{{ khong_dong_y_items|length }}</span>
+        </h6>
+        <div class="d-flex gap-2 no-print">
+            <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBangKDY','Danh sách Không đồng ý')">
+                <i class="bi bi-printer me-1"></i>In PDF
+            </button>
+        </div>
+    </div>
+    <div class="card-body-custom py-2">
+        <div class="table-responsive">
+            <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Danh hiệu</th>
+                        <th>Đơn vị</th>
+                        <th>Cá nhân</th>
+                        <th>Năm học</th>
+                        {% for vt in HOI_DONG_VAI_TRO %}
+                        <th class="text-center" style="white-space:nowrap;font-size:0.75rem;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
+                        {% endfor %}
+                        <th>Ghi chú phản đối</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in khong_dong_y_items %}
+                {% set ct = row.ct %}
+                {% set dx = row.dx %}
+                <tr class="table-danger">
+                    <td>{{ loop.index }}</td>
+                    <td><span class="badge bg-secondary">{{ ct.loai_danh_hieu }}</span></td>
+                    <td>{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
+                    <td><strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong></td>
+                    <td>{{ dx.nam_hoc }}</td>
+                    {% for vt in HOI_DONG_VAI_TRO %}
+                    {% set bq = row.votes.get(vt) %}
+                    <td class="text-center">
+                        {% if bq %}
+                            {% if bq.ket_qua == 'Đồng ý' %}
+                            <span class="badge bg-success"><i class="bi bi-check-lg"></i></span>
+                            {% else %}
+                            <span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>
+                            {% endif %}
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-danger small">
+                        {% for vt, bq in row.votes.items() %}
+                            {% if bq.ket_qua == 'Không đồng ý' and bq.ghi_chu %}
+                            <div><strong>{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}:</strong> {{ bq.ghi_chu }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ===== Vote Modal for Bảng 2 ===== #}
 <div class="modal fade" id="voteModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
@@ -546,6 +639,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 <form id="voteFormDongY" method="POST" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="ket_qua" value="Đồng ý">
+                    <input type="hidden" name="vai_tro" id="voteFormVaiTro" value="admin">
                     <div class="mb-2">
                         <label class="form-label small mb-1">Ghi chú (tuỳ chọn)</label>
                         <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteY" placeholder="Ghi chú...">
@@ -557,6 +651,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 <form id="voteFormKhong" method="POST" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="ket_qua" value="Không đồng ý">
+                    <input type="hidden" name="vai_tro" id="voteFormVaiTroK" value="admin">
                     <div class="mb-2">
                         <label class="form-label small mb-1">Ghi chú (tuỳ chọn)</label>
                         <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteK" placeholder="Ghi chú...">
@@ -662,6 +757,13 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
         .badge { border: 1px solid #666; color: #000 !important; background: transparent !important; }
         #printTimestamp { display: block !important; position: fixed; bottom: 10px; right: 10px;
             font-size: 9pt; color: #666; }
+        /* Section-specific print: hide all print-sections, show only the selected one */
+        body[data-print-section] .print-section { display: none !important; }
+        body[data-print-section="printBang1"] #printBang1 { display: block !important; }
+        body[data-print-section="printBang2"] #printBang2 { display: block !important; }
+        body[data-print-section="printBang3"] #printBang3 { display: block !important; }
+        body[data-print-section="printBangKDY"] #printBangKDY { display: block !important; }
+        body[data-print-section="printTracking"] #printTracking { display: block !important; }
     }
     /* compact mode – hides col-b1-detail, col-b2-detail, col-b3-detail */
     body.rl-compact .col-b1-detail,
@@ -671,6 +773,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 
 {# Print timestamp watermark (only visible when printing) #}
 <div id="printTimestamp" style="display:none;"></div>
+<div id="printSectionTitle" class="print-only" style="font-weight:bold;font-size:13pt;margin-bottom:8px;"></div>
 
 <script>
 // ===== Vote Modal =====
@@ -686,6 +789,14 @@ function openVoteModal(ctId, name, ban, currentVote) {
     document.getElementById('voteNoteY').value = '';
     document.getElementById('voteNoteK').value = '';
     new bootstrap.Modal(document.getElementById('voteModal')).show();
+}
+function openVoteModalKhong(ctId, name) {
+    openVoteModal(ctId, name, 'Admin', '');
+    // After modal opens, scroll to Không đồng ý form
+    setTimeout(function() {
+        var el = document.getElementById('voteNoteK');
+        if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 300);
 }
 
 // ===== Revoke / Reject =====
@@ -719,14 +830,25 @@ function openRejectModal(deXuatId, unitName) {
 })();
 
 // ===== PDF Print =====
-function printPage() {
+function _setPrintTimestamp() {
     var ts = document.getElementById('printTimestamp');
     var now = new Date();
     var pad = function(n){ return n < 10 ? '0' + n : n; };
     ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' ngày '
         + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
     ts.style.display = 'block';
+}
+function printPage() {
+    document.body.removeAttribute('data-print-section');
+    _setPrintTimestamp();
     window.print();
+}
+function printSection(sectionId, title) {
+    document.body.setAttribute('data-print-section', sectionId);
+    document.getElementById('printSectionTitle').textContent = title || '';
+    _setPrintTimestamp();
+    window.print();
+    setTimeout(function(){ document.body.removeAttribute('data-print-section'); }, 1000);
 }
 
 // ===== Offcanvas chi tiết =====
