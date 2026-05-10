@@ -20,6 +20,9 @@
         <a href="{{ url_for('personnel.create_personnel') }}" class="btn btn-navy">
             <i class="bi bi-person-plus me-1"></i> Thêm quân nhân
         </a>
+        <a href="{{ url_for('personnel.list_chuyen_vung') }}" class="btn btn-outline-warning">
+            <i class="bi bi-geo-alt me-1"></i> DS Chuyển vùng
+        </a>
     </div>
 </div>
 
@@ -138,6 +141,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <a href="{{ url_for('personnel.edit_personnel', id=qn.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            <form method="POST" action="{{ url_for('personnel.mark_chuyen_vung', id=qn.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Chuyển vùng"
+                                        onclick="return confirm('Chuyển {{ qn.ho_ten }} sang danh sách quân nhân chuyển vùng?')">
+                                    <i class="bi bi-geo-alt"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}

@@ -844,9 +844,14 @@ def confirm_transfer(transfer_id):
 
     ghi_chu = request.form.get('ghi_chu', '').strip()
 
-    # Move the personnel record to the new unit
-    qn = chuyen.quan_nhan
+    # Explicitly reload QuanNhan to ensure it is tracked by the current session
+    qn = QuanNhan.query.get(chuyen.quan_nhan_id)
+    if not qn:
+        flash('Không tìm thấy thông tin quân nhân.', 'danger')
+        return redirect(url_for('personnel.incoming_transfers'))
+
     qn.don_vi_id = chuyen.don_vi_dich_id
+    db.session.add(qn)
 
     chuyen.trang_thai = TrangThaiChuyen.CONFIRMED
     chuyen.nguoi_xac_nhan_id = current_user.id
@@ -904,3 +909,62 @@ def cancel_transfer(transfer_id):
     db.session.commit()
     flash('Đã hủy yêu cầu chuyển đơn vị.', 'success')
     return redirect(url_for('personnel.incoming_transfers'))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CHUYỂN VÙNG
+# ─────────────────────────────────────────────────────────────────────────────
+
+@personnel_bp.route('/chuyen-vung')
+@login_required
+@unit_user_required
+def list_chuyen_vung():
+    """Danh sách quân nhân chuyển vùng của đơn vị."""
+    if not current_user.don_vi:
+        flash('Tài khoản chưa được gán đơn vị.', 'warning')
+        return redirect(url_for('dashboard.index'))
+
+    personnel = QuanNhan.query.filter_by(
+        don_vi_id=current_user.don_vi_id,
+        is_chuyen_vung=True,
+    ).order_by(QuanNhan.ngay_chuyen_vung.desc(), QuanNhan.ho_ten).all()
+
+    return render_template('personnel/chuyen_vung.html', personnel=personnel)
+
+
+@personnel_bp.route('/<int:id>/chuyen-vung', methods=['POST'])
+@login_required
+@unit_user_required
+def mark_chuyen_vung(id):
+    """Đánh dấu quân nhân chuyển vùng."""
+    qn = QuanNhan.query.get_or_404(id)
+    if qn.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền thao tác với quân nhân này.', 'danger')
+        return redirect(url_for('personnel.list_personnel'))
+
+    if qn.is_chuyen_vung:
+        flash(f'{qn.ho_ten} đã ở danh sách chuyển vùng rồi.', 'info')
+        return redirect(url_for('personnel.detail_personnel', id=id))
+
+    qn.is_chuyen_vung = True
+    qn.ngay_chuyen_vung = datetime.utcnow()
+    db.session.commit()
+    flash(f'Đã chuyển {qn.ho_ten} sang danh sách quân nhân chuyển vùng.', 'success')
+    return redirect(url_for('personnel.list_chuyen_vung'))
+
+
+@personnel_bp.route('/<int:id>/huy-chuyen-vung', methods=['POST'])
+@login_required
+@unit_user_required
+def unmark_chuyen_vung(id):
+    """Hủy đánh dấu chuyển vùng — đưa quân nhân trở lại danh sách thường."""
+    qn = QuanNhan.query.get_or_404(id)
+    if qn.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền thao tác với quân nhân này.', 'danger')
+        return redirect(url_for('personnel.list_chuyen_vung'))
+
+    qn.is_chuyen_vung = False
+    qn.ngay_chuyen_vung = None
+    db.session.commit()
+    flash(f'Đã đưa {qn.ho_ten} trở lại danh sách quân nhân.', 'success')
+    return redirect(url_for('personnel.list_chuyen_vung'))

@@ -746,12 +746,12 @@ def confirm_khen_thuong_ct(ct_id):
         flash('Đề xuất không ở giai đoạn chờ xác nhận khen thưởng.', 'warning')
         return redirect(url_for('admin.reward_list'))
 
-    # Verify all 6 roles voted DONG_Y for this individual
+    # Verify all 6 roles have voted (any result)
     for vai_tro in HOI_DONG_VAI_TRO:
         bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
-        if not bq or bq.ket_qua != KET_QUA_DONG_Y:
+        if not bq:
             vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
-            flash(f'{vt_name} chưa biểu quyết đồng ý cho cá nhân này.', 'warning')
+            flash(f'{vt_name} chưa biểu quyết cho cá nhân này.', 'warning')
             return redirect(url_for('admin.reward_list'))
 
     existing = KhenThuong.query.filter_by(de_xuat_id=de_xuat.id, chi_tiet_id=ct.id).first()
@@ -779,6 +779,59 @@ def confirm_khen_thuong_ct(ct_id):
 
     name = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
     flash(f'Đã xác nhận khen thưởng cho {name}.', 'success')
+    return redirect(url_for('admin.reward_list'))
+
+
+@admin_bp.route('/reward-list/confirm-khong-dong-y-ct/<int:ct_id>', methods=['POST'])
+@login_required
+@admin_required
+def confirm_khong_dong_y_ct(ct_id):
+    """Admin xác nhận Không đồng ý cho một cá nhân trong Bảng 2 → đưa vào Danh sách Không đồng ý."""
+    from app.models.hoi_dong import (
+        HoiDongBieuQuyet, HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY,
+        KET_QUA_KHONG_DONG_Y,
+    )
+    ct = DeXuatChiTiet.query.get_or_404(ct_id)
+    de_xuat = ct.de_xuat
+
+    if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+        flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
+        return redirect(url_for('admin.reward_list'))
+
+    # Verify all 6 roles have voted (any result)
+    for vai_tro in HOI_DONG_VAI_TRO:
+        bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+        if not bq:
+            vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
+            flash(f'{vt_name} chưa biểu quyết cho cá nhân này.', 'warning')
+            return redirect(url_for('admin.reward_list'))
+
+    # Check not already confirmed as KhenThuong
+    if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
+        flash('Cá nhân này đã được xác nhận khen thưởng, không thể đánh dấu không đồng ý.', 'warning')
+        return redirect(url_for('admin.reward_list'))
+
+    ghi_chu = request.form.get('ghi_chu', '').strip() or None
+
+    existing = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct_id, vai_tro='admin_final').first()
+    if existing:
+        existing.ket_qua = KET_QUA_KHONG_DONG_Y
+        existing.ghi_chu = ghi_chu
+        existing.nguoi_bieu_quyet_id = current_user.id
+    else:
+        bq = HoiDongBieuQuyet(
+            de_xuat_id=ct.de_xuat_id,
+            chi_tiet_id=ct_id,
+            nguoi_bieu_quyet_id=current_user.id,
+            vai_tro='admin_final',
+            ket_qua=KET_QUA_KHONG_DONG_Y,
+            ghi_chu=ghi_chu,
+        )
+        db.session.add(bq)
+
+    db.session.commit()
+    name = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
+    flash(f'Đã xác nhận Không đồng ý cho {name}.', 'info')
     return redirect(url_for('admin.reward_list'))
 
 
@@ -1252,13 +1305,11 @@ def reward_list():
     # Bảng 2: nominations at PHE_DUYET_CUOI stage + Hội đồng vote status
     phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter)
 
-    # Bảng "Không đồng ý": cá nhân PHE_DUYET_CUOI có ít nhất 1 phiếu Không đồng ý, chưa xác nhận
+    # Bảng "Không đồng ý": cá nhân mà Admin đã xác nhận Không đồng ý (admin_final_vote = KHONG_DONG_Y)
     from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_KHONG_DONG_Y
     khong_dong_y_items = [r for r in phe_duyet_cuoi_items
-                          if not r['is_confirmed'] and any(
-                              v is not None and v.ket_qua == KET_QUA_KHONG_DONG_Y
-                              for v in r['votes'].values()
-                          )]
+                          if r['admin_final_vote'] is not None
+                          and r['admin_final_vote'].ket_qua == KET_QUA_KHONG_DONG_Y]
 
     # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
@@ -1386,18 +1437,25 @@ def _get_phe_duyet_cuoi_items(nam_hoc=None):
         for ct in dx.chi_tiets:
             votes = {}
             ct_all_dong_y = True
+            ct_all_voted = True
             for vai_tro in HOI_DONG_VAI_TRO:
                 bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
                 votes[vai_tro] = bq
-                if not bq or bq.ket_qua != KET_QUA_DONG_Y:
+                if not bq:
+                    ct_all_dong_y = False
+                    ct_all_voted = False
+                elif bq.ket_qua != KET_QUA_DONG_Y:
                     ct_all_dong_y = False
             is_confirmed = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
+            admin_final_vote = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro='admin_final').first()
             rows.append({
                 'dx': dx,
                 'ct': ct,
                 'votes': votes,
                 'all_voted_dong_y': ct_all_dong_y,
+                'all_voted': ct_all_voted,
                 'is_confirmed': is_confirmed,
+                'admin_final_vote': admin_final_vote,
                 '_sort_award': danh_hieu_order.get(ct.loai_danh_hieu, 999),
                 '_sort_unit': dx.don_vi.ten_don_vi if dx.don_vi else '',
             })

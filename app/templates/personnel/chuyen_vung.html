@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Danh sách quân nhân chuyển vùng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-geo-alt me-2"></i>Danh sách quân nhân chuyển vùng</h4>
+        <nav>
+            <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                <li class="breadcrumb-item"><a href="{{ url_for('personnel.list_personnel') }}">Quân nhân</a></li>
+                <li class="breadcrumb-item active">Chuyển vùng</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="ms-auto">
+        <a href="{{ url_for('personnel.list_personnel') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại DS quân nhân
+        </a>
+    </div>
+</div>
+
+<div class="card-section mb-3">
+    <div class="card-header-custom d-flex align-items-center justify-content-between">
+        <h6 class="mb-0">
+            <i class="bi bi-geo-alt-fill text-warning me-2"></i>Quân nhân chuyển vùng
+            {% if personnel %}
+            <span class="badge bg-warning text-dark ms-2">{{ personnel|length }}</span>
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body-custom">
+        {% if personnel %}
+        <div class="table-responsive">
+            <table class="table table-sm table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ tên</th>
+                        <th>Cấp bậc</th>
+                        <th>Chức vụ</th>
+                        <th>Đối tượng</th>
+                        <th>CCCD</th>
+                        <th>Ngày chuyển vùng</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for qn in personnel %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="fw-semibold text-decoration-none">
+                            {{ qn.ho_ten }}
+                        </a>
+                    </td>
+                    <td>{{ qn.cap_bac or '—' }}</td>
+                    <td>{{ qn.chuc_vu or '—' }}</td>
+                    <td>{{ qn.doi_tuong or '—' }}</td>
+                    <td class="small text-muted">{{ qn.can_cuoc_cong_dan or '—' }}</td>
+                    <td class="small text-muted">
+                        {{ qn.ngay_chuyen_vung.strftime('%d/%m/%Y %H:%M') if qn.ngay_chuyen_vung else '—' }}
+                    </td>
+                    <td class="text-center">
+                        <form method="POST" action="{{ url_for('personnel.unmark_chuyen_vung', id=qn.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                    onclick="return confirm('Đưa {{ qn.ho_ten }} trở lại danh sách quân nhân thường?')">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Hoàn tác
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted small fst-italic mb-0">Chưa có quân nhân chuyển vùng nào.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
