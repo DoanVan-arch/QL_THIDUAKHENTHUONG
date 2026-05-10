@@ -1652,16 +1652,16 @@ def export_pending_final_word():
 @login_required
 @admin_or_reward_viewer_required
 def export_bang2_excel():
-    """Export Bảng 2 (PHE_DUYET_CUOI – Hội đồng biểu quyết) ra Excel."""
+    """Export Bảng 2 (PHE_DUYET_CUOI – Hội đồng biểu quyết) ra Excel đầy đủ thông tin."""
     from app.models.hoi_dong import HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY
+    import datetime as _dt
     items = _get_phe_duyet_cuoi_items()
 
     wb = Workbook()
     ws = wb.active
-    ws.title = 'Bang 2 - Xet duyet HĐ'
+    ws.title = 'Bang 2 - Xet duyet HD'
 
     from openpyxl.styles import Font as _Font, Alignment as _Align, PatternFill as _Fill, Border as _Border, Side as _Side
-    bold = _Font(name='Times New Roman', bold=True, size=11)
     normal = _Font(name='Times New Roman', size=10)
     center = _Align(horizontal='center', vertical='center', wrap_text=True)
     left = _Align(horizontal='left', vertical='center', wrap_text=True)
@@ -1670,68 +1670,74 @@ def export_bang2_excel():
     navy_fill = _Fill(start_color='1F4E79', end_color='1F4E79', fill_type='solid')
     white_bold = _Font(name='Times New Roman', bold=True, size=10, color='FFFFFF')
 
-    # Title
-    col_count = 5 + len(HOI_DONG_VAI_TRO) + 1
+    # Columns: STT + thông tin cá nhân đầy đủ + 6 ban + Trạng thái
+    personal_headers = [
+        'STT', 'Họ và tên', 'CCCD', 'Cấp bậc', 'Chức vụ', 'Đối tượng',
+        'Đơn vị', 'Danh hiệu', 'Năm học',
+    ]
+    personal_widths = [5, 22, 14, 12, 20, 16, 28, 20, 12]
+    ban_headers = [HOI_DONG_VAI_TRO_DISPLAY[vt] for vt in HOI_DONG_VAI_TRO]
+    all_headers = personal_headers + ban_headers + ['Trạng thái']
+    all_widths = personal_widths + [16] * len(HOI_DONG_VAI_TRO) + [16]
+    col_count = len(all_headers)
+
+    # Title rows
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=col_count)
     ws.cell(1, 1).value = 'BẢNG 2: XÉT DUYỆT CỦA CƠ QUAN THƯỜNG TRỰC – HỘI ĐỒNG BIỂU QUYẾT'
     ws.cell(1, 1).font = _Font(name='Times New Roman', bold=True, size=13)
     ws.cell(1, 1).alignment = center
 
-    import datetime as _dt
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=col_count)
     ws.cell(2, 1).value = f'Xuất ngày: {_dt.datetime.now().strftime("%d/%m/%Y %H:%M")}'
     ws.cell(2, 1).font = _Font(name='Times New Roman', italic=True, size=10)
     ws.cell(2, 1).alignment = center
 
     # Header row
-    headers = ['STT', 'Danh hiệu', 'Đơn vị', 'Cá nhân', 'Năm học']
-    for vt in HOI_DONG_VAI_TRO:
-        headers.append(HOI_DONG_VAI_TRO_DISPLAY[vt])
-    headers.append('Trạng thái')
-
-    for col_idx, h in enumerate(headers, 1):
+    for col_idx, (h, w) in enumerate(zip(all_headers, all_widths), 1):
         c = ws.cell(row=3, column=col_idx, value=h)
         c.font = white_bold
         c.fill = navy_fill
         c.alignment = center
         c.border = thin
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
 
-    # Data rows
-    for row_idx, row in enumerate(items, 4):
-        ct = row.ct
-        dx = row.dx
-        name = ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or '—')
+    # Data rows — items is list of dict
+    for row_num, row in enumerate(items, 4):
+        ct = row['ct']
+        dx = row['dx']
+        votes = row['votes']
+        qn = ct.quan_nhan
+        name = qn.ho_ten if qn else (ct.ten_don_vi_de_xuat or '—')
         don_vi = dx.don_vi.ten_don_vi if dx.don_vi else '—'
 
-        data = [
-            row_idx - 3,
-            ct.loai_danh_hieu,
-            don_vi,
+        row_data = [
+            row_num - 3,
             name,
-            dx.nam_hoc,
+            (qn.can_cuoc_cong_dan if qn else '') or '',
+            (qn.cap_bac if qn else '') or '',
+            (qn.chuc_vu if qn else '') or '',
+            (ct.doi_tuong or ''),
+            don_vi,
+            ct.loai_danh_hieu or '',
+            dx.nam_hoc or '',
         ]
         for vt in HOI_DONG_VAI_TRO:
-            bq = row.votes.get(vt)
-            data.append(bq.ket_qua if bq else '—')
-        data.append('Đã xác nhận' if row.is_confirmed else ('Đủ phiếu' if row.all_voted_dong_y else 'Chờ biểu quyết'))
+            bq = votes.get(vt)
+            row_data.append(bq.ket_qua if bq else '—')
+        trang_thai = ('Đã xác nhận' if row['is_confirmed']
+                      else ('Đủ phiếu – chờ xác nhận' if row['all_voted_dong_y']
+                            else 'Chờ biểu quyết'))
+        row_data.append(trang_thai)
 
-        for col_idx, val in enumerate(data, 1):
-            c = ws.cell(row=row_idx, column=col_idx, value=val)
+        for col_idx, val in enumerate(row_data, 1):
+            c = ws.cell(row=row_num, column=col_idx, value=val)
             c.font = normal
             c.alignment = center if col_idx == 1 else left
             c.border = thin
 
-    # Column widths
-    ws.column_dimensions['A'].width = 5
-    ws.column_dimensions['B'].width = 18
-    ws.column_dimensions['C'].width = 22
-    ws.column_dimensions['D'].width = 22
-    ws.column_dimensions['E'].width = 12
-    for i in range(len(HOI_DONG_VAI_TRO)):
-        col_letter = ws.cell(row=3, column=6 + i).column_letter
-        ws.column_dimensions[col_letter].width = 16
-    last_col = ws.cell(row=3, column=col_count).column_letter
-    ws.column_dimensions[last_col].width = 16
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToWidth = 1
+    ws.freeze_panes = 'A4'
 
     output = BytesIO()
     wb.save(output)
