@@ -245,6 +245,37 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     {% for vt in HOI_DONG_VAI_TRO %}
                     {% set bq = row.votes.get(vt) %}
                     <td class="text-center">
+                        {% if vt == current_user_vai_tro and not row.is_confirmed %}
+                        {# This column belongs to the logged-in Hội đồng member — show vote buttons #}
+                        <div class="d-flex flex-column align-items-center gap-1">
+                            {% if bq %}
+                                {% if bq.ket_qua == 'Đồng ý' %}
+                                <span class="badge bg-success mb-1" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i> Đồng ý</span>
+                                {% else %}
+                                <span class="badge bg-danger mb-1" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i> Không đồng ý</span>
+                                {% endif %}
+                            {% endif %}
+                            <div class="d-flex gap-1">
+                                <form method="POST" action="{{ url_for('admin.hoi_dong_vote_ct', ct_id=ct.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="ket_qua" value="Đồng ý">
+                                    <button type="submit" class="btn btn-xs py-0 px-1 {% if bq and bq.ket_qua == 'Đồng ý' %}btn-success{% else %}btn-outline-success{% endif %}"
+                                            title="Biểu quyết Đồng ý" style="font-size:0.7rem;">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.hoi_dong_vote_ct', ct_id=ct.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="ket_qua" value="Không đồng ý">
+                                    <button type="submit" class="btn btn-xs py-0 px-1 {% if bq and bq.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-danger{% endif %}"
+                                            title="Biểu quyết Không đồng ý" style="font-size:0.7rem;">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        {# Other columns — show read-only badge #}
                         {% if bq %}
                             {% if bq.ket_qua == 'Đồng ý' %}
                             <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
@@ -253,6 +284,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             {% endif %}
                         {% else %}
                         <span class="text-muted">—</span>
+                        {% endif %}
                         {% endif %}
                     </td>
                     {% endfor %}
@@ -294,6 +326,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 <!-- Summary stats -->
 <div class="d-flex gap-3 mb-2 flex-wrap align-items-center">
     <span class="fw-semibold text-navy"><i class="bi bi-trophy me-1"></i>Bảng 3: Danh sách khen thưởng đã xác nhận</span>
+    <button id="toggleRewardView" class="btn btn-sm btn-outline-secondary ms-auto" onclick="toggleRewardListView()">
+        <i class="bi bi-layout-text-sidebar-reverse me-1"></i><span id="toggleRewardLabel">Thu gọn</span>
+    </button>
 </div>
 <div class="d-flex gap-3 mb-3 flex-wrap">
     <div class="stat-mini">
@@ -375,13 +410,13 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <tr>
                         <th style="width:40px;">STT</th>
                         <th style="min-width:150px;">Họ tên</th>
-                        <th>Cấp bậc</th>
-                        <th>Chức vụ</th>
-                        <th>Đối tượng</th>
+                        <th class="col-detail">Cấp bậc</th>
+                        <th class="col-detail">Chức vụ</th>
+                        <th class="col-detail">Đối tượng</th>
                         <th>Đơn vị</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
-                        <th>Ngày duyệt</th>
+                        <th class="col-detail">Ngày duyệt</th>
                         <th class="text-center" style="width:110px;">Thao tác</th>
                     </tr>
                 </thead>
@@ -398,9 +433,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <tr>
                         <td>{{ (rewards.page - 1) * rewards.per_page + loop.index }}</td>
                         <td class="fw-semibold">{{ kt.ho_ten }}</td>
-                        <td><small>{{ kt.cap_bac or '-' }}</small></td>
-                        <td><small>{{ kt.chuc_vu or '-' }}</small></td>
-                        <td><small>{{ kt.doi_tuong or '-' }}</small></td>
+                        <td class="col-detail"><small>{{ kt.cap_bac or '-' }}</small></td>
+                        <td class="col-detail"><small>{{ kt.chuc_vu or '-' }}</small></td>
+                        <td class="col-detail"><small>{{ kt.doi_tuong or '-' }}</small></td>
                         <td>{{ kt.don_vi.ten_don_vi }}</td>
                         <td>
                             {% if kt.loai_danh_hieu == 'Chiến sĩ thi đua' %}
@@ -414,7 +449,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             {% endif %}
                         </td>
                         <td>{{ kt.nam_hoc }}</td>
-                        <td><span class="text-ellipsis-sm" title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
+                        <td class="col-detail"><span class="text-ellipsis-sm" title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
                         <td class="text-center">
                             <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
                                     data-ct-id="{{ kt.chi_tiet_id }}"
@@ -694,6 +729,26 @@ function openRejectModal(deXuatId, unitName) {
             .then(data => { body.innerHTML = renderDetail(data); })
             .catch(() => { body.innerHTML = '<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>'; });
     });
+})();
+</script>
+<script>
+// Compact/Full toggle for Bảng 3
+(function() {
+    var KEY = 'rewardListViewMode';
+    var compact = localStorage.getItem(KEY) === 'compact';
+    function applyView() {
+        document.querySelectorAll('.col-detail').forEach(function(el) {
+            el.style.display = compact ? 'none' : '';
+        });
+        var label = document.getElementById('toggleRewardLabel');
+        if (label) label.textContent = compact ? 'Đầy đủ' : 'Thu gọn';
+    }
+    window.toggleRewardListView = function() {
+        compact = !compact;
+        localStorage.setItem(KEY, compact ? 'compact' : 'full');
+        applyView();
+    };
+    document.addEventListener('DOMContentLoaded', applyView);
 })();
 </script>
 {% endblock %}
