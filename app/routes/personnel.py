@@ -917,17 +917,25 @@ def cancel_transfer(transfer_id):
 
 @personnel_bp.route('/chuyen-vung')
 @login_required
-@unit_user_required
 def list_chuyen_vung():
     """Danh sách quân nhân chuyển vùng của đơn vị."""
-    if not current_user.don_vi:
-        flash('Tài khoản chưa được gán đơn vị.', 'warning')
-        return redirect(url_for('dashboard.index'))
+    from app.models.user import Role as _Role
+    if current_user.role not in (_Role.UNIT_USER, _Role.ADMIN):
+        from flask import abort
+        abort(403)
 
-    personnel = QuanNhan.query.filter_by(
-        don_vi_id=current_user.don_vi_id,
-        is_chuyen_vung=True,
-    ).order_by(QuanNhan.ngay_chuyen_vung.desc(), QuanNhan.ho_ten).all()
+    if current_user.role == _Role.ADMIN:
+        # Admin sees all chuyen vung across all units
+        personnel = QuanNhan.query.filter_by(is_chuyen_vung=True).order_by(
+            QuanNhan.ngay_chuyen_vung.desc(), QuanNhan.ho_ten).all()
+    else:
+        if not current_user.don_vi:
+            flash('Tài khoản chưa được gán đơn vị.', 'warning')
+            return redirect(url_for('dashboard.index'))
+        personnel = QuanNhan.query.filter_by(
+            don_vi_id=current_user.don_vi_id,
+            is_chuyen_vung=True,
+        ).order_by(QuanNhan.ngay_chuyen_vung.desc(), QuanNhan.ho_ten).all()
 
     return render_template('personnel/chuyen_vung.html', personnel=personnel)
 
@@ -968,3 +976,78 @@ def unmark_chuyen_vung(id):
     db.session.commit()
     flash(f'Đã đưa {qn.ho_ten} trở lại danh sách quân nhân.', 'success')
     return redirect(url_for('personnel.list_chuyen_vung'))
+
+
+@personnel_bp.route('/bulk-action', methods=['POST'])
+@login_required
+@unit_user_required
+def bulk_action():
+    """Bulk action: đổi đối tượng / chuyển vùng / chuyển đơn vị cho nhiều quân nhân."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Dữ liệu không hợp lệ'}), 400
+
+    action = data.get('action')
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'success': False, 'message': 'Không có quân nhân nào được chọn'}), 400
+
+    # Validate all IDs belong to current unit
+    qn_list = QuanNhan.query.filter(
+        QuanNhan.id.in_(ids),
+        QuanNhan.don_vi_id == current_user.don_vi_id,
+        QuanNhan.is_active == True,
+    ).all()
+    if len(qn_list) != len(ids):
+        return jsonify({'success': False, 'message': 'Một số quân nhân không thuộc đơn vị của bạn'}), 403
+
+    if action == 'doi_tuong':
+        doi_tuong = data.get('doi_tuong', '').strip()
+        if not doi_tuong:
+            return jsonify({'success': False, 'message': 'Chưa chọn đối tượng'}), 400
+        for qn in qn_list:
+            qn.doi_tuong = doi_tuong
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã cập nhật đối tượng cho {len(qn_list)} quân nhân'})
+
+    elif action == 'chuyen_vung':
+        for qn in qn_list:
+            qn.is_chuyen_vung = True
+            qn.ngay_chuyen_vung = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã chuyển vùng {len(qn_list)} quân nhân'})
+
+    elif action == 'chuyen_don_vi':
+        don_vi_id = data.get('don_vi_id')
+        ly_do = data.get('ly_do', '').strip()
+        if not don_vi_id:
+            return jsonify({'success': False, 'message': 'Chưa chọn đơn vị đích'}), 400
+        from app.models.unit import DonVi as _DonVi
+        target_unit = _DonVi.query.get(don_vi_id)
+        if not target_unit:
+            return jsonify({'success': False, 'message': 'Đơn vị đích không tồn tại'}), 404
+        for qn in qn_list:
+            chuyen = ChuyenDonVi(
+                quan_nhan_id=qn.id,
+                don_vi_cu_id=qn.don_vi_id,
+                don_vi_moi_id=don_vi_id,
+                ly_do=ly_do or None,
+                trang_thai=TrangThaiChuyen.CHO_DUYET.value,
+                nguoi_tao_id=current_user.id,
+            )
+            db.session.add(chuyen)
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã tạo yêu cầu chuyển đơn vị cho {len(qn_list)} quân nhân'})
+
+    else:
+        return jsonify({'success': False, 'message': 'Hành động không hợp lệ'}), 400
+
+
+@personnel_bp.route('/units-json')
+@login_required
+@unit_user_required
+def get_units_json():
+    """Return list of all active units for transfer dropdown."""
+    from app.models.unit import DonVi as _DonVi
+    units = _DonVi.query.filter_by(is_active=True).order_by(_DonVi.ten_don_vi).all()
+    return jsonify({'units': [{'id': u.id, 'ten_don_vi': u.ten_don_vi} for u in units]})

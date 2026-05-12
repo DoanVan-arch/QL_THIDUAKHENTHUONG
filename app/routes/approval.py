@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import User, Role
@@ -8,6 +8,7 @@ from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetCh
 from app.models.notification import ThongBao
 from app.utils.decorators import department_required
 from datetime import datetime
+from io import BytesIO
 
 approval_bp = Blueprint('approval', __name__)
 
@@ -1045,3 +1046,113 @@ def revoke_review(pd_id):
     db.session.commit()
     flash(f'{phong_name} đã thu hồi kết quả duyệt cho đề xuất của {de_xuat.don_vi.ten_don_vi}.', 'success')
     return redirect(url_for('approval.history'))
+
+
+@approval_bp.route('/export-excel')
+@login_required
+@department_required
+def export_excel():
+    """Export pending review list to Excel with timestamp."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    phong_name = ROLE_TO_PHONG.get(current_user.role, '')
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+
+    q = PheDuyet.query.filter_by(phong_duyet=phong_name, ket_qua=KetQuaDuyet.CHO_DUYET.value)
+    if nam_hoc_filter:
+        from app.models.nomination import DeXuat as _DeXuat
+        q = q.join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id).filter(_DeXuat.nam_hoc == nam_hoc_filter)
+    pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
+
+    # Build out-of-scope set
+    out_of_scope_ct_ids = set()
+    if current_user.role in (Role.BAN_QUANLUC, Role.BAN_CANBO):
+        for pd in pending_reviews:
+            for ct in pd.de_xuat.chi_tiets:
+                if not _is_in_dept_scope(current_user.role, ct.doi_tuong):
+                    out_of_scope_ct_ids.add(ct.id)
+
+    # Build item results
+    all_item_results = {}
+    for pd in pending_reviews:
+        all_item_results[pd.id] = {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet}
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Phê duyệt khen thưởng'
+
+    # Timestamp header
+    ts = datetime.now().strftime('%d/%m/%Y %H:%M')
+    ws.merge_cells('A1:H1')
+    ws['A1'] = f'DANH SÁCH PHÊ DUYỆT KHEN THƯỞNG - {phong_name}'
+    ws['A1'].font = Font(bold=True, size=13)
+    ws['A1'].alignment = Alignment(horizontal='center')
+
+    ws.merge_cells('A2:H2')
+    ws['A2'] = f'Năm học: {nam_hoc_filter or "Tất cả"} | Xuất lúc: {ts}'
+    ws['A2'].alignment = Alignment(horizontal='center')
+    ws['A2'].font = Font(italic=True, size=10)
+
+    # Header row
+    headers = ['STT', 'Đơn vị', 'Họ tên', 'Cấp bậc', 'Chức vụ', 'Đối tượng', 'Danh hiệu', 'Kết quả']
+    header_fill = PatternFill('solid', fgColor='1B3A6B')
+    header_font = Font(bold=True, color='FFFFFF', size=10)
+    thin = Side(style='thin', color='CCCCCC')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col, value=h)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = border
+
+    row_num = 5
+    stt = 0
+    for pd in pending_reviews:
+        results = all_item_results.get(pd.id, {})
+        don_vi = pd.de_xuat.don_vi.ten_don_vi
+        for ct in pd.de_xuat.chi_tiets:
+            if ct.id in out_of_scope_ct_ids:
+                continue
+            stt += 1
+            kq = results.get(ct.id)
+            ket_qua_str = ''
+            if kq:
+                if kq.ket_qua == 'Đồng ý':
+                    ket_qua_str = 'Nhất trí'
+                elif kq.ket_qua == 'Từ chối':
+                    ket_qua_str = f'Không NT: {kq.ly_do or ""}'
+                else:
+                    ket_qua_str = 'Chờ duyệt'
+            ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else don_vi
+            cap_bac = ct.quan_nhan.cap_bac if ct.quan_nhan else ''
+            chuc_vu = ct.quan_nhan.chuc_vu if ct.quan_nhan else ''
+
+            row_data = [stt, don_vi, ho_ten, cap_bac or '', chuc_vu or '',
+                        ct.doi_tuong or '', ct.loai_danh_hieu or '', ket_qua_str]
+            for col, val in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col, value=val)
+                cell.border = border
+                cell.alignment = Alignment(vertical='center', wrap_text=True)
+                if ket_qua_str == 'Nhất trí':
+                    cell.fill = PatternFill('solid', fgColor='D4EDDA')
+                elif ket_qua_str.startswith('Không NT'):
+                    cell.fill = PatternFill('solid', fgColor='F8D7DA')
+            row_num += 1
+
+    # Column widths
+    col_widths = [6, 30, 25, 16, 20, 18, 22, 28]
+    for i, w in enumerate(col_widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    ws.row_dimensions[4].height = 28
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    ts_file = datetime.now().strftime('%Y%m%d_%H%M')
+    filename = f'phe_duyet_{phong_name.replace(" ", "_")}_{ts_file}.xlsx'
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name=filename)
