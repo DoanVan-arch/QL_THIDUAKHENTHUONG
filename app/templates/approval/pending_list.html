@@ -23,6 +23,13 @@
             <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
                 <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
             </button>
+            <a href="{{ url_for('approval.export_excel', nam_hoc=nam_hoc_filter) }}"
+               class="btn btn-outline-success btn-sm" title="Xuất Excel có timestamp">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+            </a>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnPrintPDF" title="In PDF có timestamp">
+                <i class="bi bi-printer me-1"></i>In PDF
+            </button>
             <div id="filterBar" class="d-flex gap-2 align-items-center flex-wrap">
             <!-- Search by name -->
             <div class="input-group input-group-sm" style="width:200px;">
@@ -1012,7 +1019,39 @@ document.addEventListener('DOMContentLoaded', function () {
             filterBar.classList.toggle('d-none');
         });
     }
+
+    // ===================== PRINT PDF =====================
+    const btnPrintPDF = document.getElementById('btnPrintPDF');
+    if (btnPrintPDF) {
+        btnPrintPDF.addEventListener('click', function() {
+            window.print();
+        });
+    }
 });
+</script>
+
+<style>
+@media print {
+    .sidebar, .page-header .d-flex, #filterBar, #globalStats,
+    .btn-approve-unit, .toggle-approval, .reject-link,
+    .reject-reason-row, nav.pagination, .btn, button { display: none !important; }
+    .card-section { border: none !important; box-shadow: none !important; }
+    .print-timestamp { display: block !important; }
+}
+.print-timestamp {
+    display: none;
+    font-size: 0.82rem;
+    color: #666;
+    margin-bottom: 8px;
+}
+</style>
+<div class="print-timestamp">
+    Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
+    {% if nam_hoc_filter %} | Năm học: <strong>{{ nam_hoc_filter }}</strong>{% endif %}
+</div>
+<script>
+document.getElementById('printTimestamp') && (document.getElementById('printTimestamp').textContent =
+    new Date().toLocaleString('vi-VN'));
 </script>
 {% endif %}{# end nam_hoc_filter #}
 {% endblock %}

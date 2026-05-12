@@ -54,6 +54,9 @@
                     <span class="badge bg-danger rounded-pill ms-auto" style="font-size:0.65rem;">{{ unread_notification_count }}</span>
                     {% endif %}
                 </a>
+                <a href="{{ url_for('personnel.list_chuyen_vung') }}" class="sidebar-link {% if request.endpoint == 'personnel.list_chuyen_vung' %}active{% endif %}">
+                    <i class="bi bi-geo-alt"></i> <span>DS Chuyển vùng</span>
+                </a>
                 {% endif %}
 
                 {% if current_user.is_department %}
@@ -102,6 +105,9 @@
                 </a>
                 <a href="{{ url_for('admin.all_personnel') }}" class="sidebar-link {% if request.endpoint in ['admin.all_personnel', 'admin.admin_personnel_detail', 'admin.admin_personnel_edit'] %}active{% endif %}">
                     <i class="bi bi-people"></i> <span>Hồ sơ cá nhân</span>
+                </a>
+                <a href="{{ url_for('personnel.list_chuyen_vung') }}" class="sidebar-link {% if request.endpoint == 'personnel.list_chuyen_vung' %}active{% endif %}">
+                    <i class="bi bi-geo-alt"></i> <span>DS Chuyển vùng</span>
                 </a>
                 <!-- Collapsible group: DANH MỤC -->
                 {% set danh_muc_active = request.endpoint in ['admin.manage_chuc_vu', 'admin.manage_doi_tuong', 'admin.manage_cap_bac', 'admin.manage_users', 'admin.manage_units'] %}

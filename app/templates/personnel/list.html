@@ -2,6 +2,7 @@
 {% block title %}Danh sách quân nhân{% endblock %}
 
 {% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <div class="page-header">
     <div>
         <h4><i class="bi bi-people me-2"></i>Danh sách quân nhân</h4>
@@ -19,9 +20,6 @@
         </button>
         <a href="{{ url_for('personnel.create_personnel') }}" class="btn btn-navy">
             <i class="bi bi-person-plus me-1"></i> Thêm quân nhân
-        </a>
-        <a href="{{ url_for('personnel.list_chuyen_vung') }}" class="btn btn-outline-warning">
-            <i class="bi bi-geo-alt me-1"></i> DS Chuyển vùng
         </a>
     </div>
 </div>
@@ -102,17 +100,35 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card-section mt-3">
     <div class="card-body-custom p-0">
         {% if personnel.items %}
+        <!-- Bulk action bar -->
+        <div id="bulkActionBar" class="d-none d-flex align-items-center gap-2 p-2 bg-light border-bottom">
+            <span class="text-muted small" id="selectedCount">0 đã chọn</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnBulkDoiTuong">
+                <i class="bi bi-diagram-2 me-1"></i>Đổi đối tượng
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning" id="btnBulkChuyenVung">
+                <i class="bi bi-geo-alt me-1"></i>Chuyển vùng
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnBulkChuyenDonVi">
+                <i class="bi bi-arrow-left-right me-1"></i>Chuyển đơn vị
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="btnClearSelection">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
         <div class="table-responsive">
             <table class="table table-custom mb-0">
                 <thead>
                     <tr>
+                        <th style="width:36px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input" title="Chọn tất cả">
+                        </th>
                         <th>STT</th>
+                        <th>CCCD</th>
                         <th>Họ và tên</th>
                         <th>Cấp bậc</th>
                         <th>Chức vụ</th>
-                        <th>Đơn vị trực thuộc</th>
                         <th>Đối tượng</th>
-                        <th>Đơn vị</th>
                         <th>Học vị</th>
                         <th>Thao tác</th>
                     </tr>
@@ -120,7 +136,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody>
                     {% for qn in personnel.items %}
                     <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input qn-checkbox" value="{{ qn.id }}" data-name="{{ qn.ho_ten }}">
+                        </td>
                         <td>{{ (personnel.page - 1) * personnel.per_page + loop.index }}</td>
+                        <td><small class="text-muted">{{ qn.can_cuoc_cong_dan or '-' }}</small></td>
                         <td>
                             <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="text-decoration-none fw-500">
                                 {{ qn.ho_ten }}
@@ -130,9 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>{{ qn.cap_bac or '-' }}</td>
                         <td>{{ qn.chuc_vu or '-' }}</td>
-                        <td>{{ qn.don_vi_truc_thuoc or '-' }}</td>
                         <td>{{ qn.doi_tuong or '-' }}{% if qn.is_student and qn.lop %} <span class="text-muted small">({{ qn.lop }})</span>{% endif %}</td>
-                        <td>{{ qn.don_vi.ten_don_vi if qn.don_vi else '-' }}</td>
                         <td>{{ qn.hoc_vi if qn.hoc_vi != 'Không' else '-' }}</td>
                         <td>
                             <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Chi tiết">
@@ -197,6 +215,177 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     </div>
 </div>
+
+<!-- Bulk: Đổi đối tượng modal -->
+<div class="modal fade" id="bulkDoiTuongModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"><i class="bi bi-diagram-2 me-1"></i>Đổi đối tượng hàng loạt</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2 text-muted small" id="bulkDoiTuongInfo"></p>
+                <label class="form-label">Đối tượng mới</label>
+                <select class="form-select" id="bulkDoiTuongSelect">
+                    {% for dt in doi_tuong_list %}
+                    <option value="{{ dt }}">{{ dt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-navy" id="confirmBulkDoiTuong">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk: Chuyển đơn vị modal -->
+<div class="modal fade" id="bulkChuyenDonViModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"><i class="bi bi-arrow-left-right me-1"></i>Chuyển đơn vị hàng loạt</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2 text-muted small" id="bulkChuyenDonViInfo"></p>
+                <label class="form-label">Chọn đơn vị đích</label>
+                <select class="form-select" id="bulkDonViSelect">
+                    <!-- loaded dynamically -->
+                </select>
+                <div class="mt-2">
+                    <label class="form-label">Lý do chuyển</label>
+                    <input type="text" class="form-control" id="bulkChuyenLyDo" placeholder="Nhập lý do...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="confirmBulkChuyenDonVi">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]') ?
+        document.querySelector('meta[name="csrf-token"]').content : '';
+
+    // ===== CHECKBOX MULTI-SELECT =====
+    const selectAll = document.getElementById('selectAll');
+    const bulkActionBar = document.getElementById('bulkActionBar');
+    const selectedCountEl = document.getElementById('selectedCount');
+
+    function getSelectedIds() {
+        return Array.from(document.querySelectorAll('.qn-checkbox:checked')).map(cb => parseInt(cb.value));
+    }
+
+    function getSelectedNames() {
+        return Array.from(document.querySelectorAll('.qn-checkbox:checked')).map(cb => cb.dataset.name);
+    }
+
+    function updateBulkBar() {
+        const ids = getSelectedIds();
+        if (ids.length > 0) {
+            bulkActionBar.classList.remove('d-none');
+            bulkActionBar.classList.add('d-flex');
+            selectedCountEl.textContent = `${ids.length} đã chọn`;
+        } else {
+            bulkActionBar.classList.add('d-none');
+            bulkActionBar.classList.remove('d-flex');
+        }
+    }
+
+    selectAll && selectAll.addEventListener('change', function() {
+        document.querySelectorAll('.qn-checkbox').forEach(cb => cb.checked = this.checked);
+        updateBulkBar();
+    });
+    document.querySelectorAll('.qn-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateBulkBar);
+    });
+
+    document.getElementById('btnClearSelection') && document.getElementById('btnClearSelection').addEventListener('click', function() {
+        document.querySelectorAll('.qn-checkbox').forEach(cb => cb.checked = false);
+        if (selectAll) selectAll.checked = false;
+        updateBulkBar();
+    });
+
+    // ===== BULK ĐỔI ĐỐI TƯỢNG =====
+    document.getElementById('btnBulkDoiTuong') && document.getElementById('btnBulkDoiTuong').addEventListener('click', function() {
+        const names = getSelectedNames();
+        document.getElementById('bulkDoiTuongInfo').textContent = `${names.length} quân nhân: ${names.slice(0,3).join(', ')}${names.length>3?' ...':''}`;
+        new bootstrap.Modal(document.getElementById('bulkDoiTuongModal')).show();
+    });
+
+    document.getElementById('confirmBulkDoiTuong') && document.getElementById('confirmBulkDoiTuong').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const doi_tuong = document.getElementById('bulkDoiTuongSelect').value;
+        this.disabled = true;
+        try {
+            const res = await fetch('{{ url_for("personnel.bulk_action") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'doi_tuong', ids, doi_tuong }),
+            });
+            const data = await res.json();
+            if (data.success) { location.reload(); }
+            else { alert(data.message || 'Có lỗi xảy ra'); }
+        } finally { this.disabled = false; }
+    });
+
+    // ===== BULK CHUYỂN VÙNG =====
+    document.getElementById('btnBulkChuyenVung') && document.getElementById('btnBulkChuyenVung').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const names = getSelectedNames();
+        if (!confirm(`Chuyển vùng ${ids.length} quân nhân (${names.slice(0,3).join(', ')}${names.length>3?' ...':''})?`)) return;
+        try {
+            const res = await fetch('{{ url_for("personnel.bulk_action") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'chuyen_vung', ids }),
+            });
+            const data = await res.json();
+            if (data.success) { location.reload(); }
+            else { alert(data.message || 'Có lỗi xảy ra'); }
+        } catch(e) { alert('Lỗi kết nối'); }
+    });
+
+    // ===== BULK CHUYỂN ĐƠN VỊ =====
+    document.getElementById('btnBulkChuyenDonVi') && document.getElementById('btnBulkChuyenDonVi').addEventListener('click', async function() {
+        const names = getSelectedNames();
+        document.getElementById('bulkChuyenDonViInfo').textContent = `${names.length} quân nhân: ${names.slice(0,3).join(', ')}${names.length>3?' ...':''}`;
+        // Load units
+        const select = document.getElementById('bulkDonViSelect');
+        if (select.options.length <= 1) {
+            try {
+                const res = await fetch('{{ url_for("personnel.get_units_json") }}');
+                const data = await res.json();
+                select.innerHTML = data.units.map(u => `<option value="${u.id}">${u.ten_don_vi}</option>`).join('');
+            } catch(e) { select.innerHTML = '<option>Lỗi tải đơn vị</option>'; }
+        }
+        new bootstrap.Modal(document.getElementById('bulkChuyenDonViModal')).show();
+    });
+
+    document.getElementById('confirmBulkChuyenDonVi') && document.getElementById('confirmBulkChuyenDonVi').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const don_vi_id = parseInt(document.getElementById('bulkDonViSelect').value);
+        const ly_do = document.getElementById('bulkChuyenLyDo').value.trim();
+        this.disabled = true;
+        try {
+            const res = await fetch('{{ url_for("personnel.bulk_action") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'chuyen_don_vi', ids, don_vi_id, ly_do }),
+            });
+            const data = await res.json();
+            if (data.success) { location.reload(); }
+            else { alert(data.message || 'Có lỗi xảy ra'); }
+        } finally { this.disabled = false; }
+    });
+});
+</script>
 
 <!-- Import Excel Modal -->
 <div class="modal fade" id="importExcelModal" tabindex="-1" aria-hidden="true">
