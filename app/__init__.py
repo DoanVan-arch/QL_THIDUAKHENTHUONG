@@ -64,4 +64,24 @@ def create_app(config_class=None):
                 ).count()
         return dict(unread_notification_count=count, pending_transfer_count=pending_transfers)
 
+    # Jinja2 filter: clean ngay_nhap_ngu display (strip datetime noise)
+    import re as _re
+    from datetime import datetime as _dt
+
+    @app.template_filter('clean_nhap_ngu')
+    def clean_nhap_ngu_filter(value):
+        if not value:
+            return ''
+        text = str(value).strip()
+        if _re.match(r'^\d{2}/\d{4}$', text):
+            return text
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+            try:
+                return _dt.strptime(text, fmt).strftime('%m/%Y')
+            except ValueError:
+                continue
+        if ' ' in text:
+            text = text.split(' ')[0]
+        return text
+
     return app
