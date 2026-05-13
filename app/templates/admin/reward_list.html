@@ -488,7 +488,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     {% if not prev or prev.don_vi_id != kt.don_vi_id or prev.nam_hoc != kt.nam_hoc %}
                     <tr class="table-light">
                         <td colspan="10" class="fw-semibold text-navy">
-                            Nhóm: {{ kt.don_vi.ten_don_vi }} - Năm học {{ kt.nam_hoc }}
+                             {{ kt.don_vi.ten_don_vi }} - Năm học {{ kt.nam_hoc }}
                         </td>
                     </tr>
                     {% endif %}
