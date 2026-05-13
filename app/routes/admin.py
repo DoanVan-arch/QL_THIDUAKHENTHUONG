@@ -1452,6 +1452,7 @@ def _get_phe_duyet_cuoi_items(nam_hoc=None):
                 'dx': dx,
                 'ct': ct,
                 'votes': votes,
+                'voted_count': sum(1 for bq in votes.values() if bq is not None),
                 'all_voted_dong_y': ct_all_dong_y,
                 'all_voted': ct_all_voted,
                 'is_confirmed': is_confirmed,
