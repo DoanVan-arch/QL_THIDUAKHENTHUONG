@@ -29,6 +29,7 @@ def department_required(f):
         Role.BAN_CTCQ, Role.BAN_CNTT, Role.BAN_TAC_HUAN,
         Role.BAN_KHAOTHI, Role.UY_BAN_KIEMTRA,
         Role.BAN_QUANLUC,
+        Role.PHONG_HAUCANKYTHUAT, Role.BAN_SAUDAIHOC,
     )(f)
 
 
@@ -44,6 +45,7 @@ def admin_or_department_required(f):
         Role.BAN_CTCQ, Role.BAN_CNTT, Role.BAN_TAC_HUAN,
         Role.BAN_KHAOTHI, Role.UY_BAN_KIEMTRA,
         Role.BAN_QUANLUC,
+        Role.PHONG_HAUCANKYTHUAT, Role.BAN_SAUDAIHOC,
     )(f)
 
 

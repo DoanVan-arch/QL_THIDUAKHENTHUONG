@@ -20,6 +20,8 @@ class PhongDuyet(enum.Enum):
     BAN_KHAOTHI = 'Ban Khảo thí'
     UY_BAN_KIEMTRA = 'Ủy ban Kiểm tra'
     BAN_QUANLUC = 'Ban Quân lực'
+    PHONG_HAUCANKYTHUAT = 'Phòng Hậu cần - Kỹ thuật'
+    BAN_SAUDAIHOC = 'Ban Sau đại học'
     ADMIN_TUYENHUAN = 'Tuyên huấn'
 
 

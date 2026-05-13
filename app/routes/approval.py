@@ -26,6 +26,8 @@ ROLE_TO_PHONG = {
     Role.BAN_KHAOTHI: PhongDuyet.BAN_KHAOTHI.value,
     Role.UY_BAN_KIEMTRA: PhongDuyet.UY_BAN_KIEMTRA.value,
     Role.BAN_QUANLUC: PhongDuyet.BAN_QUANLUC.value,
+    Role.PHONG_HAUCANKYTHUAT: PhongDuyet.PHONG_HAUCANKYTHUAT.value,
+    Role.BAN_SAUDAIHOC: PhongDuyet.BAN_SAUDAIHOC.value,
 }
 
 
