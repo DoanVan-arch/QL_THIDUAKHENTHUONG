@@ -349,6 +349,35 @@ def _parse_date(value):
     return None
 
 
+def _parse_ngay_nhap_ngu(value):
+    """Normalize ngay_nhap_ngu to MM/YYYY string, stripping time if present."""
+    if value is None or value == '':
+        return None
+    # datetime or date object from Excel
+    if isinstance(value, datetime):
+        return value.strftime('%m/%Y')
+    if hasattr(value, 'strftime'):
+        try:
+            return value.strftime('%m/%Y')
+        except Exception:
+            pass
+    text = str(value).strip()
+    # Already in correct format MM/YYYY
+    import re
+    if re.match(r'^\d{2}/\d{4}$', text):
+        return text
+    # datetime string like "2015-01-01 00:00:00" or "2015-01-01"
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(text, fmt).strftime('%m/%Y')
+        except ValueError:
+            continue
+    # fallback: strip time part if space present
+    if ' ' in text:
+        text = text.split(' ')[0]
+    return text or None
+
+
 def _normalize_cccd(value):
     if value is None:
         return None
@@ -542,7 +571,7 @@ def import_personnel_excel():
                 can_cuoc_cong_dan=cccd or None,
                 don_vi_truc_thuoc=str(row[headers['don_vi_truc_thuoc']]).strip() if headers.get('don_vi_truc_thuoc') is not None and row[headers['don_vi_truc_thuoc']] is not None else None,
                 ngay_sinh=_parse_date(row[headers['ngay_sinh']]) if headers.get('ngay_sinh') is not None else None,
-                ngay_nhap_ngu=str(row[headers['ngay_nhap_ngu']]).strip() if headers.get('ngay_nhap_ngu') is not None and row[headers['ngay_nhap_ngu']] is not None else None,
+                ngay_nhap_ngu=_parse_ngay_nhap_ngu(row[headers['ngay_nhap_ngu']]) if headers.get('ngay_nhap_ngu') is not None and row[headers['ngay_nhap_ngu']] is not None else None,
                 hoc_ham=hoc_ham_val,
                 hoc_vi=hoc_vi_val,
                 trinh_do_hoc_van=str(row[headers['trinh_do_hoc_van']]).strip() if headers.get('trinh_do_hoc_van') is not None and row[headers['trinh_do_hoc_van']] is not None else None,
