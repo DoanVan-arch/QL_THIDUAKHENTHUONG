@@ -204,6 +204,9 @@ class DeXuatChiTiet(db.Model):
     # For collective (tap_the/don_vi) nominations — unit name being proposed
     ten_don_vi_de_xuat = Column(String(255), nullable=True)
 
+    # JSON blob for collective-specific criteria values (DVQT / DVTT)
+    tap_the_data = Column(Text, nullable=True)
+
     ghi_chu = Column(Text, nullable=True)
 
     # Admin pre-approval flag (Bảng 1 → Bảng 2 transition)
@@ -211,6 +214,22 @@ class DeXuatChiTiet(db.Model):
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    @property
+    def tap_the_dict(self):
+        if self.tap_the_data:
+            try:
+                return json.loads(self.tap_the_data)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return {}
+
+    @tap_the_dict.setter
+    def tap_the_dict(self, value):
+        if isinstance(value, dict):
+            self.tap_the_data = json.dumps(value, ensure_ascii=False)
+        else:
+            self.tap_the_data = None
 
     de_xuat = relationship('DeXuat', back_populates='chi_tiets')
     quan_nhan = relationship('QuanNhan', back_populates='de_xuat_items')

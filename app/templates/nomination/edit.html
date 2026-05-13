@@ -195,6 +195,14 @@
                 </div>
             </div>
 
+            <!-- Collective criteria section (DVQT / DVTT) — rendered dynamically by JS -->
+            <div class="form-section" id="section-tap-the-criteria" style="display:none;">
+                <div class="form-section-title" style="color:#0d6efd;">
+                    <i class="bi bi-diagram-3 me-1"></i>Tiêu chí đánh giá tập thể
+                </div>
+                <div id="tap-the-criteria-container"></div>
+            </div>
+
             <!-- Common fields - always visible -->
             <div class="form-section" id="section-common-fields">
                 <div class="form-section-title">Tiêu chí điểm và tiêu chí chung</div>
@@ -573,6 +581,23 @@
 var DANH_HIEU_TIEU_CHI = {{ danh_hieu_tieu_chi | default({}) | tojson }};
 var DANH_HIEU_PHAM_VI = {{ danh_hieu_pham_vi | default({}) | tojson }};
 
+// Tiêu chí tập thể by danh_hieu: {ten_danh_hieu: {nhom: [{ma_truong,ten,loai_input,gia_tri_chon,huong_dan}]}}
+var TIEU_CHI_TAP_THE = {{ tieu_chi_tap_the | default({}) | tojson }};
+
+// Nhom display labels
+var NHOM_LABEL = {
+    'ban_canbo': 'Ban Cán bộ',
+    'ban_tochuc': 'Ban Tổ chức',
+    'ban_tuyenhuan': 'Ban Tuyên huấn',
+    'ban_ctqc': 'Ban Công tác quần chúng',
+    'ban_cntt': 'Ban CNTT',
+    'ban_tachuan': 'Ban Tác huấn',
+    'phong_daotao': 'Phòng Đào tạo',
+    'phong_khqs': 'Phòng KHQS',
+    'phong_hckt': 'Phòng HC-KT',
+    'ban_khaothi': 'Ban Khảo thí',
+};
+
 // Tiêu chí tooltips from DB: {field_name: tooltip_text}
 var TIEU_CHI_TOOLTIPS = {{ tieu_chi_tooltips | default({}) | tojson }};
 
@@ -945,6 +970,10 @@ function applyCriteriaVisibilityByGroup() {
         if (sec === basicSection) { sec.classList.remove('hidden'); return; }
         if (sec.id === 'dynamic-evidence-section') { sec.classList.remove('hidden'); return; }
         if (sec.id === 'score-reason-section') return; // managed by renderScoreReasonSection
+        if (sec.id === 'section-tap-the-criteria') return; // managed by renderTapTheCriteria
+
+        // Hide all individual criteria sections for tap_the nominations
+        if (isTapThe) { sec.classList.add('hidden'); return; }
 
         if (!selectedDoiTuong) { sec.classList.add('hidden'); return; }
 
@@ -955,11 +984,13 @@ function applyCriteriaVisibilityByGroup() {
     });
 
     var submitBtn = formEl.querySelector('button[type="submit"].btn-navy');
-    if (submitBtn) submitBtn.disabled = !selectedDoiTuong;
+    if (submitBtn) submitBtn.disabled = isTapThe ? !document.getElementById('ten_don_vi_de_xuat').value.trim() : !selectedDoiTuong;
 
-    renderScoreWarnings(selectedDanhHieu);
-    renderScoreReasonSection(selectedDanhHieu);
-    renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
+    if (!isTapThe) {
+        renderScoreWarnings(selectedDanhHieu);
+        renderScoreReasonSection(selectedDanhHieu);
+        renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
+    }
 }
 
 // Auto-inject tooltip icons next to form labels for criteria fields
@@ -979,10 +1010,52 @@ function togglePhamViBlocks() {
     // For tap_the: doi_tuong_select value doesn't matter — reset it to avoid affecting criteria visibility
     var dtSelect = document.getElementById('doi_tuong_select');
     if (dtSelect && isTapThe) {
-        // Fake a non-empty doi_tuong so criteria visibility logic is triggered correctly
-        // (but criteria will be hidden anyway since tieu_chi is empty for tap_the)
         dtSelect.value = '';
     }
+
+    // Render or hide collective criteria section
+    renderTapTheCriteria(selectedDanhHieu, isTapThe);
+}
+
+function renderTapTheCriteria(selectedDanhHieu, isTapThe) {
+    var section = document.getElementById('section-tap-the-criteria');
+    var container = document.getElementById('tap-the-criteria-container');
+    if (!section || !container) return;
+
+    if (!isTapThe || !selectedDanhHieu || !TIEU_CHI_TAP_THE[selectedDanhHieu]) {
+        section.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    var byNhom = TIEU_CHI_TAP_THE[selectedDanhHieu];
+    var html = '';
+    Object.keys(byNhom).forEach(function(nhom) {
+        var label = NHOM_LABEL[nhom] || nhom;
+        var tcs = byNhom[nhom];
+        html += '<div class="mb-3"><div class="fw-semibold text-secondary border-bottom pb-1 mb-2" style="font-size:0.85rem;">' + label + '</div><div class="row g-2">';
+        tcs.forEach(function(tc) {
+            html += '<div class="col-md-4">';
+            html += '<label class="form-label" style="font-size:0.82rem;">' + tc.ten;
+            if (tc.huong_dan) {
+                html += ' <i class="bi bi-info-circle text-muted" title="' + tc.huong_dan.replace(/"/g, '&quot;') + '"></i>';
+            }
+            html += '</label>';
+            if (tc.loai_input === 'combobox' && tc.gia_tri_chon && tc.gia_tri_chon.length) {
+                html += '<select class="form-select form-select-sm" name="' + tc.ma_truong + '"><option value="">-- Chọn --</option>';
+                tc.gia_tri_chon.forEach(function(opt) {
+                    html += '<option value="' + opt + '">' + opt + '</option>';
+                });
+                html += '</select>';
+            } else {
+                html += '<input type="text" class="form-control form-control-sm" name="' + tc.ma_truong + '">';
+            }
+            html += '</div>';
+        });
+        html += '</div></div>';
+    });
+    container.innerHTML = html;
+    section.style.display = '';
 }
 
 document.addEventListener('DOMContentLoaded', function() {
