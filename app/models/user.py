@@ -25,6 +25,8 @@ class Role(enum.Enum):
     BAN_KEHOACH_TONGHOP = 'ban_keHoachTongHop'
     UY_BAN_KIEMTRA = 'uy_banKiemTra'
     BAN_QUANLUC = 'ban_quanLuc'
+    PHONG_HAUCANKYTHUAT = 'phong_hauCanKyThuat'
+    BAN_SAUDAIHOC = 'ban_sauDaiHoc'
     ADMIN = 'admin'
 
 
@@ -47,6 +49,8 @@ ROLE_DISPLAY = {
     Role.BAN_KEHOACH_TONGHOP: 'Ban Kế hoạch tổng hợp',
     Role.UY_BAN_KIEMTRA: 'Ủy ban Kiểm tra',
     Role.BAN_QUANLUC: 'Ban Quân lực',
+    Role.PHONG_HAUCANKYTHUAT: 'Phòng Hậu cần - Kỹ thuật',
+    Role.BAN_SAUDAIHOC: 'Ban Sau đại học',
     Role.ADMIN: 'Ban thư ký Hội đồng thi đua khen thưởng',
 }
 
@@ -90,6 +94,8 @@ class User(db.Model, UserMixin):
             Role.BAN_KHAOTHI,
             Role.UY_BAN_KIEMTRA,
             Role.BAN_QUANLUC,
+            Role.PHONG_HAUCANKYTHUAT,
+            Role.BAN_SAUDAIHOC,
         )
 
     @property
