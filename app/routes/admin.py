@@ -637,7 +637,7 @@ def final_approve_from_tracking(id):
     de_xuat = DeXuat.query.get_or_404(id)
 
     if de_xuat.trang_thai != TrangThaiDeXuat.HOI_DONG.value:
-        flash('Đề xuất này chưa qua giai đoạn Hội đồng xét duyệt.', 'warning')
+        flash('Đề xuất này chưa qua giai đoạn Xét duyệt của cơ quan thường trực.', 'warning')
         return redirect(url_for('admin.approval_tracking'))
 
     # Verify departments approved this nomination, honoring auto-scope

@@ -75,7 +75,7 @@
                     <div class="col-md-4">
                         <label class="form-label">Tháng/năm nhập ngũ</label>
                         <input type="text" class="form-control" name="ngay_nhap_ngu"
-                               value="{{ qn.ngay_nhap_ngu or '' }}" placeholder="VD: 09/2015">
+                               value="{{ qn.ngay_nhap_ngu.strftime('%d/%m/%Y') if qn.ngay_nhap_ngu else '' }}" placeholder="VD: 09/2015">
                     </div>
                 </div>
             </div>

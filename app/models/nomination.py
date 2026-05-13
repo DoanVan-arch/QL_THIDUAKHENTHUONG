@@ -111,7 +111,7 @@ class TrangThaiDeXuat(enum.Enum):
     NHAP = 'Nháp'
     CHO_DUYET = 'Chờ duyệt'
     DANG_DUYET = 'Đang duyệt'
-    HOI_DONG = 'Hội đồng xét duyệt'
+    HOI_DONG = 'Xét duyệt của cơ quan thường trực'
     PHE_DUYET_CUOI = 'Phê duyệt cuối'
     TU_CHOI = 'Từ chối'
 

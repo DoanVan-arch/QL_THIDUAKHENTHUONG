@@ -123,7 +123,7 @@
                             {% if qn %}
                             <div><strong>CCCD:</strong> {{ qn.can_cuoc_cong_dan or '-' }}</div>
                             <div><strong>Ngày sinh:</strong> {{ qn.ngay_sinh.strftime('%d/%m/%Y') if qn.ngay_sinh else '-' }}</div>
-                            <div><strong>Ngày nhập ngũ:</strong> {{ qn.ngay_nhap_ngu or '-' }}</div>
+                            <div><strong>Ngày nhập ngũ:</strong> {{ qn.ngay_nhap_ngu.strftime('%d/%m/%Y') if qn.ngay_nhap_ngu else '-' }}</div>
                             <div><strong>Cấp bậc:</strong> {{ qn.cap_bac or '-' }}</div>
                             <div><strong>Chức vụ:</strong> {{ qn.chuc_vu or '-' }}</div>
                             <div><strong>Đối tượng:</strong> {{ ct.doi_tuong or qn.doi_tuong or '-' }}</div>
