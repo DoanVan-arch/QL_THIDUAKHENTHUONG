@@ -222,10 +222,11 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 <thead>
                     <tr>
                         <th>STT</th>
-                        <th>Danh hiệu</th>
                         <th>Đơn vị</th>
                         <th>Cá nhân</th>
-                        <th>Năm học</th>
+                        <th>Cấp bậc</th>
+                        <th>Chức vụ</th>
+                        <th>Tiến độ BQ</th>
                         {% for vt in HOI_DONG_VAI_TRO %}
                         <th class="text-center col-b2-detail" style="white-space:nowrap;font-size:0.75rem;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
                         {% endfor %}
@@ -240,14 +241,13 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 {% if row.ct.loai_danh_hieu != ns.prev_award %}
                 {% set ns.prev_award = row.ct.loai_danh_hieu %}
                 <tr class="table-light">
-                    <td colspan="{{ 6 + HOI_DONG_VAI_TRO|length + 1 }}" class="fw-semibold text-navy small py-1">
+                    <td colspan="{{ 7 + HOI_DONG_VAI_TRO|length + 1 }}" class="fw-semibold text-navy small py-1">
                         <i class="bi bi-bookmark-fill me-1"></i>{{ ct.loai_danh_hieu }}
                     </td>
                 </tr>
                 {% endif %}
                 <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
                     <td>{{ loop.index }}</td>
-                    <td><span class="badge bg-secondary">{{ ct.loai_danh_hieu }}</span></td>
                     <td>{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
                     <td>
                         <strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong>
@@ -258,7 +258,15 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             <i class="bi bi-info-circle"></i>
                         </button>
                     </td>
-                    <td>{{ dx.nam_hoc }}</td>
+                    <td>{{ ct.quan_nhan.cap_bac if ct.quan_nhan else '—' }}</td>
+                    <td>{{ ct.quan_nhan.chuc_vu if ct.quan_nhan else '—' }}</td>
+                    <td class="text-center">
+                        {% set voted_count = row.votes|length %}
+                        {% set total = HOI_DONG_VAI_TRO|length %}
+                        <span class="badge {% if voted_count == total %}bg-success{% elif voted_count > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="font-size:0.72rem;">
+                            {{ voted_count }}/{{ total }}
+                        </span>
+                    </td>
                     {# Ban columns – all read-only badges #}
                     {% for vt in HOI_DONG_VAI_TRO %}
                     {% set bq = row.votes.get(vt) %}
