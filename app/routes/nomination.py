@@ -58,6 +58,29 @@ def _evidence_input_names_for_field(field_key):
     return mapping.get(field_key, [f'minh_chung_{field_key}'])
 
 
+def _get_tieu_chi_tap_the_by_danh_hieu(danh_hieu_db):
+    """Return a dict: {ten_danh_hieu: [TieuChi dicts grouped by nhom]} for tap_the danh hieus."""
+    result = {}
+    for dh in danh_hieu_db:
+        if (dh.pham_vi or 'Cá nhân') != 'Đơn vị' or not dh.tieu_chi:
+            continue
+        tcs = TieuChi.query.filter(
+            TieuChi.ma_truong.in_(dh.tieu_chi),
+            TieuChi.is_active == True
+        ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
+        by_nhom = {}
+        for tc in tcs:
+            by_nhom.setdefault(tc.nhom, []).append({
+                'ma_truong': tc.ma_truong,
+                'ten': tc.ten,
+                'loai_input': tc.loai_input or 'textbox',
+                'gia_tri_chon': tc.gia_tri_chon or [],
+                'huong_dan': tc.huong_dan or '',
+            })
+        result[dh.ten_danh_hieu] = by_nhom
+    return result
+
+
 @nomination_bp.route('/history')
 @login_required
 @unit_user_required
@@ -383,6 +406,7 @@ def edit_nomination(id):
                            score_rules=score_rules,
                            diem_field_labels=diem_field_labels,
                            diem_nhom_map=diem_nhom_map,
+                           tieu_chi_tap_the=_get_tieu_chi_tap_the_by_danh_hieu(danh_hieu_db),
                            nam_hoc_options=_get_nam_hoc_options())
 
 
@@ -495,6 +519,18 @@ def add_nomination_item(id):
 
     # Evidence upload is optional: do not force validation here.
 
+    # Collect tap_the criteria values if this is a collective nomination
+    tap_the_data_dict = None
+    if is_tap_the and dh_obj and dh_obj.tieu_chi:
+        from app.models.nomination import TieuChi as _TC
+        _tc_list = _TC.query.filter(_TC.ma_truong.in_(dh_obj.tieu_chi), _TC.is_active == True).all()
+        tap_the_data_dict = {}
+        for tc in _tc_list:
+            val = request.form.get(tc.ma_truong, '').strip()
+            if val:
+                tap_the_data_dict[tc.ma_truong] = val
+
+    import json as _json
     chi_tiet = DeXuatChiTiet(
         de_xuat_id=de_xuat.id,
         quan_nhan_id=quan_nhan_id,
@@ -502,6 +538,7 @@ def add_nomination_item(id):
         doi_tuong=doi_tuong,
         nam_hoc=de_xuat.nam_hoc,
         ten_don_vi_de_xuat=request.form.get('ten_don_vi_de_xuat', '').strip() or None,
+        tap_the_data=_json.dumps(tap_the_data_dict, ensure_ascii=False) if tap_the_data_dict else None,
         muc_do_hoan_thanh=request.form.get('muc_do_hoan_thanh', '').strip() or None,
         kiem_tra_tin_hoc=request.form.get('kiem_tra_tin_hoc', '').strip() or None,
         diem_kiem_tra_tin_hoc=request.form.get('diem_kiem_tra_tin_hoc', '').strip() or None,
