@@ -30,7 +30,7 @@
                     <option value="Chờ duyệt">Chờ duyệt</option>
                     <option value="Đang duyệt">Đang duyệt</option>
                     <option value="Đã duyệt">Đã duyệt</option>
-                    <option value="Hội đồng xét duyệt">Hội đồng xét duyệt</option>
+                    <option value="Xét duyệt của cơ quan thường trực">Xét duyệt của cơ quan thường trực</option>
                     <option value="Phê duyệt cuối">Phê duyệt cuối</option>
                     <option value="Từ chối">Từ chối</option>
                 </select>
@@ -59,7 +59,7 @@
                 <tbody>
                     {% set status_class = {
                         'Nháp': 'badge-draft', 'Chờ duyệt': 'badge-pending',
-                        'Đang duyệt': 'badge-reviewing', 'Hội đồng xét duyệt': 'badge-approved',
+                        'Đang duyệt': 'badge-reviewing', 'Xét duyệt của cơ quan thường trực': 'badge-approved',
                         'Phê duyệt cuối': 'badge-final', 'Từ chối': 'badge-rejected'
                     } %}
                     {% for dx in nominations.items %}

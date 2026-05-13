@@ -69,7 +69,7 @@
                 </a>
                 {% if current_user.is_hoi_dong_member %}
                 <a href="{{ url_for('hoi_dong.list_nominations') }}" class="sidebar-link {% if request.blueprint == 'hoi_dong' %}active{% endif %}">
-                    <i class="bi bi-people-fill"></i> <span>Hội đồng xét duyệt</span>
+                    <i class="bi bi-people-fill"></i> <span>Xét duyệt của cơ quan thường trực</span>
                 </a>
                 {% endif %}
                 {% if current_user.is_reward_viewer %}
