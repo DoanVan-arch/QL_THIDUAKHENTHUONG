@@ -1230,6 +1230,89 @@ def reward_stats():
                            searched=searched)
 
 
+@admin_bp.route('/don-vi-stats')
+@login_required
+@admin_or_reward_viewer_required
+def don_vi_stats():
+    """Thống kê tỷ lệ đề xuất khen thưởng của từng đơn vị theo năm học."""
+    # Năm học options
+    nam_hoc_list = [r[0] for r in db.session.query(DeXuat.nam_hoc).filter(
+        DeXuat.nam_hoc.isnot(None)
+    ).distinct().order_by(DeXuat.nam_hoc.desc()).all() if r[0]]
+
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+    if not nam_hoc_filter and nam_hoc_list:
+        nam_hoc_filter = nam_hoc_list[0]
+
+    stats = []
+    if nam_hoc_filter:
+        don_vi_list = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu, DonVi.ten_don_vi).all()
+
+        # Pre-fetch DeXuatChiTiet for this nam_hoc (exclude NHAP drafts)
+        submitted_statuses = [
+            TrangThaiDeXuat.CHO_DUYET.value,
+            TrangThaiDeXuat.DANG_DUYET.value,
+            TrangThaiDeXuat.HOI_DONG.value,
+            TrangThaiDeXuat.PHE_DUYET_CUOI.value,
+        ]
+        # Also include approved/rejected to count all submitted
+        all_non_draft = submitted_statuses + [TrangThaiDeXuat.TU_CHOI.value]
+
+        from sqlalchemy import and_
+        rows = db.session.query(
+            DeXuatChiTiet.quan_nhan_id,
+            DeXuatChiTiet.loai_danh_hieu,
+            DeXuat.don_vi_id,
+        ).join(DeXuat, DeXuatChiTiet.de_xuat_id == DeXuat.id).filter(
+            DeXuat.nam_hoc == nam_hoc_filter,
+            DeXuat.trang_thai.in_(all_non_draft),
+            DeXuatChiTiet.quan_nhan_id.isnot(None),
+        ).all()
+
+        # Build per-donvi lookup: {dv_id: {qn_id: set(loai_danh_hieu)}}
+        from collections import defaultdict
+        dv_qn_map = defaultdict(lambda: defaultdict(set))
+        for qn_id, loai_dh, dv_id in rows:
+            if loai_dh:
+                dv_qn_map[dv_id][qn_id].add(loai_dh)
+
+        for dv in don_vi_list:
+            total_qn = dv.quan_nhans.count()
+            qn_map = dv_qn_map.get(dv.id, {})
+
+            # Count CSTD (Chiến sĩ thi đua) and CSTT (Chiến sĩ tiên tiến)
+            cstd_label = LoaiDanhHieu.CHIEN_SI_THI_DUA.value
+            cstt_label = LoaiDanhHieu.CHIEN_SI_TIEN_TIEN.value
+
+            # A person may be nominated for multiple danh hieu; count each separately
+            cstd_count = sum(1 for danh_hieus in qn_map.values() if cstd_label in danh_hieus)
+            cstt_count = sum(1 for danh_hieus in qn_map.values() if cstt_label in danh_hieus)
+            # Total unique nominated (either CSTD or CSTT)
+            total_nom = sum(1 for danh_hieus in qn_map.values()
+                            if cstd_label in danh_hieus or cstt_label in danh_hieus)
+
+            def pct(num, denom):
+                if not denom:
+                    return None
+                return round(num * 100 / denom, 1)
+
+            stats.append({
+                'don_vi': dv,
+                'total_qn': total_qn,
+                'total_nom': total_nom,
+                'cstd_count': cstd_count,
+                'cstt_count': cstt_count,
+                'total_pct': pct(total_nom, total_qn),
+                'cstd_pct': pct(cstd_count, total_qn),
+                'cstt_pct': pct(cstt_count, total_qn),
+            })
+
+    return render_template('admin/don_vi_stats.html',
+                           nam_hoc_list=nam_hoc_list,
+                           nam_hoc_filter=nam_hoc_filter,
+                           stats=stats)
+
+
 @admin_bp.route('/reward-list')
 @login_required
 @admin_or_reward_viewer_required

@@ -66,7 +66,7 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Nhập ngũ</small>
-                        <div>{{ qn.ngay_nhap_ngu if qn.ngay_nhap_ngu else '-' }}</div>
+                        <div>{{ qn.ngay_nhap_ngu|clean_nhap_ngu or '-' }}</div>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Học hàm</small>
