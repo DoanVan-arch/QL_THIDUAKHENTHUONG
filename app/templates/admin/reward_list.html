@@ -225,9 +225,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <th>Họ tên</th>
                         <th>Đơn vị</th>
                         <th style="white-space:nowrap;">Cấp bậc / Chức vụ</th>
-                        <th class="text-center" style="white-space:nowrap;">Tiến độ BQ</th>
+                        <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
                         {% for vt in HOI_DONG_VAI_TRO %}
-                        <th class="text-center no-print" style="font-size:0.72rem;white-space:normal;min-width:68px;max-width:80px;line-height:1.2;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
+                        <th class="text-center no-print col-b2-detail" style="font-size:0.72rem;white-space:normal;min-width:72px;max-width:90px;line-height:1.3;word-break:break-word;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
                         {% endfor %}
                         <th class="text-center print-only" style="display:none;">Kết quả BQ</th>
                         <th class="text-center no-print">Thao tác</th>
@@ -265,15 +265,15 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <span class="text-muted">{{ ct.quan_nhan.chuc_vu if ct.quan_nhan else '—' }}</span>
                     </td>
                     {# Tiến độ BQ #}
-                    <td class="text-center" style="white-space:nowrap;">
+                    <td class="text-center col-b2-detail" style="white-space:nowrap;">
                         <span class="badge {% if voted_count == total %}bg-success{% elif voted_count > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="font-size:0.72rem;">
                             {{ voted_count }}/{{ total }}
                         </span>
                     </td>
-                    {# 6 cột ban — chỉ hiện trên màn hình #}
+                    {# 6 cột ban — chỉ hiện trên màn hình, ẩn khi thu gọn #}
                     {% for vt in HOI_DONG_VAI_TRO %}
                     {% set bq = row.votes.get(vt) %}
-                    <td class="text-center no-print" style="padding:0.25rem 0.3rem;">
+                    <td class="text-center no-print col-b2-detail" style="padding:0.25rem 0.3rem;">
                         {% if bq %}
                             {% if bq.ket_qua == 'Đồng ý' %}
                             <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
