@@ -1141,12 +1141,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var dhSelect = document.getElementById('loai_danh_hieu_select');
-    if (dhSelect) {
-        dhSelect.addEventListener('change', function() {
-            togglePhamViBlocks();
-            setTimeout(applyCriteriaVisibilityByGroup, 0);
-        });
-    }
+    // togglePhamViBlocks already called via onDanhHieuChange() inline handler
 
     var qnSelect = document.getElementById('quan_nhan_select');
     // onChange handled by TomSelect instance below

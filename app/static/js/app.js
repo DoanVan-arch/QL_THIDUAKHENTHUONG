@@ -104,6 +104,9 @@ function updateNckhSection() {
 
 function onDanhHieuChange() {
     updateNckhSection();
+    if (typeof togglePhamViBlocks === 'function') {
+        togglePhamViBlocks();
+    }
     if (typeof applyCriteriaVisibilityByGroup === 'function') {
         applyCriteriaVisibilityByGroup();
     }
