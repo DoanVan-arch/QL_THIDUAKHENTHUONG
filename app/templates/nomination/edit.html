@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Chỉnh sửa đề xuất - {{ de_xuat.nam_hoc }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<style>
+  .ts-wrapper.form-select { padding: 0; }
+  .ts-wrapper .ts-control { border: none; box-shadow: none; min-height: 38px; }
+</style>
+{% endblock %}
+
 {%- macro tc_input(name, placeholder='', tmap=tieu_chi_input_map) -%}
 {%- set cfg = tmap.get(name, {}) -%}
 {%- if cfg.get('loai_input') == 'combobox' and cfg.get('gia_tri_chon') -%}
@@ -94,9 +102,15 @@
                     {% for ct in de_xuat.chi_tiets %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td class="fw-semibold">{{ ct.ten_don_vi_de_xuat if ct.ten_don_vi_de_xuat else (ct.quan_nhan.ho_ten if ct.quan_nhan else '-') }}</td>
-                        <td>{{ ct.quan_nhan.cap_bac if ct.quan_nhan else '-' }}</td>
-                        <td>{{ ct.doi_tuong or ('-' if ct.quan_nhan else 'Tập thể') }}</td>
+                        <td class="fw-semibold">
+                            {% if ct.ten_don_vi_de_xuat %}
+                            <i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat }}
+                            {% else %}
+                            {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
+                            {% endif %}
+                        </td>
+                        <td>{{ ct.quan_nhan.cap_bac if ct.quan_nhan else ('<span class="badge bg-info text-dark">Tập thể</span>'|safe) }}</td>
+                        <td>{{ ct.doi_tuong or ('-' if ct.quan_nhan else '—') }}</td>
                         <td><span class="badge bg-navy">{{ ct.loai_danh_hieu }}</span></td>
                         <td>
                             {% if ct.minh_chungs %}
@@ -155,10 +169,7 @@
                     <div id="block-ca-nhan" class="col-md-8 row g-3 p-0 m-0">
                     <div class="col-md-7">
                         <label class="form-label">Chọn cá nhân <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control mb-2" id="quan_nhan_search"
-                               placeholder="Tìm theo họ tên, cấp bậc, chức vụ..."
-                               oninput="filterPersonnelOptions(this)">
-                        <select class="form-select" name="quan_nhan_id" id="quan_nhan_select" onchange="onPersonnelSelect(this)">
+                        <select class="form-select" name="quan_nhan_id" id="quan_nhan_select">
                             <option value="">-- Chọn quân nhân --</option>
                             {% for p in personnel %}
                             {% set is_nominated = p.id in already_nominated_ids %}
@@ -188,9 +199,14 @@
 
                     <!-- Don vi block (tap_the nominations only) -->
                     <div id="block-tap-the" class="col-md-8" style="display:none;">
-                        <label class="form-label">Tên đơn vị đề xuất <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-building me-1 text-primary"></i>Tên tập thể <span class="text-danger">*</span>
+                        </label>
                         <input type="text" class="form-control" name="ten_don_vi_de_xuat" id="ten_don_vi_de_xuat"
-                               placeholder="VD: Đại đội 1, Phòng Đào tạo...">
+                               placeholder="VD: Đại đội 1, Phòng Đào tạo, Tiểu đoàn 6...">
+                        <div class="form-text" id="tap-the-name-hint">
+                            Nhập tên đầy đủ của tập thể được đề xuất khen thưởng.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1007,6 +1023,18 @@ function togglePhamViBlocks() {
     if (blockCaNhan) blockCaNhan.style.display = isTapThe ? 'none' : '';
     if (blockTapThe) blockTapThe.style.display = isTapThe ? '' : 'none';
 
+    // Update hint text based on danh hieu type
+    var hint = document.getElementById('tap-the-name-hint');
+    if (hint && isTapThe) {
+        if (selectedDanhHieu.indexOf('Quyết thắng') >= 0 || selectedDanhHieu.indexOf('quyết thắng') >= 0) {
+            hint.textContent = 'Nhập tên tập thể đề xuất danh hiệu Đơn vị quyết thắng. VD: Đại đội 1 Tiểu đoàn 6';
+        } else if (selectedDanhHieu.indexOf('Tiên tiến') >= 0 || selectedDanhHieu.indexOf('tiên tiến') >= 0) {
+            hint.textContent = 'Nhập tên tập thể đề xuất danh hiệu Đơn vị tiên tiến. VD: Phòng Đào tạo';
+        } else {
+            hint.textContent = 'Nhập tên đầy đủ của tập thể được đề xuất khen thưởng.';
+        }
+    }
+
     // For tap_the: doi_tuong_select value doesn't matter — reset it to avoid affecting criteria visibility
     var dtSelect = document.getElementById('doi_tuong_select');
     if (dtSelect && isTapThe) {
@@ -1121,25 +1149,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var qnSelect = document.getElementById('quan_nhan_select');
-    if (qnSelect) {
-        qnSelect.addEventListener('change', function() {
-            setTimeout(applyCriteriaVisibilityByGroup, 0);
-            // Toggle Đoàn/Phụ nữ sections based on selected person's membership flags
-            var opt = qnSelect.options[qnSelect.selectedIndex];
-            var secDoan = document.getElementById('section-doan-the');
-            var secPN = document.getElementById('section-phu-nu');
-            if (opt && opt.value) {
-                var isDoan = opt.getAttribute('data-ladoanvien') === '1';
-                var isPN = opt.getAttribute('data-lahoivienphunu') === '1';
-                if (secDoan) secDoan.classList.toggle('hidden', !isDoan);
-                if (secPN) secPN.classList.toggle('hidden', !isPN);
-            } else {
-                // No person selected: hide both
-                if (secDoan) secDoan.classList.add('hidden');
-                if (secPN) secPN.classList.add('hidden');
-            }
-        });
-    }
+    // onChange handled by TomSelect instance below
 
     Object.keys(DIEM_FIELD_LABELS || {}).forEach(function(fieldName) {
         var scoreInput = document.querySelector('[name="' + fieldName + '"]');
@@ -1166,5 +1176,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+(function() {
+    var qnEl = document.getElementById('quan_nhan_select');
+    if (!qnEl) return;
+
+    // Preserve pre-selected value (edit mode)
+    var preselected = qnEl.value;
+
+    var ts = new TomSelect(qnEl, {
+        placeholder: 'Tìm theo họ tên, cấp bậc, chức vụ...',
+        searchField: ['text'],
+        maxOptions: 300,
+        onChange: function(value) {
+            // Mirror logic from the old addEventListener('change') handler
+            var opt = qnEl.querySelector('option[value="' + value + '"]');
+            var secDoan = document.getElementById('section-doan-the');
+            var secPN = document.getElementById('section-phu-nu');
+            if (opt && value) {
+                var isDoan = opt.getAttribute('data-ladoanvien') === '1';
+                var isPN = opt.getAttribute('data-lahoivienphunu') === '1';
+                if (secDoan) secDoan.classList.toggle('hidden', !isDoan);
+                if (secPN) secPN.classList.toggle('hidden', !isPN);
+            } else {
+                if (secDoan) secDoan.classList.add('hidden');
+                if (secPN) secPN.classList.add('hidden');
+            }
+            setTimeout(applyCriteriaVisibilityByGroup, 0);
+        }
+    });
+
+    // Restore selection in edit mode
+    if (preselected) ts.setValue(preselected, true);
+})();
 </script>
 {% endblock %}
