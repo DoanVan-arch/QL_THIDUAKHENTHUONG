@@ -203,7 +203,8 @@
                             <i class="bi bi-building me-1 text-primary"></i>Tên tập thể <span class="text-danger">*</span>
                         </label>
                         <input type="text" class="form-control" name="ten_don_vi_de_xuat" id="ten_don_vi_de_xuat"
-                               placeholder="VD: Đại đội 1, Phòng Đào tạo, Tiểu đoàn 6...">
+                               placeholder="VD: Đại đội 1, Phòng Đào tạo, Tiểu đoàn 6..."
+                               oninput="updateSubmitButtonState()">
                         <div class="form-text" id="tap-the-name-hint">
                             Nhập tên đầy đủ của tập thể được đề xuất khen thưởng.
                         </div>
@@ -1001,7 +1002,7 @@ function applyCriteriaVisibilityByGroup() {
     });
 
     var submitBtn = formEl.querySelector('button[type="submit"].btn-navy');
-    if (submitBtn) submitBtn.disabled = isTapThe ? !document.getElementById('ten_don_vi_de_xuat').value.trim() : !selectedDoiTuong;
+    if (submitBtn) submitBtn.disabled = isTapThe ? false : !selectedDoiTuong;
 
     if (!isTapThe) {
         renderScoreWarnings(selectedDanhHieu);
@@ -1044,6 +1045,9 @@ function togglePhamViBlocks() {
 
     // Render or hide collective criteria section
     renderTapTheCriteria(selectedDanhHieu, isTapThe);
+
+    // Update submit button state
+    if (typeof updateSubmitButtonState === 'function') updateSubmitButtonState();
 }
 
 function renderTapTheCriteria(selectedDanhHieu, isTapThe) {
@@ -1197,5 +1201,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Restore selection in edit mode
     if (preselected) ts.setValue(preselected, true);
 })();
+
+function updateSubmitButtonState() {
+    var dhSelect = document.getElementById('loai_danh_hieu_select');
+    var selectedDanhHieu = dhSelect ? (dhSelect.value || '') : '';
+    var phamVi = (selectedDanhHieu && DANH_HIEU_PHAM_VI[selectedDanhHieu]) || 'Cá nhân';
+    var isTapThe = (phamVi === 'Đơn vị');
+    var formEl = dhSelect ? dhSelect.closest('form') : null;
+    if (!formEl) return;
+    var submitBtn = formEl.querySelector('button[type="submit"].btn-navy');
+    if (!submitBtn) return;
+    if (isTapThe) {
+        var tenInput = document.getElementById('ten_don_vi_de_xuat');
+        submitBtn.disabled = !(tenInput && tenInput.value.trim());
+    } else {
+        var dtSelect = document.getElementById('doi_tuong_select');
+        submitBtn.disabled = !(dtSelect && dtSelect.value);
+    }
+}
 </script>
 {% endblock %}
