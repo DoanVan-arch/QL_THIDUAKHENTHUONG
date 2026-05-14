@@ -9,6 +9,7 @@
     </div>
     {% if thong_baos.items %}
     <form action="{{ url_for('nomination.mark_notifications_read') }}" method="POST" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-sm btn-outline-navy">
             <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
         </button>
