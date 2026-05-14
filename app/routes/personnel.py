@@ -179,10 +179,14 @@ def create_personnel():
 
 @personnel_bp.route('/<int:id>')
 @login_required
-@unit_user_required
 def detail_personnel(id):
+    from app.models.user import Role as _Role
+    if current_user.role not in (_Role.UNIT_USER, _Role.ADMIN):
+        from flask import abort
+        abort(403)
     qn = QuanNhan.query.get_or_404(id)
-    if qn.don_vi_id != current_user.don_vi_id:
+    # Admin can view any personnel; unit users can only view their own unit
+    if current_user.role != _Role.ADMIN and qn.don_vi_id != current_user.don_vi_id:
         flash('Không có quyền truy cập.', 'danger')
         return redirect(url_for('personnel.list_personnel'))
 

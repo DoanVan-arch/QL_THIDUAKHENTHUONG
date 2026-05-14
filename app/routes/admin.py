@@ -262,7 +262,10 @@ def approval_tracking():
             }
 
         chi_tiets_data = []
+        tap_the_data_list = []  # collective nominations shown in separate table
         for ct in dx.chi_tiets:
+            is_tap_the = ct.ten_don_vi_de_xuat is not None or ct.quan_nhan_id is None
+
             # Skip individuals already in KhenThuong (fully finalized)
             if ct.id in approved_ct_ids:
                 continue
@@ -274,16 +277,17 @@ def approval_tracking():
             if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter:
                 continue
 
-            # Filter by scope (Quân lực / Cán bộ)
-            if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG:
-                continue
-            if scope_filter == 'can_bo' and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG:
-                continue
+            # Filter by scope (Quân lực / Cán bộ) — skip for collective nominations
+            if not is_tap_the:
+                if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG:
+                    continue
+                if scope_filter == 'can_bo' and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG:
+                    continue
 
-            # Filter by search query (ho_ten)
+            # Filter by search query — search in ho_ten or ten_don_vi_de_xuat
             if search_query:
-                ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else ''
-                if search_query.lower() not in ho_ten.lower():
+                name_val = (ct.quan_nhan.ho_ten if ct.quan_nhan else '') or (ct.ten_don_vi_de_xuat or '')
+                if search_query.lower() not in name_val.lower():
                     continue
 
             ct_dept_results = {}
@@ -334,19 +338,24 @@ def approval_tracking():
             # Individual can be final-approved if all 6 depts approved this person
             ct_can_approve = all_dept_ok
 
-            chi_tiets_data.append({
+            ct_entry = {
                 'ct': ct,
                 'dept_results': ct_dept_results,
                 'can_final_approve': ct_can_approve,
                 'dx_id': dx.id,
-            })
-            total_individuals += 1
+            }
+            if is_tap_the:
+                tap_the_data_list.append(ct_entry)
+            else:
+                chi_tiets_data.append(ct_entry)
+                total_individuals += 1
 
-        # Only add nomination if it still has individuals to show
-        if chi_tiets_data:
+        # Only add nomination if it still has individuals/collectives to show
+        if chi_tiets_data or tap_the_data_list:
             unit_groups_dict[unit_name].append({
                 'dx': dx,
                 'chi_tiets': chi_tiets_data,
+                'tap_the_chi_tiets': tap_the_data_list,
             })
 
     # Convert to ordered list
@@ -356,10 +365,12 @@ def approval_tracking():
         if not nom_list:
             continue
         individual_count = sum(len(n['chi_tiets']) for n in nom_list)
+        tap_the_count = sum(len(n['tap_the_chi_tiets']) for n in nom_list)
         unit_groups.append({
             'unit_name': unit_name,
             'nominations': nom_list,
             'individual_count': individual_count,
+            'tap_the_count': tap_the_count,
         })
 
     danh_hieu_list = [e.value for e in LoaiDanhHieu]

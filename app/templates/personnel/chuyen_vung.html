@@ -36,6 +36,9 @@
                     <tr>
                         <th>STT</th>
                         <th>Họ tên</th>
+                        {% if current_user.is_admin %}
+                        <th>Đơn vị</th>
+                        {% endif %}
                         <th>Cấp bậc</th>
                         <th>Chức vụ</th>
                         <th>Đối tượng</th>
@@ -53,6 +56,9 @@
                             {{ qn.ho_ten }}
                         </a>
                     </td>
+                    {% if current_user.is_admin %}
+                    <td><small class="text-muted">{{ qn.don_vi.ten_don_vi if qn.don_vi else '—' }}</small></td>
+                    {% endif %}
                     <td>{{ qn.cap_bac or '—' }}</td>
                     <td>{{ qn.chuc_vu or '—' }}</td>
                     <td>{{ qn.doi_tuong or '—' }}</td>
@@ -61,13 +67,20 @@
                         {{ qn.ngay_chuyen_vung.strftime('%d/%m/%Y %H:%M') if qn.ngay_chuyen_vung else '—' }}
                     </td>
                     <td class="text-center">
-                        <form method="POST" action="{{ url_for('personnel.unmark_chuyen_vung', id=qn.id) }}" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary"
-                                    onclick="return confirm('Đưa {{ qn.ho_ten }} trở lại danh sách quân nhân thường?')">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i>Hoàn tác
-                            </button>
-                        </form>
+                        <div class="d-flex gap-1 justify-content-center">
+                            <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if not current_user.is_admin %}
+                            <form method="POST" action="{{ url_for('personnel.unmark_chuyen_vung', id=qn.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                        onclick="return confirm('Đưa {{ qn.ho_ten }} trở lại danh sách quân nhân thường?')">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Hoàn tác
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
