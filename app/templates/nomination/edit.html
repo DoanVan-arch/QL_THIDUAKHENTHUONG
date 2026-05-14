@@ -384,7 +384,7 @@
                 'danh_hieu_hv_gioi','diem_tong_ket','ket_qua_thuc_hanh',
                 'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
                 'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
-                'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc','ten_don_vi_de_xuat',
+                'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc',
             ] -%}
             {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
             {%- if extra_tc %}
@@ -1186,20 +1186,10 @@ document.addEventListener('DOMContentLoaded', function() {
         searchField: ['text'],
         maxOptions: 300,
         onChange: function(value) {
-            // Mirror logic from the old addEventListener('change') handler
-            var opt = qnEl.querySelector('option[value="' + value + '"]');
-            var secDoan = document.getElementById('section-doan-the');
-            var secPN = document.getElementById('section-phu-nu');
-            if (opt && value) {
-                var isDoan = opt.getAttribute('data-ladoanvien') === '1';
-                var isPN = opt.getAttribute('data-lahoivienphunu') === '1';
-                if (secDoan) secDoan.classList.toggle('hidden', !isDoan);
-                if (secPN) secPN.classList.toggle('hidden', !isPN);
-            } else {
-                if (secDoan) secDoan.classList.add('hidden');
-                if (secPN) secPN.classList.add('hidden');
+            // onPersonnelSelect handles doi_tuong auto-fill, Đoàn/PN toggle, criteria visibility
+            if (typeof onPersonnelSelect === 'function') {
+                onPersonnelSelect(qnEl);
             }
-            setTimeout(applyCriteriaVisibilityByGroup, 0);
         }
     });
 
