@@ -164,6 +164,21 @@ def create_personnel():
                                    doi_tuong_list=_get_doi_tuong_list(),
                                    chuc_vu_options=_get_chuc_vu_options())
 
+        # Kiểm tra CCCD trùng
+        cccd_val = qn.can_cuoc_cong_dan
+        if cccd_val:
+            existing = QuanNhan.query.filter(
+                QuanNhan.can_cuoc_cong_dan == cccd_val
+            ).first()
+            if existing:
+                flash(f'Số CCCD {cccd_val} đã tồn tại (thuộc quân nhân: {existing.ho_ten} - {existing.don_vi.ten_don_vi if existing.don_vi else ""}). Vui lòng kiểm tra lại.', 'danger')
+                return render_template('personnel/create.html',
+                                       cap_bac_list=_get_cap_bac_list(),
+                                       hoc_ham_list=[e.value for e in HocHam],
+                                       hoc_vi_list=[e.value for e in HocVi],
+                                       doi_tuong_list=_get_doi_tuong_list(),
+                                       chuc_vu_options=_get_chuc_vu_options())
+
         db.session.add(qn)
         db.session.commit()
         flash(f'Đã thêm quân nhân: {qn.ho_ten}', 'success')
@@ -235,6 +250,16 @@ def edit_personnel(id):
         if not qn.ho_ten:
             flash('Họ tên không được để trống.', 'danger')
         else:
+            # Kiểm tra CCCD trùng (bỏ qua chính bản ghi đang sửa)
+            cccd_val = qn.can_cuoc_cong_dan
+            if cccd_val:
+                existing = QuanNhan.query.filter(
+                    QuanNhan.can_cuoc_cong_dan == cccd_val,
+                    QuanNhan.id != qn.id
+                ).first()
+                if existing:
+                    flash(f'Số CCCD {cccd_val} đã tồn tại (thuộc quân nhân: {existing.ho_ten}). Vui lòng kiểm tra lại.', 'danger')
+                    return redirect(url_for('personnel.edit_personnel', id=qn.id))
             db.session.commit()
             flash('Đã cập nhật thông tin.', 'success')
             return redirect(url_for('personnel.detail_personnel', id=qn.id))

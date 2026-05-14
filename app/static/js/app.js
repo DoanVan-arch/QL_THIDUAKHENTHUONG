@@ -135,14 +135,15 @@ function onPersonnelSelect(selectEl) {
     const dtSelect = document.getElementById('doi_tuong_select');
     if (dtSelect && doiTuong) {
         dtSelect.value = doiTuong;
+        // Fire change event so criteria visibility updates
+        dtSelect.dispatchEvent(new Event('change'));
     }
     // Toggle Đoàn/Phụ nữ sections based on selected person's membership flags
-    var opt = qnSelect.options[qnSelect.selectedIndex];
     var secDoan = document.getElementById('section-doan-the');
     var secPN = document.getElementById('section-phu-nu');
-    if (opt && opt.value) {
-        var isDoan = opt.getAttribute('data-ladoanvien') === '1';
-        var isPN = opt.getAttribute('data-lahoivienphunu') === '1';
+    if (option && option.value) {
+        var isDoan = option.getAttribute('data-ladoanvien') === '1';
+        var isPN = option.getAttribute('data-lahoivienphunu') === '1';
         if (secDoan) secDoan.classList.toggle('hidden', !isDoan);
         if (secPN) secPN.classList.toggle('hidden', !isPN);
     }

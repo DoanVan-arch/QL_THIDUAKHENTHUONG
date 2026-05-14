@@ -267,9 +267,14 @@
                                 {# Criteria field values #}
                                 {% for field in all_fields %}
                                 <td class="text-center" style="font-size:0.75rem;">
-                                    {% set val = ct[field] if ct[field] is defined else None %}
+                                    {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
                                     {% if val is not none and val != '' and val != 0 %}
+                                        {% if field in ('nckh_noi_dung', 'thanh_tich_ca_nhan_khac', 'nckh_minh_chung') %}
+                                        <span style="display:block;max-width:140px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:help;"
+                                              title="{{ val }}">{{ val }}</span>
+                                        {% else %}
                                         {{ val }}
+                                        {% endif %}
                                     {% else %}
                                         <span class="text-muted">-</span>
                                     {% endif %}
