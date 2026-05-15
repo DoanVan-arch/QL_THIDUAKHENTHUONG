@@ -2,7 +2,6 @@
 {% block title %}Danh sách quân nhân{% endblock %}
 
 {% block content %}
-<meta name="csrf-token" content="{{ csrf_token() }}">
 <div class="page-header">
     <div>
         <h4><i class="bi bi-people me-2"></i>Danh sách quân nhân</h4>
@@ -329,6 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify({ action: 'doi_tuong', ids, doi_tuong }),
             });
+            if (!res.ok) { alert('Lỗi server: ' + res.status + ' ' + res.statusText); return; }
             const data = await res.json();
             if (data.success) { location.reload(); }
             else { alert(data.message || 'Có lỗi xảy ra'); }
@@ -346,10 +346,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify({ action: 'chuyen_vung', ids }),
             });
+            if (!res.ok) { alert('Lỗi server: ' + res.status + ' ' + res.statusText); return; }
             const data = await res.json();
             if (data.success) { location.reload(); }
             else { alert(data.message || 'Có lỗi xảy ra'); }
-        } catch(e) { alert('Lỗi kết nối'); }
+        } catch(e) { alert('Lỗi kết nối: ' + e.message); }
     });
 
     // ===== BULK CHUYỂN ĐƠN VỊ =====
@@ -379,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify({ action: 'chuyen_don_vi', ids, don_vi_id, ly_do }),
             });
+            if (!res.ok) { alert('Lỗi server: ' + res.status + ' ' + res.statusText); return; }
             const data = await res.json();
             if (data.success) { location.reload(); }
             else { alert(data.message || 'Có lỗi xảy ra'); }
