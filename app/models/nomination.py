@@ -180,6 +180,10 @@ class DeXuatChiTiet(db.Model):
     phieu_tin_nhiem = Column(String(50), nullable=True)
     xep_loai_dang_vien = Column(String(50), nullable=True)
     ket_qua_doan_the = Column(String(255), nullable=True)
+    xep_loai_doan_vien = Column(String(50), nullable=True)
+    hinh_thuc_khen_thuong_qc = Column(String(255), nullable=True)
+    ket_qua_phu_nu = Column(String(255), nullable=True)
+    hinh_thuc_khen_thuong_pn = Column(String(255), nullable=True)
     chu_tri_don_vi_danh_hieu = Column(String(255), nullable=True)
 
     # Lecturer-specific

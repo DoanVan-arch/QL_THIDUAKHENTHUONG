@@ -29,9 +29,10 @@ admin_bp = Blueprint('admin', __name__)
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
     'Phòng Khoa học', 'Phòng Đào tạo',
-    'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
+    'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
-    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ủy ban Kiểm tra', 'Ban Quân lực'
+    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Bảo vệ an ninh',
+    'Ủy ban Kiểm tra', 'Ban Quân lực'
 ]
 
 # Display order for approval columns in tracking screens
@@ -40,7 +41,24 @@ TRACKING_DEPT_COLUMNS = [
     {'key': 'Ban Tổ chức', 'label': 'Ban Tổ chức'},
     {'key': 'Ban Tuyên huấn', 'label': 'Ban Tuyên huấn'},
     {'key': 'Ban Công tác quần chúng', 'label': 'Ban Công tác quần chúng'},
-    {'key': 'Thủ trưởng Phòng Chính trị', 'label': 'TT phòng Chính trị'},
+    {'key': 'Ban Bảo vệ an ninh', 'label': 'Ban Bảo vệ an ninh'},
+    {'key': 'Ban Công nghệ thông tin', 'label': 'Ban Công nghệ thông tin'},
+    {'key': 'Ban Tác huấn', 'label': 'Ban Tác huấn'},
+    {'key': 'Ban Quân lực', 'label': 'Ban Quân lực'},
+    {'key': 'Thủ trưởng Phòng TM-HC', 'label': 'TT phòng TM-HC'},
+    {'key': 'Phòng Đào tạo', 'label': '(Phòng Đào tạo)'},
+    {'key': 'Phòng Khoa học', 'label': '(Phòng Khoa học quân sự)'},
+    {'key': 'Ban Khảo thí', 'label': 'Ban Khảo thí'},
+    {'key': 'Ủy ban Kiểm tra', 'label': 'Ủy ban Kiểm tra'},
+]
+
+# Display order for approval columns in tracking screens
+TRACKING_DEPT_COLUMNS = [
+    {'key': 'Ban Cán bộ', 'label': 'Ban Cán bộ'},
+    {'key': 'Ban Tổ chức', 'label': 'Ban Tổ chức'},
+    {'key': 'Ban Tuyên huấn', 'label': 'Ban Tuyên huấn'},
+    {'key': 'Ban Công tác quần chúng', 'label': 'Ban Công tác quần chúng'},
+    {'key': 'Ban Bảo vệ an ninh', 'label': 'Ban Bảo vệ an ninh'},
     {'key': 'Ban Công nghệ thông tin', 'label': 'Ban Công nghệ thông tin'},
     {'key': 'Ban Tác huấn', 'label': 'Ban Tác huấn'},
     {'key': 'Ban Quân lực', 'label': 'Ban Quân lực'},
@@ -62,9 +80,6 @@ def _is_auto_scope_approved(dept_name, doi_tuong):
 
 # Gate columns each Thủ trưởng role waits for
 _TTR_GATE_COLUMNS = {
-    'Thủ trưởng Phòng Chính trị': [
-        'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
-    ],
     'Thủ trưởng Phòng TM-HC': [
         'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Quân lực',
     ],
@@ -1709,6 +1724,214 @@ def export_tracking_excel():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
+@admin_bp.route('/reward-list/export-hoi-dong-excel')
+@login_required
+@admin_or_reward_viewer_required
+def export_hoi_dong_excel():
+    """Export danh sách chờ (HOI_DONG + PHE_DUYET_CUOI) kèm điểm tiêu chí + biểu quyết hội đồng."""
+    import datetime as _dt
+    from openpyxl.styles import Font as _Font, Alignment as _Align, PatternFill as _Fill, Border as _Border, Side as _Side
+    from app.models.hoi_dong import HoiDongBieuQuyet as _BQ, HOI_DONG_VAI_TRO as _VT, HOI_DONG_VAI_TRO_DISPLAY as _VTD
+
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+    unit_filter = request.args.get('unit', '')
+    danh_hieu_filter = request.args.get('danh_hieu', '')
+    trang_thai_filter = request.args.get('trang_thai', '')  # 'hoi_dong' | 'phe_duyet_cuoi' | '' (cả hai)
+
+    # Build query
+    statuses = []
+    if trang_thai_filter == 'hoi_dong':
+        statuses = [TrangThaiDeXuat.HOI_DONG.value]
+    elif trang_thai_filter == 'phe_duyet_cuoi':
+        statuses = [TrangThaiDeXuat.PHE_DUYET_CUOI.value]
+    else:
+        statuses = [TrangThaiDeXuat.HOI_DONG.value, TrangThaiDeXuat.PHE_DUYET_CUOI.value]
+
+    query = DeXuat.query.filter(DeXuat.trang_thai.in_(statuses))
+    if nam_hoc_filter:
+        query = query.filter(DeXuat.nam_hoc == nam_hoc_filter)
+    if unit_filter:
+        query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
+    nominations = query.order_by(DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()).all()
+
+    # Pre-fetch all votes for these de_xuat ids
+    dx_ids = [dx.id for dx in nominations]
+    all_votes = {}  # chi_tiet_id -> {vai_tro: ket_qua}
+    if dx_ids:
+        votes = _BQ.query.filter(_BQ.de_xuat_id.in_(dx_ids)).all()
+        for v in votes:
+            all_votes.setdefault(v.chi_tiet_id, {})[v.vai_tro] = v.ket_qua
+
+    # Styles
+    bold = _Font(name='Times New Roman', bold=True, size=11)
+    normal = _Font(name='Times New Roman', size=10)
+    center = _Align(horizontal='center', vertical='center', wrap_text=True)
+    left = _Align(horizontal='left', vertical='center', wrap_text=True)
+    thin = _Border(left=_Side(style='thin'), right=_Side(style='thin'),
+                   top=_Side(style='thin'), bottom=_Side(style='thin'))
+    navy_fill = _Fill(start_color='1F4E79', end_color='1F4E79', fill_type='solid')
+    green_fill = _Fill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+    red_fill = _Fill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+    yellow_fill = _Fill(start_color='FFEB9C', end_color='FFEB9C', fill_type='solid')
+    white_bold = _Font(name='Times New Roman', bold=True, size=10, color='FFFFFF')
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'DS Hoi dong Bieu quyet'
+
+    # Title row 1
+    vote_col_count = len(_VT)
+    total_cols = 13 + vote_col_count  # info cols + vote cols + tong + ket_luan
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
+    ws.cell(1, 1).value = 'DANH SÁCH XÉT DUYỆT HỘI ĐỒNG THI ĐUA KHEN THƯỞNG'
+    ws.cell(1, 1).font = _Font(name='Times New Roman', bold=True, size=13)
+    ws.cell(1, 1).alignment = center
+
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=total_cols)
+    filter_info = []
+    if nam_hoc_filter: filter_info.append(f'Năm học: {nam_hoc_filter}')
+    if unit_filter: filter_info.append(f'Đơn vị: {unit_filter}')
+    if danh_hieu_filter: filter_info.append(f'Danh hiệu: {danh_hieu_filter}')
+    ws.cell(2, 1).value = ('  |  '.join(filter_info) if filter_info else 'Tất cả') + \
+        f'  —  Xuất ngày: {_dt.datetime.now().strftime("%d/%m/%Y %H:%M")}'
+    ws.cell(2, 1).font = _Font(name='Times New Roman', italic=True, size=10)
+    ws.cell(2, 1).alignment = center
+
+    # Header row 3: fixed info columns
+    info_headers = [
+        'STT', 'Đơn vị', 'Họ và tên', 'CCCD', 'Cấp bậc', 'Chức vụ',
+        'Đối tượng', 'Danh hiệu', 'Năm học', 'Trạng thái',
+        'Mức độ HT nhiệm vụ', 'Phiếu tín nhiệm', 'Ghi chú',
+    ]
+    info_widths = [5, 26, 22, 14, 12, 20, 16, 20, 12, 18, 22, 18, 20]
+
+    for col_idx, (h, w) in enumerate(zip(info_headers, info_widths), 1):
+        c = ws.cell(row=3, column=col_idx, value=h)
+        c.font = white_bold
+        c.fill = navy_fill
+        c.alignment = center
+        c.border = thin
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+    # Vote columns
+    vote_start_col = len(info_headers) + 1
+    for i, vt in enumerate(_VT):
+        col = vote_start_col + i
+        label = _VTD.get(vt, vt)
+        c = ws.cell(row=3, column=col, value=label)
+        c.font = white_bold
+        c.fill = _Fill(start_color='375623', end_color='375623', fill_type='solid')
+        c.alignment = center
+        c.border = thin
+        ws.column_dimensions[get_column_letter(col)].width = 18
+
+    # Tổng đồng ý + Kết luận
+    tong_col = vote_start_col + len(_VT)
+    kl_col = tong_col + 1
+    c = ws.cell(row=3, column=tong_col, value='Tổng ĐY')
+    c.font = white_bold; c.fill = navy_fill; c.alignment = center; c.border = thin
+    ws.column_dimensions[get_column_letter(tong_col)].width = 10
+    c = ws.cell(row=3, column=kl_col, value='Kết luận')
+    c.font = white_bold; c.fill = navy_fill; c.alignment = center; c.border = thin
+    ws.column_dimensions[get_column_letter(kl_col)].width = 16
+
+    # Data rows
+    row_num = 4
+    stt = 0
+    for dx in nominations:
+        unit_name = dx.don_vi.ten_don_vi if dx.don_vi else '—'
+        for ct in dx.chi_tiets:
+            if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter:
+                continue
+            qn = ct.quan_nhan
+            ho_ten = qn.ho_ten if qn else (ct.ten_don_vi_de_xuat or '—')
+            stt += 1
+
+            row_data = [
+                stt,
+                unit_name,
+                ho_ten,
+                (qn.can_cuoc_cong_dan if qn else ''),
+                (qn.cap_bac if qn else ''),
+                (qn.chuc_vu if qn else ''),
+                (ct.doi_tuong or ''),
+                ct.loai_danh_hieu or '',
+                dx.nam_hoc or '',
+                dx.trang_thai,
+                ct.muc_do_hoan_thanh or '',
+                ct.phieu_tin_nhiem or '',
+                ct.ghi_chu or '',
+            ]
+            for col_idx, val in enumerate(row_data, 1):
+                c = ws.cell(row=row_num, column=col_idx, value=val)
+                c.font = normal
+                c.border = thin
+                c.alignment = center if col_idx == 1 else left
+
+            # Vote cells
+            ct_votes = all_votes.get(ct.id, {})
+            dong_y_count = 0
+            for i, vt in enumerate(_VT):
+                col = vote_start_col + i
+                ket_qua = ct_votes.get(vt, '')
+                c = ws.cell(row=row_num, column=col, value=ket_qua)
+                c.font = normal
+                c.border = thin
+                c.alignment = center
+                if ket_qua == 'Đồng ý':
+                    c.fill = green_fill
+                    dong_y_count += 1
+                elif ket_qua == 'Không đồng ý':
+                    c.fill = red_fill
+
+            # Tổng ĐY
+            c = ws.cell(row=row_num, column=tong_col, value=dong_y_count)
+            c.font = _Font(name='Times New Roman', bold=True, size=10)
+            c.border = thin
+            c.alignment = center
+
+            # Kết luận
+            voted_count = len(ct_votes)
+            if voted_count == 0:
+                ket_luan = 'Chưa biểu quyết'
+                kl_fill = None
+            elif dong_y_count > len(_VT) / 2:
+                ket_luan = 'Đề nghị khen thưởng'
+                kl_fill = green_fill
+            else:
+                ket_luan = 'Không đạt'
+                kl_fill = red_fill
+            c = ws.cell(row=row_num, column=kl_col, value=ket_luan)
+            c.font = _Font(name='Times New Roman', bold=True, size=10)
+            c.border = thin
+            c.alignment = center
+            if kl_fill:
+                c.fill = kl_fill
+
+            row_num += 1
+
+    # Summary
+    ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=total_cols)
+    c = ws.cell(row=row_num, column=1, value=f'Tổng cộng: {stt} người')
+    c.font = bold
+    c.alignment = left
+
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToWidth = 1
+    ws.freeze_panes = 'A4'
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    fname_parts = ['DanhSach_HoiDong_BieuQuyet']
+    if nam_hoc_filter:
+        fname_parts.append(nam_hoc_filter.replace('-', '_'))
+    fname_parts.append(_dt.datetime.now().strftime('%d%m%Y'))
+    return send_file(output, as_attachment=True,
+                     download_name='_'.join(fname_parts) + '.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
 @admin_bp.route('/reward-list/pending-final/export-excel')
 @login_required
 @admin_or_reward_viewer_required
@@ -3201,7 +3424,6 @@ def delete_danh_hieu(id):
 PHONG_DUYET_OPTIONS = [
     ('Phòng Khoa học', 'Phòng Khoa học'),
     ('Phòng Đào tạo', 'Phòng Đào tạo'),
-    ('Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng Chính trị'),
     ('Thủ trưởng Phòng TM-HC', 'Thủ trưởng Phòng TM-HC'),
     ('Ban Cán bộ', 'Ban Cán bộ'),
     ('Ban Tổ chức', 'Ban Tổ chức'),
@@ -3210,6 +3432,7 @@ PHONG_DUYET_OPTIONS = [
     ('Ban Công nghệ thông tin', 'Ban Công nghệ thông tin'),
     ('Ban Tác huấn', 'Ban Tác huấn'),
     ('Ban Khảo thí', 'Ban Khảo thí'),
+    ('Ban Bảo vệ an ninh', 'Ban Bảo vệ an ninh'),
     ('Ủy ban Kiểm tra', 'Ủy ban Kiểm tra'),
     ('Ban Quân lực', 'Ban Quân lực'),
 ]

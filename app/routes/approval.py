@@ -15,7 +15,6 @@ approval_bp = Blueprint('approval', __name__)
 ROLE_TO_PHONG = {
     Role.PHONG_KHOAHOC: PhongDuyet.PHONG_KHOAHOC.value,
     Role.PHONG_DAOTAO: PhongDuyet.PHONG_DAOTAO.value,
-    Role.THU_TRUONG_PHONG_CHINHTRI: PhongDuyet.THU_TRUONG_PHONG_CHINHTRI.value,
     Role.THU_TRUONG_PHONG_TMHC: PhongDuyet.THU_TRUONG_PHONG_TMHC.value,
     Role.BAN_CANBO: PhongDuyet.BAN_CANBO.value,
     Role.BAN_TOCHUC: PhongDuyet.BAN_TOCHUC.value,
@@ -24,6 +23,7 @@ ROLE_TO_PHONG = {
     Role.BAN_CNTT: PhongDuyet.BAN_CNTT.value,
     Role.BAN_TAC_HUAN: PhongDuyet.BAN_TAC_HUAN.value,
     Role.BAN_KHAOTHI: PhongDuyet.BAN_KHAOTHI.value,
+    Role.BAN_BAOVE_ANNINH: PhongDuyet.BAN_BAOVE_ANNINH.value,
     Role.UY_BAN_KIEMTRA: PhongDuyet.UY_BAN_KIEMTRA.value,
     Role.BAN_QUANLUC: PhongDuyet.BAN_QUANLUC.value,
     Role.PHONG_HAUCANKYTHUAT: PhongDuyet.PHONG_HAUCANKYTHUAT.value,
@@ -32,13 +32,6 @@ ROLE_TO_PHONG = {
 
 
 def _managed_gate_columns(role):
-    if role == Role.THU_TRUONG_PHONG_CHINHTRI:
-        return [
-            PhongDuyet.BAN_CANBO.value,
-            PhongDuyet.BAN_TOCHUC.value,
-            PhongDuyet.BAN_TUYENHUAN.value,
-            PhongDuyet.BAN_CTCQ.value,
-        ]
     if role == Role.THU_TRUONG_PHONG_TMHC:
         return [
             PhongDuyet.BAN_CNTT.value,
@@ -48,12 +41,6 @@ def _managed_gate_columns(role):
     return []
 
 _GROUP_CONFIRMATION = {
-    Role.THU_TRUONG_PHONG_CHINHTRI: {
-        PhongDuyet.BAN_CANBO.value,
-        PhongDuyet.BAN_TOCHUC.value,
-        PhongDuyet.BAN_TUYENHUAN.value,
-        PhongDuyet.BAN_CTCQ.value,
-    },
     Role.THU_TRUONG_PHONG_TMHC: {
         PhongDuyet.BAN_CNTT.value,
         PhongDuyet.BAN_TAC_HUAN.value,

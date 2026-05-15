@@ -60,7 +60,6 @@ def department_dashboard():
     role_phong_map = {
         Role.PHONG_KHOAHOC: 'Phòng Khoa học',
         Role.PHONG_DAOTAO: 'Phòng Đào tạo',
-        Role.THU_TRUONG_PHONG_CHINHTRI: 'Thủ trưởng Phòng Chính trị',
         Role.THU_TRUONG_PHONG_TMHC: 'Thủ trưởng Phòng TM-HC',
         Role.BAN_CANBO: 'Ban Cán bộ',
         Role.BAN_TOCHUC: 'Ban Tổ chức',
@@ -69,6 +68,8 @@ def department_dashboard():
         Role.BAN_CNTT: 'Ban Công nghệ thông tin',
         Role.BAN_TAC_HUAN: 'Ban Tác huấn',
         Role.BAN_KHAOTHI: 'Ban Khảo thí',
+        Role.BAN_BAOVE_ANNINH: 'Ban Bảo vệ an ninh',
+        Role.UY_BAN_KIEMTRA: 'Ủy ban Kiểm tra',
         Role.BAN_QUANLUC: 'Ban Quân lực',
     }
     phong_name = role_phong_map.get(current_user.role, '')
