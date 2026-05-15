@@ -555,6 +555,10 @@ def add_nomination_item(id):
         phieu_tin_nhiem=request.form.get('phieu_tin_nhiem', '').strip() or None,
         xep_loai_dang_vien=request.form.get('xep_loai_dang_vien', '').strip() or None,
         ket_qua_doan_the=request.form.get('ket_qua_doan_the', '').strip() or None,
+        xep_loai_doan_vien=request.form.get('xep_loai_doan_vien', '').strip() or None,
+        hinh_thuc_khen_thuong_qc=request.form.get('hinh_thuc_khen_thuong_qc', '').strip() or None,
+        ket_qua_phu_nu=request.form.get('ket_qua_phu_nu', '').strip() or None,
+        hinh_thuc_khen_thuong_pn=request.form.get('hinh_thuc_khen_thuong_pn', '').strip() or None,
         chu_tri_don_vi_danh_hieu=request.form.get('chu_tri_don_vi_danh_hieu', '').strip() or None,
         # Lecturer fields
         danh_hieu_gv_gioi=request.form.get('danh_hieu_gv_gioi', '').strip() or None,
@@ -719,9 +723,10 @@ def submit_nomination(id):
     has_any_doan_the = any((ct.ket_qua_doan_the or '').strip() for ct in de_xuat.chi_tiets)
 
     for phong in [PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
-                  PhongDuyet.THU_TRUONG_PHONG_CHINHTRI, PhongDuyet.THU_TRUONG_PHONG_TMHC,
+                  PhongDuyet.THU_TRUONG_PHONG_TMHC,
                   PhongDuyet.BAN_CANBO, PhongDuyet.BAN_TOCHUC,
                   PhongDuyet.BAN_TUYENHUAN, PhongDuyet.BAN_CTCQ,
+                  PhongDuyet.BAN_BAOVE_ANNINH,
                   PhongDuyet.BAN_CNTT, PhongDuyet.BAN_TAC_HUAN,
                   PhongDuyet.BAN_KHAOTHI, PhongDuyet.UY_BAN_KIEMTRA,
                   PhongDuyet.BAN_QUANLUC]:
