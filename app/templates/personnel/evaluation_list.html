@@ -5,7 +5,7 @@
 <div class="page-header">
     <div>
         <h4><i class="bi bi-clipboard-data me-2"></i>Đánh giá xếp loại hằng năm</h4>
-        <small class="text-muted">Đánh giá xếp loại đảng viên và cán bộ cho toàn bộ quân nhân đơn vị</small>
+        <small class="text-muted">Đánh giá xếp loại đảng viên, cán bộ, đoàn viên và hội viên phụ nữ</small>
     </div>
 </div>
 
@@ -40,7 +40,7 @@
 
             <div class="p-3 border-bottom">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label class="form-label small">Áp dụng xếp loại đảng viên cho toàn đơn vị</label>
                         <select class="form-select form-select-sm" name="bulk_xep_loai_dang_vien" {% if migration_missing %}disabled{% endif %}>
                             <option value="">-- Không áp dụng --</option>
@@ -49,7 +49,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label class="form-label small">Áp dụng xếp loại cán bộ cho toàn đơn vị</label>
                         <select class="form-select form-select-sm" name="bulk_xep_loai_can_bo" {% if migration_missing %}disabled{% endif %}>
                             <option value="">-- Không áp dụng --</option>
@@ -77,6 +77,8 @@
                             <th>Chức vụ</th>
                             <th>Xếp loại đảng viên</th>
                             <th>Xếp loại cán bộ</th>
+                            <th>Xếp loại đoàn viên <small class="text-muted">(nếu có)</small></th>
+                            <th>Xếp loại phụ nữ <small class="text-muted">(nếu có)</small></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -103,6 +105,30 @@
                                     {% endfor %}
                                 </select>
                             </td>
+                            <td {% if not qn.la_doan_vien %}class="text-center text-muted"{% endif %}>
+                                {% if qn.la_doan_vien %}
+                                <select class="form-select form-select-sm" name="xep_loai_doan_vien_{{ qn.id }}">
+                                    <option value="">-- Không chọn --</option>
+                                    {% for x in doan_vien_choices %}
+                                    <option value="{{ x }}" {% if row and row.xep_loai_doan_vien == x %}selected{% endif %}>{{ x }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
+                                <span title="Không phải đoàn viên">—</span>
+                                {% endif %}
+                            </td>
+                            <td {% if not qn.la_hoi_vien_phu_nu %}class="text-center text-muted"{% endif %}>
+                                {% if qn.la_hoi_vien_phu_nu %}
+                                <select class="form-select form-select-sm" name="xep_loai_phu_nu_{{ qn.id }}">
+                                    <option value="">-- Không chọn --</option>
+                                    {% for x in phu_nu_choices %}
+                                    <option value="{{ x }}" {% if row and row.xep_loai_phu_nu == x %}selected{% endif %}>{{ x }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
+                                <span title="Không phải hội viên phụ nữ">—</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -125,12 +151,6 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    if ({{ 'true' if migration_missing else 'false' }}) {
-        return;
-    }
-});
-
 function applyBulkToAll() {
     const dv = document.querySelector('select[name="bulk_xep_loai_dang_vien"]');
     const cb = document.querySelector('select[name="bulk_xep_loai_can_bo"]');
