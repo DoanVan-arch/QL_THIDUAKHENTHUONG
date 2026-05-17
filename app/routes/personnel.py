@@ -674,7 +674,9 @@ def annual_evaluations():
                            nam_hoc_list=nam_hoc_list,
                            migration_missing=migration_missing,
                            dang_vien_choices=DanhGiaHangNam.XEP_LOAI_DANG_VIEN_CHOICES,
-                           can_bo_choices=DanhGiaHangNam.XEP_LOAI_CAN_BO_CHOICES)
+                           can_bo_choices=DanhGiaHangNam.XEP_LOAI_CAN_BO_CHOICES,
+                           doan_vien_choices=DanhGiaHangNam.XEP_LOAI_DOAN_VIEN_CHOICES,
+                           phu_nu_choices=DanhGiaHangNam.XEP_LOAI_PHU_NU_CHOICES)
 
 
 @personnel_bp.route('/evaluations/save', methods=['POST'])
@@ -723,6 +725,8 @@ def save_annual_evaluations():
     for qn in personnel:
         dang_vien_val = request.form.get(f'xep_loai_dang_vien_{qn.id}', '').strip() or apply_all_dang_vien
         can_bo_val = request.form.get(f'xep_loai_can_bo_{qn.id}', '').strip() or apply_all_can_bo
+        doan_vien_val = request.form.get(f'xep_loai_doan_vien_{qn.id}', '').strip() or None
+        phu_nu_val = request.form.get(f'xep_loai_phu_nu_{qn.id}', '').strip() or None
 
         if not dang_vien_val or not can_bo_val:
             missing_names.append(qn.ho_ten)
@@ -735,7 +739,7 @@ def save_annual_evaluations():
             flash(f'Giá trị xếp loại cán bộ không hợp lệ cho {qn.ho_ten}.', 'danger')
             return redirect(url_for('personnel.annual_evaluations', nam_hoc=nam_hoc))
 
-        values_map[qn.id] = (dang_vien_val, can_bo_val)
+        values_map[qn.id] = (dang_vien_val, can_bo_val, doan_vien_val, phu_nu_val)
 
     if missing_names:
         flash(f'Chưa đánh giá đủ toàn bộ quân nhân. Thiếu: {len(missing_names)} người.', 'danger')
@@ -743,7 +747,7 @@ def save_annual_evaluations():
 
     saved = 0
     for qn in personnel:
-        dang_vien_val, can_bo_val = values_map[qn.id]
+        dang_vien_val, can_bo_val, doan_vien_val, phu_nu_val = values_map[qn.id]
 
         row = existing_map.get(qn.id)
         if not row:
@@ -761,6 +765,8 @@ def save_annual_evaluations():
 
         row.xep_loai_dang_vien = dang_vien_val
         row.xep_loai_can_bo = can_bo_val
+        row.xep_loai_doan_vien = doan_vien_val
+        row.xep_loai_phu_nu = phu_nu_val
         row.nguoi_cap_nhat_id = current_user.id
         saved += 1
 
@@ -772,7 +778,7 @@ def save_annual_evaluations():
         # Retry safely in case another request inserted same (quan_nhan_id, nam_hoc)
         saved = 0
         for qn in personnel:
-            dang_vien_val, can_bo_val = values_map[qn.id]
+            dang_vien_val, can_bo_val, doan_vien_val, phu_nu_val = values_map[qn.id]
             row = DanhGiaHangNam.query.filter_by(
                 quan_nhan_id=qn.id,
                 nam_hoc=nam_hoc,
@@ -787,6 +793,8 @@ def save_annual_evaluations():
 
             row.xep_loai_dang_vien = dang_vien_val
             row.xep_loai_can_bo = can_bo_val
+            row.xep_loai_doan_vien = doan_vien_val
+            row.xep_loai_phu_nu = phu_nu_val
             row.nguoi_cap_nhat_id = current_user.id
             saved += 1
 

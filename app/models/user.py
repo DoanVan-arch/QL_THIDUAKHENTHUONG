@@ -128,6 +128,7 @@ class User(db.Model, UserMixin):
             Role.BAN_BAOVE_ANNINH,
             Role.BAN_TOCHUC,
             Role.BAN_KEHOACH_TONGHOP,
+            Role.UY_BAN_KIEMTRA,
         )
 
     @property
@@ -140,6 +141,7 @@ class User(db.Model, UserMixin):
             Role.BAN_BAOVE_ANNINH: 'ban_baoVeAnNinh',
             Role.BAN_TOCHUC: 'ban_toChuc',
             Role.BAN_KEHOACH_TONGHOP: 'ban_keHoachTongHop',
+            Role.UY_BAN_KIEMTRA: 'uy_banKiemTra',
         }
         return _map.get(self.role)
 

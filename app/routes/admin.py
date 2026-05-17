@@ -2168,13 +2168,13 @@ def export_reward_list():
     left_align = Alignment(horizontal='left', vertical='center', wrap_text=True)
 
     # Title rows
-    ws.merge_cells('A1:S1')
+    ws.merge_cells('A1:Y1')
     cell_title = ws['A1']
     cell_title.value = 'TRƯỜNG SĨ QUAN CHÍNH TRỊ'
     cell_title.font = Font(name='Times New Roman', bold=True, size=13)
     cell_title.alignment = center_align
 
-    ws.merge_cells('A2:S2')
+    ws.merge_cells('A2:Y2')
     cell_sub = ws['A2']
     cell_sub.value = 'DANH SÁCH KHEN THƯỞNG'
     cell_sub.font = Font(name='Times New Roman', bold=True, size=14)
@@ -2191,7 +2191,7 @@ def export_reward_list():
     if search_query:
         filter_parts.append(f'Tìm kiếm: {search_query}')
 
-    ws.merge_cells('A3:S3')
+    ws.merge_cells('A3:Y3')
     cell_filter = ws['A3']
     cell_filter.value = ' | '.join(filter_parts) if filter_parts else 'Tất cả dữ liệu'
     cell_filter.font = Font(name='Times New Roman', italic=True, size=10)
@@ -2217,6 +2217,12 @@ def export_reward_list():
         ('Thể lực', 12),
         ('Điểm NCKH', 12),
         ('Nội dung NCKH', 30),
+        ('XL Đảng viên', 22),
+        ('XL Cán bộ', 22),
+        ('XL Đoàn viên', 22),
+        ('XL Phụ nữ', 22),
+        ('KQ Đoàn thể', 22),
+        ('KQ Phụ nữ', 22),
         ('Ngày phê duyệt', 16),
     ]
 
@@ -2234,6 +2240,14 @@ def export_reward_list():
 
         # Load original DeXuatChiTiet for criteria fields
         ct = DeXuatChiTiet.query.get(kt.chi_tiet_id) if kt.chi_tiet_id else None
+
+        # Load DanhGiaHangNam for annual evaluation fields
+        dg = None
+        if kt.quan_nhan_id and kt.nam_hoc:
+            dg = DanhGiaHangNam.query.filter_by(
+                quan_nhan_id=kt.quan_nhan_id,
+                nam_hoc=kt.nam_hoc
+            ).first()
 
         row_data = [
             row_idx,                                                    # STT
@@ -2254,6 +2268,12 @@ def export_reward_list():
             (ct.the_luc or '') if ct else '',                           # Thể lực
             (ct.diem_nckh or '') if ct else '',                         # Điểm NCKH
             (ct.nckh_noi_dung or '') if ct else '',                    # Nội dung NCKH
+            (dg.xep_loai_dang_vien or '') if dg else '',               # XL Đảng viên
+            (dg.xep_loai_can_bo or '') if dg else '',                  # XL Cán bộ
+            (dg.xep_loai_doan_vien or '') if dg else '',               # XL Đoàn viên
+            (dg.xep_loai_phu_nu or '') if dg else '',                  # XL Phụ nữ
+            (ct.ket_qua_doan_the or '') if ct else '',                 # KQ Đoàn thể
+            (ct.ket_qua_phu_nu or '') if ct else '',                   # KQ Phụ nữ
             kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '',  # Ngày duyệt
         ]
 
@@ -2277,14 +2297,14 @@ def export_reward_list():
 
     # Signature section
     sig_row = summary_row + 2
-    ws.merge_cells(f'N{sig_row}:S{sig_row}')
-    cell_date = ws.cell(row=sig_row, column=14,
+    ws.merge_cells(f'T{sig_row}:Y{sig_row}')
+    cell_date = ws.cell(row=sig_row, column=20,
                         value=f'Ngày {datetime.now().day} tháng {datetime.now().month} năm {datetime.now().year}')
     cell_date.font = Font(name='Times New Roman', italic=True, size=10)
     cell_date.alignment = center_align
 
-    ws.merge_cells(f'N{sig_row+1}:S{sig_row+1}')
-    cell_signer = ws.cell(row=sig_row + 1, column=14, value='BAN THƯ KÝ HỘI ĐỒNG THI ĐUA KHEN THƯỞNG')
+    ws.merge_cells(f'T{sig_row+1}:Y{sig_row+1}')
+    cell_signer = ws.cell(row=sig_row + 1, column=20, value='BAN THƯ KÝ HỘI ĐỒNG THI ĐUA KHEN THƯỞNG')
     cell_signer.font = Font(name='Times New Roman', bold=True, size=11)
     cell_signer.alignment = center_align
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from app.extensions import db
 
 
-# 6 Hội đồng roles allowed to cast votes
+# 7 Hội đồng roles allowed to cast votes
 HOI_DONG_VAI_TRO = [
     'ban_tuyenHuan',
     'ban_canBo',
@@ -11,6 +11,7 @@ HOI_DONG_VAI_TRO = [
     'ban_baoVeAnNinh',
     'ban_toChuc',
     'ban_keHoachTongHop',
+    'uy_banKiemTra',
 ]
 
 HOI_DONG_VAI_TRO_DISPLAY = {
@@ -20,6 +21,7 @@ HOI_DONG_VAI_TRO_DISPLAY = {
     'ban_baoVeAnNinh': 'Ban Bảo vệ an ninh',
     'ban_toChuc': 'Ban Tổ chức',
     'ban_keHoachTongHop': 'Ban Kế hoạch tổng hợp',
+    'uy_banKiemTra': 'Ủy ban Kiểm tra',
 }
 
 KET_QUA_DONG_Y = 'Đồng ý'

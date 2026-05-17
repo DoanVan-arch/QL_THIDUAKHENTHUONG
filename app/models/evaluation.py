@@ -54,12 +54,28 @@ class DanhGiaHangNam(db.Model):
         'Không hoàn thành nhiệm vụ',
     ]
 
+    XEP_LOAI_DOAN_VIEN_CHOICES = [
+        'Đoàn viên xuất sắc',
+        'Hoàn thành tốt nhiệm vụ',
+        'Hoàn thành nhiệm vụ',
+        'Không hoàn thành nhiệm vụ',
+    ]
+
+    XEP_LOAI_PHU_NU_CHOICES = [
+        'Phụ nữ hai giỏi',
+        'Hoàn thành tốt nhiệm vụ',
+        'Hoàn thành nhiệm vụ',
+        'Không hoàn thành nhiệm vụ',
+    ]
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     quan_nhan_id = Column(Integer, ForeignKey('quan_nhan.id'), nullable=False, index=True)
     don_vi_id = Column(Integer, ForeignKey('don_vi.id'), nullable=False, index=True)
     nam_hoc = Column(String(20), nullable=False, index=True)
     xep_loai_dang_vien = Column(String(100), nullable=False)
     xep_loai_can_bo = Column(String(100), nullable=False)
+    xep_loai_doan_vien = Column(String(100), nullable=True)
+    xep_loai_phu_nu = Column(String(100), nullable=True)
     nguoi_cap_nhat_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
