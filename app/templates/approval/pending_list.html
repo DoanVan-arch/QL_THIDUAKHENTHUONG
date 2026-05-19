@@ -173,6 +173,13 @@
                 <span class="badge bg-danger {% if rejected_count == 0 %}d-none{% endif %}"
                       id="stat-rejected-{{ pd.id }}" title="Không nhất trí">{{ rejected_count }}</span>
                 <span class="badge bg-secondary" id="stat-progress-{{ pd.id }}">{{ reviewed }}/{{ total }}</span>
+                {% if pending_count > 0 %}
+                <span class="badge bg-warning text-dark" id="stat-pending-{{ pd.id }}" title="Chưa duyệt">
+                    <i class="bi bi-hourglass-split me-1"></i>{{ pending_count }} chờ
+                </span>
+                {% else %}
+                <span class="badge bg-success" id="stat-pending-{{ pd.id }}" title="Đã duyệt hết" style="display:none;"></span>
+                {% endif %}
                 <i class="bi bi-chevron-down"></i>
             </div>
         </div>
@@ -197,6 +204,23 @@
                 </div>
                 {% endif %}
                 {% endif %}
+                {# Tách chi tiết thành cá nhân và tập thể #}
+                {% set cn_items = [] %}
+                {% set tt_items = [] %}
+                {% for ct in pd.de_xuat.chi_tiets %}
+                    {% if ct.quan_nhan_id %}
+                        {% if cn_items.append(ct) %}{% endif %}
+                    {% else %}
+                        {% if tt_items.append(ct) %}{% endif %}
+                    {% endif %}
+                {% endfor %}
+
+                {# ── Bảng CÁ NHÂN ── #}
+                {% if cn_items %}
+                <div class="px-2 pt-2 pb-0">
+                    <span class="badge bg-primary me-1"><i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân</span>
+                    <small class="text-muted">{{ cn_items|length }} người</small>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
                         <thead>
@@ -216,9 +240,7 @@
                                 {% endif %}
                                 {% if is_ttr_role %}
                                     {% for gdept in gate_dept_fields %}
-                                    <th class="text-center bg-light col-gate-criteria" colspan="{{ gdept.fields|length }}" style="font-size:0.72rem; border-left:2px solid #dee2e6;">
-                                        {{ gdept.dept }}
-                                    </th>
+                                    <th class="text-center bg-light col-gate-criteria" colspan="{{ gdept.fields|length }}" style="font-size:0.72rem; border-left:2px solid #dee2e6;">{{ gdept.dept }}</th>
                                     {% endfor %}
                                     {% for mcol in managed_dept_columns %}
                                     <th class="text-center" style="width:74px; font-size:0.72rem;"><small>{{ mcol }}</small></th>
@@ -238,9 +260,7 @@
                                 {% if show_evidence %}<th class="col-evidence"></th>{% endif %}
                                 {% for gdept in gate_dept_fields %}
                                     {% for field in gdept.fields %}
-                                    <th class="text-center {% if not loop.first %}{% else %}border-left-dept{% endif %}" title="{{ field_labels[field] if field in field_labels else field }}">
-                                        {{ field_labels[field] if field in field_labels else field }}
-                                    </th>
+                                    <th class="text-center {% if loop.first %}border-left-dept{% endif %}" title="{{ field_labels[field] if field in field_labels else field }}">{{ field_labels[field] if field in field_labels else field }}</th>
                                     {% endfor %}
                                 {% endfor %}
                                 {% for mcol in managed_dept_columns %}<th></th>{% endfor %}
@@ -249,7 +269,7 @@
                             {% endif %}
                         </thead>
                         <tbody>
-                            {% for ct in pd.de_xuat.chi_tiets %}
+                            {% for ct in cn_items %}
                             {% set kq = results[ct.id] if ct.id in results else None %}
                             {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
                             {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
@@ -260,176 +280,161 @@
                                 class="{% if is_out_of_scope %}table-light text-muted{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
                                 data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
                                 data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
-                                data-ho-ten="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else pd.de_xuat.don_vi.ten_don_vi)|lower }}"
+                                data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
                                 data-doi-tuong="{{ ct.doi_tuong or '' }}"
                                 data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi }}">
                                 <td>{{ loop.index }}</td>
                                 <td class="fw-semibold">
-                                    {% set display_name = ct.quan_nhan.ho_ten if ct.quan_nhan else pd.de_xuat.don_vi.ten_don_vi %}
-                                    <span class="text-ellipsis" title="{{ display_name }}">{{ display_name }}</span>
+                                    <span class="text-ellipsis" title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span>
                                 </td>
                                 <td>
-                                    {% if ct.quan_nhan %}
                                     <small title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
                                         <span class="text-ellipsis-sm">{{ ct.quan_nhan.cap_bac or '' }}</span>{% if ct.quan_nhan.chuc_vu %}<br><span class="text-ellipsis-sm">{{ ct.quan_nhan.chuc_vu }}</span>{% endif %}
                                     </small>
-                                    {% else %}
-                                    <small class="text-muted">-</small>
-                                    {% endif %}
                                 </td>
                                 <td><small class="text-ellipsis-sm" title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
                                 <td>
-                                    {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
-                                    <span class="badge bg-warning text-dark">CSTĐ</span>
-                                    {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
-                                    <span class="badge bg-info text-dark">CSTT</span>
-                                    {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}
-                                    <span class="badge bg-navy">ĐVQT</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">ĐVTT</span>
-                                    {% endif %}
+                                    {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
+                                    {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                                    {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                                    {% else %}<span class="badge bg-secondary">ĐVTT</span>{% endif %}
                                 </td>
                                 {% for field in display_fields %}
                                 <td class="col-criteria">
-                                    {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}
-                                        <small class="text-muted">-</small>
-                                    {% elif field == 'nckh_noi_dung' %}
-                                        {% set val = ct|attr(field) %}
-                                        {% if val %}
-                                        <small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>
-                                        {% else %}<small class="text-muted">-</small>{% endif %}
-                                    {% elif field == 'diem_nckh' %}
-                                        {% set val = ct|attr(field) %}
-                                        {% if val is not none %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
-                                    {% else %}
-                                        {% set val = ct|attr(field) %}
-                                        {% if val %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
-                                    {% endif %}
+                                    {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}<small class="text-muted">-</small>
+                                    {% elif field == 'nckh_noi_dung' %}{% set val = ct|attr(field) %}{% if val %}<small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                                    {% elif field == 'diem_nckh' %}{% set val = ct|attr(field) %}{% if val is not none %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                                    {% else %}{% set val = ct|attr(field) %}{% if val %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}{% endif %}
                                 </td>
                                 {% endfor %}
                                 {% if show_evidence %}
                                 <td class="col-evidence text-center">
-                                    {% if ct.minh_chungs %}
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1"
-                                            data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}"
-                                            title="{{ ct.minh_chungs|length }} minh chứng">
-                                        <i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small>
-                                    </button>
-                                    {% else %}
-                                    <small class="text-muted">-</small>
-                                    {% endif %}
+                                    {% if ct.minh_chungs %}<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}" title="{{ ct.minh_chungs|length }} minh chứng"><i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small></button>
+                                    {% else %}<small class="text-muted">-</small>{% endif %}
                                 </td>
                                 {% endif %}
                                 {% if is_ttr_role %}
-                                    {# Gate sub-dept criteria columns #}
-                                    {% for gdept in gate_dept_fields %}
-                                        {% for field in gdept.fields %}
-                                        <td class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.8rem;">
-                                            {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
-                                            {% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
-                                        </td>
-                                        {% endfor %}
-                                    {% endfor %}
-                                    {# Gate dept status badges #}
+                                    {% for gdept in gate_dept_fields %}{% for field in gdept.fields %}
+                                    <td class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.8rem;">{% set val = ct|attr(field) if ct|attr(field) is defined else None %}{% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}</td>
+                                    {% endfor %}{% endfor %}
                                     {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
-                                    {% for mcol in managed_dept_columns %}
-                                    {% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
-                                    <td class="text-center">
-                                        {% if gate_kq == 'Đồng ý' %}
-                                        <span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>
-                                        {% elif gate_kq == 'Từ chối' %}
-                                        <span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                                        {% else %}
-                                        <span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                                        {% endif %}
-                                    </td>
+                                    {% for mcol in managed_dept_columns %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                                    <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
                                     {% endfor %}
                                 {% elif managed_dept_columns %}
-                                    {% for mcol in managed_dept_columns %}
-                                    {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
-                                    {% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
-                                    <td class="text-center">
-                                        {% if gate_kq == 'Đồng ý' %}
-                                        <span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>
-                                        {% elif gate_kq == 'Từ chối' %}
-                                        <span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                                        {% else %}
-                                        <span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                                        {% endif %}
-                                    </td>
+                                    {% for mcol in managed_dept_columns %}{% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                                    <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
                                     {% endfor %}
                                 {% endif %}
                                 <td class="text-center">
                                     {% if is_out_of_scope %}
-                                    <div class="form-check form-switch d-flex justify-content-center mb-0">
-                                        <input class="form-check-input" type="checkbox"
-                                               checked disabled
-                                               style="width:2.5em; height:1.3em; opacity:0.5;">
-                                    </div>
+                                    <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input" type="checkbox" checked disabled style="width:2.5em; height:1.3em; opacity:0.5;"></div>
                                     <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
                                     {% elif is_gate_ready %}
-                                    <div class="form-check form-switch d-flex justify-content-center mb-0">
-                                        <input class="form-check-input toggle-approval" type="checkbox"
-                                               id="switch-{{ pd.id }}-{{ ct.id }}"
-                                               data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                               {% if is_approved %}checked{% endif %}
-                                               style="cursor:pointer; width:2.5em; height:1.3em;">
-                                    </div>
-                                    {% if not is_approved %}
-                                    <a href="javascript:void(0)" class="reject-link text-danger"
-                                       data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                       style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>
-                                    {% endif %}
-                                    {% if is_rejected %}
-                                    <small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}"
-                                           style="font-size:0.72rem;" title="{{ kq.ly_do }}">
-                                        {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
-                                    </small>
-                                    {% endif %}
+                                    <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input toggle-approval" type="checkbox" id="switch-{{ pd.id }}-{{ ct.id }}" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" {% if is_approved %}checked{% endif %} style="cursor:pointer; width:2.5em; height:1.3em;"></div>
+                                    {% if not is_approved %}<a href="javascript:void(0)" class="reject-link text-danger" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>{% endif %}
+                                    {% if is_rejected %}<small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}" style="font-size:0.72rem;" title="{{ kq.ly_do }}">{{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}</small>{% endif %}
                                     {% else %}
                                     <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
-                                    {% if ct_gate and ct_gate.pending %}
-                                    <small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">
-                                        Chưa duyệt: {{ ct_gate.pending|join(', ') }}
-                                    </small>
-                                    {% endif %}
+                                    {% if ct_gate and ct_gate.pending %}<small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chưa duyệt: {{ ct_gate.pending|join(', ') }}</small>{% endif %}
                                     {% endif %}
                                 </td>
-                                <td class="text-center">
-                                    <a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}"
-                                       class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                </td>
+                                <td class="text-center"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
                             </tr>
-                            <!-- Reject reason row (hidden) -->
                             {% if not is_out_of_scope %}
-                            <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row"
-                                data-danh-hieu="{{ ct.loai_danh_hieu or '' }}">
-                                <td colspan="20">
-                                    <div class="d-flex gap-2 align-items-center py-1 ps-3">
-                                        <small class="text-danger fw-semibold text-nowrap"><i class="bi bi-x-circle me-1"></i>Lý do:</small>
-                                        <input type="text" class="form-control form-control-sm"
-                                               id="reason-input-{{ pd.id }}-{{ ct.id }}"
-                                               placeholder="Nhập lý do không nhất trí..."
-                                               value="{{ kq.ly_do if kq and kq.ly_do else '' }}"
-                                               style="max-width:400px;">
-                                        <button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn"
-                                                data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
-                                            <i class="bi bi-check me-1"></i>Lưu
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn"
-                                                data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
-                                            Hủy
-                                        </button>
-                                    </div>
-                                </td>
+                            <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}">
+                                <td colspan="20"><div class="d-flex gap-2 align-items-center py-1 ps-3"><small class="text-danger fw-semibold text-nowrap"><i class="bi bi-x-circle me-1"></i>Lý do:</small><input type="text" class="form-control form-control-sm" id="reason-input-{{ pd.id }}-{{ ct.id }}" placeholder="Nhập lý do không nhất trí..." value="{{ kq.ly_do if kq and kq.ly_do else '' }}" style="max-width:400px;"><button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"><i class="bi bi-check me-1"></i>Lưu</button><button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">Hủy</button></div></td>
                             </tr>
                             {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% endif %}
+
+                {# ── Bảng TẬP THỂ ── #}
+                {% if tt_items %}
+                <div class="px-2 pt-2 pb-0 border-top mt-1">
+                    <span class="badge bg-secondary me-1"><i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể</span>
+                    <small class="text-muted">{{ tt_items|length }} tập thể</small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
+                        <thead>
+                            <tr>
+                                <th style="width:35px;">STT</th>
+                                <th style="min-width:160px;">Tên tập thể</th>
+                                <th>Danh hiệu</th>
+                                <th class="col-criteria">Mức độ HTNV</th>
+                                <th class="col-criteria">Chủ trì ĐV DH</th>
+                                <th class="col-criteria">Thành tích khác</th>
+                                {% if managed_dept_columns %}
+                                    {% for mcol in managed_dept_columns %}
+                                    <th style="width:74px;"><small>{{ mcol }}</small></th>
+                                    {% endfor %}
+                                {% endif %}
+                                <th style="width:100px;" class="text-center">Đang chờ</th>
+                                <th style="width:40px;" class="text-center">Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ct in tt_items %}
+                            {% set kq = results[ct.id] if ct.id in results else None %}
+                            {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
+                            {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
+                            {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
+                            {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                            {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
+                            <tr id="row-{{ pd.id }}-{{ ct.id }}"
+                                class="{% if is_out_of_scope %}table-light text-muted{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
+                                data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
+                                data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
+                                data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
+                                data-doi-tuong=""
+                                data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi }}">
+                                <td>{{ loop.index }}</td>
+                                <td class="fw-semibold">
+                                    <i class="bi bi-building text-secondary me-1"></i>
+                                    {{ ct.ten_don_vi_de_xuat or pd.de_xuat.don_vi.ten_don_vi }}
+                                </td>
+                                <td>
+                                    {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                                    {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
+                                    {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                                </td>
+                                <td class="col-criteria"><small>{{ ct.muc_do_hoan_thanh or '-' }}</small></td>
+                                <td class="col-criteria"><small>{{ ct.chu_tri_don_vi_danh_hieu or '-' }}</small></td>
+                                <td class="col-criteria"><small class="text-truncate d-inline-block" style="max-width:160px;" title="{{ ct.thanh_tich_ca_nhan_khac or '' }}">{{ ct.thanh_tich_ca_nhan_khac or '-' }}</small></td>
+                                {% if managed_dept_columns %}
+                                    {% for mcol in managed_dept_columns %}{% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                                    <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
+                                    {% endfor %}
+                                {% endif %}
+                                <td class="text-center">
+                                    {% if is_out_of_scope %}
+                                    <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input" type="checkbox" checked disabled style="width:2.5em; height:1.3em; opacity:0.5;"></div>
+                                    <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
+                                    {% elif is_gate_ready %}
+                                    <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input toggle-approval" type="checkbox" id="switch-{{ pd.id }}-{{ ct.id }}" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" {% if is_approved %}checked{% endif %} style="cursor:pointer; width:2.5em; height:1.3em;"></div>
+                                    {% if not is_approved %}<a href="javascript:void(0)" class="reject-link text-danger" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>{% endif %}
+                                    {% if is_rejected %}<small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}" style="font-size:0.72rem;" title="{{ kq.ly_do }}">{{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}</small>{% endif %}
+                                    {% else %}
+                                    <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
+                                    {% if ct_gate and ct_gate.pending %}<small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chưa duyệt: {{ ct_gate.pending|join(', ') }}</small>{% endif %}
+                                    {% endif %}
+                                </td>
+                                <td class="text-center"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
+                            </tr>
+                            {% if not is_out_of_scope %}
+                            <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}">
+                                <td colspan="20"><div class="d-flex gap-2 align-items-center py-1 ps-3"><small class="text-danger fw-semibold text-nowrap"><i class="bi bi-x-circle me-1"></i>Lý do:</small><input type="text" class="form-control form-control-sm" id="reason-input-{{ pd.id }}-{{ ct.id }}" placeholder="Nhập lý do không nhất trí..." value="{{ kq.ly_do if kq and kq.ly_do else '' }}" style="max-width:400px;"><button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"><i class="bi bi-check me-1"></i>Lưu</button><button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">Hủy</button></div></td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -948,6 +953,17 @@ document.addEventListener('DOMContentLoaded', function () {
             rejectedBadge.classList.toggle('d-none', stats.rejected === 0);
         }
         if (progressBadge) progressBadge.textContent = `${stats.reviewed}/${stats.total}`;
+        const pendingBadge = document.getElementById(`stat-pending-${pdId}`);
+        if (pendingBadge) {
+            const pendingCnt = stats.total - stats.reviewed;
+            if (pendingCnt > 0) {
+                pendingBadge.className = 'badge bg-warning text-dark';
+                pendingBadge.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>${pendingCnt} chờ`;
+                pendingBadge.style.display = '';
+            } else {
+                pendingBadge.style.display = 'none';
+            }
+        }
 
         // Update global stats
         updateGlobalStats();
