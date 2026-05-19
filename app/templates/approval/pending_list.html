@@ -173,13 +173,6 @@
                 <span class="badge bg-danger {% if rejected_count == 0 %}d-none{% endif %}"
                       id="stat-rejected-{{ pd.id }}" title="Không nhất trí">{{ rejected_count }}</span>
                 <span class="badge bg-secondary" id="stat-progress-{{ pd.id }}">{{ reviewed }}/{{ total }}</span>
-                {% if pending_count > 0 %}
-                <span class="badge bg-warning text-dark" id="stat-pending-{{ pd.id }}" title="Chưa duyệt">
-                    <i class="bi bi-hourglass-split me-1"></i>{{ pending_count }} chờ
-                </span>
-                {% else %}
-                <span class="badge bg-success" id="stat-pending-{{ pd.id }}" title="Đã duyệt hết" style="display:none;"></span>
-                {% endif %}
                 <i class="bi bi-chevron-down"></i>
             </div>
         </div>
@@ -953,17 +946,6 @@ document.addEventListener('DOMContentLoaded', function () {
             rejectedBadge.classList.toggle('d-none', stats.rejected === 0);
         }
         if (progressBadge) progressBadge.textContent = `${stats.reviewed}/${stats.total}`;
-        const pendingBadge = document.getElementById(`stat-pending-${pdId}`);
-        if (pendingBadge) {
-            const pendingCnt = stats.total - stats.reviewed;
-            if (pendingCnt > 0) {
-                pendingBadge.className = 'badge bg-warning text-dark';
-                pendingBadge.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>${pendingCnt} chờ`;
-                pendingBadge.style.display = '';
-            } else {
-                pendingBadge.style.display = 'none';
-            }
-        }
 
         // Update global stats
         updateGlobalStats();

@@ -148,6 +148,56 @@
         <h5><i class="bi bi-clipboard-data me-2"></i>Các tiêu chí đánh giá</h5>
     </div>
     <div class="card-body-custom">
+        {% if not ct.quan_nhan %}
+        {# ---- TẬP THỂ criteria ---- #}
+        {% set ttd = ct.tap_the_dict %}
+        {% set has_tt = ct.muc_do_hoan_thanh or ct.chu_tri_don_vi_danh_hieu or ttd or ct.thanh_tich_ca_nhan_khac %}
+        {% if has_tt %}
+        <div class="row g-2">
+            {% if ct.muc_do_hoan_thanh %}
+            <div class="col-md-4 col-sm-6">
+                <div class="detail-field-item">
+                    <small class="text-muted d-block">Mức độ hoàn thành nhiệm vụ</small>
+                    <span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>
+                </div>
+            </div>
+            {% endif %}
+            {% if ct.chu_tri_don_vi_danh_hieu %}
+            <div class="col-md-4 col-sm-6">
+                <div class="detail-field-item">
+                    <small class="text-muted d-block">Chủ trì đơn vị danh hiệu</small>
+                    <span>{{ ct.chu_tri_don_vi_danh_hieu }}</span>
+                </div>
+            </div>
+            {% endif %}
+            {% if ct.thanh_tich_ca_nhan_khac %}
+            <div class="col-md-4 col-sm-6">
+                <div class="detail-field-item">
+                    <small class="text-muted d-block">Thành tích khác</small>
+                    <span>{{ ct.thanh_tich_ca_nhan_khac }}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% if ttd %}
+        <hr class="my-2">
+        <div class="fw-semibold mb-2" style="font-size:0.85rem;"><i class="bi bi-diagram-3 me-1"></i>Tiêu chí tập thể ({{ ttd | length }})</div>
+        <div class="row g-2">
+            {% for ma_truong, gia_tri in ttd.items() %}
+            <div class="col-md-4 col-sm-6">
+                <div class="detail-field-item">
+                    <small class="text-muted d-block">{{ ma_truong }}</small>
+                    <span>{{ gia_tri }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-muted small fst-italic">Chưa có dữ liệu tiêu chí tập thể</div>
+        {% endif %}
+        {% else %}
+        {# ---- CÁ NHÂN criteria ---- #}
         {% set has_any_field = namespace(val=false) %}
         {% for field in all_fields %}
             {% set val = ct[field] if ct[field] is defined else None %}
@@ -180,6 +230,7 @@
         </div>
         {% else %}
         <div class="text-muted small fst-italic">Chưa có dữ liệu tiêu chí</div>
+        {% endif %}
         {% endif %}
     </div>
 </div>

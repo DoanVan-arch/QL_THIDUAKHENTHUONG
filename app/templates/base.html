@@ -64,6 +64,9 @@
                 <div class="sidebar-section-title">PHÊ DUYỆT</div>
                 <a href="{{ url_for('approval.pending_list') }}" class="sidebar-link {% if request.endpoint == 'approval.pending_list' %}active{% endif %}">
                     <i class="bi bi-clipboard-check"></i> <span>Chờ duyệt</span>
+                    {% if dept_pending_count > 0 %}
+                    <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size:0.65rem;">{{ dept_pending_count }}</span>
+                    {% endif %}
                 </a>
                 <a href="{{ url_for('approval.history') }}" class="sidebar-link {% if request.endpoint in ['approval.history', 'approval.history_detail'] %}active{% endif %}">
                     <i class="bi bi-clock-history"></i> <span>Lịch sử duyệt</span>
@@ -103,6 +106,9 @@
                 <div class="sidebar-section-title">QUẢN TRỊ</div>
                 <a href="{{ url_for('admin.approval_tracking') }}" class="sidebar-link {% if request.endpoint in ['admin.approval_tracking', 'admin.tracking_detail'] %}active{% endif %}">
                     <i class="bi bi-eye"></i> <span>Theo dõi phê duyệt</span>
+                    {% if admin_pending_count > 0 %}
+                    <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size:0.65rem;">{{ admin_pending_count }}</span>
+                    {% endif %}
                 </a>
                 <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
                     <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
