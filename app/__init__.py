@@ -51,18 +51,52 @@ def create_app(config_class=None):
         from flask_login import current_user
         count = 0
         pending_transfers = 0
-        if current_user.is_authenticated and current_user.is_unit_user:
-            from app.models.notification import ThongBao
-            from app.models.transfer import ChuyenDonVi, TrangThaiChuyen
-            count = ThongBao.query.filter_by(
-                user_id=current_user.id, da_doc=False
-            ).count()
-            if current_user.don_vi_id:
-                pending_transfers = ChuyenDonVi.query.filter_by(
-                    don_vi_dich_id=current_user.don_vi_id,
-                    trang_thai=TrangThaiChuyen.PENDING,
+        dept_pending_count = 0
+        admin_pending_count = 0
+        if current_user.is_authenticated:
+            if current_user.is_unit_user:
+                from app.models.notification import ThongBao
+                from app.models.transfer import ChuyenDonVi, TrangThaiChuyen
+                count = ThongBao.query.filter_by(
+                    user_id=current_user.id, da_doc=False
                 ).count()
-        return dict(unread_notification_count=count, pending_transfer_count=pending_transfers)
+                if current_user.don_vi_id:
+                    pending_transfers = ChuyenDonVi.query.filter_by(
+                        don_vi_dich_id=current_user.don_vi_id,
+                        trang_thai=TrangThaiChuyen.PENDING,
+                    ).count()
+            if current_user.is_department:
+                # Count PheDuyet records assigned to this dept user's role, not yet reviewed
+                try:
+                    from app.models.approval import PheDuyet, KetQuaDuyet
+                    from app.routes.approval import ROLE_TO_PHONG
+                    user_role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+                    phong = ROLE_TO_PHONG.get(user_role)
+                    if phong:
+                        dept_pending_count = PheDuyet.query.filter_by(
+                            phong_duyet=phong, ket_qua=KetQuaDuyet.CHO_DUYET.value
+                        ).count()
+                except Exception:
+                    dept_pending_count = 0
+            if current_user.is_admin:
+                # Count nominations not yet final-approved or rejected
+                try:
+                    from app.models.nomination import DeXuat, TrangThaiDeXuat
+                    admin_pending_count = DeXuat.query.filter(
+                        DeXuat.trang_thai.notin_([
+                            TrangThaiDeXuat.PHE_DUYET_CUOI.value,
+                            TrangThaiDeXuat.TU_CHOI.value,
+                            TrangThaiDeXuat.NHAP.value,
+                        ])
+                    ).count()
+                except Exception:
+                    admin_pending_count = 0
+        return dict(
+            unread_notification_count=count,
+            pending_transfer_count=pending_transfers,
+            dept_pending_count=dept_pending_count,
+            admin_pending_count=admin_pending_count,
+        )
 
     # Jinja2 filter: clean ngay_nhap_ngu display (strip datetime noise)
     import re as _re
