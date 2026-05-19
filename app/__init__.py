@@ -71,7 +71,7 @@ def create_app(config_class=None):
                     from app.models.approval import PheDuyet, KetQuaDuyet
                     from app.routes.approval import ROLE_TO_PHONG
                     user_role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
-                    phong = ROLE_TO_PHONG.get(user_role)
+                    phong = ROLE_TO_PHONG.get(current_user.role)
                     if phong:
                         dept_pending_count = PheDuyet.query.filter_by(
                             phong_duyet=phong, ket_qua=KetQuaDuyet.CHO_DUYET.value

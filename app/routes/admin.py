@@ -390,6 +390,29 @@ def approval_tracking():
 
     danh_hieu_list = [e.value for e in LoaiDanhHieu]
 
+    # Compute dynamic tap_the criteria columns from tap_the_dict keys across all items
+    from app.models.nomination import TieuChi as _TieuChi
+    tt_keys_seen = set()
+    for ug in unit_groups:
+        for nom_data in ug['nominations']:
+            for ct_entry in nom_data['tap_the_chi_tiets']:
+                td = ct_entry['ct'].tap_the_dict or {}
+                tt_keys_seen.update(td.keys())
+    if tt_keys_seen:
+        tt_tieu_chi_rows = _TieuChi.query.filter(
+            _TieuChi.ma_truong.in_(list(tt_keys_seen)), _TieuChi.is_active == True
+        ).order_by(_TieuChi.thu_tu, _TieuChi.ten).all()
+        tt_criteria_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
+        tt_field_labels = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
+        # add any keys not in DB (fallback: use key as label)
+        for k in tt_keys_seen:
+            if k not in tt_field_labels:
+                tt_criteria_fields.append(k)
+                tt_field_labels[k] = k
+    else:
+        tt_criteria_fields = []
+        tt_field_labels = {}
+
     return render_template('admin/tracking.html',
                            unit_groups=unit_groups,
                            status_filter=status_filter,
@@ -408,7 +431,9 @@ def approval_tracking():
                            tracking_dept_columns=TRACKING_DEPT_COLUMNS,
                            total_individuals=total_individuals,
                            all_field_labels=ALL_FIELD_LABELS,
-                           all_fields=ALL_FIELDS)
+                           all_fields=ALL_FIELDS,
+                           tt_criteria_fields=tt_criteria_fields,
+                           tt_field_labels=tt_field_labels)
 
 
 @admin_bp.route('/tracking/chi-tiet/<int:ct_id>')
@@ -1708,8 +1733,12 @@ def export_tracking_excel():
     c.font = bold
     c.alignment = left
 
+    ws.page_setup.paperSize = 9
     ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToPage = True
     ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.freeze_panes = 'A4'
 
     ws.protection.sheet = True
@@ -1919,8 +1948,12 @@ def export_hoi_dong_excel():
     c.font = bold
     c.alignment = left
 
+    ws.page_setup.paperSize = 9
     ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToPage = True
     ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.freeze_panes = 'A4'
 
     ws.protection.sheet = True
@@ -1976,6 +2009,13 @@ def export_pending_final_excel():
     widths = [6, 24, 16, 12, 20, 18, 28, 20, 12, 12]
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
+
+    ws.page_setup.paperSize = 9
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
 
     ws.protection.sheet = True
     ws.protection.password = 'hktd@2025'
@@ -2120,8 +2160,12 @@ def export_bang2_excel():
             c.alignment = center if col_idx == 1 else left
             c.border = thin
 
+    ws.page_setup.paperSize = 9
     ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToPage = True
     ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.freeze_panes = 'A4'
 
     ws.protection.sheet = True
@@ -2321,10 +2365,12 @@ def export_reward_list():
     cell_signer.alignment = center_align
 
     # Set print area and page setup
-    ws.sheet_properties.pageSetUpPr = None
+    ws.page_setup.paperSize = 9
     ws.page_setup.orientation = 'landscape'
-    ws.page_setup.paperSize = ws.PAPERSIZE_A3
+    ws.page_setup.fitToPage = True
     ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
 
     # Freeze panes
     ws.freeze_panes = 'A6'
