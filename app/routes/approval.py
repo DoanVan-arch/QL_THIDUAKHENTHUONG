@@ -1068,24 +1068,34 @@ def export_excel():
     for pd in pending_reviews:
         all_item_results[pd.id] = {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet}
 
+    # Get criteria fields for current department
+    phong_fields_map = get_phong_fields()
+    field_labels = get_field_labels()
+    criteria_fields = phong_fields_map.get(current_user.role, [])
+
     wb = Workbook()
     ws = wb.active
     ws.title = 'Phê duyệt khen thưởng'
 
     # Timestamp header
     ts = datetime.now().strftime('%d/%m/%Y %H:%M')
-    ws.merge_cells('A1:H1')
+    total_cols = 8 + len(criteria_fields)
+    last_col = get_column_letter(total_cols)
+    ws.merge_cells(f'A1:{last_col}1')
     ws['A1'] = f'DANH SÁCH PHÊ DUYỆT KHEN THƯỞNG - {phong_name}'
     ws['A1'].font = Font(bold=True, size=13)
     ws['A1'].alignment = Alignment(horizontal='center')
 
-    ws.merge_cells('A2:H2')
+    ws.merge_cells(f'A2:{last_col}2')
     ws['A2'] = f'Năm học: {nam_hoc_filter or "Tất cả"} | Xuất lúc: {ts}'
     ws['A2'].alignment = Alignment(horizontal='center')
     ws['A2'].font = Font(italic=True, size=10)
 
     # Header row
-    headers = ['STT', 'Đơn vị', 'Họ tên', 'Cấp bậc', 'Chức vụ', 'Đối tượng', 'Danh hiệu', 'Kết quả']
+    base_headers = ['STT', 'Đơn vị', 'Họ tên', 'Cấp bậc', 'Chức vụ', 'Đối tượng', 'Danh hiệu', 'Kết quả']
+    criteria_headers = [field_labels.get(f, f) for f in criteria_fields]
+    headers = base_headers + criteria_headers
+
     header_fill = PatternFill('solid', fgColor='1B3A6B')
     header_font = Font(bold=True, color='FFFFFF', size=10)
     thin = Side(style='thin', color='CCCCCC')
@@ -1120,8 +1130,16 @@ def export_excel():
             cap_bac = ct.quan_nhan.cap_bac if ct.quan_nhan else ''
             chuc_vu = ct.quan_nhan.chuc_vu if ct.quan_nhan else ''
 
+            # Build criteria values (individual: getattr; tap_the: tap_the_dict)
+            is_tap_the = ct.quan_nhan_id is None
+            if is_tap_the:
+                tt_dict = ct.tap_the_dict or {}
+                criteria_vals = [tt_dict.get(f, '') for f in criteria_fields]
+            else:
+                criteria_vals = [getattr(ct, f, '') or '' for f in criteria_fields]
+
             row_data = [stt, don_vi, ho_ten, cap_bac or '', chuc_vu or '',
-                        ct.doi_tuong or '', ct.loai_danh_hieu or '', ket_qua_str]
+                        ct.doi_tuong or '', ct.loai_danh_hieu or '', ket_qua_str] + criteria_vals
             for col, val in enumerate(row_data, 1):
                 cell = ws.cell(row=row_num, column=col, value=val)
                 cell.border = border
@@ -1133,10 +1151,16 @@ def export_excel():
             row_num += 1
 
     # Column widths
-    col_widths = [6, 30, 25, 16, 20, 18, 22, 28]
+    base_widths = [6, 30, 25, 16, 20, 18, 22, 28]
+    criteria_widths = [18] * len(criteria_fields)
+    col_widths = base_widths + criteria_widths
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.row_dimensions[4].height = 28
+
+    # Sheet protection
+    ws.protection.sheet = True
+    ws.protection.password = 'hktd@2025'
 
     output = BytesIO()
     wb.save(output)

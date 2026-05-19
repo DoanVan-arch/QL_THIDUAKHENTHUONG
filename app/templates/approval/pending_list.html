@@ -358,9 +358,9 @@
                                 <th style="width:35px;">STT</th>
                                 <th style="min-width:160px;">Tên tập thể</th>
                                 <th>Danh hiệu</th>
-                                <th class="col-criteria">Mức độ HTNV</th>
-                                <th class="col-criteria">Chủ trì ĐV DH</th>
-                                <th class="col-criteria">Thành tích khác</th>
+                                <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
+                                <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
+                                <th class="col-criteria">{{ field_labels.get('thanh_tich_ca_nhan_khac', 'Thành tích khác') }}</th>
                                 {% if managed_dept_columns %}
                                     {% for mcol in managed_dept_columns %}
                                     <th style="width:74px;"><small>{{ mcol }}</small></th>
