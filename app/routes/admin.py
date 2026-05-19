@@ -1712,6 +1712,9 @@ def export_tracking_excel():
     ws.page_setup.fitToWidth = 1
     ws.freeze_panes = 'A4'
 
+    ws.protection.sheet = True
+    ws.protection.password = 'hktd@2025'
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -1920,6 +1923,9 @@ def export_hoi_dong_excel():
     ws.page_setup.fitToWidth = 1
     ws.freeze_panes = 'A4'
 
+    ws.protection.sheet = True
+    ws.protection.password = 'hktd@2025'
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -1970,6 +1976,9 @@ def export_pending_final_excel():
     widths = [6, 24, 16, 12, 20, 18, 28, 20, 12, 12]
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
+
+    ws.protection.sheet = True
+    ws.protection.password = 'hktd@2025'
 
     out = BytesIO()
     wb.save(out)
@@ -2114,6 +2123,9 @@ def export_bang2_excel():
     ws.page_setup.orientation = 'landscape'
     ws.page_setup.fitToWidth = 1
     ws.freeze_panes = 'A4'
+
+    ws.protection.sheet = True
+    ws.protection.password = 'hktd@2025'
 
     output = BytesIO()
     wb.save(output)
@@ -2316,6 +2328,9 @@ def export_reward_list():
 
     # Freeze panes
     ws.freeze_panes = 'A6'
+
+    ws.protection.sheet = True
+    ws.protection.password = 'hktd@2025'
 
     # Write to BytesIO
     output = BytesIO()
