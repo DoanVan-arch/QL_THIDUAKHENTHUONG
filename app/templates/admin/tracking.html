@@ -82,6 +82,17 @@
     {% endif %}
 </div>
 
+{% if stats.pending > 0 or stats.reviewing > 0 %}
+<div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size:0.85rem;">
+    <i class="bi bi-hourglass-split"></i>
+    <span>
+        <strong>{{ stats.pending + stats.reviewing }}</strong> đề xuất chưa hoàn thành quy trình duyệt
+        {% if stats.pending %} — <span class="badge bg-warning text-dark">{{ stats.pending }} Chờ duyệt</span>{% endif %}
+        {% if stats.reviewing %} — <span class="badge bg-info text-dark">{{ stats.reviewing }} Đang duyệt</span>{% endif %}
+    </span>
+</div>
+{% endif %}
+
 <!-- Filters -->
 <div class="card-section mb-3">
     <div class="card-body-custom py-2">
@@ -168,6 +179,25 @@
                         onclick="event.stopPropagation();">
                     <i class="bi bi-shield-check me-1"></i><small>PD cuối ĐV</small>
                 </button>
+                {% endif %}
+                {# Count pending approvals for this unit #}
+                {% set ns_pending = namespace(cnt=0) %}
+                {% for nom_data2 in ug.nominations %}
+                    {% for ct_d in nom_data2.chi_tiets %}
+                        {% if ct_d.ct.admin_approved == false and ct_d.can_final_approve == false %}
+                            {% set ns_pending.cnt = ns_pending.cnt + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {% for ct_d in nom_data2.tap_the_chi_tiets %}
+                        {% if ct_d.ct.admin_approved == false and ct_d.can_final_approve == false %}
+                            {% set ns_pending.cnt = ns_pending.cnt + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% if ns_pending.cnt > 0 %}
+                <span class="badge bg-warning text-dark" title="{{ ns_pending.cnt }} dòng chưa hoàn thành duyệt">
+                    <i class="bi bi-hourglass-split me-1"></i>{{ ns_pending.cnt }} chờ
+                </span>
                 {% endif %}
                 <span class="badge bg-primary" title="Số cá nhân">{{ ug.individual_count }} CN</span>
                 {% if ug.tap_the_count > 0 %}
@@ -352,6 +382,12 @@
                                     <th style="min-width:160px;">Tên tập thể</th>
                                     <th>Danh hiệu</th>
                                     <th>Năm học</th>
+                                    {% if view_mode == 'detail' %}
+                                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
+                                    <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
+                                    <th class="text-center" style="min-width:120px;font-size:0.72rem;">Tiêu chí tập thể</th>
+                                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Ghi chú</th>
+                                    {% endif %}
                                     {% for col in tracking_dept_columns %}
                                     <th class="text-center">{{ col.label }}</th>
                                     {% endfor %}
@@ -380,6 +416,27 @@
                                         {% endif %}
                                     </td>
                                     <td><small>{{ dx_tt.nam_hoc }}</small></td>
+                                    {% if view_mode == 'detail' %}
+                                    <td class="text-center" style="font-size:0.75rem;">
+                                        {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
+                                    </td>
+                                    <td class="text-center" style="font-size:0.75rem;">
+                                        {% if ct.chu_tri_don_vi_danh_hieu %}
+                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
+                                        {% else %}<span class="text-muted">-</span>{% endif %}
+                                    </td>
+                                    <td class="text-center" style="font-size:0.75rem;">
+                                        {% set ttd = ct.tap_the_dict %}
+                                        {% if ttd %}
+                                        <span class="badge bg-primary" title="{{ ttd | tojson }}">{{ ttd | length }} TC</span>
+                                        {% else %}<span class="text-muted">-</span>{% endif %}
+                                    </td>
+                                    <td class="text-center" style="font-size:0.75rem;">
+                                        {% if ct.ghi_chu %}
+                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.ghi_chu }}">{{ ct.ghi_chu }}</span>
+                                        {% else %}<span class="text-muted">-</span>{% endif %}
+                                    </td>
+                                    {% endif %}
                                     {% for col in tracking_dept_columns %}
                                     {% set dn = col.key %}
                                     <td class="text-center">
