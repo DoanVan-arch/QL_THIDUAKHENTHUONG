@@ -395,6 +395,27 @@ def pending_list():
         if name not in unit_names:
             unit_names.append(name)
 
+    # Compute dynamic tap_the criteria columns
+    tt_keys_seen = set()
+    for pd in pending_reviews:
+        for ct in pd.de_xuat.chi_tiets:
+            if ct.quan_nhan_id is None:
+                td = ct.tap_the_dict or {}
+                tt_keys_seen.update(td.keys())
+    if tt_keys_seen:
+        tt_tieu_chi_rows = TieuChi.query.filter(
+            TieuChi.ma_truong.in_(list(tt_keys_seen)), TieuChi.is_active == True
+        ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
+        tt_criteria_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
+        tt_field_labels_map = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
+        for k in tt_keys_seen:
+            if k not in tt_field_labels_map:
+                tt_criteria_fields.append(k)
+                tt_field_labels_map[k] = k
+    else:
+        tt_criteria_fields = []
+        tt_field_labels_map = {}
+
     return render_template('approval/pending_list.html',
                            pending_reviews=pending_reviews,
                            all_item_results=all_item_results,
@@ -410,7 +431,9 @@ def pending_list():
                            managed_dept_columns=managed_dept_columns,
                            gate_dept_fields=gate_dept_fields,
                            nam_hoc_filter=nam_hoc_filter,
-                           nam_hoc_list=nam_hoc_list)
+                           nam_hoc_list=nam_hoc_list,
+                           tt_criteria_fields=tt_criteria_fields,
+                           tt_field_labels=tt_field_labels_map)
 
 
 @approval_bp.route('/review/<int:id>', methods=['GET'])
@@ -1157,6 +1180,14 @@ def export_excel():
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.row_dimensions[4].height = 28
+
+    # Page setup: A4 landscape, fit to 1 page wide
+    ws.page_setup.paperSize = 9
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
 
     # Sheet protection
     ws.protection.sheet = True

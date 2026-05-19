@@ -481,6 +481,14 @@ def download_personnel_template():
         ws.add_data_validation(dv)
         dv.add(f'{col}2:{col}{max_row}')
 
+    for _ws in wb.worksheets:
+        _ws.page_setup.paperSize = 9
+        _ws.page_setup.orientation = 'landscape'
+        _ws.page_setup.fitToPage = True
+        _ws.page_setup.fitToWidth = 1
+        _ws.page_setup.fitToHeight = 0
+        _ws.sheet_properties.pageSetUpPr.fitToPage = True
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)

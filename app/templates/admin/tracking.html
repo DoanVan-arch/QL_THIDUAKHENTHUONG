@@ -354,7 +354,9 @@
                                     <th>Năm học</th>
                                     <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
                                     <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
-                                    <th class="text-center" style="min-width:80px;font-size:0.72rem;">Tiêu chí TT</th>
+                                    {% for f in tt_criteria_fields %}
+                                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
+                                    {% endfor %}
                                     <th class="text-center" style="min-width:100px;font-size:0.72rem;">Thành tích khác</th>
                                     {% for col in tracking_dept_columns %}
                                     <th class="text-center">{{ col.label }}</th>
@@ -392,12 +394,13 @@
                                         <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
                                         {% else %}<span class="text-muted">-</span>{% endif %}
                                     </td>
+                                    {% set ttd = ct.tap_the_dict or {} %}
+                                    {% for f in tt_criteria_fields %}
                                     <td class="text-center" style="font-size:0.75rem;">
-                                        {% set ttd = ct.tap_the_dict %}
-                                        {% if ttd %}
-                                        <span class="badge bg-primary" title="{% for k,v in ttd.items() %}{{ k }}: {{ v }}&#10;{% endfor %}">{{ ttd | length }} TC</span>
-                                        {% else %}<span class="text-muted">-</span>{% endif %}
+                                        {% set fval = ttd.get(f, '') %}
+                                        {% if fval %}<span>{{ fval }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
                                     </td>
+                                    {% endfor %}
                                     <td class="text-center" style="font-size:0.75rem;">
                                         {% if ct.thanh_tich_ca_nhan_khac %}
                                         <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>

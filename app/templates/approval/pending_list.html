@@ -360,6 +360,9 @@
                                 <th>Danh hiệu</th>
                                 <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                                 <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
+                                {% for f in tt_criteria_fields %}
+                                <th class="col-criteria"><small>{{ tt_field_labels.get(f, f) }}</small></th>
+                                {% endfor %}
                                 <th class="col-criteria">{{ field_labels.get('thanh_tich_ca_nhan_khac', 'Thành tích khác') }}</th>
                                 {% if managed_dept_columns %}
                                     {% for mcol in managed_dept_columns %}
@@ -397,6 +400,10 @@
                                 </td>
                                 <td class="col-criteria"><small>{{ ct.muc_do_hoan_thanh or '-' }}</small></td>
                                 <td class="col-criteria"><small>{{ ct.chu_tri_don_vi_danh_hieu or '-' }}</small></td>
+                                {% set ttd = ct.tap_the_dict or {} %}
+                                {% for f in tt_criteria_fields %}
+                                <td class="col-criteria"><small>{{ ttd.get(f, '-') }}</small></td>
+                                {% endfor %}
                                 <td class="col-criteria"><small class="text-truncate d-inline-block" style="max-width:160px;" title="{{ ct.thanh_tich_ca_nhan_khac or '' }}">{{ ct.thanh_tich_ca_nhan_khac or '-' }}</small></td>
                                 {% if managed_dept_columns %}
                                     {% for mcol in managed_dept_columns %}{% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
