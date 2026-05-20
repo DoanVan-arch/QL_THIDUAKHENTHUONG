@@ -163,9 +163,9 @@
     </div>
 </div>
 <script>
-var STUDENT_DOI_TUONG = ['Học viên năm thứ I','Học viên năm thứ II','Học viên năm thứ III','Học viên năm thứ IV','Học viên sau đại học','Học viên VB2','Học viên TS','Học viên quốc tế'];
 document.getElementById('doi_tuong_select').addEventListener('change', function() {
-    document.getElementById('lop_field').style.display = STUDENT_DOI_TUONG.indexOf(this.value) >= 0 ? '' : 'none';
+    document.getElementById('lop_field').style.display = 
+        this.value.includes('Học viên') ? '' : 'none';
 });
 </script>
 {% endblock %}
