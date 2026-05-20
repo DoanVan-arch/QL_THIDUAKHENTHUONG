@@ -44,7 +44,7 @@ def field_visibility(field_name, selected_danh_hieu, selected_doi_tuong,
         'csrf_token', 'quan_nhan_id', 'loai_danh_hieu', 'doi_tuong',
         'ghi_chu_item', 'ly_do_chua_dat_diem', 'nckh_noi_dung_text',
         'muc_do_hoan_thanh', 'phieu_tin_nhiem', 'xep_loai_dang_vien',
-        'ket_qua_doan_the', 'minh_chung_doan_the', 'chu_tri_don_vi_danh_hieu',
+        'ket_qua_doan_the', 'chu_tri_don_vi_danh_hieu',
     }
 
     if field_name in NON_CRITERIA_FIELDS:
