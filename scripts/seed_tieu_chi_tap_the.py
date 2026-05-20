@@ -150,7 +150,7 @@ TIEU_CHI_TAP_THE = [
     # --- Ban CNTT ---
     {
         'ma_truong': 'cntt_chuyen_doi_so',
-        'ten': 'Ban CNTT: Chuyển đổi số',
+        'ten': 'Chuyển đổi số',
         'nhom': 'ban_cntt',
         'loai_input': 'combobox',
         'gia_tri_chon': ['Tốt', 'Chưa tốt'],
@@ -159,7 +159,7 @@ TIEU_CHI_TAP_THE = [
     },
     {
         'ma_truong': 'cntt_an_toan_thong_tin',
-        'ten': 'Ban CNTT: An toàn thông tin',
+        'ten': 'An toàn thông tin',
         'nhom': 'ban_cntt',
         'loai_input': 'combobox',
         'gia_tri_chon': ['An toàn', 'Có vụ việc'],
