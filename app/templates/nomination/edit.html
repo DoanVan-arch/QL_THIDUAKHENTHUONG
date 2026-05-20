@@ -386,7 +386,7 @@
                 'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
                 'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
                 'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc',
-                'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn',
+                'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn','ten_don_vi_de_xuat',
             ] -%}
             {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
             {%- if extra_tc %}
@@ -638,7 +638,7 @@ var DIEM_NHOM_MAP = {{ diem_nhom_map | default({}) | tojson }};
 
 function ensureBuiltInEvidenceFields() {
     var requiredBuiltIns = [
-        { ma_truong: 'ket_qua_doan_the', ten: 'Hoàn thành nhiệm vụ, khen thưởng của tổ chức quần chúng' },
+        
         { ma_truong: 'thanh_tich_ca_nhan_khac', ten: 'Thành tích cá nhân khác' }
     ];
 
@@ -747,7 +747,7 @@ var NON_CRITERIA_FIELDS = {
     csrf_token: true, quan_nhan_id: true, loai_danh_hieu: true,
     doi_tuong: true, ghi_chu_item: true, ly_do_chua_dat_diem: true,
     nckh_noi_dung_text: true,
-    ten_don_vi_de_xuat: true,  // managed by togglePhamViBlocks, not criteria visibility
+    // managed by togglePhamViBlocks, not criteria visibility
 };
 
 // Fields that ARE criteria-controlled but not managed via CRITERIA_META/DIEM_NHOM_MAP.
