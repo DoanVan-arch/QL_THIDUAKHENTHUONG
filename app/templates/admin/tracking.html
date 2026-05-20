@@ -10,13 +10,17 @@
     'Từ chối': 'badge-rejected'
 } %}
 
+<!-- ===== PAGE HEADER (tiêu đề, không chứa toolbar) ===== -->
 <div class="page-header">
     <div>
         <h4><i class="bi bi-eye me-2"></i>Theo dõi quy trình phê duyệt</h4>
         <small class="text-muted">Xem tất cả cá nhân và tiến trình duyệt theo đơn vị</small>
     </div>
-    {% if unit_groups %}
-    <div class="toolbar-wrapper">
+</div>
+
+<!-- ===== TOOLBAR CỐ ĐỊNH CĂNG TRÁI (tách khỏi page-header) ===== -->
+{% if unit_groups %}
+<div class="toolbar-wrapper">
     <div class="toolbar-inner">
         <select class="form-select form-select-sm" id="unitFilter" style="width:220px; min-width:220px;">
             <option value="">Tất cả đơn vị ({{ unit_groups|length }})</option>
@@ -24,6 +28,7 @@
             <option value="{{ ug.unit_name }}" {% if unit_filter == ug.unit_name %}selected{% endif %}>{{ ug.unit_name }}</option>
             {% endfor %}
         </select>
+
         <!-- View mode toggle -->
         <div class="btn-group btn-group-sm" role="group" title="Chế độ xem">
             <a href="{{ url_for('admin.approval_tracking', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, view='compact') }}"
@@ -35,20 +40,23 @@
                 <i class="bi bi-table"></i>
             </a>
         </div>
-        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Phê duyệt cuối tất cả đề xuất sẵn sàng">
+
+        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll"
+                title="Phê duyệt cuối tất cả đề xuất sẵn sàng">
             <i class="bi bi-shield-check me-1"></i>PD cuối toàn bộ
         </button>
+
         <a href="{{ url_for('admin.export_tracking_excel', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
            class="btn btn-sm btn-outline-success" title="Xuất Excel chi tiết">
             <i class="bi bi-file-earmark-excel me-1"></i>Excel
         </a>
+
         <button class="btn btn-sm btn-outline-danger" onclick="printTracking()" title="In PDF toàn bộ">
             <i class="bi bi-printer me-1"></i>In PDF
         </button>
     </div>
-    </div>
-    {% endif %}
 </div>
+{% endif %}
 
 <!-- Summary stats -->
 <div class="d-flex gap-3 mb-3 flex-wrap">
@@ -88,10 +96,8 @@
 <div class="card-section mb-3">
     <div class="card-body-custom py-2">
         <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
-            {# Preserve view mode #}
             <input type="hidden" name="view" value="{{ view_mode }}">
             <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
-            {# Năm học — required to show data #}
             <select class="form-select form-select-sm {% if not nam_hoc_filter %}border-warning{% endif %}"
                     name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
                 <option value="">-- Chọn năm học --</option>
@@ -124,7 +130,8 @@
                 <option value="can_bo" {% if scope_filter == 'can_bo' %}selected{% endif %}>Diện Cán bộ</option>
             </select>
             <div class="input-group input-group-sm" style="width:220px;">
-                <input type="text" class="form-control" name="q" value="{{ search_query }}" placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
+                <input type="text" class="form-control" name="q" value="{{ search_query }}"
+                       placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
                 <button class="btn btn-outline-navy" type="submit" title="Tìm kiếm">
                     <i class="bi bi-search"></i>
                 </button>
@@ -157,7 +164,6 @@
                 <i class="bi bi-building me-2"></i>{{ ug.unit_name }}
             </h6>
             <div class="d-flex align-items-center gap-2">
-                {# Check if any nomination in this unit is ready for final approval #}
                 {% set ns_unit = namespace(has_ready=false) %}
                 {% for nom_data in ug.nominations %}
                     {% if nom_data.dx.trang_thai == 'Xét duyệt của cơ quan thường trực' %}
@@ -214,10 +220,8 @@
                                 <th>Đối tượng</th>
                                 <th>Danh hiệu</th>
                                 {% if view_mode == 'detail' %}
-                                {# Extra personal info columns #}
                                 <th>Đơn vị</th>
                                 <th>Năm học</th>
-                                {# Criteria columns #}
                                 {% for field in all_fields %}
                                 <th class="text-center" style="min-width:70px;font-size:0.72rem;">{{ all_field_labels[field] }}</th>
                                 {% endfor %}
@@ -233,7 +237,6 @@
                             {% set ct = ct_data.ct %}
                             {% set dept_results = ct_data.dept_results %}
                             {% set ct_can_approve = ct_data.can_final_approve %}
-                            {# Determine row styling #}
                             {% set any_rejected = false %}
                             {% for dn in dept_names %}
                                 {% if dept_results[dn] == 'Từ chối' %}{% set any_rejected = true %}{% endif %}
@@ -263,10 +266,8 @@
                                     {% endif %}
                                 </td>
                                 {% if view_mode == 'detail' %}
-                                {# Extra personal info #}
                                 <td><small>{{ dx.don_vi.ten_don_vi }}</small></td>
                                 <td><small>{{ dx.nam_hoc }}</small></td>
-                                {# Criteria field values #}
                                 {% for field in all_fields %}
                                 <td class="text-center" style="font-size:0.75rem;">
                                     {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
@@ -302,7 +303,8 @@
                                 {% endfor %}
                                 <td class="text-center sticky-action-col">
                                     <div class="d-flex gap-1 justify-content-center">
-                                        <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
+                                        <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}"
+                                           class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         {% if ct_can_approve %}
@@ -330,7 +332,6 @@
                 {% if ug.nominations|length > 1 and not loop.last %}
                 <hr class="m-0">
                 {% endif %}
-
                 {% endfor %}
 
                 {# ── Bảng tập thể riêng ── #}
@@ -393,7 +394,8 @@
                                     </td>
                                     <td class="text-center" style="font-size:0.75rem;">
                                         {% if ct.chu_tri_don_vi_danh_hieu %}
-                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
+                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
+                                              title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
                                         {% else %}<span class="text-muted">-</span>{% endif %}
                                     </td>
                                     {% set ttd = ct.tap_the_dict or {} %}
@@ -405,7 +407,8 @@
                                     {% endfor %}
                                     <td class="text-center" style="font-size:0.75rem;">
                                         {% if ct.thanh_tich_ca_nhan_khac %}
-                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
+                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
+                                              title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
                                         {% else %}<span class="text-muted">-</span>{% endif %}
                                     </td>
                                     {% for col in tracking_dept_columns %}
@@ -427,7 +430,8 @@
                                     {% endfor %}
                                     <td class="text-center">
                                         <div class="d-flex gap-1 justify-content-center">
-                                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
+                                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}"
+                                               class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             {% if ct_can_approve %}
@@ -479,6 +483,22 @@
     </div>
     {% endfor %}
 </div>
+
+{% else %}
+{% if nam_hoc_filter %}
+<div class="card-section">
+    <div class="empty-state">
+        <i class="bi bi-eye d-block"></i>
+        <p>Không có đề xuất nào{{ ' phù hợp bộ lọc' if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query else ' trong năm học ' ~ nam_hoc_filter }}</p>
+        {% if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
+        <a href="{{ url_for('admin.approval_tracking', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-outline-navy">
+            <i class="bi bi-x-lg me-1"></i>Xóa bộ lọc
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
 
 <!-- Individual final approve modal -->
 <div class="modal fade" id="individualApproveModal" tabindex="-1">
@@ -538,22 +558,6 @@
         </div>
     </div>
 </div>
-
-{% else %}
-{% if nam_hoc_filter %}
-<div class="card-section">
-    <div class="empty-state">
-        <i class="bi bi-eye d-block"></i>
-        <p>Không có đề xuất nào{{ ' phù hợp bộ lọc' if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query else ' trong năm học ' ~ nam_hoc_filter }}</p>
-        {% if status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
-        <a href="{{ url_for('admin.approval_tracking', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-outline-navy">
-            <i class="bi bi-x-lg me-1"></i>Xóa bộ lọc
-        </a>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-{% endif %}
 
 <!-- Reject individual modal -->
 <div class="modal fade" id="rejectIndividualModal" tabindex="-1">
@@ -635,6 +639,7 @@
 </script>
 
 <style>
+    /* ===== STAT MINI ===== */
     .stat-mini {
         display: flex;
         align-items: center;
@@ -646,6 +651,37 @@
         font-size: 0.82rem;
     }
     .stat-mini i { font-size: 1rem; }
+
+    /* ===== TOOLBAR CỐ ĐỊNH CĂNG TRÁI ===== */
+    .toolbar-wrapper {
+        /* Tách hoàn toàn khỏi page-header, dùng block-level */
+        display: block;
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 1030;
+        background: #fff;
+        border-bottom: 1px solid #dee2e6;
+        padding: 6px 0;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,.07);
+        /* Đảm bảo không bị ảnh hưởng bởi flex-parent */
+        width: 100%;
+    }
+    .toolbar-inner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;           /* Không xuống dòng */
+        overflow-x: auto;            /* Scroll ngang khi màn nhỏ */
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 0 4px;
+    }
+    .toolbar-inner::-webkit-scrollbar { display: none; }
+    .toolbar-inner > * { flex-shrink: 0; } /* Không co lại */
+
+    /* ===== TABLE STICKY ACTION ===== */
     .unit-card.filtered-out { display: none !important; }
     .sticky-action-col {
         position: sticky !important;
@@ -659,71 +695,32 @@
         color: #fff !important;
         z-index: 2;
     }
-    tr.table-info td.sticky-action-col { background: #cff4fc !important; }
+    tr.table-info td.sticky-action-col  { background: #cff4fc !important; }
     tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
     .table-custom tbody tr:hover td.sticky-action-col { background: #F8F9FB !important; }
+
+    /* ===== BTN NAVY ===== */
     .btn-navy {
         background: var(--navy-primary);
         color: #fff;
         border-color: var(--navy-primary);
     }
-    .btn-navy:hover {
-        background: var(--navy-dark);
-        color: #fff;
-    }
-     .toolbar-wrapper {
-      position: sticky;
-      top: 0;
-      left: 0;
-      z-index: 1030;
-      background: #fff;
-      border-bottom: 1px solid #dee2e6;
-      padding: 8px 12px;
-      /* Căn trái cố định, không co giãn theo content */
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      width: 100%;
-      box-shadow: 0 2px 4px rgba(0,0,0,.06);
-    }
-
-    .toolbar-inner {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      /* KHÔNG wrap → các thẻ không bị xuống dòng / dịch chuyển */
-      flex-wrap: nowrap;
-      /* Cho phép scroll ngang nếu màn hình quá nhỏ thay vì bị vỡ layout */
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none; /* ẩn scrollbar Firefox */
-    }
-    .toolbar-inner::-webkit-scrollbar { display: none; } /* ẩn scrollbar Chrome */
-
-    /* Giữ các item không bị co lại */
-    .toolbar-inner > * {
-      flex-shrink: 0;
-    }
-
-    /* Demo btn-navy */
-    .btn-navy {
-      background-color: #001f5b;
-      color: #fff;
-      border-color: #001f5b;
-    }
-    .btn-navy:hover { background-color: #00174a; color: #fff; }
+    .btn-navy:hover { background: var(--navy-dark); color: #fff; }
     .btn-outline-navy {
-      color: #001f5b;
-      border-color: #001f5b;
-      background: transparent;
+        color: var(--navy-primary);
+        border-color: var(--navy-primary);
+        background: transparent;
     }
-    .btn-outline-navy:hover { background-color: #001f5b; color: #fff; }
+    .btn-outline-navy:hover { background: var(--navy-primary); color: #fff; }
 
-    /* Nội dung demo để test scroll */
-    .demo-content {
-      padding: 20px;
-      height: 2000px;
-      background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+    /* ===== PRINT ===== */
+    @media print {
+        .no-print, .toolbar-wrapper { display: none !important; }
+        .card-section { box-shadow: none !important; border: 1px solid #ccc !important; }
+        .collapse, .accordion-collapse { display: block !important; }
+        body { font-size: 10pt; }
+        .badge { border: 1px solid #666; color: #000 !important; background: transparent !important; }
+        #trackingPrintTimestamp { display: block !important; }
     }
 </style>
 
@@ -731,43 +728,32 @@
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-    // Parse nomination data
     let nominations = [];
     try {
         const raw = document.getElementById('nominationData').textContent.trim();
-        // Remove trailing comma before ]
-        const cleaned = raw.replace(/,\s*\]/, ']');
-        nominations = JSON.parse(cleaned);
+        nominations = JSON.parse(raw.replace(/,\s*\]/, ']'));
     } catch(e) { console.warn('Parse error:', e); }
 
-    // ===================== UNIT FILTER =====================
+    // ===== UNIT FILTER =====
     const unitFilter = document.getElementById('unitFilter');
     if (unitFilter) {
         unitFilter.addEventListener('change', function () {
             const selected = this.value;
             document.querySelectorAll('.unit-card').forEach(card => {
-                if (!selected || card.dataset.unitName === selected) {
-                    card.classList.remove('filtered-out');
-                } else {
-                    card.classList.add('filtered-out');
-                }
+                card.classList.toggle('filtered-out', !!(selected && card.dataset.unitName !== selected));
             });
         });
     }
 
-    // ===================== BATCH FINAL APPROVE =====================
+    // ===== BATCH FINAL APPROVE =====
     let batchIds = [];
 
-    // Per-unit button
     document.querySelectorAll('.btn-approve-unit').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const unitName = this.dataset.unitName;
             const unitNoms = nominations.filter(n => n.unit === unitName);
-            if (unitNoms.length === 0) {
-                alert('Đơn vị này không có đề xuất nào sẵn sàng phê duyệt cuối.');
-                return;
-            }
+            if (!unitNoms.length) { alert('Đơn vị này không có đề xuất nào sẵn sàng phê duyệt cuối.'); return; }
             batchIds = unitNoms.map(n => n.id);
             document.getElementById('batchFinalTitle').textContent = 'PD cuối: ' + unitName;
             document.getElementById('batchFinalMessage').innerHTML =
@@ -778,14 +764,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // All button
     const btnApproveAll = document.getElementById('btnApproveAll');
     if (btnApproveAll) {
         btnApproveAll.addEventListener('click', function() {
-            if (nominations.length === 0) {
-                alert('Không có đề xuất nào sẵn sàng phê duyệt cuối.');
-                return;
-            }
+            if (!nominations.length) { alert('Không có đề xuất nào sẵn sàng phê duyệt cuối.'); return; }
             batchIds = nominations.map(n => n.id);
             document.getElementById('batchFinalTitle').textContent = 'PD cuối toàn bộ';
             document.getElementById('batchFinalMessage').innerHTML =
@@ -796,39 +778,29 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Confirm
     document.getElementById('batchFinalConfirm').addEventListener('click', async function() {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
         const ghiChu = document.getElementById('batchGhiChu').value.trim();
-
         try {
             const res = await fetch('/admin/batch-final-approve', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify({ ids: batchIds, ghi_chu: ghiChu }),
             });
             const data = await res.json();
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('batchFinalModal')).hide();
                 location.reload();
-            } else {
-                alert(data.message || 'Có lỗi xảy ra');
-            }
-        } catch(err) {
-            console.error(err);
-            alert('Lỗi kết nối. Vui lòng thử lại.');
-        } finally {
+            } else { alert(data.message || 'Có lỗi xảy ra'); }
+        } catch(err) { console.error(err); alert('Lỗi kết nối. Vui lòng thử lại.'); }
+        finally {
             this.disabled = false;
             this.innerHTML = '<i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt';
         }
     });
 });
 
-// ===================== INDIVIDUAL FINAL APPROVE =====================
 function openIndividualApproveModal(ctId, hoTen) {
     document.getElementById('individualApproveForm').action =
         '{{ url_for("admin.final_approve_individual", ct_id=0) }}'.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
@@ -836,27 +808,22 @@ function openIndividualApproveModal(ctId, hoTen) {
     new bootstrap.Modal(document.getElementById('individualApproveModal')).show();
 }
 
-// ===================== REJECT INDIVIDUAL =====================
 function openRejectIndividualModal(ctId, hoTen) {
-    const baseUrl = '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}';
     document.getElementById('rejectIndividualForm').action =
-        baseUrl.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+        '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
     document.getElementById('rejectIndividualName').textContent = hoTen;
     document.querySelector('#rejectIndividualForm textarea[name="ly_do"]').value = '';
     new bootstrap.Modal(document.getElementById('rejectIndividualModal')).show();
 }
 
-// ===================== REJECT NOMINATION =====================
 function openRejectNominationModal(dxId, label) {
-    const baseUrl = '{{ url_for("admin.reject_from_tracking", id=0) }}';
     document.getElementById('rejectNominationForm').action =
-        baseUrl.replace('/0/', '/' + dxId + '/').replace('/0', '/' + dxId);
+        '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0/', '/' + dxId + '/').replace('/0', '/' + dxId);
     document.getElementById('rejectNominationName').textContent = label;
     document.querySelector('#rejectNominationForm textarea[name="ly_do"]').value = '';
     new bootstrap.Modal(document.getElementById('rejectNominationModal')).show();
 }
 
-// ===================== PRINT PDF =====================
 function printTracking() {
     var ts = document.getElementById('trackingPrintTimestamp');
     if (!ts) {
@@ -865,25 +832,11 @@ function printTracking() {
         ts.style.cssText = 'display:none;position:fixed;bottom:10px;right:10px;font-size:9pt;color:#666;';
         document.body.appendChild(ts);
     }
-    var now = new Date();
-    var pad = function(n){ return n < 10 ? '0' + n : n; };
-    ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' ngày '
-        + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
+    var now = new Date(), pad = n => n < 10 ? '0'+n : n;
+    ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) +
+        ' ngày ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
     ts.style.display = 'block';
     window.print();
 }
 </script>
-
-<style>
-@media print {
-    .no-print { display: none !important; }
-    .card-section { box-shadow: none !important; border: 1px solid #ccc !important; }
-    .collapse { display: block !important; }
-    .accordion-collapse { display: block !important; }
-    body { font-size: 10pt; }
-    .badge { border: 1px solid #666; color: #000 !important; background: transparent !important; }
-    #trackingPrintTimestamp { display: block !important; }
-    #unitFilter, .btn-group, #btnApproveAll { display: none !important; }
-}
-</style>
 {% endblock %}
