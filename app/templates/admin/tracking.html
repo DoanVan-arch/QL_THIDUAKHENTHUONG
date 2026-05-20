@@ -653,21 +653,20 @@
     .stat-mini i { font-size: 1rem; }
 
     /* ===== TOOLBAR CỐ ĐỊNH CĂNG TRÁI ===== */
-    .toolbar-wrapper {
-        /* Tách hoàn toàn khỏi page-header, dùng block-level */
-        display: block;
-        position: sticky;
-        top: 0;
-        left: 0;
-        z-index: 1030;
-        background: #fff;
-        border-bottom: 1px solid #dee2e6;
-        padding: 6px 0;
-        margin-bottom: 12px;
-        box-shadow: 0 2px 6px rgba(0,0,0,.07);
-        /* Đảm bảo không bị ảnh hưởng bởi flex-parent */
-        width: 100%;
-    }
+    /* ===== TOOLBAR CỐ ĐỊNH CĂNG TRÁI ===== */
+.toolbar-wrapper {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 100;          /* ← Giảm z-index xuống, thấp hơn sidebar */
+    background: #fff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 6px 0;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.07);
+    width: 100%;
+}
+
     .toolbar-inner {
         display: flex;
         align-items: center;
