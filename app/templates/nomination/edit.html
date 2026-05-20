@@ -379,14 +379,14 @@
                 'diem_kiem_tra_chinh_tri','kiem_tra_chinh_tri',
                 'diem_kiem_tra_tin_hoc','kiem_tra_tin_hoc',
                 'diem_dia_ly_quan_su','dia_ly_quan_su',
-                'xep_loai_dang_vien','ket_qua_doan_the','xep_loai_doan_vien','minh_chung_doan_the','chu_tri_don_vi_danh_hieu',
+                'xep_loai_dang_vien','ket_qua_doan_the','xep_loai_doan_vien','chu_tri_don_vi_danh_hieu',
                 'danh_hieu_gv_gioi','dinh_muc_giang_day','thoi_gian_lao_dong_kh','ket_qua_kiem_tra_giang',
                 'tien_do_pgs',
                 'danh_hieu_hv_gioi','diem_tong_ket','ket_qua_thuc_hanh',
                 'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
                 'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
                 'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc',
-                'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn','minh_chung_phu_nu',
+                'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn',
             ] -%}
             {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
             {%- if extra_tc %}
@@ -496,7 +496,7 @@
                    id="hinh_thuc_khen_thuong_qc" 
                    placeholder="Ví dụ: Giấy khen, Bằng khen, Cờ thi đua...">
         </div>
-        <div class="col-md-12">
+        <!-- <div class="col-md-12">
             <label class="form-label">Minh chứng (nhiều file) - nếu có</label>
             <input type="file" 
                    class="form-control" 
@@ -505,7 +505,7 @@
                    accept="image/*,.pdf" 
                    multiple>
             <small class="text-muted d-block mt-1">Chấp nhận file ảnh (JPG, PNG) hoặc PDF</small>
-        </div>
+        </div> -->
     </div>
 </div>
 
@@ -702,9 +702,7 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
 
     activeFields.forEach(function(ef) {
         var inputName = 'minh_chung_' + ef.ma_truong;
-        if (ef.ma_truong === 'ket_qua_doan_the') {
-            inputName = 'minh_chung_doan_the';
-        } else if (ef.ma_truong === 'thanh_tich_ca_nhan_khac') {
+        if (ef.ma_truong === 'thanh_tich_ca_nhan_khac') {
             inputName = 'minh_chung_thanh_tich_khac';
         } else if (ef.ma_truong === 'nckh_noi_dung') {
             inputName = 'nckh_minh_chung';
@@ -762,10 +760,10 @@ var OPTIONAL_CRITERIA_FIELDS = {
     ket_qua_doan_the: true,
     xep_loai_doan_vien: true,
     hinh_thuc_khen_thuong_qc: true,
-    minh_chung_doan_the: true,      // follows ket_qua_doan_the
+    // follows ket_qua_doan_the
     ket_qua_phu_nu: true,
     hinh_thuc_khen_thuong_pn: true,
-    minh_chung_phu_nu: true,
+ 
     chu_tri_don_vi_danh_hieu: true,
     diem_nckh: true,
     nckh_noi_dung: true,
@@ -861,8 +859,7 @@ function annotateCriteriaGroupLabels() {
 // Resolve "companion" fields: some fields follow their parent field visibility.
 // e.g. minh_chung_doan_the follows ket_qua_doan_the
 var FIELD_COMPANION_MAP = {
-    'minh_chung_doan_the': 'ket_qua_doan_the',
-    'minh_chung_phu_nu': 'ket_qua_phu_nu',
+    
     'nckh_minh_chung': 'nckh_noi_dung',
     'minh_chung_thanh_tich_khac': 'thanh_tich_ca_nhan_khac',
 };
@@ -1068,10 +1065,12 @@ function togglePhamViBlocks() {
 function renderTapTheCriteria(selectedDanhHieu, isTapThe) {
     var section = document.getElementById('section-tap-the-criteria');
     var container = document.getElementById('tap-the-criteria-container');
+    var ten_tap_the_input = document.querySelector('[name="ten_don_vi_de_xuat"]');
     if (!section || !container) return;
 
     if (!isTapThe || !selectedDanhHieu || !TIEU_CHI_TAP_THE[selectedDanhHieu]) {
         section.style.display = 'none';
+        ten_tap_the_input.style.display = 'none';
         container.innerHTML = '';
         return;
     }
