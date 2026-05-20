@@ -16,44 +16,37 @@
         <small class="text-muted">Xem tất cả cá nhân và tiến trình duyệt theo đơn vị</small>
     </div>
     {% if unit_groups %}
-      <div class="toolbar-wrapper">
+    <div class="toolbar-wrapper">
     <div class="toolbar-inner">
-
-      <!-- Select đơn vị -->
-      <select class="form-select form-select-sm" id="unitFilter" style="width:220px; min-width:220px;">
-        <option value="">Tất cả đơn vị (12)</option>
-        <option value="Phòng A">Phòng A</option>
-        <option value="Phòng B">Phòng B</option>
-      </select>
-
-      <!-- View mode toggle -->
-      <div class="btn-group btn-group-sm" role="group" title="Chế độ xem">
-        <a href="#" class="btn btn-navy" title="Xem gọn">
-          <i class="bi bi-list"></i>
+        <select class="form-select form-select-sm" id="unitFilter" style="width:220px; min-width:220px;">
+            <option value="">Tất cả đơn vị ({{ unit_groups|length }})</option>
+            {% for ug in unit_groups %}
+            <option value="{{ ug.unit_name }}" {% if unit_filter == ug.unit_name %}selected{% endif %}>{{ ug.unit_name }}</option>
+            {% endfor %}
+        </select>
+        <!-- View mode toggle -->
+        <div class="btn-group btn-group-sm" role="group" title="Chế độ xem">
+            <a href="{{ url_for('admin.approval_tracking', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, view='compact') }}"
+               class="btn {{ 'btn-navy' if view_mode == 'compact' else 'btn-outline-navy' }}" title="Xem gọn">
+                <i class="bi bi-list"></i>
+            </a>
+            <a href="{{ url_for('admin.approval_tracking', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, view='detail') }}"
+               class="btn {{ 'btn-navy' if view_mode == 'detail' else 'btn-outline-navy' }}" title="Xem chi tiết">
+                <i class="bi bi-table"></i>
+            </a>
+        </div>
+        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll" title="Phê duyệt cuối tất cả đề xuất sẵn sàng">
+            <i class="bi bi-shield-check me-1"></i>PD cuối toàn bộ
+        </button>
+        <a href="{{ url_for('admin.export_tracking_excel', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
+           class="btn btn-sm btn-outline-success" title="Xuất Excel chi tiết">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
         </a>
-        <a href="#" class="btn btn-outline-navy" title="Xem chi tiết">
-          <i class="bi bi-table"></i>
-        </a>
-      </div>
-
-      <!-- Phê duyệt cuối toàn bộ -->
-      <button type="button" class="btn btn-sm btn-success" id="btnApproveAll"
-              title="Phê duyệt cuối tất cả đề xuất sẵn sàng">
-        <i class="bi bi-shield-check me-1"></i>PD cuối toàn bộ
-      </button>
-
-      <!-- Xuất Excel -->
-      <a href="#" class="btn btn-sm btn-outline-success" title="Xuất Excel chi tiết">
-        <i class="bi bi-file-earmark-excel me-1"></i>Excel
-      </a>
-
-      <!-- In PDF -->
-      <button class="btn btn-sm btn-outline-danger" title="In PDF toàn bộ">
-        <i class="bi bi-printer me-1"></i>In PDF
-      </button>
-
+        <button class="btn btn-sm btn-outline-danger" onclick="printTracking()" title="In PDF toàn bộ">
+            <i class="bi bi-printer me-1"></i>In PDF
+        </button>
     </div>
-  </div>
+    </div>
     {% endif %}
 </div>
 
@@ -640,8 +633,45 @@
 []
 {% endif %}
 </script>
+
 <style>
-    .toolbar-wrapper {
+    .stat-mini {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.82rem;
+    }
+    .stat-mini i { font-size: 1rem; }
+    .unit-card.filtered-out { display: none !important; }
+    .sticky-action-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 1;
+        background: #fff !important;
+        box-shadow: -2px 0 4px rgba(0,0,0,0.08);
+    }
+    thead th.sticky-action-col {
+        background: var(--navy-primary) !important;
+        color: #fff !important;
+        z-index: 2;
+    }
+    tr.table-info td.sticky-action-col { background: #cff4fc !important; }
+    tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
+    .table-custom tbody tr:hover td.sticky-action-col { background: #F8F9FB !important; }
+    .btn-navy {
+        background: var(--navy-primary);
+        color: #fff;
+        border-color: var(--navy-primary);
+    }
+    .btn-navy:hover {
+        background: var(--navy-dark);
+        color: #fff;
+    }
+     .toolbar-wrapper {
       position: sticky;
       top: 0;
       left: 0;
@@ -694,44 +724,6 @@
       padding: 20px;
       height: 2000px;
       background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
-    }
-  </style>
-<style>
-    .stat-mini {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 0.4rem 0.75rem;
-        font-size: 0.82rem;
-    }
-    .stat-mini i { font-size: 1rem; }
-    .unit-card.filtered-out { display: none !important; }
-    .sticky-action-col {
-        position: sticky !important;
-        right: 0 !important;
-        z-index: 1;
-        background: #fff !important;
-        box-shadow: -2px 0 4px rgba(0,0,0,0.08);
-    }
-    thead th.sticky-action-col {
-        background: var(--navy-primary) !important;
-        color: #fff !important;
-        z-index: 2;
-    }
-    tr.table-info td.sticky-action-col { background: #cff4fc !important; }
-    tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
-    .table-custom tbody tr:hover td.sticky-action-col { background: #F8F9FB !important; }
-    .btn-navy {
-        background: var(--navy-primary);
-        color: #fff;
-        border-color: var(--navy-primary);
-    }
-    .btn-navy:hover {
-        background: var(--navy-dark);
-        color: #fff;
     }
 </style>
 
