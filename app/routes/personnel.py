@@ -36,6 +36,9 @@ def list_personnel():
     don_vi_truc_thuoc_filter = request.args.get('don_vi_truc_thuoc', '').strip()
     sort_by = request.args.get('sort_by', 'chuc_vu_order').strip()
     page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    if per_page not in (20, 50, 100):
+        per_page = 20
 
     query = QuanNhan.query.filter_by(don_vi_id=current_user.don_vi_id, is_active=True)
     if search:
@@ -77,7 +80,7 @@ def list_personnel():
             QuanNhan.ho_ten.asc()
         )
 
-    personnel = query.paginate(page=page, per_page=20, error_out=False)
+    personnel = query.paginate(page=page, per_page=per_page, error_out=False)
 
     # Distinct don_vi_truc_thuoc values for this don_vi (for filter dropdown)
     don_vi_truc_thuoc_list = [
@@ -95,6 +98,7 @@ def list_personnel():
                            doi_tuong_filter=doi_tuong_filter,
                            don_vi_truc_thuoc_filter=don_vi_truc_thuoc_filter,
                            sort_by=sort_by,
+                           per_page=per_page,
                            cap_bac_list=_get_cap_bac_list(),
                            chuc_vu_list=[x.ten for x in _get_chuc_vu_options()],
                            doi_tuong_list=_get_doi_tuong_list(),
