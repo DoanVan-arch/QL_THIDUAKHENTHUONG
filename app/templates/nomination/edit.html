@@ -469,7 +469,7 @@
              <!-- Thành tích quần chúng khác -->
           
     <!-- Thành tích quần chúng khác -->
-<div class="form-section" id="section-doan-the" style="display: none;">
+<div class="form-section hidden" id="section-doan-the">
     <div class="form-section-title" style="color: #E67E22;">
         <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn thể (nếu có)
     </div>
@@ -511,7 +511,7 @@
     </div>
 </div>
 
-<div class="form-section" id="section-phu-nu" style="display: none;">
+<div class="form-section hidden" id="section-phu-nu">
     <div class="form-section-title" style="color: #E67E22;">
         <i class="bi bi-star me-1"></i>Thành tích cá nhân hội phụ nữ (nếu có)
     </div>
@@ -1088,12 +1088,10 @@ function togglePhamViBlocks() {
 function renderTapTheCriteria(selectedDanhHieu, isTapThe) {
     var section = document.getElementById('section-tap-the-criteria');
     var container = document.getElementById('tap-the-criteria-container');
-    var ten_tap_the_input = document.querySelector('[name="ten_don_vi_de_xuat"]');
     if (!section || !container) return;
 
     if (!isTapThe || !selectedDanhHieu || !TIEU_CHI_TAP_THE[selectedDanhHieu]) {
         section.style.display = 'none';
-        ten_tap_the_input.style.display = 'none';
         container.innerHTML = '';
         return;
     }
@@ -1138,8 +1136,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var _qnSel = document.getElementById('quan_nhan_select');
     if (_qnSel && _qnSel.value) {
         var _opt = _qnSel.options[_qnSel.selectedIndex];
-        if (_secDoan){ _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1'); _secDoan.display = ''; }
-        if (_secPN) { _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1'); _secPN.display = ''; }
+        if (_secDoan) _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1');
+        if (_secPN) _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1');
         // chu_tri: only for cap truong or bi thu
         var _chuTriWrap = (function() { var i = document.querySelector('[name="chu_tri_don_vi_danh_hieu"]'); return i ? i.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null; })();
         if (_chuTriWrap) _chuTriWrap.classList.toggle('hidden', !(_opt.getAttribute('data-lachihuy') === '1' || _opt.getAttribute('data-labithu') === '1'));
