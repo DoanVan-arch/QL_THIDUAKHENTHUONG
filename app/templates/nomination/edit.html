@@ -180,8 +180,6 @@
                                     data-chucvu="{{ p.chuc_vu or '' }}"
                                     data-ladoanvien="{{ '1' if p.la_doan_vien else '0' }}"
                                     data-lahoivienphunu="{{ '1' if p.la_hoi_vien_phu_nu else '0' }}"
-                                    data-lachihuy="{{ '1' if p.la_chi_huy else '0' }}"
-                                    data-labithu="{{ '1' if p.la_bi_thu else '0' }}"
                                     {% if is_nominated %}disabled{% endif %}>
                                 {{ p.ho_ten }} - {{ p.cap_bac or '' }} - {{ p.chuc_vu or '' }}{% if is_nominated %} (Đã đề xuất){% endif %}
                             </option>
@@ -388,7 +386,7 @@
                 'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
                 'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
                 'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc',
-                'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn','ten_don_vi_de_xuat',
+                'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn',
             ] -%}
             {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
             {%- if extra_tc %}
@@ -640,7 +638,7 @@ var DIEM_NHOM_MAP = {{ diem_nhom_map | default({}) | tojson }};
 
 function ensureBuiltInEvidenceFields() {
     var requiredBuiltIns = [
-        
+        { ma_truong: 'ket_qua_doan_the', ten: 'Hoàn thành nhiệm vụ, khen thưởng của tổ chức quần chúng' },
         { ma_truong: 'thanh_tich_ca_nhan_khac', ten: 'Thành tích cá nhân khác' }
     ];
 
@@ -749,7 +747,7 @@ var NON_CRITERIA_FIELDS = {
     csrf_token: true, quan_nhan_id: true, loai_danh_hieu: true,
     doi_tuong: true, ghi_chu_item: true, ly_do_chua_dat_diem: true,
     nckh_noi_dung_text: true,
-    // managed by togglePhamViBlocks, not criteria visibility
+    ten_don_vi_de_xuat: true,  // managed by togglePhamViBlocks, not criteria visibility
 };
 
 // Fields that ARE criteria-controlled but not managed via CRITERIA_META/DIEM_NHOM_MAP.
@@ -773,24 +771,6 @@ var OPTIONAL_CRITERIA_FIELDS = {
     thanh_tich_ca_nhan_khac: true,
     minh_chung_thanh_tich_khac: true, // follows thanh_tich_ca_nhan_khac
 };
-// Auto-register extra (DB-only) tiêu chí as optional so they follow OPTIONAL_CRITERIA_FIELDS logic
-{%- set hardcoded_fields_set = [
-    'diem_kiem_tra_dieu_lenh','diem_ban_sung','diem_the_luc','diem_kiem_tra_chinh_tri','diem_kiem_tra_tin_hoc','diem_dia_ly_quan_su',
-    'kiem_tra_dieu_lenh','ban_sung','the_luc','kiem_tra_chinh_tri','kiem_tra_tin_hoc','dia_ly_quan_su',
-    'xep_loai_dang_vien','ket_qua_doan_the','xep_loai_doan_vien','chu_tri_don_vi_danh_hieu',
-    'danh_hieu_gv_gioi','dinh_muc_giang_day','thoi_gian_lao_dong_kh','ket_qua_kiem_tra_giang',
-    'tien_do_pgs','danh_hieu_hv_gioi','diem_tong_ket','ket_qua_thuc_hanh',
-    'nckh_noi_dung','nckh_noi_dung_text','diem_nckh','nckh_minh_chung',
-    'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
-    'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc',
-    'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn','ten_don_vi_de_xuat',
-    'muc_do_hoan_thanh','phieu_tin_nhiem',
-] -%}
-(function() {
-    {% for tc in tieu_chi_list %}{% if tc.ma_truong not in hardcoded_fields_set %}
-    OPTIONAL_CRITERIA_FIELDS[{{ tc.ma_truong | tojson }}] = true;
-    {% endif %}{% endfor %}
-})();
 
 function renderScoreWarnings(selectedDanhHieu) {
     // Remove all old warnings first
@@ -1021,9 +1001,6 @@ function applyCriteriaVisibilityByGroup() {
         if (sec.id === 'dynamic-evidence-section') { sec.classList.remove('hidden'); return; }
         if (sec.id === 'score-reason-section') return; // managed by renderScoreReasonSection
         if (sec.id === 'section-tap-the-criteria') return; // managed by renderTapTheCriteria
-        if (sec.id === 'section-doan-the') return; // managed by onPersonnelSelect
-        if (sec.id === 'section-phu-nu') return; // managed by onPersonnelSelect
-        // section-extra-criteria: show/hide based on whether any child field is visible
 
         // Hide all individual criteria sections for tap_the nominations
         if (isTapThe) { sec.classList.add('hidden'); return; }
@@ -1138,16 +1115,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var _qnSel = document.getElementById('quan_nhan_select');
     if (_qnSel && _qnSel.value) {
         var _opt = _qnSel.options[_qnSel.selectedIndex];
-        if (_secDoan){ _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1'); _secDoan.display = ''; }
-        if (_secPN) { _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1'); _secPN.display = ''; }
-        // chu_tri: only for cap truong or bi thu
-        var _chuTriWrap = (function() { var i = document.querySelector('[name="chu_tri_don_vi_danh_hieu"]'); return i ? i.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null; })();
-        if (_chuTriWrap) _chuTriWrap.classList.toggle('hidden', !(_opt.getAttribute('data-lachihuy') === '1' || _opt.getAttribute('data-labithu') === '1'));
+        if (_secDoan) _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1');
+        if (_secPN) _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1');
     } else {
         if (_secDoan) _secDoan.classList.add('hidden');
         if (_secPN) _secPN.classList.add('hidden');
-        var _chuTriWrap2 = (function() { var i = document.querySelector('[name="chu_tri_don_vi_danh_hieu"]'); return i ? i.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null; })();
-        if (_chuTriWrap2) _chuTriWrap2.classList.add('hidden');
     }
 
     Object.keys(TIEU_CHI_TOOLTIPS).forEach(function(fieldName) {
