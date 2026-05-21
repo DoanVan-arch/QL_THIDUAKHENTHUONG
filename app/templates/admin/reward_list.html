@@ -112,6 +112,7 @@
                         <th>STT</th>
                         <th>Đơn vị</th>
                         <th>Họ và tên</th>
+                        <th>Vai trò</th>
                         <th class="col-b1-detail">Thông tin cá nhân</th>
                         <th class="col-b1-detail">Chi tiết tiêu chí</th>
                         <th>Danh hiệu</th>
@@ -129,6 +130,15 @@
                         <td>{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
                         <td>{{ qn.ho_ten if qn else '—' }}</td>
+                        <td>
+                            {% if qn %}
+                            {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.6rem;">Cấp trưởng</span>{% endif %}
+                            {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.6rem;">Bí thư</span>{% endif %}
+                            {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.6rem;">Đoàn viên</span>{% endif %}
+                            {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.6rem;">Phụ nữ</span>{% endif %}
+                            {% if not (qn.la_chi_huy or qn.la_bi_thu or qn.la_doan_vien or qn.la_hoi_vien_phu_nu) %}-{% endif %}
+                            {% else %}-{% endif %}
+                        </td>
                         <td class="col-b1-detail">
                             {% if qn %}
                             <div><strong>CCCD:</strong> {{ qn.can_cuoc_cong_dan or '-' }}</div>
@@ -296,6 +306,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <tr>
                         <th style="width:36px;">STT</th>
                         <th>Họ tên</th>
+                        <th>Vai trò</th>
                         <th>Đơn vị</th>
                         <th style="white-space:nowrap;">Cấp bậc / Chức vụ</th>
                         <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
@@ -326,6 +337,14 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet no-print"
                                 data-ct-id="{{ ct.id }}" title="Xem chi tiết"
                                 style="padding:0.1rem 0.35rem;font-size:0.7rem;"><i class="bi bi-info-circle"></i></button>
+                    </td>
+                    <td style="font-size:0.75rem;">
+                        {% set qn2 = ct.quan_nhan %}
+                        {% if qn2.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
+                        {% if qn2.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
+                        {% if qn2.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
+                        {% if qn2.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                        {% if not (qn2.la_chi_huy or qn2.la_bi_thu or qn2.la_doan_vien or qn2.la_hoi_vien_phu_nu) %}-{% endif %}
                     </td>
                     <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
                     <td style="font-size:0.78rem;white-space:nowrap;">
@@ -640,6 +659,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <tr>
                         <th style="width:40px;">STT</th>
                         <th style="min-width:150px;">Họ tên</th>
+                        <th>Vai trò</th>
                         <th class="col-b3-detail">Cấp bậc</th>
                         <th class="col-b3-detail">Chức vụ</th>
                         <th class="col-b3-detail">Đối tượng</th>
@@ -657,12 +677,22 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     {% set ns_b3cn.prev_unit = kt.don_vi_id %}
                     {% set ns_b3cn.prev_nh = kt.nam_hoc %}
                     <tr class="table-light">
-                        <td colspan="10" class="fw-semibold text-navy">{{ kt.don_vi.ten_don_vi }} - Năm học {{ kt.nam_hoc }}</td>
+                        <td colspan="11" class="fw-semibold text-navy">{{ kt.don_vi.ten_don_vi }} - Năm học {{ kt.nam_hoc }}</td>
                     </tr>
                     {% endif %}
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">{{ kt.ho_ten }}</td>
+                        <td>
+                            {% if kt.quan_nhan %}
+                            {% set qn3 = kt.quan_nhan %}
+                            {% if qn3.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.6rem;">Cấp trưởng</span>{% endif %}
+                            {% if qn3.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.6rem;">Bí thư</span>{% endif %}
+                            {% if qn3.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.6rem;">Đoàn viên</span>{% endif %}
+                            {% if qn3.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.6rem;">Phụ nữ</span>{% endif %}
+                            {% if not (qn3.la_chi_huy or qn3.la_bi_thu or qn3.la_doan_vien or qn3.la_hoi_vien_phu_nu) %}-{% endif %}
+                            {% else %}-{% endif %}
+                        </td>
                         <td class="col-b3-detail"><small>{{ kt.cap_bac or '-' }}</small></td>
                         <td class="col-b3-detail"><small>{{ kt.chuc_vu or '-' }}</small></td>
                         <td class="col-b3-detail"><small>{{ kt.doi_tuong or '-' }}</small></td>
