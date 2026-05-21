@@ -1,5 +1,5 @@
-from flask import Flask, send_from_directory
-from flask_login import login_required
+from flask import Flask, send_from_directory, session, redirect, url_for, flash
+from flask_login import login_required, current_user, logout_user
 from config import Config
 from app.extensions import db, login_manager, csrf, migrate
 
@@ -32,6 +32,17 @@ def create_app(config_class=None):
     app.register_blueprint(approval_bp, url_prefix='/approval')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(hoi_dong_bp, url_prefix='/hoi-dong')
+
+    @app.before_request
+    def enforce_single_session():
+        """Force logout if session token doesn't match DB (another device logged in)."""
+        if current_user.is_authenticated:
+            stored = session.get('_session_token')
+            if stored is None or current_user.session_token != stored:
+                logout_user()
+                session.clear()
+                flash('Tài khoản đã được đăng nhập từ thiết bị khác. Vui lòng đăng nhập lại.', 'warning')
+                return redirect(url_for('auth.login'))
 
     @app.route('/uploads/<path:filename>')
     @login_required

@@ -554,7 +554,8 @@ def tracking_detail(ct_id):
                            all_fields=all_fields,
                            hoi_dong_votes=HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id).all(),
                            HOI_DONG_VAI_TRO=HOI_DONG_VAI_TRO,
-                           HOI_DONG_VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY)
+                           HOI_DONG_VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY,
+                           back_url=request.referrer or url_for('admin.approval_tracking'))
 
 
 @admin_bp.route('/api/chi-tiet/<int:ct_id>')

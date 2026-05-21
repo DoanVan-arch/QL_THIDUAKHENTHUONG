@@ -1,4 +1,5 @@
 import enum
+import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from sqlalchemy import Column, Integer, String, Enum, Boolean, DateTime, ForeignKey, func
@@ -67,6 +68,11 @@ class User(db.Model, UserMixin):
     is_active_account = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    # Single-device session tracking
+    session_token = Column(String(64), nullable=True, index=True)
+    last_login_ip = Column(String(45), nullable=True)
+    last_login_at = Column(DateTime, nullable=True)
+    last_login_device = Column(String(256), nullable=True)
 
     don_vi = relationship('DonVi', back_populates='user_account')
 
@@ -75,6 +81,12 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def generate_session_token(self):
+        """Generate a new session token and return it."""
+        token = secrets.token_hex(32)
+        self.session_token = token
+        return token
 
     @property
     def is_active(self):

@@ -22,6 +22,8 @@
                         <th>Vai trò</th>
                         <th>Đơn vị</th>
                         <th>Trạng thái</th>
+                        <th>Đăng nhập cuối</th>
+                        <th>Địa chỉ IP</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
@@ -39,6 +41,13 @@
                             <span class="badge-status badge-rejected">Vô hiệu</span>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if u.last_login_at %}
+                            <small>{{ u.last_login_at.strftime('%H:%M %d/%m/%Y') }}</small>
+                            {% if u.session_token %}<i class="bi bi-circle-fill text-success ms-1" title="Đang online" style="font-size:0.55rem;"></i>{% endif %}
+                            {% else %}<small class="text-muted">Chưa đăng nhập</small>{% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ u.last_login_ip or '-' }}</small></td>
                         <td>
                             <form method="POST" action="{{ url_for('admin.toggle_user', id=u.id) }}" style="display:inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

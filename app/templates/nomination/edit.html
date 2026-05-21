@@ -1069,12 +1069,12 @@ function togglePhamViBlocks() {
 function renderTapTheCriteria(selectedDanhHieu, isTapThe) {
     var section = document.getElementById('section-tap-the-criteria');
     var container = document.getElementById('tap-the-criteria-container');
-    var ten_tap_the_input = document.querySelector('[name="ten_don_vi_de_xuat"]');
+   // var ten_tap_the_input = document.querySelector('[name="ten_don_vi_de_xuat"]');
     if (!section || !container) return;
 
     if (!isTapThe || !selectedDanhHieu || !TIEU_CHI_TAP_THE[selectedDanhHieu]) {
         section.style.display = 'none';
-        ten_tap_the_input.style.display = 'none';
+      //  ten_tap_the_input.style.display = 'none';
         container.innerHTML = '';
         return;
     }
