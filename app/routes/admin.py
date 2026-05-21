@@ -3460,7 +3460,8 @@ def edit_danh_hieu(id):
     return render_template('admin/edit_danh_hieu.html',
                            dh=dh,
                            tieu_chi_options=[(tc.ma_truong, tc.ten) for tc in TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all()] or TIEU_CHI_OPTIONS,
-                           tieu_chi_db=TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all())
+                           tieu_chi_db=TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all(),
+                           nhom_labels=_get_nhom_tieu_chi_choices())
 
 
 # ------------------------------------------------------------------

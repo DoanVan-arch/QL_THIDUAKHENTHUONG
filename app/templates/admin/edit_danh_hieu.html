@@ -51,60 +51,107 @@
                 <div class="form-section-title">Tiêu chí áp dụng</div>
                 <small class="text-muted d-block mb-3">Chọn các tiêu chí sẽ hiển thị khi đề xuất danh hiệu này. Các tiêu chí không được chọn sẽ bị ẩn trên form đề xuất.</small>
 
-                <div class="mb-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="selectAllTC()">
+                <div class="mb-3 d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectAllTC()">
                         <i class="bi bi-check-all me-1"></i>Chọn tất cả
                     </button>
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAllTC()">
                         <i class="bi bi-x-lg me-1"></i>Bỏ chọn tất cả
                     </button>
+                    <span class="ms-2 text-muted small align-self-center">
+                        Đã chọn: <strong id="tc-selected-count">0</strong> / {{ tieu_chi_db|length }}
+                    </span>
                 </div>
 
-                <div class="row g-2">
-                    {% if tieu_chi_db %}
-                    {# DB-driven grouped display #}
-                    {% set nhom_labels = {'chung': 'Tiêu chí chung', 'giang_vien': 'Tiêu chí giảng viên', 'hoc_vien': 'Tiêu chí học viên', 'nckh': 'Tiêu chí NCKH', 'khac': 'Khác'} %}
-                    {% set ns = namespace(current_nhom='') %}
-                    {% for tc in tieu_chi_db %}
-                    {% if tc.nhom != ns.current_nhom %}
-                    {% set ns.current_nhom = tc.nhom %}
-                    <div class="col-12 {% if not loop.first %}mt-3{% endif %}">
-                        <small class="fw-semibold text-muted">{{ nhom_labels.get(tc.nhom, tc.nhom) }}</small>
-                    </div>
+                {% if tieu_chi_db %}
+                {# Group by nhom #}
+                {% set ns = namespace(groups={}) %}
+                {% for tc in tieu_chi_db %}
+                    {% set nhom_key = tc.nhom or 'khac' %}
+                    {# accumulate into groups dict is not possible in Jinja2; use nhom ordering instead #}
+                {% endfor %}
+
+                {# Collect unique nhom in order #}
+                {% set ns2 = namespace(seen=[], ordered=[]) %}
+                {% for tc in tieu_chi_db %}
+                    {% set nhom_key = tc.nhom or 'khac' %}
+                    {% if nhom_key not in ns2.seen %}
+                        {% set ns2.seen = ns2.seen + [nhom_key] %}
+                        {% set ns2.ordered = ns2.ordered + [nhom_key] %}
                     {% endif %}
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            <input class="form-check-input tc-checkbox" type="checkbox" name="tieu_chi" 
-                                   value="{{ tc.ma_truong }}" id="tc_{{ tc.ma_truong }}"
-                                   {% if tc.ma_truong in dh.tieu_chi %}checked{% endif %}>
-                            <label class="form-check-label small" for="tc_{{ tc.ma_truong }}">
-                                {{ tc.ten }}
-                                {% if tc.huong_dan %}
-                                <i class="bi bi-info-circle text-muted ms-1" 
-                                   data-bs-toggle="tooltip" data-bs-placement="top"
-                                   title="{{ tc.huong_dan }}"></i>
+                {% endfor %}
+
+                <div class="accordion" id="tcAccordion">
+                {% for nhom_key in ns2.ordered %}
+                    {% set nhom_name = nhom_labels.get(nhom_key, nhom_key) %}
+                    {% set nhom_tcs = tieu_chi_db | selectattr('nhom', 'equalto', nhom_key) | list %}
+                    {% set nhom_checked = nhom_tcs | selectattr('ma_truong', 'in', dh.tieu_chi) | list %}
+                    {% set acc_id = 'acc_' ~ nhom_key %}
+                    <div class="accordion-item border mb-2 rounded">
+                        <h2 class="accordion-header" id="h_{{ acc_id }}">
+                            <button class="accordion-button {% if loop.index > 1 %}collapsed{% endif %} py-2 px-3"
+                                    type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#{{ acc_id }}" aria-expanded="{{ 'true' if loop.first else 'false' }}">
+                                <span class="fw-semibold">{{ nhom_name }}</span>
+                                <span class="badge bg-secondary ms-2" style="font-size:0.7rem;">{{ nhom_tcs|length }} tiêu chí</span>
+                                {% if nhom_checked %}
+                                <span class="badge bg-success ms-1" style="font-size:0.7rem;">{{ nhom_checked|length }} đã chọn</span>
                                 {% endif %}
-                                {% if tc.co_minh_chung %}
-                                <i class="bi bi-paperclip text-muted ms-1" title="Yêu cầu minh chứng"></i>
-                                {% endif %}
-                            </label>
+                                <button type="button" class="btn btn-link btn-sm ms-auto me-3 p-0 text-primary"
+                                        style="font-size:0.75rem;text-decoration:none;"
+                                        onclick="event.stopPropagation(); selectGroupTC('{{ nhom_key }}')">Chọn nhóm</button>
+                                <button type="button" class="btn btn-link btn-sm me-2 p-0 text-secondary"
+                                        style="font-size:0.75rem;text-decoration:none;"
+                                        onclick="event.stopPropagation(); deselectGroupTC('{{ nhom_key }}')">Bỏ chọn</button>
+                            </button>
+                        </h2>
+                        <div id="{{ acc_id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}">
+                            <div class="accordion-body py-2 px-3">
+                                <div class="row g-2">
+                                {% for tc in nhom_tcs %}
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input tc-checkbox" type="checkbox"
+                                               name="tieu_chi" value="{{ tc.ma_truong }}"
+                                               id="tc_{{ tc.ma_truong }}"
+                                               data-nhom="{{ nhom_key }}"
+                                               {% if tc.ma_truong in dh.tieu_chi %}checked{% endif %}>
+                                        <label class="form-check-label small" for="tc_{{ tc.ma_truong }}">
+                                            {{ tc.ten }}
+                                            {% if tc.huong_dan %}
+                                            <i class="bi bi-info-circle text-muted ms-1"
+                                               data-bs-toggle="tooltip" data-bs-placement="top"
+                                               title="{{ tc.huong_dan }}"></i>
+                                            {% endif %}
+                                            {% if tc.co_minh_chung %}
+                                            <i class="bi bi-paperclip text-muted ms-1" title="Yêu cầu minh chứng"></i>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    {% endfor %}
-                    {% else %}
-                    {# Fallback to flat tieu_chi_options list #}
+                {% endfor %}
+                </div>
+
+                {% else %}
+                {# Fallback flat list #}
+                <div class="row g-2">
                     {% for key, label in tieu_chi_options %}
                     <div class="col-md-4">
                         <div class="form-check">
-                            <input class="form-check-input tc-checkbox" type="checkbox" name="tieu_chi" 
+                            <input class="form-check-input tc-checkbox" type="checkbox" name="tieu_chi"
                                    value="{{ key }}" id="tc_{{ key }}"
                                    {% if key in dh.tieu_chi %}checked{% endif %}>
                             <label class="form-check-label small" for="tc_{{ key }}">{{ label }}</label>
                         </div>
                     </div>
                     {% endfor %}
-                    {% endif %}
                 </div>
+                {% endif %}
             </div>
 
             <div class="d-flex gap-2">
@@ -118,14 +165,32 @@
 
 {% block extra_js %}
 <script>
+function updateCount() {
+    var checked = document.querySelectorAll('.tc-checkbox:checked').length;
+    var el = document.getElementById('tc-selected-count');
+    if (el) el.textContent = checked;
+}
 function selectAllTC() {
     document.querySelectorAll('.tc-checkbox').forEach(function(cb) { cb.checked = true; });
+    updateCount();
 }
 function deselectAllTC() {
     document.querySelectorAll('.tc-checkbox').forEach(function(cb) { cb.checked = false; });
+    updateCount();
 }
-// Enable tooltips
+function selectGroupTC(nhom) {
+    document.querySelectorAll('.tc-checkbox[data-nhom="' + nhom + '"]').forEach(function(cb) { cb.checked = true; });
+    updateCount();
+}
+function deselectGroupTC(nhom) {
+    document.querySelectorAll('.tc-checkbox[data-nhom="' + nhom + '"]').forEach(function(cb) { cb.checked = false; });
+    updateCount();
+}
 document.addEventListener('DOMContentLoaded', function() {
+    updateCount();
+    document.querySelectorAll('.tc-checkbox').forEach(function(cb) {
+        cb.addEventListener('change', updateCount);
+    });
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
 });

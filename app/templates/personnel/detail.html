@@ -100,11 +100,14 @@
                         <div>{{ qn.ngoai_ngu or '-' }}</div>
                     </div>
                     <div class="col-md-3">
-                        <small class="text-muted">Vai trò</small>
-                        <div>
-                            {% if qn.la_chi_huy %}<span class="badge bg-primary">Cấp trưởng</span>{% endif %}
-                            {% if qn.la_bi_thu %}<span class="badge bg-info">Bí thư</span>{% endif %}
-                            {% if not qn.la_chi_huy and not qn.la_bi_thu %}-{% endif %}
+                        <small class="text-muted">Vai trò / Thành viên</small>
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            {% if qn.la_chi_huy %}<span class="badge bg-danger">Cấp trưởng</span>{% endif %}
+                            {% if qn.la_bi_thu %}<span class="badge bg-primary">Bí thư</span>{% endif %}
+                            {% if qn.la_dang_vien %}<span class="badge bg-success">Đảng viên</span>{% endif %}
+                            {% if qn.la_doan_vien %}<span class="badge bg-info text-dark">Đoàn viên</span>{% endif %}
+                            {% if qn.la_hoi_vien_phu_nu %}<span class="badge" style="background:#e83e8c;">Hội viên phụ nữ</span>{% endif %}
+                            {% if not (qn.la_chi_huy or qn.la_bi_thu or qn.la_dang_vien or qn.la_doan_vien or qn.la_hoi_vien_phu_nu) %}<span class="text-muted">-</span>{% endif %}
                         </div>
                     </div>
                 </div>
