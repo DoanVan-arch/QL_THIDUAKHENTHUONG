@@ -58,7 +58,8 @@
 </div>
 {% endif %}
 
-<!-- Summary stats -->
+<!-- Summary stats (chỉ hiện khi đã chọn năm học) -->
+{% if nam_hoc_filter %}
 <div class="d-flex gap-3 mb-3 flex-wrap">
     <div class="stat-mini">
         <i class="bi bi-people-fill text-primary"></i>
@@ -91,6 +92,7 @@
     </div>
     {% endif %}
 </div>
+{% endif %}
 
 <!-- Filters -->
 <div class="card-section mb-3">
@@ -167,9 +169,8 @@
                 <tr>
                     <th style="width:35px;">STT</th>
                     <th style="min-width:130px;">Họ tên</th>
-                    <th style="min-width:80px;">Vai trò</th>
+                    <th style="min-width:110px;">Đơn vị</th>
                     <th>Cấp bậc / Chức vụ</th>
-                    <th>Đơn vị</th>
                     <th>Đối tượng</th>
                     <th>Danh hiệu</th>
                     {% if view_mode == 'detail' %}
@@ -196,21 +197,22 @@
                 {% endfor %}
                 <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
                     <td>{{ loop.index }}</td>
-                    <td class="fw-semibold">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}</td>
-                    <td>
+                    <td class="fw-semibold">
+                        {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
                         {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
-                        {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.62rem;">Cấp trưởng</span>{% endif %}
-                        {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.62rem;">Bí thư</span>{% endif %}
-                        {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.62rem;">Đoàn viên</span>{% endif %}
-                        {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.62rem;">Phụ nữ</span>{% endif %}
-                        {% if not (qn.la_chi_huy or qn.la_bi_thu or qn.la_doan_vien or qn.la_hoi_vien_phu_nu) %}<span class="text-muted" style="font-size:0.75rem;">-</span>{% endif %}
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                        {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
+                        {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
+                        {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
+                        {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                        </div>
                         {% endif %}
                     </td>
+                    <td><small class="text-ellipsis-sm" title="{{ ct_data.don_vi }}">{{ ct_data.don_vi }}</small></td>
                     <td>
                         {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
                         {% else %}<small class="text-muted">-</small>{% endif %}
                     </td>
-                    <td><small>{{ ct_data.don_vi }}</small></td>
                     <td><small>{{ ct.doi_tuong or '-' }}</small></td>
                     <td>
                         {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTD</span>
