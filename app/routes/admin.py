@@ -350,8 +350,8 @@ def approval_tracking():
                     if not dept_ok:
                         all_dept_ok = False
 
-            # Individual can be final-approved if all 6 depts approved this person
-            ct_can_approve = all_dept_ok
+            # Individual can be final-approved if all depts approved and not yet admin_approved
+            ct_can_approve = all_dept_ok and not ct.admin_approved
 
             ct_entry = {
                 'ct': ct,
