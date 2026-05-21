@@ -261,6 +261,35 @@ def _notify_rejections(phe_duyet):
             db.session.add(thong_bao)
 
 
+def _auto_reject_nomination_on_item(phe_duyet, ct_id, ly_do=''):
+    """When any dept rejects an item, immediately reject the whole nomination and notify."""
+    de_xuat = phe_duyet.de_xuat
+    # Mark this phe_duyet as rejected immediately
+    phe_duyet.ket_qua = KetQuaDuyet.TU_CHOI.value
+    phe_duyet.nguoi_duyet_id = None
+    phe_duyet.ngay_duyet = datetime.utcnow()
+    phe_duyet.ly_do = ly_do or 'Có cá nhân/tập thể bị từ chối'
+    # Mark the whole nomination as rejected
+    de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
+    # Send notification to unit
+    unit_user = User.query.filter_by(
+        don_vi_id=de_xuat.don_vi_id, role=Role.UNIT_USER
+    ).first()
+    if unit_user:
+        ct = DeXuatChiTiet.query.get(ct_id)
+        name = (ct.quan_nhan.ho_ten if ct and ct.quan_nhan else
+                (ct.ten_don_vi_de_xuat if ct else de_xuat.don_vi.ten_don_vi))
+        thong_bao = ThongBao(
+            user_id=unit_user.id,
+            de_xuat_id=de_xuat.id,
+            chi_tiet_id=ct_id,
+            loai='tu_choi',
+            tieu_de=f'{phe_duyet.phong_duyet} từ chối: {name}',
+            noi_dung=f'Lý do: {ly_do or "Không đạt yêu cầu"}. Đề xuất năm học {de_xuat.nam_hoc} của {de_xuat.don_vi.ten_don_vi} đã bị từ chối.',
+        )
+        db.session.add(thong_bao)
+
+
 @approval_bp.route('/pending')
 @login_required
 @department_required
@@ -562,11 +591,12 @@ def reject_item(id, ct_id):
 
     kq.ket_qua = KetQuaDuyet.TU_CHOI.value
     kq.ly_do = ly_do
+    _auto_reject_nomination_on_item(phe_duyet, ct_id, ly_do)
     db.session.commit()
 
     ct = DeXuatChiTiet.query.get(ct_id)
     name = ct.quan_nhan.ho_ten if ct and ct.quan_nhan else 'Đơn vị'
-    flash(f'Đã không nhất trí: {name}', 'warning')
+    flash(f'Đã từ chối: {name}. Đề xuất của đơn vị đã bị từ chối và thông báo đã gửi.', 'warning')
     return redirect(url_for('approval.review_nomination', id=id))
 
 
@@ -677,6 +707,7 @@ def toggle_item(pd_id, ct_id):
             return jsonify({'success': False, 'message': 'Vui lòng nhập lý do'}), 400
         kq.ket_qua = KetQuaDuyet.TU_CHOI.value
         kq.ly_do = ly_do
+        _auto_reject_nomination_on_item(phe_duyet, ct_id, ly_do)
 
     db.session.commit()
 

@@ -153,347 +153,214 @@
         <p class="mt-2 mb-0">Vui lòng <strong>chọn năm học</strong> để xem danh sách theo dõi phê duyệt.</p>
     </div>
 </div>
-{% elif unit_groups %}
-<div class="accordion" id="trackingAccordion">
-    {% for ug in unit_groups %}
-    {% set ug_index = loop.index %}
-    <div class="card-section mb-3 unit-card" data-unit-name="{{ ug.unit_name }}">
-        <div class="card-header-custom d-flex justify-content-between align-items-center"
-             data-bs-toggle="collapse" data-bs-target="#unit-{{ ug_index }}" style="cursor:pointer;">
-            <h6 class="mb-0">
-                <i class="bi bi-building me-2"></i>{{ ug.unit_name }}
-            </h6>
-            <div class="d-flex align-items-center gap-2">
-                {% set ns_unit = namespace(has_ready=false) %}
-                {% for nom_data in ug.nominations %}
-                    {% if nom_data.dx.trang_thai == 'Xét duyệt của cơ quan thường trực' %}
-                        {% set ns_unit.has_ready = true %}
-                    {% endif %}
-                {% endfor %}
-                {% if ns_unit.has_ready %}
-                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 btn-approve-unit"
-                        data-unit-name="{{ ug.unit_name }}" title="Phê duyệt cuối đơn vị này"
-                        onclick="event.stopPropagation();">
-                    <i class="bi bi-shield-check me-1"></i><small>PD cuối ĐV</small>
-                </button>
-                {% endif %}
-                <span class="badge bg-primary" title="Số cá nhân">{{ ug.individual_count }} CN</span>
-                {% if ug.tap_the_count > 0 %}
-                <span class="badge bg-info text-dark" title="Số tập thể">{{ ug.tap_the_count }} TT</span>
-                {% endif %}
-                <span class="badge bg-secondary" title="Số đề xuất">{{ ug.nominations|length }} ĐX</span>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-        </div>
-        <div id="unit-{{ ug_index }}" class="collapse show">
-            <div class="p-0">
-                {% for nom_data in ug.nominations %}
-                {% set dx = nom_data.dx %}
-                {% set sc = status_class[dx.trang_thai] if dx.trang_thai in status_class else 'badge-draft' %}
+{% elif flat_ca_nhan or flat_tap_the %}
 
-                {% if ug.nominations|length > 1 %}
-                <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom bg-light" style="font-size:0.82rem;">
-                    <small class="fw-semibold text-muted">{{ dx.nam_hoc }}</small>
-                    <span class="badge-status {{ sc }}" style="font-size:0.72rem;">{{ dx.trang_thai }}</span>
-                    {% if dx.trang_thai == 'Xét duyệt của cơ quan thường trực' %}
-                    <span class="badge bg-gold text-dark ms-1" style="font-size:0.72rem;">
-                        <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
-                    </span>
-                    {% endif %}
-                    {% if dx.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
-                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-auto"
-                            onclick="openRejectNominationModal({{ dx.id }}, '{{ (ug.unit_name ~ ' - ' ~ dx.nam_hoc)|e }}')"
-                            title="Từ chối toàn bộ đề xuất này">
-                        <i class="bi bi-x-circle me-1"></i><small>Từ chối ĐX</small>
-                    </button>
-                    {% endif %}
-                </div>
-                {% endif %}
-
-                <div class="table-responsive">
-                    <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
-                        <thead>
-                            <tr>
-                                <th style="width:35px;">STT</th>
-                                <th style="min-width:130px;">Họ tên</th>
-                                <th style="min-width:80px;">Vai trò</th>
-                                <th>Cấp bậc / Chức vụ</th>
-                                <th>Đối tượng</th>
-                                <th>Danh hiệu</th>
-                                {% if view_mode == 'detail' %}
-                                <th>Đơn vị</th>
-                                <th>Năm học</th>
-                                {% for field in all_fields %}
-                                <th class="text-center" style="min-width:70px;font-size:0.72rem;">{{ all_field_labels[field] }}</th>
-                                {% endfor %}
-                                {% endif %}
-                                {% for col in tracking_dept_columns %}
-                                <th class="text-center">{{ col.label }}</th>
-                                {% endfor %}
-                                <th class="text-center sticky-action-col" style="width:120px;">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ct_data in nom_data.chi_tiets %}
-                            {% set ct = ct_data.ct %}
-                            {% set dept_results = ct_data.dept_results %}
-                            {% set ct_can_approve = ct_data.can_final_approve %}
-                            {% set any_rejected = false %}
-                            {% for dn in dept_names %}
-                                {% if dept_results[dn] == 'Từ chối' %}{% set any_rejected = true %}{% endif %}
-                            {% endfor %}
-                            <tr class="{% if any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
-                                <td>{{ loop.index }}</td>
-                                <td class="fw-semibold">
-                                    {{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}
-                                </td>
-                                <td>
-                                    {% if ct.quan_nhan %}
-                                    {% set qn = ct.quan_nhan %}
-                                    {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.62rem;">Cấp trưởng</span>{% endif %}
-                                    {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.62rem;">Bí thư</span>{% endif %}
-                                    {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.62rem;">Đoàn viên</span>{% endif %}
-                                    {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.62rem;">Phụ nữ</span>{% endif %}
-                                    {% if not (qn.la_chi_huy or qn.la_bi_thu or qn.la_doan_vien or qn.la_hoi_vien_phu_nu) %}<span class="text-muted" style="font-size:0.75rem;">-</span>{% endif %}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if ct.quan_nhan %}
-                                    <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
-                                    {% else %}
-                                    <small class="text-muted">-</small>
-                                    {% endif %}
-                                </td>
-                                <td><small>{{ ct.doi_tuong or '-' }}</small></td>
-                                <td>
-                                    {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
-                                    <span class="badge bg-warning text-dark">CSTD</span>
-                                    {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
-                                    <span class="badge bg-info text-dark">CSTT</span>
-                                    {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}
-                                    <span class="badge bg-navy">DVQT</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>
-                                    {% endif %}
-                                </td>
-                                {% if view_mode == 'detail' %}
-                                <td><small>{{ dx.don_vi.ten_don_vi }}</small></td>
-                                <td><small>{{ dx.nam_hoc }}</small></td>
-                                {% for field in all_fields %}
-                                <td class="text-center" style="font-size:0.75rem;">
-                                    {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
-                                    {% if val is not none and val != '' and val != 0 %}
-                                        {% if field in ('nckh_noi_dung', 'thanh_tich_ca_nhan_khac', 'nckh_minh_chung') %}
-                                        <span style="display:block;max-width:140px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:help;"
-                                              title="{{ val }}">{{ val }}</span>
-                                        {% else %}
-                                        {{ val }}
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                {% endfor %}
-                                {% endif %}
-                                {% for col in tracking_dept_columns %}
-                                {% set dn = col.key %}
-                                <td class="text-center">
-                                    {% set kq_obj = dept_results[dn] %}
-                                    {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
-                                    <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
-                                        <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
-                                    </span>
-                                    {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
-                                    <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                                    {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
-                                    <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                                    {% else %}
-                                    <span class="text-muted" title="Chưa có">-</span>
-                                    {% endif %}
-                                </td>
-                                {% endfor %}
-                                <td class="text-center sticky-action-col">
-                                    <div class="d-flex gap-1 justify-content-center">
-                                        <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}"
-                                           class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        {% if ct_can_approve %}
-                                        <button type="button" class="btn btn-sm btn-success py-0 px-2"
-                                                title="Phê duyệt cuối"
-                                                onclick="openIndividualApproveModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi)|e }}')">
-                                            <i class="bi bi-shield-check"></i>
-                                        </button>
-                                        {% endif %}
-                                        {% if dx.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
-                                                title="Từ chối cá nhân này"
-                                                onclick="openRejectIndividualModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi)|e }}')">
-                                            <i class="bi bi-x-circle"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                {% if ug.nominations|length > 1 and not loop.last %}
-                <hr class="m-0">
-                {% endif %}
-                {% endfor %}
-
-                {# ── Bảng tập thể riêng ── #}
-                {% set all_tap_the = [] %}
-                {% for nom_data in ug.nominations %}
-                    {% for ct_entry in nom_data.tap_the_chi_tiets %}
-                        {% if all_tap_the.append({'ct_entry': ct_entry, 'dx': nom_data.dx}) %}{% endif %}
-                    {% endfor %}
-                {% endfor %}
-                {% if all_tap_the %}
-                <div class="border-top pt-2 px-2 pb-1">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="badge bg-primary"><i class="bi bi-building me-1"></i>Tập thể</span>
-                        <small class="text-muted fw-semibold">{{ all_tap_the|length }} tập thể đề xuất</small>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:35px;">STT</th>
-                                    <th style="min-width:160px;">Tên tập thể</th>
-                                    <th>Danh hiệu</th>
-                                    <th>Năm học</th>
-                                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
-                                    <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
-                                    {% for f in tt_criteria_fields %}
-                                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
-                                    {% endfor %}
-                                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Thành tích khác</th>
-                                    {% for col in tracking_dept_columns %}
-                                    <th class="text-center">{{ col.label }}</th>
-                                    {% endfor %}
-                                    <th class="text-center" style="width:100px;">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in all_tap_the %}
-                                {% set ct = item.ct_entry.ct %}
-                                {% set dept_results = item.ct_entry.dept_results %}
-                                {% set ct_can_approve = item.ct_entry.can_final_approve %}
-                                {% set dx_tt = item.dx %}
-                                <tr class="{% if ct_can_approve %}table-info{% endif %}">
-                                    <td>{{ loop.index }}</td>
-                                    <td class="fw-semibold">
-                                        <i class="bi bi-building text-primary me-1"></i>
-                                        {{ ct.ten_don_vi_de_xuat or dx_tt.don_vi.ten_don_vi }}
-                                    </td>
-                                    <td>
-                                        {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}
-                                        <span class="badge bg-navy">ĐVQT</span>
-                                        {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}
-                                        <span class="badge bg-info text-dark">ĐVTT</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td><small>{{ dx_tt.nam_hoc }}</small></td>
-                                    <td class="text-center" style="font-size:0.75rem;">
-                                        {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
-                                    </td>
-                                    <td class="text-center" style="font-size:0.75rem;">
-                                        {% if ct.chu_tri_don_vi_danh_hieu %}
-                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
-                                              title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
-                                        {% else %}<span class="text-muted">-</span>{% endif %}
-                                    </td>
-                                    {% set ttd = ct.tap_the_dict or {} %}
-                                    {% for f in tt_criteria_fields %}
-                                    <td class="text-center" style="font-size:0.75rem;">
-                                        {% set fval = ttd.get(f, '') %}
-                                        {% if fval %}<span>{{ fval }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
-                                    </td>
-                                    {% endfor %}
-                                    <td class="text-center" style="font-size:0.75rem;">
-                                        {% if ct.thanh_tich_ca_nhan_khac %}
-                                        <span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
-                                              title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
-                                        {% else %}<span class="text-muted">-</span>{% endif %}
-                                    </td>
-                                    {% for col in tracking_dept_columns %}
-                                    {% set dn = col.key %}
-                                    <td class="text-center">
-                                        {% set kq_obj = dept_results[dn] %}
-                                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
-                                        <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
-                                            <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
-                                        </span>
-                                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
-                                        <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
-                                        <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                                        {% else %}
-                                        <span class="text-muted" title="Chưa có">-</span>
-                                        {% endif %}
-                                    </td>
-                                    {% endfor %}
-                                    <td class="text-center">
-                                        <div class="d-flex gap-1 justify-content-center">
-                                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}"
-                                               class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            {% if ct_can_approve %}
-                                            <button type="button" class="btn btn-sm btn-success py-0 px-2"
-                                                    title="Phê duyệt cuối"
-                                                    onclick="openIndividualApproveModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat|e }}')">
-                                                <i class="bi bi-shield-check"></i>
-                                            </button>
-                                            {% endif %}
-                                            {% if dx_tt.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
-                                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
-                                                    title="Từ chối tập thể này"
-                                                    onclick="openRejectIndividualModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat|e }}')">
-                                                <i class="bi bi-x-circle"></i>
-                                            </button>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if ug.nominations|length <= 1 %}
-                {% set dx = ug.nominations[0].dx %}
-                {% set sc = status_class[dx.trang_thai] if dx.trang_thai in status_class else 'badge-draft' %}
-                <div class="d-flex align-items-center gap-2 px-3 py-2 border-top" style="font-size:0.82rem;">
-                    <small class="text-muted">{{ dx.nam_hoc }}</small>
-                    <span class="badge-status {{ sc }}" style="font-size:0.72rem;">{{ dx.trang_thai }}</span>
-                    {% if dx.trang_thai == 'Xét duyệt của cơ quan thường trực' %}
-                    <span class="badge bg-gold text-dark ms-1" title="Sẵn sàng phê duyệt cuối" style="font-size:0.72rem;">
-                        <i class="bi bi-shield-check me-1"></i>Sẵn sàng PD cuối
-                    </span>
-                    {% endif %}
-                    {% if dx.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
-                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-auto"
-                            onclick="openRejectNominationModal({{ dx.id }}, '{{ (ug.unit_name ~ ' - ' ~ dx.nam_hoc)|e }}')"
-                            title="Từ chối toàn bộ đề xuất này">
-                        <i class="bi bi-x-circle me-1"></i><small>Từ chối ĐX</small>
-                    </button>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-        </div>
+{# ===== BẢNG CÁ NHÂN ===== #}
+{% if flat_ca_nhan %}
+<div class="card-section mb-4">
+    <div class="card-header-custom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cá nhân — {{ flat_ca_nhan|length }} người</h6>
     </div>
-    {% endfor %}
+    <div class="table-responsive">
+        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
+            <thead>
+                <tr>
+                    <th style="width:35px;">STT</th>
+                    <th style="min-width:130px;">Họ tên</th>
+                    <th style="min-width:80px;">Vai trò</th>
+                    <th>Cấp bậc / Chức vụ</th>
+                    <th>Đơn vị</th>
+                    <th>Đối tượng</th>
+                    <th>Danh hiệu</th>
+                    {% if view_mode == 'detail' %}
+                    <th>Năm học</th>
+                    {% for field in all_fields %}
+                    <th class="text-center" style="min-width:70px;font-size:0.72rem;">{{ all_field_labels[field] }}</th>
+                    {% endfor %}
+                    {% endif %}
+                    {% for col in tracking_dept_columns %}
+                    <th class="text-center">{{ col.label }}</th>
+                    {% endfor %}
+                    <th class="text-center sticky-action-col" style="width:120px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ct_data in flat_ca_nhan %}
+                {% set ct = ct_data.ct %}
+                {% set dx = ct_data.dx %}
+                {% set dept_results = ct_data.dept_results %}
+                {% set ct_can_approve = ct_data.can_final_approve %}
+                {% set ns_r = namespace(any_rejected=false) %}
+                {% for dn in dept_names %}
+                    {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
+                {% endfor %}
+                <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
+                    <td>{{ loop.index }}</td>
+                    <td class="fw-semibold">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}</td>
+                    <td>
+                        {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
+                        {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.62rem;">Cấp trưởng</span>{% endif %}
+                        {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.62rem;">Bí thư</span>{% endif %}
+                        {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.62rem;">Đoàn viên</span>{% endif %}
+                        {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.62rem;">Phụ nữ</span>{% endif %}
+                        {% if not (qn.la_chi_huy or qn.la_bi_thu or qn.la_doan_vien or qn.la_hoi_vien_phu_nu) %}<span class="text-muted" style="font-size:0.75rem;">-</span>{% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
+                        {% else %}<small class="text-muted">-</small>{% endif %}
+                    </td>
+                    <td><small>{{ ct_data.don_vi }}</small></td>
+                    <td><small>{{ ct.doi_tuong or '-' }}</small></td>
+                    <td>
+                        {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTD</span>
+                        {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                        {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">DVQT</span>
+                        {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                    </td>
+                    {% if view_mode == 'detail' %}
+                    <td><small>{{ dx.nam_hoc }}</small></td>
+                    {% for field in all_fields %}
+                    <td class="text-center" style="font-size:0.75rem;">
+                        {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
+                        {% if val is not none and val != '' and val != 0 %}
+                            {% if field in ('nckh_noi_dung', 'thanh_tich_ca_nhan_khac', 'nckh_minh_chung') %}
+                            <span style="display:block;max-width:140px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:help;" title="{{ val }}">{{ val }}</span>
+                            {% else %}{{ val }}{% endif %}
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                    {% endif %}
+                    {% for col in tracking_dept_columns %}
+                    {% set dn = col.key %}
+                    <td class="text-center">
+                        {% set kq_obj = dept_results[dn] %}
+                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}"><i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}</span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}<span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}<span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                        {% else %}<span class="text-muted" title="Chưa có">-</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-center sticky-action-col">
+                        <div class="d-flex gap-1 justify-content-center">
+                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                            {% if ct_can_approve %}
+                            <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
+                                    onclick="openIndividualApproveModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                                <i class="bi bi-shield-check"></i>
+                            </button>
+                            {% endif %}
+                            {% if dx.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối cá nhân này"
+                                    onclick="openRejectIndividualModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+{% endif %}
+
+{# ===== BẢNG TẬP THỂ ===== #}
+{% if flat_tap_the %}
+<div class="card-section mb-4">
+    <div class="card-header-custom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-building me-2"></i>Tập thể — {{ flat_tap_the|length }} đơn vị</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:35px;">STT</th>
+                    <th style="min-width:160px;">Tên tập thể</th>
+                    <th>Đơn vị đề xuất</th>
+                    <th>Danh hiệu</th>
+                    <th>Năm học</th>
+                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
+                    <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
+                    {% for f in tt_criteria_fields %}
+                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
+                    {% endfor %}
+                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Thành tích khác</th>
+                    {% for col in tracking_dept_columns %}
+                    <th class="text-center">{{ col.label }}</th>
+                    {% endfor %}
+                    <th class="text-center" style="width:100px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in flat_tap_the %}
+                {% set ct = item.ct %}
+                {% set dept_results = item.dept_results %}
+                {% set ct_can_approve = item.can_final_approve %}
+                {% set dx_tt = item.dx %}
+                <tr class="{% if ct_can_approve %}table-info{% endif %}">
+                    <td>{{ loop.index }}</td>
+                    <td class="fw-semibold"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or dx_tt.don_vi.ten_don_vi }}</td>
+                    <td><small>{{ item.don_vi }}</small></td>
+                    <td>
+                        {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                        {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
+                        {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                    </td>
+                    <td><small>{{ dx_tt.nam_hoc }}</small></td>
+                    <td class="text-center" style="font-size:0.75rem;">
+                        {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                    <td class="text-center" style="font-size:0.75rem;">
+                        {% if ct.chu_tri_don_vi_danh_hieu %}<span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                    {% set ttd = ct.tap_the_dict or {} %}
+                    {% for f in tt_criteria_fields %}
+                    <td class="text-center" style="font-size:0.75rem;">
+                        {% set fval = ttd.get(f, '') %}
+                        {% if fval %}<span>{{ fval }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-center" style="font-size:0.75rem;">
+                        {% if ct.thanh_tich_ca_nhan_khac %}<span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                    {% for col in tracking_dept_columns %}
+                    {% set dn = col.key %}
+                    <td class="text-center">
+                        {% set kq_obj = dept_results[dn] %}
+                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}"><i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}</span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}<span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}<span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                        {% else %}<span class="text-muted" title="Chưa có">-</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-center">
+                        <div class="d-flex gap-1 justify-content-center">
+                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                            {% if ct_can_approve %}
+                            <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
+                                    onclick="openIndividualApproveModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat|e }}')">
+                                <i class="bi bi-shield-check"></i>
+                            </button>
+                            {% endif %}
+                            {% if dx_tt.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối tập thể này"
+                                    onclick="openRejectIndividualModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat|e }}')">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 {% else %}
 {% if nam_hoc_filter %}
