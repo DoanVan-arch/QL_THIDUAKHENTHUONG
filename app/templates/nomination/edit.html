@@ -1115,8 +1115,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var _qnSel = document.getElementById('quan_nhan_select');
     if (_qnSel && _qnSel.value) {
         var _opt = _qnSel.options[_qnSel.selectedIndex];
-        if (_secDoan) _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1');
-        if (_secPN) _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1');
+        if (_secDoan){ _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1'); _secDoan.display = ''; }
+        if (_secPN) { _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1'); _secPN.display = ''; }
     } else {
         if (_secDoan) _secDoan.classList.add('hidden');
         if (_secPN) _secPN.classList.add('hidden');
