@@ -180,6 +180,8 @@
                                     data-chucvu="{{ p.chuc_vu or '' }}"
                                     data-ladoanvien="{{ '1' if p.la_doan_vien else '0' }}"
                                     data-lahoivienphunu="{{ '1' if p.la_hoi_vien_phu_nu else '0' }}"
+                                    data-lachihuy="{{ '1' if p.la_chi_huy else '0' }}"
+                                    data-labithu="{{ '1' if p.la_bi_thu else '0' }}"
                                     {% if is_nominated %}disabled{% endif %}>
                                 {{ p.ho_ten }} - {{ p.cap_bac or '' }} - {{ p.chuc_vu or '' }}{% if is_nominated %} (Đã đề xuất){% endif %}
                             </option>
@@ -467,7 +469,7 @@
              <!-- Thành tích quần chúng khác -->
           
     <!-- Thành tích quần chúng khác -->
-<div class="form-section" id="section-doan-the" style="display: none;">
+<div class="form-section hidden" id="section-doan-the">
     <div class="form-section-title" style="color: #E67E22;">
         <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn thể (nếu có)
     </div>
@@ -509,7 +511,7 @@
     </div>
 </div>
 
-<div class="form-section" id="section-phu-nu" style="display: none;">
+<div class="form-section hidden" id="section-phu-nu">
     <div class="form-section-title" style="color: #E67E22;">
         <i class="bi bi-star me-1"></i>Thành tích cá nhân hội phụ nữ (nếu có)
     </div>
@@ -1001,6 +1003,8 @@ function applyCriteriaVisibilityByGroup() {
         if (sec.id === 'dynamic-evidence-section') { sec.classList.remove('hidden'); return; }
         if (sec.id === 'score-reason-section') return; // managed by renderScoreReasonSection
         if (sec.id === 'section-tap-the-criteria') return; // managed by renderTapTheCriteria
+        if (sec.id === 'section-doan-the') return; // managed by onPersonnelSelect
+        if (sec.id === 'section-phu-nu') return; // managed by onPersonnelSelect
 
         // Hide all individual criteria sections for tap_the nominations
         if (isTapThe) { sec.classList.add('hidden'); return; }
@@ -1113,13 +1117,21 @@ document.addEventListener('DOMContentLoaded', function() {
     var _secDoan = document.getElementById('section-doan-the');
     var _secPN = document.getElementById('section-phu-nu');
     var _qnSel = document.getElementById('quan_nhan_select');
+    var _getChuTriWrap = function() {
+        var i = document.querySelector('[name="chu_tri_don_vi_danh_hieu"]');
+        return i ? i.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null;
+    };
     if (_qnSel && _qnSel.value) {
         var _opt = _qnSel.options[_qnSel.selectedIndex];
         if (_secDoan) _secDoan.classList.toggle('hidden', _opt.getAttribute('data-ladoanvien') !== '1');
         if (_secPN) _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1');
+        var _chuTriWrap = _getChuTriWrap();
+        if (_chuTriWrap) _chuTriWrap.classList.toggle('hidden', !(_opt.getAttribute('data-lachihuy') === '1' || _opt.getAttribute('data-labithu') === '1'));
     } else {
         if (_secDoan) _secDoan.classList.add('hidden');
         if (_secPN) _secPN.classList.add('hidden');
+        var _chuTriWrap = _getChuTriWrap();
+        if (_chuTriWrap) _chuTriWrap.classList.add('hidden');
     }
 
     Object.keys(TIEU_CHI_TOOLTIPS).forEach(function(fieldName) {

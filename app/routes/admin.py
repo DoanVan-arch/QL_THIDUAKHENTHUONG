@@ -388,6 +388,34 @@ def approval_tracking():
             'tap_the_count': tap_the_count,
         })
 
+    # Build flat sorted lists for unified table view
+    flat_ca_nhan = []
+    flat_tap_the = []
+    for ug in unit_groups:
+        for nom_data in ug['nominations']:
+            dx = nom_data['dx']
+            for ct_entry in nom_data['chi_tiets']:
+                ct = ct_entry['ct']
+                qn = ct.quan_nhan
+                flat_ca_nhan.append({
+                    **ct_entry,
+                    'don_vi': dx.don_vi.ten_don_vi if dx.don_vi else '',
+                    'chuc_vu': qn.chuc_vu if qn else '',
+                    'dx': dx,
+                })
+            for ct_entry in nom_data['tap_the_chi_tiets']:
+                ct = ct_entry['ct']
+                flat_tap_the.append({
+                    **ct_entry,
+                    'don_vi': dx.don_vi.ten_don_vi if dx.don_vi else '',
+                    'dx': dx,
+                })
+
+    # Sort cá nhân: theo đơn vị rồi chức vụ
+    flat_ca_nhan.sort(key=lambda x: (x['don_vi'], x['chuc_vu'] or ''))
+    # Sort tập thể: theo đơn vị
+    flat_tap_the.sort(key=lambda x: x['don_vi'])
+
     danh_hieu_list = [e.value for e in LoaiDanhHieu]
 
     # Compute dynamic tap_the criteria columns from tap_the_dict keys across all items
@@ -415,6 +443,8 @@ def approval_tracking():
 
     return render_template('admin/tracking.html',
                            unit_groups=unit_groups,
+                           flat_ca_nhan=flat_ca_nhan,
+                           flat_tap_the=flat_tap_the,
                            status_filter=status_filter,
                            unit_filter=unit_filter,
                            danh_hieu_filter=danh_hieu_filter,
