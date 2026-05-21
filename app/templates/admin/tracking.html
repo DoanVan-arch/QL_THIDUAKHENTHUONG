@@ -216,6 +216,7 @@
                             <tr>
                                 <th style="width:35px;">STT</th>
                                 <th style="min-width:130px;">Họ tên</th>
+                                <th style="min-width:80px;">Vai trò</th>
                                 <th>Cấp bậc / Chức vụ</th>
                                 <th>Đối tượng</th>
                                 <th>Danh hiệu</th>
@@ -245,6 +246,16 @@
                                 <td>{{ loop.index }}</td>
                                 <td class="fw-semibold">
                                     {{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}
+                                </td>
+                                <td>
+                                    {% if ct.quan_nhan %}
+                                    {% set qn = ct.quan_nhan %}
+                                    {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.62rem;">Cấp trưởng</span>{% endif %}
+                                    {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.62rem;">Bí thư</span>{% endif %}
+                                    {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.62rem;">Đoàn viên</span>{% endif %}
+                                    {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.62rem;">Phụ nữ</span>{% endif %}
+                                    {% if not (qn.la_chi_huy or qn.la_bi_thu or qn.la_doan_vien or qn.la_hoi_vien_phu_nu) %}<span class="text-muted" style="font-size:0.75rem;">-</span>{% endif %}
+                                    {% endif %}
                                 </td>
                                 <td>
                                     {% if ct.quan_nhan %}

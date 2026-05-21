@@ -144,8 +144,16 @@ function onPersonnelSelect(selectEl) {
     if (option && option.value) {
         var isDoan = option.getAttribute('data-ladoanvien') === '1';
         var isPN = option.getAttribute('data-lahoivienphunu') === '1';
+        var isChiHuy = option.getAttribute('data-lachihuy') === '1';
+        var isBiThu = option.getAttribute('data-labithu') === '1';
         if (secDoan) secDoan.classList.toggle('hidden', !isDoan);
         if (secPN) secPN.classList.toggle('hidden', !isPN);
+        // chu_tri_don_vi_danh_hieu: only show for cap truong or bi thu
+        var chuTriWrap = (function() {
+            var inp = document.querySelector('[name="chu_tri_don_vi_danh_hieu"]');
+            return inp ? inp.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12') : null;
+        })();
+        if (chuTriWrap) chuTriWrap.classList.toggle('hidden', !(isChiHuy || isBiThu));
     }
 
     updateConditionalFields(doiTuong, hocVi);
