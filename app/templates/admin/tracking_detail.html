@@ -8,7 +8,7 @@
         <h4><i class="bi bi-person-lines-fill me-2"></i>Chi tiết cá nhân</h4>
         <nav>
             <ol class="breadcrumb mb-0" style="font-size:0.8rem;">
-                <li class="breadcrumb-item"><a href="{{ url_for('admin.approval_tracking') }}">Theo dõi</a></li>
+                <li class="breadcrumb-item"><a href="{{ back_url }}">Theo dõi</a></li>
                 <li class="breadcrumb-item active">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi }}</li>
             </ol>
         </nav>
@@ -92,24 +92,26 @@
                         {% set dept = dept_item_results[phong_name] %}
                         {% set kq = dept.item_result %}
                         {% if kq and kq.ket_qua == 'Đồng ý' %}
-                        <div class="step-icon step-approved"><i class="bi bi-check-lg"></i></div>
+                        <div class="step-icon step-approved"><i class="bi bi-check-circle-fill"></i></div>
                         {% elif kq and kq.ket_qua == 'Từ chối' %}
-                        <div class="step-icon step-rejected"><i class="bi bi-x-lg"></i></div>
+                        <div class="step-icon step-rejected"><i class="bi bi-x-circle-fill"></i></div>
+                        {% elif dept.phe_duyet and dept.phe_duyet.ket_qua == 'Chờ duyệt' %}
+                        <div class="step-icon step-waiting"><i class="bi bi-hourglass-split"></i></div>
                         {% else %}
-                        <div class="step-icon step-pending"><i class="bi bi-hourglass"></i></div>
+                        <div class="step-icon step-pending"><i class="bi bi-dash-circle"></i></div>
                         {% endif %}
                         <div>
                             <div class="fw-semibold" style="font-size:0.85rem;">{{ phong_name }}</div>
-                            <small class="text-muted">{{ kq.ket_qua if kq else 'Chưa duyệt' }}
-                                {% if dept.phe_duyet.ngay_duyet %} - {{ dept.phe_duyet.ngay_duyet.strftime('%d/%m/%Y') }}{% endif %}
-                                {% if dept.is_auto %} - Tự động{% endif %}
+                            <small class="text-muted">{{ kq.ket_qua if kq else 'Chờ duyệt' }}
+                                {% if dept.phe_duyet and dept.phe_duyet.ngay_duyet %} — {{ dept.phe_duyet.ngay_duyet.strftime('%H:%M %d/%m/%Y') }}{% endif %}
+                                {% if dept.is_auto %} — Tự động{% endif %}
                             </small>
                             {% if kq and kq.ly_do %}
                             <br><small class="text-danger">{{ kq.ly_do }}</small>
                             {% endif %}
                         </div>
                     {% else %}
-                        <div class="step-icon step-pending"><i class="bi bi-hourglass"></i></div>
+                        <div class="step-icon step-pending"><i class="bi bi-dash-circle"></i></div>
                         <div>
                             <div class="fw-semibold" style="font-size:0.85rem;">{{ phong_name }}</div>
                             <small class="text-muted">Chưa duyệt</small>
@@ -126,13 +128,15 @@
                     <div class="step-icon step-approved"><i class="bi bi-shield-fill-check"></i></div>
                     {% elif kq and kq.ket_qua == 'Từ chối' %}
                     <div class="step-icon step-rejected"><i class="bi bi-shield-fill-x"></i></div>
+                    {% elif dept.phe_duyet and dept.phe_duyet.ket_qua == 'Chờ duyệt' %}
+                    <div class="step-icon step-waiting"><i class="bi bi-hourglass-split"></i></div>
                     {% else %}
-                    <div class="step-icon step-pending"><i class="bi bi-shield"></i></div>
+                    <div class="step-icon step-pending"><i class="bi bi-dash-circle"></i></div>
                     {% endif %}
                     <div>
                         <div class="fw-semibold" style="font-size:0.85rem;">Tuyên huấn</div>
                         <small class="text-muted">{{ kq.ket_qua if kq else 'Chờ duyệt' }}
-                            {% if dept.phe_duyet.ngay_duyet %} - {{ dept.phe_duyet.ngay_duyet.strftime('%d/%m/%Y') }}{% endif %}
+                            {% if dept.phe_duyet and dept.phe_duyet.ngay_duyet %} — {{ dept.phe_duyet.ngay_duyet.strftime('%H:%M %d/%m/%Y') }}{% endif %}
                         </small>
                     </div>
                 </div>
@@ -272,7 +276,7 @@
         <i class="bi bi-shield-check me-1"></i> Phê duyệt cuối
     </button>
     {% endif %}
-    <a href="{{ url_for('admin.approval_tracking') }}" class="btn btn-outline-secondary">
+    <a href="{{ back_url }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Quay lại
     </a>
 </div>

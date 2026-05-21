@@ -37,6 +37,15 @@ body {
     min-height: 100vh;
 }
 
+/* ---- Sidebar collapsed (desktop) ---- */
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
+.main-content.sidebar-collapsed {
+    margin-left: 0;
+}
+
 /* ---- Sidebar ---- */
 .sidebar {
     width: var(--sidebar-width);
@@ -541,6 +550,11 @@ body {
 .step-rejected {
     background: #F8D7DA;
     color: #721C24;
+}
+
+.step-waiting {
+    background: #FFF3CD;
+    color: #856404;
 }
 
 /* Table truncation helpers */

@@ -210,7 +210,8 @@ def detail_personnel(id):
         return redirect(url_for('personnel.list_personnel'))
 
     return render_template('personnel/detail.html', qn=qn,
-                           loai_chung_chi_list=[e.value for e in LoaiChungChi])
+                           loai_chung_chi_list=[e.value for e in LoaiChungChi],
+                           back_url=request.referrer or url_for('personnel.list_personnel'))
 
 
 @personnel_bp.route('/<int:id>/edit', methods=['GET', 'POST'])

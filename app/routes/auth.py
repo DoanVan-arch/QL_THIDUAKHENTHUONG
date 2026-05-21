@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from datetime import datetime
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models.user import User
+from app.extensions import db
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -16,7 +18,15 @@ def login():
 
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password) and user.is_active:
+            # Generate new session token — invalidates any existing session on other devices
+            token = user.generate_session_token()
+            user.last_login_ip = request.remote_addr
+            user.last_login_at = datetime.utcnow()
+            user.last_login_device = request.user_agent.string[:256] if request.user_agent else None
+            db.session.commit()
+
             login_user(user, remember=request.form.get('remember'))
+            session['_session_token'] = token
             next_page = request.args.get('next')
             flash(f'Chào mừng {user.ho_ten}!', 'success')
             return redirect(next_page or url_for('dashboard.index'))
@@ -29,6 +39,10 @@ def login():
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    if current_user.is_authenticated:
+        current_user.session_token = None
+        db.session.commit()
     logout_user()
+    session.pop('_session_token', None)
     flash('Đã đăng xuất thành công.', 'info')
     return redirect(url_for('auth.login'))
