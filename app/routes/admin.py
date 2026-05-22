@@ -705,7 +705,7 @@ def final_approve_individual(ct_id):
     db.session.commit()
     ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
     flash(f'Đã đồng ý cho "{ho_ten}". Khi toàn bộ đề xuất được duyệt sẽ chuyển sang Hội đồng biểu quyết.', 'success')
-    return redirect(url_for('admin.reward_list'))
+    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
 
 @admin_bp.route('/tracking/<int:id>/final-approve', methods=['POST'])
@@ -819,35 +819,36 @@ def confirm_khen_thuong(id):
 @login_required
 @admin_required
 def confirm_khen_thuong_ct(ct_id):
-    """Confirm KhenThuong for a single DeXuatChiTiet (per-individual confirm in Bảng 2)."""
-    from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y, HOI_DONG_VAI_TRO_DISPLAY
+    """Admin confirms KhenThuong for a single DeXuatChiTiet after all 7 organs have voted (Bảng 2 → Bảng 3)."""
+    from app.models.hoi_dong import HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
     de_xuat = ct.de_xuat
 
     if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
         flash('Đề xuất không ở giai đoạn chờ xác nhận khen thưởng.', 'warning')
-        return redirect(url_for('admin.reward_list'))
+        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
-    # Verify all 6 roles have voted (any result)
+    # Require all 7 organs to have cast a vote (any result) before Admin decides
     for vai_tro in HOI_DONG_VAI_TRO:
         bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
         if not bq:
             vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
-            flash(f'{vt_name} chưa biểu quyết cho cá nhân này.', 'warning')
-            return redirect(url_for('admin.reward_list'))
+            flash(f'{vt_name} chưa biểu quyết cho cá nhân/tập thể này.', 'warning')
+            return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     existing = KhenThuong.query.filter_by(de_xuat_id=de_xuat.id, chi_tiet_id=ct.id).first()
     if existing:
-        flash('Cá nhân này đã được xác nhận khen thưởng rồi.', 'info')
-        return redirect(url_for('admin.reward_list'))
+        flash('Cá nhân/tập thể này đã được xác nhận khen thưởng rồi.', 'info')
+        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     now = datetime.utcnow()
+    name = ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi)
     kt = KhenThuong(
         de_xuat_id=de_xuat.id,
         chi_tiet_id=ct.id,
         quan_nhan_id=ct.quan_nhan_id,
         don_vi_id=de_xuat.don_vi_id,
-        ho_ten=ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi,
+        ho_ten=name,
         cap_bac=ct.quan_nhan.cap_bac if ct.quan_nhan else None,
         chuc_vu=ct.quan_nhan.chuc_vu if ct.quan_nhan else None,
         doi_tuong=ct.doi_tuong,
@@ -859,16 +860,15 @@ def confirm_khen_thuong_ct(ct_id):
     db.session.add(kt)
     db.session.commit()
 
-    name = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
     flash(f'Đã xác nhận khen thưởng cho {name}.', 'success')
-    return redirect(url_for('admin.reward_list'))
+    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
 
 @admin_bp.route('/reward-list/confirm-khong-dong-y-ct/<int:ct_id>', methods=['POST'])
 @login_required
 @admin_required
 def confirm_khong_dong_y_ct(ct_id):
-    """Admin xác nhận Không đồng ý cho một cá nhân trong Bảng 2 → đưa vào Danh sách Không đồng ý."""
+    """Admin xác nhận Không đồng ý cho một cá nhân/tập thể trong Bảng 2 → đưa vào Bảng 3 mục Bị từ chối."""
     from app.models.hoi_dong import (
         HoiDongBieuQuyet, HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY,
         KET_QUA_KHONG_DONG_Y,
@@ -878,20 +878,20 @@ def confirm_khong_dong_y_ct(ct_id):
 
     if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
         flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
-        return redirect(url_for('admin.reward_list'))
+        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
-    # Verify all 6 roles have voted (any result)
+    # Require all 7 organs to have cast a vote before Admin decides
     for vai_tro in HOI_DONG_VAI_TRO:
         bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
         if not bq:
             vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
-            flash(f'{vt_name} chưa biểu quyết cho cá nhân này.', 'warning')
-            return redirect(url_for('admin.reward_list'))
+            flash(f'{vt_name} chưa biểu quyết cho cá nhân/tập thể này.', 'warning')
+            return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     # Check not already confirmed as KhenThuong
     if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
-        flash('Cá nhân này đã được xác nhận khen thưởng, không thể đánh dấu không đồng ý.', 'warning')
-        return redirect(url_for('admin.reward_list'))
+        flash('Cá nhân/tập thể này đã được xác nhận khen thưởng, không thể đánh dấu không đồng ý.', 'warning')
+        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     ghi_chu = request.form.get('ghi_chu', '').strip() or None
 
@@ -912,9 +912,9 @@ def confirm_khong_dong_y_ct(ct_id):
         db.session.add(bq)
 
     db.session.commit()
-    name = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
-    flash(f'Đã xác nhận Không đồng ý cho {name}.', 'info')
-    return redirect(url_for('admin.reward_list'))
+    name = ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi)
+    flash(f'Đã xác nhận Không đồng ý cho {name}. Sẽ hiển thị trong Bảng 3 mục Bị từ chối.', 'info')
+    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
 
 @admin_bp.route('/reward-list/vote-ct/<int:ct_id>', methods=['POST'])
@@ -962,7 +962,8 @@ def hoi_dong_vote_ct(ct_id):
     db.session.commit()
     name = ct.quan_nhan.ho_ten if ct.quan_nhan else ct.de_xuat.don_vi.ten_don_vi
     flash(f'Đã ghi nhận biểu quyết "{ket_qua}" cho {name}.', 'success')
-    return redirect(url_for('admin.reward_list'))
+    nam_hoc = ct.de_xuat.nam_hoc if ct.de_xuat else ''
+    return redirect(url_for('admin.reward_list', nam_hoc=nam_hoc))
 
 
 
@@ -1445,10 +1446,12 @@ def reward_list():
     )\
         .paginate(page=page, per_page=20, error_out=False)
 
-    # Get filter options
-    nam_hoc_list = db.session.query(KhenThuong.nam_hoc).distinct()\
-        .order_by(KhenThuong.nam_hoc.desc()).all()
-    nam_hoc_list = [n[0] for n in nam_hoc_list]
+    # Get filter options — merge year list from both KhenThuong and DeXuat
+    # so the dropdown is not empty when no rewards are finalized yet
+    from app.models.nomination import DeXuat as _DeXuat
+    _nh_kt = {n[0] for n in db.session.query(KhenThuong.nam_hoc).distinct().all() if n[0]}
+    _nh_dx = {n[0] for n in db.session.query(_DeXuat.nam_hoc).distinct().all() if n[0]}
+    nam_hoc_list = sorted(_nh_kt | _nh_dx, reverse=True)
 
     unit_names = db.session.query(DonVi.ten_don_vi).join(
         KhenThuong, KhenThuong.don_vi_id == DonVi.id
@@ -1470,11 +1473,30 @@ def reward_list():
     # Bảng 2: nominations at PHE_DUYET_CUOI stage + Hội đồng vote status
     phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter)
 
-    # Bảng "Không đồng ý": cá nhân mà Admin đã xác nhận Không đồng ý (admin_final_vote = KHONG_DONG_Y)
+    # Bảng 3 – Bị từ chối: chi tiết có admin_final = Không đồng ý (bất kể trạng thái DeXuat)
     from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_KHONG_DONG_Y
+    _rej_votes = HoiDongBieuQuyet.query.filter_by(vai_tro='admin_final', ket_qua=KET_QUA_KHONG_DONG_Y).all()
+    rejected_items = []
+    for rv in _rej_votes:
+        ct_r = DeXuatChiTiet.query.get(rv.chi_tiet_id)
+        if not ct_r:
+            continue
+        dx_r = ct_r.de_xuat
+        if not dx_r:
+            continue
+        if nam_hoc_filter and dx_r.nam_hoc != nam_hoc_filter:
+            continue
+        # Skip if already confirmed as KhenThuong (shouldn't happen but guard)
+        if KhenThuong.query.filter_by(chi_tiet_id=ct_r.id).first():
+            continue
+        rejected_items.append({'ct': ct_r, 'dx': dx_r, 'admin_vote': rv})
+
+    # Also collect phe_duyet_cuoi items where admin_final = Không đồng ý (still at B2 stage) - avoid duplicates
+    _rej_ct_ids = {r['ct'].id for r in rejected_items}
     khong_dong_y_items = [r for r in phe_duyet_cuoi_items
                           if r['admin_final_vote'] is not None
-                          and r['admin_final_vote'].ket_qua == KET_QUA_KHONG_DONG_Y]
+                          and r['admin_final_vote'].ket_qua == KET_QUA_KHONG_DONG_Y
+                          and r['ct'].id not in _rej_ct_ids]
 
     # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
@@ -1533,6 +1555,7 @@ def reward_list():
                            pending_final_nominations=pending_final_nominations,
                            phe_duyet_cuoi_items=phe_duyet_cuoi_items,
                            khong_dong_y_items=khong_dong_y_items,
+                           rejected_items=rejected_items,
                            HOI_DONG_VAI_TRO=HOI_DONG_VAI_TRO,
                            HOI_DONG_VAI_TRO_DISPLAY=HOI_DONG_VAI_TRO_DISPLAY,
                            cstd_non_consecutive=cstd_non_consecutive,
@@ -2207,6 +2230,256 @@ def export_bang2_excel():
     output.seek(0)
     return send_file(output, as_attachment=True,
                      download_name='bang2_xet_duyet_hoi_dong.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@admin_bp.route('/reward-list/bang2/export-detail-excel')
+@login_required
+@admin_or_reward_viewer_required
+def export_bang2_detail_excel():
+    """Export Bảng 2 chi tiết: Sheet 1 = danh sách tổng; Sheet per người = đầy đủ tiêu chí."""
+    from app.models.hoi_dong import HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY
+    import datetime as _dt
+    from openpyxl.styles import Font as _Font, Alignment as _Align, PatternFill as _Fill, Border as _Border, Side as _Side
+
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+    items = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter or None)
+
+    wb = Workbook()
+    # ── Sheet 1: Danh sách tổng ──────────────────────────────────────────────
+    ws = wb.active
+    ws.title = 'Tong hop'
+
+    normal = _Font(name='Times New Roman', size=10)
+    center = _Align(horizontal='center', vertical='center', wrap_text=True)
+    left = _Align(horizontal='left', vertical='center', wrap_text=True)
+    thin = _Border(left=_Side(style='thin'), right=_Side(style='thin'),
+                   top=_Side(style='thin'), bottom=_Side(style='thin'))
+    navy_fill = _Fill(start_color='1F4E79', end_color='1F4E79', fill_type='solid')
+    white_bold = _Font(name='Times New Roman', bold=True, size=10, color='FFFFFF')
+    green_fill = _Fill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+
+    personal_headers = ['STT', 'Họ và tên / Tên tập thể', 'CCCD', 'Cấp bậc', 'Chức vụ',
+                        'Đối tượng', 'Đơn vị', 'Danh hiệu', 'Năm học']
+    personal_widths = [5, 24, 14, 14, 22, 16, 28, 22, 12]
+    ban_headers = [HOI_DONG_VAI_TRO_DISPLAY[vt] for vt in HOI_DONG_VAI_TRO]
+    all_headers = personal_headers + ban_headers + ['Tổng ĐY', 'Trạng thái']
+    all_widths = personal_widths + [16] * len(HOI_DONG_VAI_TRO) + [10, 18]
+    col_count = len(all_headers)
+
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=col_count)
+    ws.cell(1, 1).value = 'BẢNG 2: XÉT DUYỆT CỦA CƠ QUAN THƯỜNG TRỰC – DANH SÁCH CHI TIẾT'
+    ws.cell(1, 1).font = _Font(name='Times New Roman', bold=True, size=13)
+    ws.cell(1, 1).alignment = center
+
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=col_count)
+    filter_txt = f'Năm học: {nam_hoc_filter}  ' if nam_hoc_filter else ''
+    ws.cell(2, 1).value = f'{filter_txt}Xuất ngày: {_dt.datetime.now().strftime("%d/%m/%Y %H:%M")}'
+    ws.cell(2, 1).font = _Font(name='Times New Roman', italic=True, size=10)
+    ws.cell(2, 1).alignment = center
+
+    for col_idx, (h, w) in enumerate(zip(all_headers, all_widths), 1):
+        c = ws.cell(row=3, column=col_idx, value=h)
+        c.font = white_bold; c.fill = navy_fill; c.alignment = center; c.border = thin
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+    for row_num, row in enumerate(items, 4):
+        ct = row['ct']; dx = row['dx']; votes = row['votes']
+        qn = ct.quan_nhan
+        name = qn.ho_ten if qn else (ct.ten_don_vi_de_xuat or '—')
+        don_vi = dx.don_vi.ten_don_vi if dx.don_vi else '—'
+        dong_y_count = sum(1 for vt in HOI_DONG_VAI_TRO if votes.get(vt) and votes[vt].ket_qua == 'Đồng ý')
+        row_data = [
+            row_num - 3, name,
+            (qn.can_cuoc_cong_dan if qn else '') or '',
+            (qn.cap_bac if qn else '') or '',
+            (qn.chuc_vu if qn else '') or '',
+            ct.doi_tuong or '', don_vi,
+            ct.loai_danh_hieu or '', dx.nam_hoc or '',
+        ]
+        for vt in HOI_DONG_VAI_TRO:
+            bq = votes.get(vt)
+            row_data.append(bq.ket_qua if bq else '—')
+        row_data.append(dong_y_count)
+        trang_thai = ('Đã xác nhận' if row['is_confirmed']
+                      else ('Đủ phiếu – chờ XN' if row.get('all_voted_dong_y') else 'Chờ biểu quyết'))
+        row_data.append(trang_thai)
+
+        for col_idx, val in enumerate(row_data, 1):
+            c = ws.cell(row=row_num, column=col_idx, value=val)
+            c.font = normal
+            c.alignment = center if col_idx in (1, col_count - 1) else left
+            c.border = thin
+            if row['is_confirmed']:
+                c.fill = green_fill
+
+    ws.freeze_panes = 'A4'
+    ws.page_setup.paperSize = 9
+    ws.page_setup.orientation = 'landscape'
+    ws.page_setup.fitToPage = True; ws.page_setup.fitToWidth = 1; ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+
+    # ── Sheet per người: đầy đủ tiêu chí ────────────────────────────────────
+    TIEU_CHI_LABELS = [
+        ('Mức độ hoàn thành NV', 'muc_do_hoan_thanh'),
+        ('Phiếu tín nhiệm', 'phieu_tin_nhiem'),
+        ('Xếp loại đảng viên', 'xep_loai_dang_vien'),
+        ('KQ đoàn thể', 'ket_qua_doan_the'),
+        ('KT điều lệnh', 'kiem_tra_dieu_lenh'),
+        ('Điểm KT điều lệnh', 'diem_kiem_tra_dieu_lenh'),
+        ('Bắn súng', 'ban_sung'),
+        ('Điểm bắn súng', 'diem_ban_sung'),
+        ('Thể lực', 'the_luc'),
+        ('Điểm thể lực', 'diem_the_luc'),
+        ('KT chính trị', 'kiem_tra_chinh_tri'),
+        ('Điểm KT chính trị', 'diem_kiem_tra_chinh_tri'),
+        ('Kỹ năng số', 'kiem_tra_tin_hoc'),
+        ('Điểm kỹ năng số', 'diem_kiem_tra_tin_hoc'),
+        ('Địa hình QS', 'dia_ly_quan_su'),
+        ('Điểm địa hình QS', 'diem_dia_ly_quan_su'),
+        ('GV giỏi', 'danh_hieu_gv_gioi'),
+        ('Định mức giảng dạy', 'dinh_muc_giang_day'),
+        ('KT giảng', 'ket_qua_kiem_tra_giang'),
+        ('Tiến độ PGS', 'tien_do_pgs'),
+        ('LĐ khoa học', 'thoi_gian_lao_dong_kh'),
+        ('HV giỏi', 'danh_hieu_hv_gioi'),
+        ('Điểm tổng kết', 'diem_tong_ket'),
+        ('KQ thực hành', 'ket_qua_thuc_hanh'),
+        ('Chủ trì ĐV danh hiệu', 'chu_tri_don_vi_danh_hieu'),
+        ('Điểm NCKH', 'diem_nckh'),
+        ('Nội dung NCKH', 'nckh_noi_dung'),
+        ('Thành tích khác', 'thanh_tich_ca_nhan_khac'),
+        ('Ghi chú', 'ghi_chu'),
+    ]
+
+    label_font = _Font(name='Times New Roman', bold=True, size=10)
+    value_font = _Font(name='Times New Roman', size=10)
+    label_align = _Align(horizontal='left', vertical='center', wrap_text=True)
+    val_align = _Align(horizontal='left', vertical='center', wrap_text=True)
+    section_fill = _Fill(start_color='D6E4F0', end_color='D6E4F0', fill_type='solid')
+    section_font = _Font(name='Times New Roman', bold=True, size=11, color='1F4E79')
+
+    for idx, row in enumerate(items, 1):
+        ct = row['ct']; dx = row['dx']; votes = row['votes']
+        qn = ct.quan_nhan
+        is_tap_the = qn is None
+        name = qn.ho_ten if qn else (ct.ten_don_vi_de_xuat or '—')
+        # Sheet title: truncate to 31 chars (Excel limit)
+        sheet_name = f'{idx:02d}_{name}'[:31]
+        ws2 = wb.create_sheet(title=sheet_name)
+        ws2.column_dimensions['A'].width = 30
+        ws2.column_dimensions['B'].width = 40
+
+        r = 1
+        # Section: Thông tin chung
+        ws2.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+        ws2.cell(r, 1).value = 'THÔNG TIN CHUNG'
+        ws2.cell(r, 1).font = section_font; ws2.cell(r, 1).fill = section_fill
+        ws2.cell(r, 1).alignment = center; r += 1
+
+        info_fields = [
+            ('Họ và tên / Tên tập thể', name),
+            ('Đơn vị', dx.don_vi.ten_don_vi if dx.don_vi else '—'),
+            ('Danh hiệu đề xuất', ct.loai_danh_hieu or '—'),
+            ('Năm học', dx.nam_hoc or '—'),
+            ('Đối tượng', ct.doi_tuong or '—'),
+        ]
+        if qn:
+            info_fields += [
+                ('CCCD', qn.can_cuoc_cong_dan or '—'),
+                ('Ngày sinh', qn.ngay_sinh.strftime('%d/%m/%Y') if qn.ngay_sinh else '—'),
+                ('Ngày nhập ngũ', qn.ngay_nhap_ngu or '—'),
+                ('Cấp bậc', qn.cap_bac or '—'),
+                ('Chức vụ', qn.chuc_vu or '—'),
+                ('Đơn vị trực thuộc', qn.don_vi_truc_thuoc or '—'),
+                ('Học hàm / Học vị', f"{qn.hoc_ham or '—'} / {qn.hoc_vi or '—'}"),
+                ('Trình độ học vấn', qn.trinh_do_hoc_van or '—'),
+                ('Ngoại ngữ', qn.ngoai_ngu or '—'),
+            ]
+
+        for lbl, val in info_fields:
+            ws2.cell(r, 1).value = lbl; ws2.cell(r, 1).font = label_font
+            ws2.cell(r, 1).alignment = label_align; ws2.cell(r, 1).border = thin
+            ws2.cell(r, 2).value = val; ws2.cell(r, 2).font = value_font
+            ws2.cell(r, 2).alignment = val_align; ws2.cell(r, 2).border = thin
+            r += 1
+
+        if not is_tap_the:
+            # Section: Tiêu chí xét duyệt
+            ws2.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+            ws2.cell(r, 1).value = 'TIÊU CHÍ XÉT DUYỆT'
+            ws2.cell(r, 1).font = section_font; ws2.cell(r, 1).fill = section_fill
+            ws2.cell(r, 1).alignment = center; r += 1
+            for lbl, attr in TIEU_CHI_LABELS:
+                val = getattr(ct, attr, None)
+                if val is None:
+                    val = '—'
+                elif attr == 'danh_hieu_hv_gioi':
+                    val = 'Có' if str(val) == 'true' else ('Không' if str(val) == 'false' else val)
+                ws2.cell(r, 1).value = lbl; ws2.cell(r, 1).font = label_font
+                ws2.cell(r, 1).alignment = label_align; ws2.cell(r, 1).border = thin
+                ws2.cell(r, 2).value = str(val) if val is not None else '—'
+                ws2.cell(r, 2).font = value_font
+                ws2.cell(r, 2).alignment = val_align; ws2.cell(r, 2).border = thin
+                r += 1
+        else:
+            # Tập thể: chỉ mục tiêu chí đặc biệt
+            ws2.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+            ws2.cell(r, 1).value = 'TIÊU CHÍ TẬP THỂ'
+            ws2.cell(r, 1).font = section_font; ws2.cell(r, 1).fill = section_fill
+            ws2.cell(r, 1).alignment = center; r += 1
+            for lbl, attr in [('Mức độ HT nhiệm vụ', 'muc_do_hoan_thanh'),
+                               ('Chủ trì ĐV danh hiệu', 'chu_tri_don_vi_danh_hieu'),
+                               ('Ghi chú', 'ghi_chu')]:
+                val = getattr(ct, attr, None) or '—'
+                ws2.cell(r, 1).value = lbl; ws2.cell(r, 1).font = label_font
+                ws2.cell(r, 1).alignment = label_align; ws2.cell(r, 1).border = thin
+                ws2.cell(r, 2).value = val; ws2.cell(r, 2).font = value_font
+                ws2.cell(r, 2).alignment = val_align; ws2.cell(r, 2).border = thin
+                r += 1
+
+        # Section: Kết quả biểu quyết Hội đồng
+        ws2.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+        ws2.cell(r, 1).value = 'KẾT QUẢ BIỂU QUYẾT HỘI ĐỒNG'
+        ws2.cell(r, 1).font = section_font; ws2.cell(r, 1).fill = section_fill
+        ws2.cell(r, 1).alignment = center; r += 1
+        dong_y = 0
+        for vt in HOI_DONG_VAI_TRO:
+            bq = votes.get(vt)
+            ket_qua = bq.ket_qua if bq else 'Chưa bỏ phiếu'
+            if ket_qua == 'Đồng ý':
+                dong_y += 1
+            ws2.cell(r, 1).value = HOI_DONG_VAI_TRO_DISPLAY[vt]
+            ws2.cell(r, 1).font = label_font; ws2.cell(r, 1).alignment = label_align; ws2.cell(r, 1).border = thin
+            ws2.cell(r, 2).value = ket_qua; ws2.cell(r, 2).font = value_font
+            ws2.cell(r, 2).alignment = val_align; ws2.cell(r, 2).border = thin
+            if ket_qua == 'Đồng ý':
+                ws2.cell(r, 2).fill = green_fill
+            elif ket_qua == 'Không đồng ý':
+                ws2.cell(r, 2).fill = _Fill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+            r += 1
+        trang_thai_txt = ('Đã xác nhận khen thưởng' if row['is_confirmed']
+                          else f'Đã bỏ phiếu: {dong_y}/{len(HOI_DONG_VAI_TRO)} Đồng ý')
+        ws2.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+        ws2.cell(r, 1).value = f'→ Tổng kết: {trang_thai_txt}'
+        ws2.cell(r, 1).font = _Font(name='Times New Roman', bold=True, size=10)
+        ws2.cell(r, 1).alignment = center
+        if row['is_confirmed']:
+            ws2.cell(r, 1).fill = green_fill
+
+        ws2.page_setup.paperSize = 9  # A4
+        ws2.page_setup.orientation = 'portrait'
+        ws2.page_setup.fitToPage = True; ws2.page_setup.fitToWidth = 1; ws2.page_setup.fitToHeight = 0
+        ws2.sheet_properties.pageSetUpPr.fitToPage = True
+
+    wb['Tong hop'].protection.sheet = True
+    wb['Tong hop'].protection.password = 'hktd@2025'
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    fname = f'bang2_chitiet{"_" + nam_hoc_filter if nam_hoc_filter else ""}.xlsx'
+    return send_file(output, as_attachment=True, download_name=fname,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 

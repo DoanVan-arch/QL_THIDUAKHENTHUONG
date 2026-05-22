@@ -282,6 +282,9 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <a href="{{ url_for('admin.export_bang2_excel') }}" class="btn btn-sm btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
+            <a href="{{ url_for('admin.export_bang2_detail_excel', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-success" title="Xuất 1 sheet tổng + sheet chi tiết per người (tiêu chí + biểu quyết)">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel Chi tiết
+            </a>
             <a href="{{ url_for('admin.export_hoi_dong_excel', trang_thai='phe_duyet_cuoi', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-outline-success" title="Xuất kèm điểm tiêu chí và biểu quyết">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel + Biểu quyết
             </a>
@@ -831,16 +834,16 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 </div>
 {% endif %}{# end nam_hoc_filter #}
 
-{% if can_view_pending_final and nam_hoc_filter and khong_dong_y_items %}
-{# ===== BẢNG KHÔNG ĐỒNG Ý: cá nhân bị Hội đồng phản đối ===== #}
+{% if nam_hoc_filter and rejected_items %}
+{# ===== BẢNG BỊ TỪ CHỐI: Admin xác nhận Không đồng ý sau biểu quyết HĐ ===== #}
 <div class="card-section mb-3 print-section" id="printBangKDY" style="border-left:4px solid #dc3545;">
     <div class="card-header-custom d-flex align-items-center justify-content-between" style="background:#fff5f5;">
         <h6 class="mb-0 text-danger">
-            <i class="bi bi-x-circle me-2"></i>Danh sách Không đồng ý (Hội đồng phản đối)
-            <span class="badge bg-danger ms-2">{{ khong_dong_y_items|length }}</span>
+            <i class="bi bi-x-circle me-2"></i>Bảng 3b: Danh sách Không đồng ý khen thưởng
+            <span class="badge bg-danger ms-2">{{ rejected_items|length }}</span>
         </h6>
         <div class="d-flex gap-2 no-print">
-            <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBangKDY','Danh sách Không đồng ý')">
+            <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBangKDY','Bảng 3b – Không đồng ý khen thưởng')">
                 <i class="bi bi-printer me-1"></i>In PDF
             </button>
         </div>
@@ -853,16 +856,13 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <th>STT</th>
                         <th>Danh hiệu</th>
                         <th>Đơn vị</th>
-                        <th>Cá nhân</th>
+                        <th>Cá nhân / Tập thể</th>
                         <th>Năm học</th>
-                        {% for vt in HOI_DONG_VAI_TRO %}
-                        <th class="text-center" style="white-space:nowrap;font-size:0.75rem;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
-                        {% endfor %}
                         <th>Ghi chú phản đối</th>
                     </tr>
                 </thead>
                 <tbody>
-                {% for row in khong_dong_y_items %}
+                {% for row in rejected_items %}
                 {% set ct = row.ct %}
                 {% set dx = row.dx %}
                 <tr class="table-danger">
@@ -871,27 +871,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     <td>{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
                     <td><strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong></td>
                     <td>{{ dx.nam_hoc }}</td>
-                    {% for vt in HOI_DONG_VAI_TRO %}
-                    {% set bq = row.votes.get(vt) %}
-                    <td class="text-center">
-                        {% if bq %}
-                            {% if bq.ket_qua == 'Đồng ý' %}
-                            <span class="badge bg-success"><i class="bi bi-check-lg"></i></span>
-                            {% else %}
-                            <span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>
-                            {% endif %}
-                        {% else %}
-                        <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                    <td class="text-danger small">
-                        {% for vt, bq in row.votes.items() %}
-                            {% if bq.ket_qua == 'Không đồng ý' and bq.ghi_chu %}
-                            <div><strong>{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}:</strong> {{ bq.ghi_chu }}</div>
-                            {% endif %}
-                        {% endfor %}
-                    </td>
+                    <td class="text-danger small">{{ row.admin_vote.ghi_chu or '—' }}</td>
                 </tr>
                 {% endfor %}
                 </tbody>
