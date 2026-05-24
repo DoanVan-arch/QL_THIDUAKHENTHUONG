@@ -228,6 +228,9 @@ DEPT_DOI_TUONG_SCOPE = {
 
 def _is_in_dept_scope(role, doi_tuong):
     """Check if an individual's doi_tuong falls within the department's approval scope."""
+    # Tập thể (doi_tuong = None/'') → tất cả phòng ban đều xét duyệt
+    if not doi_tuong:
+        return True
     if role == Role.BAN_QUANLUC:
         return doi_tuong in BAN_QUANLUC_DOI_TUONG
     elif role == Role.BAN_CANBO:
