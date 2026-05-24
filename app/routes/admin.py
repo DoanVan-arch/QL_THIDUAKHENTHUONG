@@ -179,15 +179,6 @@ ALL_FIELDS = [
     'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
     'thanh_tich_ca_nhan_khac',
 ]
-    'diem_kiem_tra_tin_hoc',
-    'diem_kiem_tra_dieu_lenh',
-    'diem_dia_ly_quan_su',
-    'diem_ban_sung',
-    'diem_the_luc',
-    'diem_kiem_tra_chinh_tri',
-    'diem_tong_ket',
-    'diem_nckh',
-]
 
 DIEM_FIELD_LABELS = {
     'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
