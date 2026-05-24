@@ -269,6 +269,9 @@
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input toggle-approval" type="checkbox" id="switch-{{ pd.id }}-{{ ct.id }}" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" {% if is_approved %}checked{% endif %} style="cursor:pointer; width:2.5em; height:1.3em;"></div>
                         {% if not is_approved %}<a href="javascript:void(0)" class="reject-link text-danger" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>{% endif %}
                         {% if is_rejected %}<small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}" style="font-size:0.72rem;" title="{{ kq.ly_do }}">{{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}</small>{% endif %}
+                        {% if is_approved or is_rejected %}
+                        <a href="javascript:void(0)" class="revoke-item-link text-warning d-block" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.68rem;" title="Thu hồi kết quả duyệt"><i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi</a>
+                        {% endif %}
                         {% else %}
                         <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
                         {% if ct_gate and ct_gate.pending %}<small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chưa duyệt: {{ ct_gate.pending|join(', ') }}</small>{% endif %}
@@ -592,6 +595,38 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('[id^="reason-input-"]').forEach(input => {
         input.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') { e.preventDefault(); this.closest('tr').querySelector('.save-reject-btn').click(); }
+        });
+    });
+
+    // ===================== REVOKE ITEM =====================
+    document.querySelectorAll('.revoke-item-link').forEach(link => {
+        link.addEventListener('click', function () {
+            const pdId = this.dataset.pdId, ctId = this.dataset.ctId;
+            if (!confirm('Thu hồi kết quả duyệt cho cá nhân/tập thể này?')) return;
+            fetch(`/approval/revoke-item/${pdId}/${ctId}`, {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'}})
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reset UI: uncheck switch, restore reject-link, remove revoke link
+                        const sw = document.getElementById(`switch-${pdId}-${ctId}`);
+                        if (sw) { sw.checked = false; sw.disabled = false; }
+                        const switchCell = this.closest('td');
+                        // Remove reason text if present
+                        const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
+                        if (rt) rt.remove();
+                        // Show reject-link if hidden
+                        const rl = switchCell.querySelector('.reject-link');
+                        if (rl) { rl.style.display = ''; }
+                        // Remove this revoke link
+                        this.remove();
+                        // Re-enable PheDuyet revoke button if exists
+                        const revBtn = document.querySelector(`.revoke-btn[data-pd-id="${pdId}"]`);
+                        if (revBtn) revBtn.disabled = false;
+                    } else {
+                        alert(data.message || 'Không thể thu hồi.');
+                    }
+                })
+                .catch(() => alert('Lỗi kết nối.'));
         });
     });
 

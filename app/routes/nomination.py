@@ -537,7 +537,7 @@ def add_nomination_item(id):
         loai_danh_hieu=loai_danh_hieu,
         doi_tuong=doi_tuong,
         nam_hoc=de_xuat.nam_hoc,
-        ten_don_vi_de_xuat=request.form.get('ten_don_vi_de_xuat', '').strip() or None,
+        ten_don_vi_de_xuat=request.form.get('ten_don_vi_de_xuat', '').strip() or None if is_tap_the else None,
         tap_the_data=_json.dumps(tap_the_data_dict, ensure_ascii=False) if tap_the_data_dict else None,
         muc_do_hoan_thanh=request.form.get('muc_do_hoan_thanh', '').strip() or None,
         kiem_tra_tin_hoc=request.form.get('kiem_tra_tin_hoc', '').strip() or None,

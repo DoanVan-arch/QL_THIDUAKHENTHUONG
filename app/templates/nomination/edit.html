@@ -103,8 +103,8 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">
-                            {% if ct.ten_don_vi_de_xuat %}
-                            <i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat }}
+                            {% if ct.quan_nhan_id is none %}
+                            <i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or '—' }}
                             {% else %}
                             {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
                             {% endif %}

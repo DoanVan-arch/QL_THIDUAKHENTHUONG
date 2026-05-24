@@ -71,11 +71,7 @@
                 <a href="{{ url_for('approval.history') }}" class="sidebar-link {% if request.endpoint in ['approval.history', 'approval.history_detail'] %}active{% endif %}">
                     <i class="bi bi-clock-history"></i> <span>Lịch sử duyệt</span>
                 </a>
-                {% if current_user.is_hoi_dong_member %}
-                <a href="{{ url_for('hoi_dong.list_nominations') }}" class="sidebar-link {% if request.blueprint == 'hoi_dong' %}active{% endif %}">
-                    <i class="bi bi-people-fill"></i> <span>Xét duyệt của cơ quan thường trực</span>
-                </a>
-                {% endif %}
+
                 {% if current_user.is_reward_viewer %}
                 <a href="{{ url_for('admin.reward_list') }}" class="sidebar-link {% if request.endpoint in ['admin.reward_list', 'admin.reward_detail'] %}active{% endif %}">
                     <i class="bi bi-trophy"></i> <span>Danh sách khen thưởng</span>
