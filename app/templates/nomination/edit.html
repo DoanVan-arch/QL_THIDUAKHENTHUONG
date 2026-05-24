@@ -12,14 +12,14 @@
 {%- macro tc_input(name, placeholder='', tmap=tieu_chi_input_map) -%}
 {%- set cfg = tmap.get(name, {}) -%}
 {%- if cfg.get('loai_input') == 'combobox' and cfg.get('gia_tri_chon') -%}
-<select class="form-select" name="{{ name }}">
+<select class="form-select" name="{{ name }}" id="{{ name }}">
     <option value="">-- Chọn --</option>
     {%- for opt in cfg['gia_tri_chon'] -%}
     <option value="{{ opt }}">{{ opt }}</option>
     {%- endfor -%}
 </select>
 {%- else -%}
-<input type="text" class="form-control" name="{{ name }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}>
+<input type="text" class="form-control" name="{{ name }}" id="{{ name }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}>
 {%- endif -%}
 {%- endmacro -%}
 
@@ -475,21 +475,17 @@
         <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn (nếu có)
     </div>
     <div class="row g-3">
-        <div class="col-md-4">
+        <!-- <div class="col-md-4">
             <label class="form-label fw-semibold">Xếp loại đoàn viên hằng năm</label>
             <input type="text"
                    class="form-control"
                    name="xep_loai_doan_vien"
                    id="xep_loai_doan_vien"
                    placeholder="VD: Đoàn viên xuất sắc, Hoàn thành tốt...">
-        </div>
+        </div> -->
         <div class="col-md-4">
             <label class="form-label">Mức độ hoàn thành nhiệm vụ của tổ chức đoàn</label>
-            <input type="text" 
-                   class="form-control" 
-                   name="ket_qua_doan_the" 
-                   id="ket_qua_doan_the" 
-                   placeholder="Ví dụ: Hoàn thành tốt, Hoàn thành xuất sắc...">
+            {{ tc_input('ket_qua_doan_the', 'Ví dụ: Hoàn thành tốt, Hoàn thành xuất sắc...') }}
         </div>
         <div class="col-md-4">
             <label class="form-label">Hình thức khen thưởng của tổ chức đoàn</label>
@@ -519,11 +515,7 @@
     <div class="row g-3">
         <div class="col-md-4">
             <label class="form-label fw-semibold">Xếp loại phụ nữ hằng năm</label>
-            <input type="text"
-                   class="form-control"
-                   name="ket_qua_phu_nu"
-                   id="ket_qua_hoi_phu_nu"
-                   placeholder="VD: Phụ nữ hai giỏi, Hoàn thành tốt...">
+            {{ tc_input('ket_qua_phu_nu', 'VD: Phụ nữ hai giỏi, Hoàn thành tốt...') }}
         </div>
         <div class="col-md-4">
             <label class="form-label">Hình thức khen thưởng của hội phụ nữ</label>
