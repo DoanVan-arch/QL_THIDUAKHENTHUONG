@@ -2729,6 +2729,202 @@ def export_reward_list():
     )
 
 
+@admin_bp.route('/reward-list/export-b3')
+@login_required
+@admin_or_reward_viewer_required
+def export_b3_excel():
+    """Export Bảng 3 – Danh sách khen thưởng đã xác nhận (gọn, có tóm tắt thành tích)."""
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from openpyxl import Workbook
+
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+    unit_filter    = request.args.get('unit', '')
+    danh_hieu_filter = request.args.get('danh_hieu', '')
+    search_query   = request.args.get('q', '').strip()
+
+    query = KhenThuong.query
+    if nam_hoc_filter:
+        query = query.filter(KhenThuong.nam_hoc == nam_hoc_filter)
+    if unit_filter:
+        query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
+    if danh_hieu_filter:
+        query = query.filter(KhenThuong.loai_danh_hieu == danh_hieu_filter)
+    if search_query:
+        query = query.filter(KhenThuong.ho_ten.ilike(f'%{search_query}%'))
+
+    # Tách cá nhân và tập thể
+    all_rewards = query.order_by(KhenThuong.don_vi_id, KhenThuong.loai_danh_hieu, KhenThuong.ho_ten).all()
+    ca_nhan  = [kt for kt in all_rewards if kt.quan_nhan_id]
+    tap_the  = [kt for kt in all_rewards if not kt.quan_nhan_id]
+
+    # ── Styles ──────────────────────────────────────────────────────────────
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Danh sách KT'
+
+    hdr_font   = Font(name='Times New Roman', bold=True, size=11)
+    title_font = Font(name='Times New Roman', bold=True, size=13)
+    sub_font   = Font(name='Times New Roman', bold=True, size=14)
+    col_font   = Font(name='Times New Roman', bold=True, size=10, color='FFFFFF')
+    data_font  = Font(name='Times New Roman', size=10)
+    grp_font   = Font(name='Times New Roman', bold=True, italic=True, size=10)
+    col_fill   = PatternFill(start_color='1F4E79', end_color='1F4E79', fill_type='solid')
+    grp_fill   = PatternFill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')
+    thin       = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'),  bottom=Side(style='thin'),
+    )
+    c_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    l_align = Alignment(horizontal='left',   vertical='center', wrap_text=True)
+
+    NUM_COLS = 7
+    col_letters = [get_column_letter(i) for i in range(1, NUM_COLS + 1)]
+
+    def _merge_title(row, text, font, fill=None):
+        ws.merge_cells(f'A{row}:{col_letters[-1]}{row}')
+        c = ws['A' + str(row)]
+        c.value = text; c.font = font; c.alignment = c_align
+        if fill: c.fill = fill
+
+    # ── Tiêu đề ─────────────────────────────────────────────────────────────
+    _merge_title(1, 'TRƯỜNG SĨ QUAN CHÍNH TRỊ', title_font)
+    _merge_title(2, 'DANH SÁCH KHEN THƯỞNG ĐÃ XÁC NHẬN', sub_font)
+
+    filter_txt = ' | '.join(filter(None, [
+        f'Năm học: {nam_hoc_filter}' if nam_hoc_filter else '',
+        f'Đơn vị: {unit_filter}' if unit_filter else '',
+        f'Danh hiệu: {danh_hieu_filter}' if danh_hieu_filter else '',
+        f'Tìm kiếm: {search_query}' if search_query else '',
+    ])) or 'Tất cả dữ liệu'
+    _merge_title(3, filter_txt, Font(name='Times New Roman', italic=True, size=10))
+
+    # ── Header cột ──────────────────────────────────────────────────────────
+    COL_WIDTHS = [6, 28, 14, 22, 30, 12, 48]
+    COL_HEADERS = ['TT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Danh hiệu', 'Tóm tắt thành tích']
+    for ci, (hdr, w) in enumerate(zip(COL_HEADERS, COL_WIDTHS), 1):
+        c = ws.cell(row=5, column=ci, value=hdr)
+        c.font = col_font; c.fill = col_fill
+        c.alignment = c_align; c.border = thin
+        ws.column_dimensions[get_column_letter(ci)].width = w
+    ws.row_dimensions[5].height = 28
+
+    # ── Helper: tóm tắt thành tích ──────────────────────────────────────────
+    def _tom_tat(kt):
+        ct = DeXuatChiTiet.query.get(kt.chi_tiet_id) if kt.chi_tiet_id else None
+        doi_tuong = (kt.doi_tuong or '').lower()
+        is_hv = 'học viên' in doi_tuong
+
+        if is_hv:
+            parts = []
+            if ct and ct.diem_tong_ket:
+                parts.append(f'Điểm TK: {ct.diem_tong_ket}')
+            if ct and ct.ket_qua_ren_luyen:
+                parts.append(f'KQ rèn luyện: {ct.ket_qua_ren_luyen}')
+            return '; '.join(parts) if parts else ''
+        else:
+            # Cán bộ, giảng viên, QNCN, CNV...
+            if ct and ct.muc_do_hoan_thanh:
+                return f'Hoàn thành NV: {ct.muc_do_hoan_thanh}'
+            return ''
+
+    # ── Hàm ghi một nhóm danh sách ──────────────────────────────────────────
+    def _write_group(items, start_row, group_label):
+        r = start_row
+        # Nhóm header
+        ws.merge_cells(f'A{r}:{col_letters[-1]}{r}')
+        c = ws['A' + str(r)]
+        c.value = group_label; c.font = grp_font
+        c.fill = grp_fill; c.alignment = l_align; c.border = thin
+        r += 1
+
+        prev_dh = None
+        stt = 0
+        for kt in items:
+            # Separator theo danh hiệu
+            if kt.loai_danh_hieu != prev_dh:
+                prev_dh = kt.loai_danh_hieu
+                ws.merge_cells(f'A{r}:{col_letters[-1]}{r}')
+                dh_c = ws['A' + str(r)]
+                dh_c.value = f'── {kt.loai_danh_hieu} ──'
+                dh_c.font = Font(name='Times New Roman', bold=True, italic=True, size=9, color='1F4E79')
+                dh_c.alignment = c_align
+                for ci in range(1, NUM_COLS + 1):
+                    ws.cell(row=r, column=ci).border = thin
+                r += 1
+
+            stt += 1
+            tom_tat = _tom_tat(kt)
+            row_vals = [
+                stt,
+                kt.ho_ten,
+                kt.cap_bac or '',
+                kt.chuc_vu or '',
+                kt.don_vi.ten_don_vi if kt.don_vi else '',
+                kt.loai_danh_hieu or '',
+                tom_tat,
+            ]
+            for ci, val in enumerate(row_vals, 1):
+                c = ws.cell(row=r, column=ci, value=val)
+                c.font = data_font; c.border = thin
+                c.alignment = c_align if ci in (1, 6) else l_align
+            ws.row_dimensions[r].height = 18
+            r += 1
+        return r
+
+    # ── Ghi dữ liệu ─────────────────────────────────────────────────────────
+    cur_row = 6
+    if ca_nhan:
+        cur_row = _write_group(ca_nhan, cur_row, f'I. DANH HIỆU CÁ NHÂN ({len(ca_nhan)} người)')
+    if tap_the:
+        if ca_nhan:
+            cur_row += 1  # dòng trống giữa 2 nhóm
+        cur_row = _write_group(tap_the, cur_row, f'II. DANH HIỆU TẬP THỂ ({len(tap_the)} đơn vị)')
+
+    # Tổng kết
+    ws.merge_cells(f'A{cur_row}:{col_letters[-1]}{cur_row}')
+    sum_c = ws['A' + str(cur_row)]
+    sum_c.value = f'Tổng cộng: {len(ca_nhan)} cá nhân, {len(tap_the)} tập thể'
+    sum_c.font = Font(name='Times New Roman', bold=True, size=10)
+    sum_c.alignment = l_align
+
+    # Ký tên
+    sig_row = cur_row + 2
+    ws.merge_cells(f'E{sig_row}:{col_letters[-1]}{sig_row}')
+    ws.cell(row=sig_row, column=5,
+            value=f'Ngày {datetime.now().day} tháng {datetime.now().month} năm {datetime.now().year}'
+            ).font = Font(name='Times New Roman', italic=True, size=10)
+    ws.cell(row=sig_row, column=5).alignment = c_align
+    ws.merge_cells(f'E{sig_row+1}:{col_letters[-1]}{sig_row+1}')
+    ws.cell(row=sig_row + 1, column=5,
+            value='BAN THƯ KÝ HỘI ĐỒNG THI ĐUA KHEN THƯỞNG'
+            ).font = Font(name='Times New Roman', bold=True, size=11)
+    ws.cell(row=sig_row + 1, column=5).alignment = c_align
+
+    # Page setup
+    ws.page_setup.paperSize = 9
+    ws.page_setup.orientation = 'portrait'
+    ws.page_setup.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.freeze_panes = 'A6'
+    ws.protection.sheet = True
+    ws.protection.password = 'hktd@2025'
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    parts = ['DanhSachKhenThuong_B3']
+    if nam_hoc_filter:
+        parts.append(nam_hoc_filter.replace('-', '_'))
+    parts.append(datetime.now().strftime('%d%m%Y'))
+    fname = '_'.join(parts) + '.xlsx'
+
+    return send_file(output, as_attachment=True, download_name=fname,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
 @admin_bp.route('/reward-detail/<int:kt_id>')
 @login_required
 @admin_or_reward_viewer_required

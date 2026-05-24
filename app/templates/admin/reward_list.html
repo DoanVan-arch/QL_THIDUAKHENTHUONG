@@ -109,7 +109,7 @@
             <table class="table table-sm table-custom mb-0">
                 <thead>
                     <tr>
-                        <th style="width:40px;">STT</th>
+                        <th class="sticky-stt-col">STT</th>
                         <th>Đơn vị</th>
                         <th class="sticky-name-col">Họ và tên</th>
                         <th>Vai trò</th>
@@ -127,7 +127,7 @@
                     {% set ct = item.ct %}
                     {% set qn = ct.quan_nhan %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td class="sticky-stt-col">{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
                         <td class="sticky-name-col">{{ qn.ho_ten if qn else '—' }}</td>
                         <td>
@@ -211,7 +211,7 @@
             <table class="table table-sm table-custom mb-0">
                 <thead>
                     <tr>
-                        <th style="width:40px;">STT</th>
+                        <th class="sticky-stt-col">STT</th>
                         <th>Đơn vị đề xuất</th>
                         <th class="sticky-name-col">Tên tập thể</th>
                         <th>Danh hiệu</th>
@@ -226,7 +226,7 @@
                     {% set dx = item.dx %}
                     {% set ct = item.ct %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td class="sticky-stt-col">{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
                         <td class="fw-semibold sticky-name-col">{{ ct.ten_don_vi_de_xuat or '—' }}</td>
                         <td>{{ ct.loai_danh_hieu }}</td>
@@ -307,7 +307,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th style="width:40px;">STT</th>
+                        <th class="sticky-stt-col">STT</th>
                         <th class="sticky-name-col">Họ tên</th>
                         <th>Vai trò</th>
                         <th>Đơn vị</th>
@@ -334,7 +334,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 </tr>
                 {% endif %}
                 <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
-                    <td>{{ loop.index }}</td>
+                    <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col">
                         <strong>{{ ct.quan_nhan.ho_ten }}</strong>
                         <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet no-print"
@@ -440,7 +440,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th style="width:40px;">STT</th>
+                        <th class="sticky-stt-col">STT</th>
                         <th class="sticky-name-col">Tên tập thể</th>
                         <th>Đơn vị đề xuất</th>
                         <th>Danh hiệu</th>
@@ -466,7 +466,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 </tr>
                 {% endif %}
                 <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
-                    <td>{{ loop.index }}</td>
+                    <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '—' }}</strong></td>
                     <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
                     <td><span class="badge bg-secondary" style="font-size:0.72rem;">{{ ct.loai_danh_hieu }}</span></td>
@@ -566,7 +566,11 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
         </button>
         <a href="{{ url_for('admin.export_reward_list', nam_hoc=nam_hoc_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query) }}"
            class="btn btn-sm btn-outline-success">
-            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel đầy đủ
+        </a>
+        <a href="{{ url_for('admin.export_b3_excel', nam_hoc=nam_hoc_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query) }}"
+           class="btn btn-sm btn-success">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel Bảng 3
         </a>
     </div>
 </div>
@@ -660,7 +664,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
                 <thead>
                     <tr>
-                        <th style="width:40px;">STT</th>
+                        <th class="sticky-stt-col">STT</th>
                         <th class="sticky-name-col">Họ tên</th>
                         <th>Vai trò</th>
                         <th class="col-b3-detail">Cấp bậc</th>
@@ -684,7 +688,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     </tr>
                     {% endif %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td class="sticky-stt-col">{{ loop.index }}</td>
                         <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>
                             {% if kt.quan_nhan %}
@@ -738,7 +742,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
                 <thead>
                     <tr>
-                        <th style="width:40px;">STT</th>
+                        <th class="sticky-stt-col">STT</th>
                         <th class="sticky-name-col">Tên tập thể</th>
                         <th>Đơn vị đề xuất</th>
                         <th>Danh hiệu</th>
@@ -758,7 +762,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     </tr>
                     {% endif %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td class="sticky-stt-col">{{ loop.index }}</td>
                         <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>{{ kt.don_vi.ten_don_vi }}</td>
                         <td>
@@ -853,7 +857,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th>STT</th>
+                        <th class="sticky-stt-col">STT</th>
                         <th>Danh hiệu</th>
                         <th>Đơn vị</th>
                         <th>Cá nhân / Tập thể</th>
@@ -866,7 +870,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 {% set ct = row.ct %}
                 {% set dx = row.dx %}
                 <tr class="table-danger">
-                    <td>{{ loop.index }}</td>
+                    <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td><span class="badge bg-secondary">{{ ct.loai_danh_hieu }}</span></td>
                     <td>{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
                     <td><strong>{{ ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '—' }}</strong></td>
@@ -1030,7 +1034,28 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
     body.rl-compact .col-b2-detail,
     body.rl-compact .col-b3-detail { display: none; }
 
-    /* ===== STICKY HỌ TÊN COL ===== */
+    /* ===== STICKY STT + HỌ TÊN COL ===== */
+    .sticky-stt-col {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 1;
+        background: #fff !important;
+        box-shadow: none;
+        min-width: 40px;
+        width: 40px;
+    }
+    thead th.sticky-stt-col {
+        background: var(--navy-primary, #1a3a5c) !important;
+        color: #fff !important;
+        z-index: 2;
+    }
+    tbody tr:hover td.sticky-stt-col { background: #F8F9FB !important; }
+    tr.table-success td.sticky-stt-col { background: #d1e7dd !important; }
+    tr.table-warning td.sticky-stt-col { background: #fff3cd !important; }
+    tr.table-danger  td.sticky-stt-col { background: #f8d7da !important; }
+    tr.table-info    td.sticky-stt-col { background: #cff4fc !important; }
+    tr.table-light   td.sticky-stt-col { background: #f8f9fa !important; }
+
     .sticky-name-col {
         position: sticky !important;
         left: 40px !important;
@@ -1049,6 +1074,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
     tr.table-warning td.sticky-name-col { background: #fff3cd !important; }
     tr.table-danger  td.sticky-name-col { background: #f8d7da !important; }
     tr.table-info    td.sticky-name-col { background: #cff4fc !important; }
+    tr.table-light   td.sticky-name-col { background: #f8f9fa !important; }
 </style>
 
 {# Print timestamp watermark (only visible when printing) #}
