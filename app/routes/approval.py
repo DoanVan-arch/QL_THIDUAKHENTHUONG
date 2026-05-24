@@ -297,13 +297,12 @@ def pending_list():
     phong_name = ROLE_TO_PHONG.get(current_user.role, '')
     nam_hoc_filter = request.args.get('nam_hoc', '')
 
-    # Get available nam_hoc options for the dropdown
+    # Get available nam_hoc options for the dropdown — all years this phong has PheDuyet records
     from app.models.nomination import DeXuat as _DeXuat
     nam_hoc_list = [n[0] for n in db.session.query(_DeXuat.nam_hoc).join(
         PheDuyet, PheDuyet.de_xuat_id == _DeXuat.id
     ).filter(
         PheDuyet.phong_duyet == phong_name,
-        PheDuyet.ket_qua == KetQuaDuyet.CHO_DUYET.value
     ).distinct().order_by(_DeXuat.nam_hoc.desc()).all()]
 
     q = PheDuyet.query.filter_by(

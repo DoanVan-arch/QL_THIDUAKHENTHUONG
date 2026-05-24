@@ -749,7 +749,8 @@ var NON_CRITERIA_FIELDS = {
     csrf_token: true, quan_nhan_id: true, loai_danh_hieu: true,
     doi_tuong: true, ghi_chu_item: true, ly_do_chua_dat_diem: true,
     nckh_noi_dung_text: true,
-    ten_don_vi_de_xuat: true,  // managed by togglePhamViBlocks, not criteria visibility
+    ten_don_vi_de_xuat: true,      // managed by togglePhamViBlocks
+    chu_tri_don_vi_danh_hieu: true, // managed by onPersonnelSelect (only for chi huy/bi thu)
 };
 
 // Fields that ARE criteria-controlled but not managed via CRITERIA_META/DIEM_NHOM_MAP.
@@ -766,7 +767,6 @@ var OPTIONAL_CRITERIA_FIELDS = {
     ket_qua_phu_nu: true,
     hinh_thuc_khen_thuong_pn: true,
  
-    chu_tri_don_vi_danh_hieu: true,
     diem_nckh: true,
     nckh_noi_dung: true,
     nckh_minh_chung: true,          // follows nckh_noi_dung
@@ -1025,6 +1025,18 @@ function applyCriteriaVisibilityByGroup() {
         renderScoreReasonSection(selectedDanhHieu);
         renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, currentCriteria);
     }
+
+    // Re-sync chu_tri_don_vi_danh_hieu: only visible for chi huy / bi thu (not tap_the)
+    (function() {
+        var i = document.querySelector('[name="chu_tri_don_vi_danh_hieu"]');
+        var wrap = i ? i.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null;
+        if (!wrap) return;
+        if (isTapThe) { wrap.classList.add('hidden'); return; }
+        var qnSel = document.getElementById('quan_nhan_select');
+        var opt = qnSel && qnSel.value ? qnSel.options[qnSel.selectedIndex] : null;
+        var isChiHuy = opt && (opt.getAttribute('data-lachihuy') === '1' || opt.getAttribute('data-labithu') === '1');
+        wrap.classList.toggle('hidden', !isChiHuy);
+    })();
 }
 
 // Auto-inject tooltip icons next to form labels for criteria fields
