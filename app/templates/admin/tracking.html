@@ -168,7 +168,7 @@
             <thead>
                 <tr>
                     <th style="width:35px;">STT</th>
-                    <th style="min-width:130px;">Họ tên</th>
+                    <th class="sticky-name-col">Họ tên</th>
                     <th style="min-width:110px;">Đơn vị</th>
                     <th>Cấp bậc / Chức vụ</th>
                     <th>Đối tượng</th>
@@ -579,6 +579,24 @@
     tr.table-info td.sticky-action-col  { background: #cff4fc !important; }
     tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
     .table-custom tbody tr:hover td.sticky-action-col { background: #F8F9FB !important; }
+
+    /* ===== STICKY HỌ TÊN COL ===== */
+    .sticky-name-col {
+        position: sticky !important;
+        left: 35px !important;
+        z-index: 1;
+        background: #fff !important;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+        min-width: 130px;
+    }
+    thead th.sticky-name-col {
+        background: var(--navy-primary) !important;
+        color: #fff !important;
+        z-index: 2;
+    }
+    tr.table-info td.sticky-name-col  { background: #cff4fc !important; }
+    tr.table-danger td.sticky-name-col { background: #f8d7da !important; }
+    .table-custom tbody tr:hover td.sticky-name-col { background: #F8F9FB !important; }
 
     /* ===== BTN NAVY ===== */
     .btn-navy {
