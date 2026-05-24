@@ -729,7 +729,11 @@ def submit_nomination(id):
                 return redirect(url_for('nomination.edit_nomination', id=id))
 
     # Create pending approval records
-    has_any_doan_the = any((ct.ket_qua_doan_the or '').strip() for ct in de_xuat.chi_tiets)
+    ca_nhan_items = [ct for ct in de_xuat.chi_tiets if ct.doi_tuong]  # tập thể có doi_tuong = None
+    has_any_doan_the = any((ct.ket_qua_doan_the or '').strip() for ct in ca_nhan_items)
+    # Chỉ auto-approve BAN_CTCQ khi có cá nhân nhưng không ai có kết quả đoàn thể
+    # Nếu toàn bộ là tập thể → không auto-approve, để BAN_CTCQ xét bình thường
+    ctcq_auto = ca_nhan_items and not has_any_doan_the
 
     for phong in [PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
                   PhongDuyet.THU_TRUONG_PHONG_TMHC,
@@ -743,7 +747,7 @@ def submit_nomination(id):
         if not existing:
             initial_ket_qua = KetQuaDuyet.CHO_DUYET.value
             initial_ghi_chu = None
-            if phong == PhongDuyet.BAN_CTCQ and not has_any_doan_the:
+            if phong == PhongDuyet.BAN_CTCQ and ctcq_auto:
                 initial_ket_qua = KetQuaDuyet.DONG_Y.value
                 initial_ghi_chu = 'Tự động duyệt (không có dữ liệu kết quả đoàn thể)'
 
@@ -756,7 +760,7 @@ def submit_nomination(id):
             db.session.add(pd)
             db.session.flush()
 
-            if phong == PhongDuyet.BAN_CTCQ and not has_any_doan_the:
+            if phong == PhongDuyet.BAN_CTCQ and ctcq_auto:
                 for ct in de_xuat.chi_tiets:
                     exists_item = KetQuaDuyetChiTiet.query.filter_by(
                         phe_duyet_id=pd.id,
