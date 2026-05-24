@@ -100,10 +100,11 @@
                 </thead>
                 <tbody>
                     {% for ct in de_xuat.chi_tiets %}
+                    {% set ct_is_tap_the = (danh_hieu_pham_vi.get(ct.loai_danh_hieu, 'Cá nhân') == 'Đơn vị') %}
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">
-                            {% if ct.quan_nhan_id is none %}
+                            {% if ct_is_tap_the %}
                             <i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or '—' }}
                             {% else %}
                             {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
@@ -471,7 +472,7 @@
     <!-- Thành tích quần chúng khác -->
 <div class="form-section hidden" id="section-doan-the">
     <div class="form-section-title" style="color: #E67E22;">
-        <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn thể (nếu có)
+        <i class="bi bi-star me-1"></i>Thành tích cá nhân các tổ chức đoàn (nếu có)
     </div>
     <div class="row g-3">
         <div class="col-md-4">
@@ -483,7 +484,7 @@
                    placeholder="VD: Đoàn viên xuất sắc, Hoàn thành tốt...">
         </div>
         <div class="col-md-4">
-            <label class="form-label">Mức độ hoàn thành nhiệm vụ của tổ chức đoàn thể</label>
+            <label class="form-label">Mức độ hoàn thành nhiệm vụ của tổ chức đoàn</label>
             <input type="text" 
                    class="form-control" 
                    name="ket_qua_doan_the" 
@@ -491,7 +492,7 @@
                    placeholder="Ví dụ: Hoàn thành tốt, Hoàn thành xuất sắc...">
         </div>
         <div class="col-md-4">
-            <label class="form-label">Hình thức khen thưởng của tổ chức đoàn thể</label>
+            <label class="form-label">Hình thức khen thưởng của tổ chức đoàn</label>
             <input type="text" 
                    class="form-control" 
                    name="hinh_thuc_khen_thuong_qc" 
@@ -532,7 +533,7 @@
                    id="hinh_thuc_khen_thuong_pn" 
                    placeholder="Ví dụ: Giấy khen, Bằng khen, Cờ thi đua...">
         </div>
-        <div class="col-md-12">
+        <!-- <div class="col-md-12">
             <label class="form-label">Minh chứng (nhiều file) - nếu có</label>
             <input type="file" 
                    class="form-control" 
@@ -541,7 +542,7 @@
                    accept="image/*,.pdf" 
                    multiple>
             <small class="text-muted d-block mt-1">Chấp nhận file ảnh (JPG, PNG) hoặc PDF</small>
-        </div>
+        </div> -->
     </div>
 </div>
 
@@ -1177,6 +1178,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Re-apply after initial auto-fill in app.js and after any async UI changes
     setTimeout(applyCriteriaVisibilityByGroup, 0);
     setTimeout(applyCriteriaVisibilityByGroup, 120);
+    setTimeout(togglePhamViBlocks, 0);
+    setTimeout(togglePhamViBlocks, 150);
 
     var dtSelect = document.getElementById('doi_tuong_select');
     if (dtSelect) {
