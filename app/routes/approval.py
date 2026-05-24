@@ -780,6 +780,43 @@ def toggle_item(pd_id, ct_id):
     })
 
 
+@approval_bp.route('/revoke-item/<int:pd_id>/<int:ct_id>', methods=['POST'])
+@login_required
+@department_required
+def revoke_item(pd_id, ct_id):
+    """Thu hồi kết quả duyệt của 1 cá nhân/tập thể, đưa về CHO_DUYET."""
+    phong_name = ROLE_TO_PHONG.get(current_user.role, '')
+    phe_duyet = PheDuyet.query.filter_by(id=pd_id, phong_duyet=phong_name).first_or_404()
+    de_xuat = phe_duyet.de_xuat
+
+    if de_xuat.trang_thai in (TrangThaiDeXuat.PHE_DUYET_CUOI.value, TrangThaiDeXuat.HOI_DONG.value):
+        return jsonify({'success': False, 'message': 'Không thể thu hồi - đề xuất đã qua giai đoạn duyệt của bộ phận.'}), 403
+
+    kq = KetQuaDuyetChiTiet.query.filter_by(
+        phe_duyet_id=phe_duyet.id, chi_tiet_id=ct_id
+    ).first_or_404()
+
+    if kq.ket_qua == KetQuaDuyet.CHO_DUYET.value:
+        return jsonify({'success': False, 'message': 'Mục này chưa được duyệt.'}), 400
+
+    # Reset this item
+    kq.ket_qua = KetQuaDuyet.CHO_DUYET.value
+    kq.ly_do = None
+
+    # If PheDuyet was finalized, revert it back to pending
+    if phe_duyet.ket_qua != KetQuaDuyet.CHO_DUYET.value:
+        phe_duyet.ket_qua = KetQuaDuyet.CHO_DUYET.value
+        phe_duyet.nguoi_duyet_id = None
+        phe_duyet.ngay_duyet = None
+        phe_duyet.ly_do = None
+        # Revert DeXuat status to DANG_DUYET if it was HOI_DONG
+        if de_xuat.trang_thai == TrangThaiDeXuat.HOI_DONG.value:
+            de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
+
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Đã thu hồi kết quả duyệt cho cá nhân này.'})
+
+
 @approval_bp.route('/batch-approve', methods=['POST'])
 @login_required
 @department_required
