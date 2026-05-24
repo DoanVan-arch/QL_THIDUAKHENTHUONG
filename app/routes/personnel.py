@@ -1098,10 +1098,10 @@ def bulk_action():
         for qn in qn_list:
             chuyen = ChuyenDonVi(
                 quan_nhan_id=qn.id,
-                don_vi_cu_id=qn.don_vi_id,
-                don_vi_moi_id=don_vi_id,
+                don_vi_nguon_id=qn.don_vi_id,
+                don_vi_dich_id=don_vi_id,
                 ly_do=ly_do or None,
-                trang_thai=TrangThaiChuyen.CHO_DUYET.value,
+                trang_thai=TrangThaiChuyen.PENDING,
                 nguoi_tao_id=current_user.id,
             )
             db.session.add(chuyen)
