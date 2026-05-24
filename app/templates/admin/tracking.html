@@ -197,7 +197,7 @@
                 {% endfor %}
                 <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
                     <td>{{ loop.index }}</td>
-                    <td class="fw-semibold">
+                    <td class="fw-semibold sticky-name-col">
                         {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
                         {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
                         <div class="d-flex flex-wrap gap-1 mt-1">
@@ -279,7 +279,7 @@
             <thead class="table-light">
                 <tr>
                     <th style="width:35px;">STT</th>
-                    <th style="min-width:160px;">Tên tập thể</th>
+                    <th class="sticky-name-col">Tên tập thể</th>
                     <th>Đơn vị đề xuất</th>
                     <th>Danh hiệu</th>
                     <th>Năm học</th>
@@ -303,7 +303,7 @@
                 {% set dx_tt = item.dx %}
                 <tr class="{% if ct_can_approve %}table-info{% endif %}">
                     <td>{{ loop.index }}</td>
-                    <td class="fw-semibold"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or dx_tt.don_vi.ten_don_vi }}</td>
+                    <td class="fw-semibold sticky-name-col"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or dx_tt.don_vi.ten_don_vi }}</td>
                     <td><small>{{ item.don_vi }}</small></td>
                     <td>
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>

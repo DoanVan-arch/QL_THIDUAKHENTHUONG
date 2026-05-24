@@ -109,9 +109,9 @@
             <table class="table table-sm table-custom mb-0">
                 <thead>
                     <tr>
-                        <th>STT</th>
+                        <th style="width:40px;">STT</th>
                         <th>Đơn vị</th>
-                        <th>Họ và tên</th>
+                        <th class="sticky-name-col">Họ và tên</th>
                         <th>Vai trò</th>
                         <th class="col-b1-detail">Thông tin cá nhân</th>
                         <th class="col-b1-detail">Chi tiết tiêu chí</th>
@@ -129,7 +129,7 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
-                        <td>{{ qn.ho_ten if qn else '—' }}</td>
+                        <td class="sticky-name-col">{{ qn.ho_ten if qn else '—' }}</td>
                         <td>
                             {% if qn %}
                             {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.6rem;">Cấp trưởng</span>{% endif %}
@@ -211,9 +211,9 @@
             <table class="table table-sm table-custom mb-0">
                 <thead>
                     <tr>
-                        <th>STT</th>
+                        <th style="width:40px;">STT</th>
                         <th>Đơn vị đề xuất</th>
-                        <th>Tên tập thể</th>
+                        <th class="sticky-name-col">Tên tập thể</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
                         <th class="col-b1-detail">Thành tích tập thể</th>
@@ -228,7 +228,7 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ dx.don_vi.ten_don_vi }}</td>
-                        <td class="fw-semibold">{{ ct.ten_don_vi_de_xuat or '—' }}</td>
+                        <td class="fw-semibold sticky-name-col">{{ ct.ten_don_vi_de_xuat or '—' }}</td>
                         <td>{{ ct.loai_danh_hieu }}</td>
                         <td>{{ dx.nam_hoc }}</td>
                         <td class="col-b1-detail">
@@ -307,8 +307,8 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th style="width:36px;">STT</th>
-                        <th>Họ tên</th>
+                        <th style="width:40px;">STT</th>
+                        <th class="sticky-name-col">Họ tên</th>
                         <th>Vai trò</th>
                         <th>Đơn vị</th>
                         <th style="white-space:nowrap;">Cấp bậc / Chức vụ</th>
@@ -335,7 +335,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 {% endif %}
                 <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
                     <td>{{ loop.index }}</td>
-                    <td>
+                    <td class="sticky-name-col">
                         <strong>{{ ct.quan_nhan.ho_ten }}</strong>
                         <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet no-print"
                                 data-ct-id="{{ ct.id }}" title="Xem chi tiết"
@@ -440,8 +440,8 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th style="width:36px;">STT</th>
-                        <th>Tên tập thể</th>
+                        <th style="width:40px;">STT</th>
+                        <th class="sticky-name-col">Tên tập thể</th>
                         <th>Đơn vị đề xuất</th>
                         <th>Danh hiệu</th>
                         <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
@@ -467,7 +467,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 {% endif %}
                 <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
                     <td>{{ loop.index }}</td>
-                    <td><strong>{{ ct.ten_don_vi_de_xuat or '—' }}</strong></td>
+                    <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '—' }}</strong></td>
                     <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '—' }}</td>
                     <td><span class="badge bg-secondary" style="font-size:0.72rem;">{{ ct.loai_danh_hieu }}</span></td>
                     <td class="text-center col-b2-detail" style="white-space:nowrap;">
@@ -661,7 +661,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 <thead>
                     <tr>
                         <th style="width:40px;">STT</th>
-                        <th style="min-width:150px;">Họ tên</th>
+                        <th class="sticky-name-col">Họ tên</th>
                         <th>Vai trò</th>
                         <th class="col-b3-detail">Cấp bậc</th>
                         <th class="col-b3-detail">Chức vụ</th>
@@ -685,7 +685,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     {% endif %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td class="fw-semibold">{{ kt.ho_ten }}</td>
+                        <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>
                             {% if kt.quan_nhan %}
                             {% set qn3 = kt.quan_nhan %}
@@ -739,7 +739,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 <thead>
                     <tr>
                         <th style="width:40px;">STT</th>
-                        <th style="min-width:150px;">Tên tập thể</th>
+                        <th class="sticky-name-col">Tên tập thể</th>
                         <th>Đơn vị đề xuất</th>
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
@@ -759,7 +759,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     {% endif %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td class="fw-semibold">{{ kt.ho_ten }}</td>
+                        <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>{{ kt.don_vi.ten_don_vi }}</td>
                         <td>
                             {% if kt.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">DVQT</span>
@@ -1029,6 +1029,26 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
     body.rl-compact .col-b1-detail,
     body.rl-compact .col-b2-detail,
     body.rl-compact .col-b3-detail { display: none; }
+
+    /* ===== STICKY HỌ TÊN COL ===== */
+    .sticky-name-col {
+        position: sticky !important;
+        left: 40px !important;
+        z-index: 1;
+        background: #fff !important;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+        min-width: 130px;
+    }
+    thead th.sticky-name-col {
+        background: var(--navy-primary, #1a3a5c) !important;
+        color: #fff !important;
+        z-index: 2;
+    }
+    tbody tr:hover td.sticky-name-col { background: #F8F9FB !important; }
+    tr.table-success td.sticky-name-col { background: #d1e7dd !important; }
+    tr.table-warning td.sticky-name-col { background: #fff3cd !important; }
+    tr.table-danger  td.sticky-name-col { background: #f8d7da !important; }
+    tr.table-info    td.sticky-name-col { background: #cff4fc !important; }
 </style>
 
 {# Print timestamp watermark (only visible when printing) #}
