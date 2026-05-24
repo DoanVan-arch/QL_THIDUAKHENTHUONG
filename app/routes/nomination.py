@@ -570,6 +570,7 @@ def add_nomination_item(id):
         danh_hieu_hv_gioi=request.form.get('danh_hieu_hv_gioi', '').strip() or None,
         diem_tong_ket=request.form.get('diem_tong_ket', '').strip() or None,
         ket_qua_thuc_hanh=request.form.get('ket_qua_thuc_hanh', '').strip() or None,
+        ket_qua_ren_luyen=request.form.get('ket_qua_ren_luyen', '').strip() or None,
         # Graduation exam fields
         hinh_thuc_tot_nghiep=request.form.get('hinh_thuc_tot_nghiep', '').strip() or None,
         diem_tn_ctd=request.form.get('diem_tn_ctd', '').strip() or None,

@@ -197,6 +197,7 @@ class DeXuatChiTiet(db.Model):
     danh_hieu_hv_gioi = Column(String(100), nullable=True)
     diem_tong_ket = Column(String(50), nullable=True)
     ket_qua_thuc_hanh = Column(String(100), nullable=True)
+    ket_qua_ren_luyen = Column(String(100), nullable=True)
 
     # Graduation exam (hoc_cuoi)
     hinh_thuc_tot_nghiep = Column(String(100), nullable=True)
