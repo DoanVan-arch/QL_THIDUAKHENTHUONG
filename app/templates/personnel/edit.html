@@ -59,12 +59,18 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Chức vụ</label>
-                        <input class="form-control" list="chucVuOptions" name="chuc_vu" value="{{ qn.chuc_vu or '' }}" placeholder="Chọn hoặc nhập chức vụ">
+                        <select class="form-select" name="chuc_vu" id="chuc_vu_select">
+                            <option value="">-- Chọn --</option>
+                            {% for cv in chuc_vu_options %}
+                            <option value="{{ cv.ten }}" {% if qn.chuc_vu == cv.ten %}selected{% endif %}>{{ cv.ten }}</option>
+                            {% endfor %}
+                        </select>
+                        <!-- <input class="form-control" list="chucVuOptions" name="chuc_vu" value="{{ qn.chuc_vu or '' }}" placeholder="Chọn hoặc nhập chức vụ">
                         <datalist id="chucVuOptions">
                             {% for cv in chuc_vu_options %}
                             <option value="{{ cv.ten }}"></option>
                             {% endfor %}
-                        </datalist>
+                        </datalist> -->
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Đơn vị</label>
