@@ -61,7 +61,7 @@
                         <select class="form-select" name="chuc_vu" id="chuc_vu_select">
                             <option value="">-- Chọn --</option>
                             {% for cv in chuc_vu_options %}
-                            <option value="{{ cv.ten }}" {% if qn.chuc_vu == cv.ten %}selected{% endif %}>{{ cv.ten }}</option>
+                            <option value="{{ cv.ten }}">{{ cv.ten }}</option>
                             {% endfor %}
                         </select>
                         <!-- <input class="form-control" list="chucVuOptions" name="chuc_vu" placeholder="Chọn hoặc nhập chức vụ">

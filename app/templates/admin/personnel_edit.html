@@ -86,7 +86,25 @@
                     </div>
                 </div>
             </div>
-
+             <div class="form-section">
+               
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="la_chi_huy" id="la_chi_huy"
+                                   {% if qn.la_chi_huy %}checked{% endif %}>
+                            <label class="form-check-label" for="la_chi_huy">Là cấp trưởng</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="la_bi_thu" id="la_bi_thu"
+                                   {% if qn.la_bi_thu %}checked{% endif %}>
+                            <label class="form-check-label" for="la_bi_thu">Bí thư cấp ủy / chi bộ</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="form-section">
                 <div class="form-section-title">Trình độ</div>
                 <div class="row g-3">
@@ -117,25 +135,7 @@
                 </div>
             </div>
 
-            <div class="form-section">
-                <div class="form-section-title">Vai trò trong đơn vị</div>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="la_chi_huy" id="la_chi_huy"
-                                   {% if qn.la_chi_huy %}checked{% endif %}>
-                            <label class="form-check-label" for="la_chi_huy">Là cấp trưởng</label>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="la_bi_thu" id="la_bi_thu"
-                                   {% if qn.la_bi_thu %}checked{% endif %}>
-                            <label class="form-check-label" for="la_bi_thu">Bí thư cấp ủy / chi bộ</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
+           
 
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Cập nhật</button>
