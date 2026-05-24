@@ -86,39 +86,8 @@
                     </div>
                 </div>
             </div>
-
             <div class="form-section">
-                <div class="form-section-title">Trình độ</div>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Học hàm</label>
-                        <select class="form-select" name="hoc_ham">
-                            {% for hh in hoc_ham_list %}
-                            <option value="{{ hh }}">{{ hh }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Học vị</label>
-                        <select class="form-select" name="hoc_vi">
-                            {% for hv in hoc_vi_list %}
-                            <option value="{{ hv }}">{{ hv }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Trình độ học vấn</label>
-                        <input type="text" class="form-control" name="trinh_do_hoc_van" placeholder="VD: 12/12">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Ngoại ngữ</label>
-                        <input type="text" class="form-control" name="ngoai_ngu" placeholder="VD: Anh B2">
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="form-section-title">Vai trò trong đơn vị</div>
+                
                 <div class="row g-3">
                     <div class="col-md-3">
                         <div class="form-check">
@@ -152,6 +121,37 @@
                     </div>
                 </div>
             </div>
+            <div class="form-section">
+                <div class="form-section-title">Trình độ</div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Học hàm</label>
+                        <select class="form-select" name="hoc_ham">
+                            {% for hh in hoc_ham_list %}
+                            <option value="{{ hh }}">{{ hh }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Học vị</label>
+                        <select class="form-select" name="hoc_vi">
+                            {% for hv in hoc_vi_list %}
+                            <option value="{{ hv }}">{{ hv }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Trình độ học vấn</label>
+                        <input type="text" class="form-control" name="trinh_do_hoc_van" placeholder="VD: 12/12">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Ngoại ngữ</label>
+                        <input type="text" class="form-control" name="ngoai_ngu" placeholder="VD: Anh B2">
+                    </div>
+                </div>
+            </div>
+
+            
 
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-navy">
