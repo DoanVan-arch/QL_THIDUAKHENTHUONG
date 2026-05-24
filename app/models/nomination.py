@@ -198,6 +198,15 @@ class DeXuatChiTiet(db.Model):
     diem_tong_ket = Column(String(50), nullable=True)
     ket_qua_thuc_hanh = Column(String(100), nullable=True)
 
+    # Graduation exam (hoc_cuoi)
+    hinh_thuc_tot_nghiep = Column(String(100), nullable=True)
+    diem_tn_ctd = Column(String(50), nullable=True)
+    diem_tn_ct = Column(String(50), nullable=True)
+    diem_tn_ta = Column(String(50), nullable=True)
+    diem_tn_mon4 = Column(String(50), nullable=True)
+    diem_tn_chuyennganh = Column(String(50), nullable=True)
+    diem_tn_baove = Column(String(50), nullable=True)
+
     # Scientific research
     diem_nckh = Column(Float, nullable=True)
     nckh_noi_dung = Column(Text, nullable=True)

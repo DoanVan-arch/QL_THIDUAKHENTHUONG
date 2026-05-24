@@ -1252,5 +1252,53 @@ function updateSubmitButtonState() {
         submitBtn.disabled = !(dtSelect && dtSelect.value);
     }
 }
+
+// ── Điểm tốt nghiệp: show/hide ô điểm theo hình thức thi ──────────────────
+(function() {
+    var HTTN_MAP = {
+        'Thi 4 môn (CTĐ , CT , TA , môn thứ 4)':                      ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4'],
+        'Thi 4 môn (chuyên ngành, bảo vệ KL , TA ,môn thứ 4)':        ['diem_tn_chuyennganh','diem_tn_baove','diem_tn_ta','diem_tn_mon4'],
+        'Thi 2 môn (CTĐ , CT)':                                         ['diem_tn_ctd','diem_tn_ct'],
+    };
+    var ALL_DIEM_TN = ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4','diem_tn_chuyennganh','diem_tn_baove'];
+
+    function applyDiemTotNghiep() {
+        var htSelect = document.querySelector('[name="hinh_thuc_tot_nghiep"]');
+        if (!htSelect) return;
+        var chosen = htSelect.value || '';
+        var show = HTTN_MAP[chosen] || [];
+
+        // ẩn/hiện field diem_tot_nghiep gốc
+        var diemGocWrap = (function(){
+            var el = document.querySelector('[name="diem_tot_nghiep"]');
+            return el ? el.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null;
+        })();
+        if (diemGocWrap) diemGocWrap.classList.toggle('hidden', chosen !== '');
+
+        ALL_DIEM_TN.forEach(function(f) {
+            var el = document.querySelector('[name="' + f + '"]');
+            var wrap = el ? el.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null;
+            if (!wrap) return;
+            if (show.indexOf(f) >= 0) wrap.classList.remove('hidden');
+            else { wrap.classList.add('hidden'); if (el) el.value = ''; }
+        });
+
+        // Đảm bảo section-extra-criteria hiển thị nếu có visible col
+        var sec = document.getElementById('section-extra-criteria');
+        if (sec) {
+            var vis = sec.querySelectorAll('.col-md-4:not(.hidden),.col-md-6:not(.hidden),.col-md-8:not(.hidden),.col-md-12:not(.hidden)').length;
+            sec.classList.toggle('hidden', vis === 0);
+        }
+    }
+
+    // Attach listener – cần chờ DOM sẵn sàng (httn có thể là TomSelect hoặc select thường)
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.name === 'hinh_thuc_tot_nghiep') applyDiemTotNghiep();
+    });
+
+    // Gọi ngay khi load (nếu đang edit lại form có giá trị sẵn)
+    document.addEventListener('DOMContentLoaded', function() { applyDiemTotNghiep(); });
+    setTimeout(applyDiemTotNghiep, 300);
+})();
 </script>
 {% endblock %}
