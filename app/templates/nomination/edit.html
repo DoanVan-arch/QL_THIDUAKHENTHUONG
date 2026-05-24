@@ -1091,7 +1091,7 @@ function renderTapTheCriteria(selectedDanhHieu, isTapThe) {
     var byNhom = TIEU_CHI_TAP_THE[selectedDanhHieu];
     var html = '';
     Object.keys(byNhom).forEach(function(nhom) {
-        var label = NHOM_LABEL[nhom] || nhom;
+        var label = "";
         var tcs = byNhom[nhom];
         html += '<div class="mb-3"><div class="fw-semibold text-secondary border-bottom pb-1 mb-2" style="font-size:0.85rem;">' + label + '</div><div class="row g-2">';
         tcs.forEach(function(tc) {
