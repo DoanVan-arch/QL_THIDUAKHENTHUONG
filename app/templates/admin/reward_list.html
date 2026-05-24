@@ -80,12 +80,12 @@
             <a href="{{ url_for('admin.export_pending_final_excel') }}" class="btn btn-sm btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
-            <a href="{{ url_for('admin.export_hoi_dong_excel', trang_thai='hoi_dong', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-outline-success" title="Xuất kèm điểm tiêu chí và biểu quyết">
+            <!-- <a href="{{ url_for('admin.export_hoi_dong_excel', trang_thai='hoi_dong', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-outline-success" title="Xuất kèm điểm tiêu chí và biểu quyết">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel + Biểu quyết
             </a>
             <a href="{{ url_for('admin.export_pending_final_word') }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-file-earmark-word me-1"></i>Word
-            </a>
+            </a> -->
             <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBang1','Bảng 1 – Chờ phê duyệt cuối')">
                 <i class="bi bi-printer me-1"></i>In PDF
             </button>
@@ -282,12 +282,12 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <a href="{{ url_for('admin.export_bang2_excel') }}" class="btn btn-sm btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
-            <a href="{{ url_for('admin.export_bang2_detail_excel', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-success" title="Xuất 1 sheet tổng + sheet chi tiết per người (tiêu chí + biểu quyết)">
+            <!-- <a href="{{ url_for('admin.export_bang2_detail_excel', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-success" title="Xuất 1 sheet tổng + sheet chi tiết per người (tiêu chí + biểu quyết)">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel Chi tiết
             </a>
             <a href="{{ url_for('admin.export_hoi_dong_excel', trang_thai='phe_duyet_cuoi', nam_hoc=nam_hoc_filter) }}" class="btn btn-sm btn-outline-success" title="Xuất kèm điểm tiêu chí và biểu quyết">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel + Biểu quyết
-            </a>
+            </a> -->
             <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBang2','Bảng 2 – Xét duyệt Hội đồng')">
                 <i class="bi bi-printer me-1"></i>In PDF
             </button>
