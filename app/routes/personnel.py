@@ -1118,6 +1118,19 @@ def bulk_action():
         db.session.commit()
         return jsonify({'success': True, 'message': f'Đã tạo yêu cầu chuyển đơn vị cho {len(qn_list)} quân nhân'})
 
+    elif action == 'delete':
+        from datetime import datetime as _dt
+        for qn in qn_list:
+            qn.is_active = False
+            try:
+                qn.is_deleted = True
+                qn.deleted_at = _dt.utcnow()
+                qn.deleted_by_id = current_user.id
+            except Exception:
+                pass
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã xóa {len(qn_list)} quân nhân'})
+
     else:
         return jsonify({'success': False, 'message': 'Hành động không hợp lệ'}), 400
 

@@ -3391,13 +3391,22 @@ def all_personnel():
     doi_tuong = request.args.get('doi_tuong', '').strip()
     cap_bac = request.args.get('cap_bac', '').strip()
     chuc_vu = request.args.get('chuc_vu', '').strip()
+    sort_by = request.args.get('sort_by', 'don_vi').strip()
     page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 30, type=int)
+    if per_page not in (20, 30, 50, 100):
+        per_page = 30
 
     from sqlalchemy.sql.expression import collate as _collate
     from sqlalchemy import case as _case
     from app.models.catalog import ChucVuOption as _ChucVuOption
     _chuc_vu_alias = db.aliased(_ChucVuOption)
-    query = QuanNhan.query.filter_by(is_active=True).join(DonVi)\
+    base_q = QuanNhan.query.filter_by(is_active=True)
+    try:
+        base_q = base_q.filter(QuanNhan.is_deleted == False)
+    except Exception:
+        pass
+    query = base_q.join(DonVi)\
         .outerjoin(_chuc_vu_alias,
                    _collate(_chuc_vu_alias.ten, 'utf8mb4_unicode_ci') ==
                    _collate(QuanNhan.chuc_vu, 'utf8mb4_unicode_ci'))
@@ -3413,18 +3422,34 @@ def all_personnel():
     if chuc_vu:
         query = query.filter(QuanNhan.chuc_vu.ilike(f'%{chuc_vu}%'))
 
-    query = query.order_by(
-        DonVi.thu_tu,
-        DonVi.ten_don_vi,
-        _case((_chuc_vu_alias.thu_tu.is_(None), 1), else_=0),
-        _chuc_vu_alias.thu_tu.asc(),
-        QuanNhan.chuc_vu.asc(),
-        QuanNhan.ho_ten.asc()
-    )
-    personnel = query.paginate(page=page, per_page=30, error_out=False)
+    if sort_by == 'ho_ten':
+        query = query.order_by(QuanNhan.ho_ten.asc())
+    elif sort_by == 'cap_bac':
+        query = query.order_by(QuanNhan.cap_bac.asc(), QuanNhan.ho_ten.asc())
+    elif sort_by == 'doi_tuong':
+        query = query.order_by(QuanNhan.doi_tuong.asc(), QuanNhan.ho_ten.asc())
+    else:  # don_vi (default)
+        query = query.order_by(
+            DonVi.thu_tu,
+            DonVi.ten_don_vi,
+            _case((_chuc_vu_alias.thu_tu.is_(None), 1), else_=0),
+            _chuc_vu_alias.thu_tu.asc(),
+            QuanNhan.chuc_vu.asc(),
+            QuanNhan.ho_ten.asc()
+        )
+    personnel = query.paginate(page=page, per_page=per_page, error_out=False)
 
     units = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu, DonVi.ten_don_vi).all()
     doi_tuong_list = _get_doi_tuong_option_list()
+
+    # cap_bac and chuc_vu distinct lists for dropdowns
+    from sqlalchemy import distinct as _distinct
+    cap_bac_list = [r[0] for r in db.session.query(_distinct(QuanNhan.cap_bac)).filter(
+        QuanNhan.is_active == True, QuanNhan.cap_bac != None, QuanNhan.cap_bac != ''
+    ).order_by(QuanNhan.cap_bac).all()]
+    chuc_vu_list = [r[0] for r in db.session.query(_distinct(QuanNhan.chuc_vu)).filter(
+        QuanNhan.is_active == True, QuanNhan.chuc_vu != None, QuanNhan.chuc_vu != ''
+    ).order_by(QuanNhan.chuc_vu).all()]
 
     return render_template('admin/all_personnel.html',
                            personnel=personnel,
@@ -3433,8 +3458,12 @@ def all_personnel():
                            doi_tuong_filter=doi_tuong,
                            cap_bac_filter=cap_bac,
                            chuc_vu_filter=chuc_vu,
+                           sort_by=sort_by,
+                           per_page=per_page,
                            units=units,
-                           doi_tuong_list=doi_tuong_list)
+                           doi_tuong_list=doi_tuong_list,
+                           cap_bac_list=cap_bac_list,
+                           chuc_vu_list=chuc_vu_list)
 
 
 # ------------------------------------------------------------------
@@ -3459,6 +3488,79 @@ def admin_personnel_detail(id):
                            loai_chung_chi_list=[e.value for e in LoaiChungChi],
                            nominations_history=nominations_history,
                            rewards_history=rewards_history)
+
+
+# ------------------------------------------------------------------
+# Admin: Bulk action on personnel (across all units)
+# ------------------------------------------------------------------
+@admin_bp.route('/personnel/bulk-action', methods=['POST'])
+@login_required
+@admin_required
+def admin_bulk_action():
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Dữ liệu không hợp lệ'}), 400
+    action = data.get('action')
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'success': False, 'message': 'Không có quân nhân nào được chọn'}), 400
+
+    qn_list = QuanNhan.query.filter(QuanNhan.id.in_(ids), QuanNhan.is_active == True).all()
+
+    if action == 'doi_tuong':
+        doi_tuong = data.get('doi_tuong', '').strip()
+        if not doi_tuong:
+            return jsonify({'success': False, 'message': 'Chưa chọn đối tượng'}), 400
+        for qn in qn_list:
+            qn.doi_tuong = doi_tuong
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã cập nhật đối tượng cho {len(qn_list)} quân nhân'})
+
+    elif action == 'chuyen_vung':
+        from datetime import datetime as _dt
+        for qn in qn_list:
+            qn.is_chuyen_vung = True
+            qn.ngay_chuyen_vung = _dt.utcnow()
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã chuyển vùng {len(qn_list)} quân nhân'})
+
+    elif action == 'chuyen_don_vi':
+        don_vi_id = data.get('don_vi_id')
+        ly_do = data.get('ly_do', '').strip()
+        if not don_vi_id:
+            return jsonify({'success': False, 'message': 'Chưa chọn đơn vị đích'}), 400
+        target_unit = DonVi.query.get(don_vi_id)
+        if not target_unit:
+            return jsonify({'success': False, 'message': 'Đơn vị đích không tồn tại'}), 404
+        from app.models.transfer import ChuyenDonVi as _ChuyenDonVi, TrangThaiChuyen as _TrangThaiChuyen
+        for qn in qn_list:
+            chuyen = _ChuyenDonVi(
+                quan_nhan_id=qn.id,
+                don_vi_nguon_id=qn.don_vi_id,
+                don_vi_dich_id=don_vi_id,
+                ly_do=ly_do or None,
+                trang_thai=_TrangThaiChuyen.PENDING,
+                nguoi_tao_id=current_user.id,
+            )
+            db.session.add(chuyen)
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã tạo yêu cầu chuyển đơn vị cho {len(qn_list)} quân nhân'})
+
+    elif action == 'delete':
+        from datetime import datetime as _dt
+        for qn in qn_list:
+            qn.is_active = False
+            try:
+                qn.is_deleted = True
+                qn.deleted_at = _dt.utcnow()
+                qn.deleted_by_id = current_user.id
+            except Exception:
+                pass
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Đã xóa {len(qn_list)} quân nhân'})
+
+    else:
+        return jsonify({'success': False, 'message': 'Hành động không hợp lệ'}), 400
 
 
 # ------------------------------------------------------------------

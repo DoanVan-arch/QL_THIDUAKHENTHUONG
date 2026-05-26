@@ -118,6 +118,9 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn btn-sm btn-outline-primary" id="btnBulkChuyenDonVi">
                 <i class="bi bi-arrow-left-right me-1"></i>Chuyển đơn vị
             </button>
+            <button type="button" class="btn btn-sm btn-outline-danger" id="btnBulkDelete">
+                <i class="bi bi-trash me-1"></i>Xóa
+            </button>
             <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="btnClearSelection">
                 <i class="bi bi-x-lg"></i>
             </button>
@@ -392,6 +395,26 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) { location.reload(); }
             else { alert(data.message || 'Có lỗi xảy ra'); }
         } finally { this.disabled = false; }
+    });
+
+    // ===== BULK XÓA =====
+    document.getElementById('btnBulkDelete') && document.getElementById('btnBulkDelete').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const names = getSelectedNames();
+        if (!confirm(`Xóa ${ids.length} quân nhân (${names.slice(0,3).join(', ')}${names.length>3?' ...':''})?\nDữ liệu sẽ vào danh sách xóa, admin có thể khôi phục.`)) return;
+        this.disabled = true;
+        try {
+            const res = await fetch('{{ url_for("personnel.bulk_action") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ action: 'delete', ids }),
+            });
+            if (!res.ok) { alert('Lỗi server: ' + res.status); return; }
+            const data = await res.json();
+            if (data.success) { location.reload(); }
+            else { alert(data.message || 'Có lỗi xảy ra'); }
+        } catch(e) { alert('Lỗi kết nối: ' + e.message); }
+        finally { this.disabled = false; }
     });
 });
 </script>
