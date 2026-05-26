@@ -59,6 +59,9 @@
                 <a href="{{ url_for('personnel.list_chuyen_vung') }}" class="sidebar-link {% if request.endpoint == 'personnel.list_chuyen_vung' %}active{% endif %}">
                     <i class="bi bi-geo-alt"></i> <span>DS Chuyển vùng</span>
                 </a>
+                <a href="{{ url_for('personnel.deleted_personnel') }}" class="sidebar-link {% if request.endpoint == 'personnel.deleted_personnel' %}active{% endif %}">
+                    <i class="bi bi-trash3"></i> <span>Danh sách xóa</span>
+                </a>
                 {% endif %}
 
                 {% if current_user.is_department %}
@@ -118,6 +121,9 @@
                 </a>
                 <a href="{{ url_for('admin.all_personnel') }}" class="sidebar-link {% if request.endpoint in ['admin.all_personnel', 'admin.admin_personnel_detail', 'admin.admin_personnel_edit'] %}active{% endif %}">
                     <i class="bi bi-people"></i> <span>Hồ sơ cá nhân</span>
+                </a>
+                <a href="{{ url_for('admin.admin_deleted_personnel') }}" class="sidebar-link {% if request.endpoint == 'admin.admin_deleted_personnel' %}active{% endif %}">
+                    <i class="bi bi-trash3"></i> <span>Danh sách xóa</span>
                 </a>
                 <a href="{{ url_for('personnel.list_chuyen_vung') }}" class="sidebar-link {% if request.endpoint == 'personnel.list_chuyen_vung' %}active{% endif %}">
                     <i class="bi bi-geo-alt"></i> <span>DS Chuyển vùng</span>

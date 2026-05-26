@@ -19,10 +19,14 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label small">Năm học</label>
-                <input type="text" class="form-control" name="nam_hoc" value="{{ nam_hoc }}" placeholder="VD: 2025-2026">
-                {% if nam_hoc_list %}
-                <small class="text-muted">Năm học đã có dữ liệu: {{ nam_hoc_list|join(', ') }}</small>
-                {% endif %}
+                <input class="form-control" name="nam_hoc" id="nam_hoc_input"
+                       value="{{ nam_hoc }}" placeholder="VD: 2025-2026"
+                       list="nam_hoc_list_dl" autocomplete="off">
+                <datalist id="nam_hoc_list_dl">
+                    {% for nh in nam_hoc_list %}
+                    <option value="{{ nh }}">
+                    {% endfor %}
+                </datalist>
             </div>
             <div class="col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-outline-navy w-100"><i class="bi bi-search me-1"></i>Tìm</button>
@@ -40,7 +44,7 @@
 
             <div class="p-3 border-bottom">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">Áp dụng xếp loại đảng viên cho toàn đơn vị</label>
                         <select class="form-select form-select-sm" name="bulk_xep_loai_dang_vien" {% if migration_missing %}disabled{% endif %}>
                             <option value="">-- Không áp dụng --</option>
@@ -49,11 +53,29 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">Áp dụng xếp loại cán bộ cho toàn đơn vị</label>
                         <select class="form-select form-select-sm" name="bulk_xep_loai_can_bo" {% if migration_missing %}disabled{% endif %}>
                             <option value="">-- Không áp dụng --</option>
                             {% for x in can_bo_choices %}
+                            <option value="{{ x }}">{{ x }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Áp dụng xếp loại đoàn viên cho toàn đơn vị</label>
+                        <select class="form-select form-select-sm" id="bulk_doan_vien" {% if migration_missing %}disabled{% endif %}>
+                            <option value="">-- Không áp dụng --</option>
+                            {% for x in doan_vien_choices %}
+                            <option value="{{ x }}">{{ x }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Áp dụng xếp loại phụ nữ cho toàn đơn vị</label>
+                        <select class="form-select form-select-sm" id="bulk_phu_nu" {% if migration_missing %}disabled{% endif %}>
+                            <option value="">-- Không áp dụng --</option>
+                            {% for x in phu_nu_choices %}
                             <option value="{{ x }}">{{ x }}</option>
                             {% endfor %}
                         </select>
@@ -154,18 +176,32 @@
 function applyBulkToAll() {
     const dv = document.querySelector('select[name="bulk_xep_loai_dang_vien"]');
     const cb = document.querySelector('select[name="bulk_xep_loai_can_bo"]');
+    const dvBulk = document.getElementById('bulk_doan_vien');
+    const pnBulk = document.getElementById('bulk_phu_nu');
+
     const valDv = dv ? dv.value : '';
     const valCb = cb ? cb.value : '';
+    const valDvien = dvBulk ? dvBulk.value : '';
+    const valPnu = pnBulk ? pnBulk.value : '';
 
     if (valDv) {
         document.querySelectorAll('select[name^="xep_loai_dang_vien_"]').forEach(function(el) {
             el.value = valDv;
         });
     }
-
     if (valCb) {
         document.querySelectorAll('select[name^="xep_loai_can_bo_"]').forEach(function(el) {
             el.value = valCb;
+        });
+    }
+    if (valDvien) {
+        document.querySelectorAll('select[name^="xep_loai_doan_vien_"]').forEach(function(el) {
+            el.value = valDvien;
+        });
+    }
+    if (valPnu) {
+        document.querySelectorAll('select[name^="xep_loai_phu_nu_"]').forEach(function(el) {
+            el.value = valPnu;
         });
     }
 }

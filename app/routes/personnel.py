@@ -40,7 +40,7 @@ def list_personnel():
     if per_page not in (20, 50, 100):
         per_page = 20
 
-    query = QuanNhan.query.filter_by(don_vi_id=current_user.don_vi_id, is_active=True)
+    query = QuanNhan.query.filter_by(don_vi_id=current_user.don_vi_id, is_active=True, is_deleted=False)
     if search:
         query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
     if cap_bac_filter:
@@ -277,8 +277,11 @@ def delete_personnel(id):
         return redirect(url_for('personnel.list_personnel'))
 
     qn.is_active = False
+    qn.is_deleted = True
+    qn.deleted_at = datetime.utcnow()
+    qn.deleted_by_id = current_user.id
     db.session.commit()
-    flash(f'Đã xóa quân nhân: {qn.ho_ten}', 'success')
+    flash(f'Đã đưa vào danh sách xóa: {qn.ho_ten}', 'warning')
     return redirect(url_for('personnel.list_personnel'))
 
 
@@ -453,7 +456,7 @@ def download_personnel_template():
     ws.append(headers)
     ws.append([
         'Nguyễn Văn A', 'Trung úy', 'Giảng viên', '', 'Trợ lý', '012345678901',
-        'Đại đội 1', '1990-01-15', '09/2015', 'Không', 'Thạc sĩ', '12/12',
+        'Đại đội 1', '15/01/1990', '09/2015', 'Không', 'Thạc sĩ', '12/12',
         'Anh B2', 'Không', 'Không', 'Không', 'Không', 'Không',
     ])
 
@@ -1120,3 +1123,51 @@ def get_units_json():
     from app.models.unit import DonVi as _DonVi
     units = _DonVi.query.filter_by(is_active=True).order_by(_DonVi.ten_don_vi).all()
     return jsonify({'units': [{'id': u.id, 'ten_don_vi': u.ten_don_vi} for u in units]})
+
+
+# ─── Danh sách xóa (soft-delete) ────────────────────────────────────────────
+
+@personnel_bp.route('/deleted')
+@login_required
+@unit_user_required
+def deleted_personnel():
+    """Unit user xem danh sách đã xóa của đơn vị mình (chỉ view, không thao tác)."""
+    if not current_user.don_vi:
+        flash('Tài khoản chưa được gán đơn vị.', 'warning')
+        return redirect(url_for('dashboard.index'))
+    deleted_list = QuanNhan.query.filter_by(
+        don_vi_id=current_user.don_vi_id, is_deleted=True
+    ).order_by(QuanNhan.deleted_at.desc()).all()
+    return render_template('personnel/deleted_list.html', deleted_list=deleted_list)
+
+
+@personnel_bp.route('/deleted/<int:id>/restore', methods=['POST'])
+@login_required
+def restore_personnel(id):
+    """Chỉ admin mới được khôi phục."""
+    if current_user.role not in (Role.ADMIN, Role.SUPER_ADMIN):
+        flash('Không có quyền thực hiện thao tác này.', 'danger')
+        return redirect(url_for('personnel.deleted_personnel'))
+    qn = QuanNhan.query.get_or_404(id)
+    qn.is_deleted = False
+    qn.is_active = True
+    qn.deleted_at = None
+    qn.deleted_by_id = None
+    db.session.commit()
+    flash(f'Đã khôi phục: {qn.ho_ten}', 'success')
+    return redirect(url_for('admin.admin_deleted_personnel'))
+
+
+@personnel_bp.route('/deleted/<int:id>/hard-delete', methods=['POST'])
+@login_required
+def hard_delete_personnel(id):
+    """Chỉ admin mới được xóa hẳn."""
+    if current_user.role not in (Role.ADMIN, Role.SUPER_ADMIN):
+        flash('Không có quyền thực hiện thao tác này.', 'danger')
+        return redirect(url_for('personnel.deleted_personnel'))
+    qn = QuanNhan.query.get_or_404(id)
+    ho_ten = qn.ho_ten
+    db.session.delete(qn)
+    db.session.commit()
+    flash(f'Đã xóa vĩnh viễn: {ho_ten}', 'danger')
+    return redirect(url_for('admin.admin_deleted_personnel'))
