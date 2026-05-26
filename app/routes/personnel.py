@@ -40,7 +40,11 @@ def list_personnel():
     if per_page not in (20, 50, 100):
         per_page = 20
 
-    query = QuanNhan.query.filter_by(don_vi_id=current_user.don_vi_id, is_active=True, is_deleted=False)
+    query = QuanNhan.query.filter_by(don_vi_id=current_user.don_vi_id, is_active=True)
+    try:
+        query = query.filter(QuanNhan.is_deleted == False)
+    except Exception:
+        pass
     if search:
         query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
     if cap_bac_filter:
@@ -277,9 +281,12 @@ def delete_personnel(id):
         return redirect(url_for('personnel.list_personnel'))
 
     qn.is_active = False
-    qn.is_deleted = True
-    qn.deleted_at = datetime.utcnow()
-    qn.deleted_by_id = current_user.id
+    try:
+        qn.is_deleted = True
+        qn.deleted_at = datetime.utcnow()
+        qn.deleted_by_id = current_user.id
+    except Exception:
+        pass
     db.session.commit()
     flash(f'Đã đưa vào danh sách xóa: {qn.ho_ten}', 'warning')
     return redirect(url_for('personnel.list_personnel'))
@@ -1135,9 +1142,13 @@ def deleted_personnel():
     if not current_user.don_vi:
         flash('Tài khoản chưa được gán đơn vị.', 'warning')
         return redirect(url_for('dashboard.index'))
-    deleted_list = QuanNhan.query.filter_by(
-        don_vi_id=current_user.don_vi_id, is_deleted=True
-    ).order_by(QuanNhan.deleted_at.desc()).all()
+    try:
+        deleted_list = QuanNhan.query.filter(
+            QuanNhan.don_vi_id == current_user.don_vi_id,
+            QuanNhan.is_deleted == True
+        ).order_by(QuanNhan.deleted_at.desc()).all()
+    except Exception:
+        deleted_list = []
     return render_template('personnel/deleted_list.html', deleted_list=deleted_list)
 
 
@@ -1149,10 +1160,13 @@ def restore_personnel(id):
         flash('Không có quyền thực hiện thao tác này.', 'danger')
         return redirect(url_for('personnel.deleted_personnel'))
     qn = QuanNhan.query.get_or_404(id)
-    qn.is_deleted = False
     qn.is_active = True
-    qn.deleted_at = None
-    qn.deleted_by_id = None
+    try:
+        qn.is_deleted = False
+        qn.deleted_at = None
+        qn.deleted_by_id = None
+    except Exception:
+        pass
     db.session.commit()
     flash(f'Đã khôi phục: {qn.ho_ten}', 'success')
     return redirect(url_for('admin.admin_deleted_personnel'))
