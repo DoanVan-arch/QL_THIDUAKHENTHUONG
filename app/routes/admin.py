@@ -3357,6 +3357,28 @@ def report_summary():
 # ------------------------------------------------------------------
 # Admin: View all personnel across all units
 # ------------------------------------------------------------------
+# Admin: Danh sách xóa
+# ------------------------------------------------------------------
+@admin_bp.route('/personnel/deleted')
+@login_required
+@admin_required
+def admin_deleted_personnel():
+    search = request.args.get('search', '').strip()
+    don_vi_id = request.args.get('don_vi_id', '', type=str)
+    query = QuanNhan.query.filter_by(is_deleted=True).join(DonVi)
+    if search:
+        query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
+    if don_vi_id:
+        query = query.filter(QuanNhan.don_vi_id == int(don_vi_id))
+    deleted_list = query.order_by(QuanNhan.deleted_at.desc()).all()
+    units = DonVi.query.filter_by(is_active=True).order_by(DonVi.ten_don_vi).all()
+    return render_template('admin/deleted_personnel.html',
+                           deleted_list=deleted_list,
+                           search=search,
+                           don_vi_id=don_vi_id,
+                           units=units)
+
+# ------------------------------------------------------------------
 @admin_bp.route('/personnel')
 @login_required
 @admin_required

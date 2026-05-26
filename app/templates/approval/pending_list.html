@@ -10,6 +10,7 @@
         <small class="text-muted">{{ phong_name }}</small>
     </div>
     {% if pending_reviews %}
+    {% if nam_hoc_filter %}
     <div class="toolbar-wrapper">
         <div class="toolbar-inner">
             <!-- View mode toggle -->
@@ -57,6 +58,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     {% endif %}
 </div>
 

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Danh sách xóa (Admin){% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-trash3 me-2"></i>Danh sách xóa — Quản trị</h4>
+        <small class="text-muted">Khôi phục hoặc xóa vĩnh viễn quân nhân</small>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card-section mb-3">
+    <div class="card-body-custom py-2">
+        <form method="GET" class="d-flex gap-2 align-items-center flex-wrap">
+            <input type="text" class="form-control form-control-sm" name="search" value="{{ search }}"
+                   placeholder="Tìm theo họ tên..." style="width:220px;">
+            <select class="form-select form-select-sm" name="don_vi_id" style="width:220px;">
+                <option value="">Tất cả đơn vị</option>
+                {% for u in units %}
+                <option value="{{ u.id }}" {% if don_vi_id == u.id|string %}selected{% endif %}>{{ u.ten_don_vi }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-navy"><i class="bi bi-search me-1"></i>Lọc</button>
+            {% if search or don_vi_id %}
+            <a href="{{ url_for('admin.admin_deleted_personnel') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Xóa lọc</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if deleted_list %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th style="width:35px;">STT</th>
+                        <th>Họ tên</th>
+                        <th>Đơn vị</th>
+                        <th>Cấp bậc</th>
+                        <th>Chức vụ</th>
+                        <th>Đối tượng</th>
+                        <th>Ngày xóa</th>
+                        <th class="text-center" style="width:160px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qn in deleted_list %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-semibold">{{ qn.ho_ten }}</td>
+                        <td><small>{{ qn.don_vi.ten_don_vi }}</small></td>
+                        <td>{{ qn.cap_bac or '-' }}</td>
+                        <td>{{ qn.chuc_vu or '-' }}</td>
+                        <td>{{ qn.doi_tuong or '-' }}</td>
+                        <td><small>{{ qn.deleted_at.strftime('%d/%m/%Y %H:%M') if qn.deleted_at else '-' }}</small></td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <!-- Khôi phục -->
+                                <form action="{{ url_for('personnel.restore_personnel', id=qn.id) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('Khôi phục {{ qn.ho_ten }} vào danh sách hoạt động?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2" title="Khôi phục">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục
+                                    </button>
+                                </form>
+                                <!-- Xóa hẳn -->
+                                <form action="{{ url_for('personnel.hard_delete_personnel', id=qn.id) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('XÓA VĨNH VIỄN {{ qn.ho_ten }}? Không thể hoàn tác!');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Xóa vĩnh viễn">
+                                        <i class="bi bi-trash3 me-1"></i>Xóa hẳn
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="p-2 text-muted" style="font-size:0.8rem;">
+            Tổng: <strong>{{ deleted_list|length }}</strong> quân nhân trong danh sách xóa
+        </div>
+        {% else %}
+        <div class="empty-state py-4">
+            <i class="bi bi-trash d-block" style="font-size:2rem;"></i>
+            <p>Không có quân nhân nào trong danh sách xóa</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

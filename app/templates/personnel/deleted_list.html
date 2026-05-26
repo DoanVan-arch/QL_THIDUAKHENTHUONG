@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Danh sách xóa{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-trash3 me-2"></i>Danh sách đã xóa</h4>
+        <small class="text-muted">Quân nhân đã bị xóa khỏi danh sách hoạt động</small>
+    </div>
+    <a href="{{ url_for('personnel.list_personnel') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if deleted_list %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th style="width:35px;">STT</th>
+                        <th>Họ tên</th>
+                        <th>Cấp bậc</th>
+                        <th>Chức vụ</th>
+                        <th>Đối tượng</th>
+                        <th>Ngày xóa</th>
+                        <th class="text-center">Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qn in deleted_list %}
+                    <tr class="table-light text-muted">
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-semibold text-dark">{{ qn.ho_ten }}</td>
+                        <td>{{ qn.cap_bac or '-' }}</td>
+                        <td>{{ qn.chuc_vu or '-' }}</td>
+                        <td>{{ qn.doi_tuong or '-' }}</td>
+                        <td>{{ qn.deleted_at.strftime('%d/%m/%Y %H:%M') if qn.deleted_at else '-' }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">Chờ admin xử lý</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-4">
+            <i class="bi bi-trash d-block" style="font-size:2rem;"></i>
+            <p>Không có quân nhân nào trong danh sách xóa</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
