@@ -444,11 +444,11 @@ def download_personnel_template():
             lookup[f'{col}{idx}'] = value
 
     headers = [
-        'ho_ten', 'cap_bac', 'doi_tuong', 'lop', 'chuc_vu', 'can_cuoc_cong_dan',
-        'don_vi_truc_thuoc',
-        'ngay_sinh', 'ngay_nhap_ngu', 'hoc_ham', 'hoc_vi', 'trinh_do_hoc_van',
-        'ngoai_ngu', 'la_chi_huy', 'la_bi_thu',
-        'la_dang_vien', 'la_doan_vien', 'la_hoi_vien_phu_nu',
+        'Họ và tên', 'Cấp bậc', 'Đối tượng', 'Lớp', 'Chức vụ', 'Căn cước công dân',
+        'Đơn vị trực thuộc',
+        'Ngày sinh', 'Ngày nhập ngũ', 'Học hàm', 'Học vị', 'Trình độ học vấn',
+        'Ngoại ngữ', 'Cấp trưởng', 'Bí thư',
+        'Đảng viên', 'Đoàn viên', 'Hội viên phụ nữ',
     ]
     ws.append(headers)
     ws.append([

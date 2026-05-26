@@ -1000,6 +1000,27 @@ def history():
     allowed_fields = get_phong_fields().get(current_user.role, [])
     table_columns = get_phong_table_columns().get(current_user.role, [])
 
+    # Build tt_criteria_fields from results for tập thể history table
+    tt_keys_seen = set()
+    for kq_item in individual_results.items:
+        ct = kq_item.chi_tiet
+        if ct and ct.quan_nhan_id is None:
+            td = ct.tap_the_dict or {}
+            tt_keys_seen.update(td.keys())
+    if tt_keys_seen:
+        tt_tieu_chi_rows = TieuChi.query.filter(
+            TieuChi.ma_truong.in_(list(tt_keys_seen)), TieuChi.is_active == True
+        ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
+        tt_history_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
+        tt_field_labels_h = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
+        for k in tt_keys_seen:
+            if k not in tt_field_labels_h:
+                tt_history_fields.append(k)
+                tt_field_labels_h[k] = k
+    else:
+        tt_history_fields = []
+        tt_field_labels_h = {}
+
     return render_template('approval/history.html',
                            individual_results=individual_results,
                            phong_name=phong_name,
@@ -1010,7 +1031,9 @@ def history():
                            stats=stats,
                            allowed_fields=allowed_fields,
                            table_columns=table_columns,
-                           field_labels=get_field_labels())
+                           field_labels=get_field_labels(),
+                           tt_history_fields=tt_history_fields,
+                           tt_field_labels=tt_field_labels_h)
 
 
 @approval_bp.route('/history/chi-tiet/<int:ct_id>')

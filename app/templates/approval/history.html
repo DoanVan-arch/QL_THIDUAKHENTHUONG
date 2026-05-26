@@ -62,9 +62,13 @@
     </div>
 </div>
 
-<div class="card-section">
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-person-fill me-2 text-primary"></i>Danh hiệu cá nhân</h6>
+    </div>
     <div class="card-body-custom p-0">
-        {% if individual_results.items %}
+        {% set cn_items = individual_results.items | selectattr('chi_tiet.quan_nhan_id') | list %}
+        {% if cn_items %}
         <div class="table-responsive">
             <table class="table table-custom mb-0 align-middle" style="font-size:0.82rem;">
                 <thead>
@@ -84,74 +88,45 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for kq_item in individual_results.items %}
+                    {% for kq_item in cn_items %}
                     {% set ct = kq_item.chi_tiet %}
                     {% set pd = kq_item.phe_duyet %}
                     {% set dx = pd.de_xuat %}
                     <tr class="{% if kq_item.ket_qua == 'Đồng ý' %}table-success{% elif kq_item.ket_qua == 'Từ chối' %}table-danger{% endif %}">
-                        <td>{{ (individual_results.page - 1) * individual_results.per_page + loop.index }}</td>
-                        <td class="fw-semibold">
-                            {{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}
-                        </td>
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-semibold">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}</td>
                         <td><small>{{ dx.don_vi.ten_don_vi }}</small></td>
                         <td>
-                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}
-                            <span class="badge bg-warning text-dark">CSTD</span>
-                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}
-                            <span class="badge bg-info text-dark">CSTT</span>
-                            {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}
-                            <span class="badge bg-navy">DVQT</span>
-                            {% else %}
-                            <span class="badge bg-secondary">DVTT</span>
-                            {% endif %}
+                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTD</span>
+                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">DVQT</span>
+                            {% else %}<span class="badge bg-secondary">DVTT</span>{% endif %}
                         </td>
                         {% for field in table_columns %}
-                        <td>
-                            {% set val = ct[field] if ct[field] is defined else None %}
-                            {% if val is not none and val != '' %}
-                            <small>{{ val }}</small>
-                            {% else %}
-                            <small class="text-muted">-</small>
-                            {% endif %}
-                        </td>
+                        <td>{% set val = ct[field] if ct[field] is defined else None %}{% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}</td>
                         {% endfor %}
                         <td>
-                            {% if kq_item.ket_qua == 'Đồng ý' %}
-                            <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Nhất trí</span>
-                            {% elif kq_item.ket_qua == 'Từ chối' %}
-                            <span class="badge bg-danger"><i class="bi bi-x-lg me-1"></i>Không NT</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Chờ duyệt</span>
-                            {% endif %}
+                            {% if kq_item.ket_qua == 'Đồng ý' %}<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Nhất trí</span>
+                            {% elif kq_item.ket_qua == 'Từ chối' %}<span class="badge bg-danger"><i class="bi bi-x-lg me-1"></i>Không NT</span>
+                            {% else %}<span class="badge bg-secondary">Chờ duyệt</span>{% endif %}
                         </td>
                         <td><small>{{ kq_item.ly_do or '-' }}</small></td>
                         <td><small>{{ pd.ngay_duyet.strftime('%d/%m/%Y') if pd.ngay_duyet else '-' }}</small></td>
                         <td>
                             {% set dx_status = dx.trang_thai %}
-                            {% if dx_status == 'Phê duyệt cuối' %}
-                            <span class="badge bg-primary" style="font-size:0.72rem;"><i class="bi bi-shield-check me-1"></i>PD cuối</span>
-                            {% elif dx_status == 'Xét duyệt của cơ quan thường trực' %}
-                            <span class="badge bg-success" style="font-size:0.72rem;">Xét duyệt của cơ quan thường trực</span>
-                            {% elif dx_status == 'Đang duyệt' %}
-                            <span class="badge bg-info" style="font-size:0.72rem;">Đang duyệt</span>
-                            {% elif dx_status == 'Từ chối' %}
-                            <span class="badge bg-danger" style="font-size:0.72rem;">Từ chối</span>
-                            {% else %}
-                            <span class="badge bg-secondary" style="font-size:0.72rem;">{{ dx_status }}</span>
-                            {% endif %}
+                            {% if dx_status == 'Phê duyệt cuối' %}<span class="badge bg-primary" style="font-size:0.72rem;"><i class="bi bi-shield-check me-1"></i>PD cuối</span>
+                            {% elif dx_status == 'Xét duyệt của cơ quan thường trực' %}<span class="badge bg-success" style="font-size:0.72rem;">Xét duyệt CQTT</span>
+                            {% elif dx_status == 'Đang duyệt' %}<span class="badge bg-info" style="font-size:0.72rem;">Đang duyệt</span>
+                            {% elif dx_status == 'Từ chối' %}<span class="badge bg-danger" style="font-size:0.72rem;">Từ chối</span>
+                            {% else %}<span class="badge bg-secondary" style="font-size:0.72rem;">{{ dx_status }}</span>{% endif %}
                         </td>
                         <td class="text-center">
                             <div class="d-flex gap-1 justify-content-center">
-                                <a href="{{ url_for('approval.history_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết">
-                                    <i class="bi bi-eye"></i>
-                                </a>
+                                <a href="{{ url_for('approval.history_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                 {% if dx.trang_thai != 'Phê duyệt cuối' and pd.ket_qua != 'Chờ duyệt' %}
-                                <form action="{{ url_for('approval.revoke_review', pd_id=pd.id) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('Thu hồi kết quả duyệt cho đề xuất của {{ dx.don_vi.ten_don_vi }}?');">
+                                <form action="{{ url_for('approval.revoke_review', pd_id=pd.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Thu hồi kết quả duyệt?');">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2" title="Thu hồi duyệt">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
+                                    <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2" title="Thu hồi duyệt"><i class="bi bi-arrow-counterclockwise"></i></button>
                                 </form>
                                 {% endif %}
                             </div>
@@ -161,46 +136,126 @@
                 </tbody>
             </table>
         </div>
-
-        {% if individual_results.pages > 1 %}
-        <div class="d-flex justify-content-center py-3">
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    {% if individual_results.has_prev %}
-                    <li class="page-item"><a class="page-link" href="?page={{ individual_results.prev_num }}&unit={{ unit_filter }}&danh_hieu={{ danh_hieu_filter }}&ket_qua={{ ket_qua_filter }}">&laquo;</a></li>
-                    {% endif %}
-                    {% for p in individual_results.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                    {% if p %}
-                    <li class="page-item {{ 'active' if p == individual_results.page }}">
-                        <a class="page-link" href="?page={{ p }}&unit={{ unit_filter }}&danh_hieu={{ danh_hieu_filter }}&ket_qua={{ ket_qua_filter }}">{{ p }}</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                    {% endif %}
-                    {% endfor %}
-                    {% if individual_results.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ individual_results.next_num }}&unit={{ unit_filter }}&danh_hieu={{ danh_hieu_filter }}&ket_qua={{ ket_qua_filter }}">&raquo;</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-        {% endif %}
-
         {% else %}
-        <div class="empty-state">
-            <i class="bi bi-clock-history d-block"></i>
-            <p>Chưa có lịch sử duyệt nào{{ ' phù hợp bộ lọc' if unit_filter or danh_hieu_filter or ket_qua_filter else '' }}</p>
-            {% if unit_filter or danh_hieu_filter or ket_qua_filter %}
-            <a href="{{ url_for('approval.history') }}" class="btn btn-sm btn-outline-navy">
-                <i class="bi bi-x-lg me-1"></i>Xóa bộ lọc
-            </a>
-            {% endif %}
-        </div>
+        <div class="empty-state py-3"><p class="text-muted mb-0">Không có cá nhân nào</p></div>
         {% endif %}
     </div>
 </div>
 
-<style>
+<div class="card-section mb-3">
+    <div class="card-header-custom">
+        <h6 class="mb-0"><i class="bi bi-building-fill me-2 text-secondary"></i>Danh hiệu tập thể</h6>
+    </div>
+    <div class="card-body-custom p-0">
+        {% set tt_items = individual_results.items | rejectattr('chi_tiet.quan_nhan_id') | list %}
+        {% if tt_items %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0 align-middle" style="font-size:0.82rem;">
+                <thead>
+                    <tr>
+                        <th style="width:35px;">STT</th>
+                        <th style="min-width:160px;">Tên tập thể</th>
+                        <th>Đơn vị</th>
+                        <th>Danh hiệu</th>
+                        {% for f in tt_history_fields %}
+                        <th><small>{{ tt_field_labels.get(f, f) }}</small></th>
+                        {% endfor %}
+                        <th>Kết quả</th>
+                        <th>Lý do</th>
+                        <th>Ngày duyệt</th>
+                        <th>TT Đề xuất</th>
+                        <th class="text-center" style="width:80px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kq_item in tt_items %}
+                    {% set ct = kq_item.chi_tiet %}
+                    {% set pd = kq_item.phe_duyet %}
+                    {% set dx = pd.de_xuat %}
+                    {% set ttd = ct.tap_the_dict or {} %}
+                    <tr class="{% if kq_item.ket_qua == 'Đồng ý' %}table-success{% elif kq_item.ket_qua == 'Từ chối' %}table-danger{% endif %}">
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-semibold"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or dx.don_vi.ten_don_vi }}</td>
+                        <td><small>{{ dx.don_vi.ten_don_vi }}</small></td>
+                        <td>
+                            {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
+                            {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                        </td>
+                        {% for f in tt_history_fields %}
+                        <td><small>{{ ttd.get(f, '-') }}</small></td>
+                        {% endfor %}
+                        <td>
+                            {% if kq_item.ket_qua == 'Đồng ý' %}<span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Nhất trí</span>
+                            {% elif kq_item.ket_qua == 'Từ chối' %}<span class="badge bg-danger"><i class="bi bi-x-lg me-1"></i>Không NT</span>
+                            {% else %}<span class="badge bg-secondary">Chờ duyệt</span>{% endif %}
+                        </td>
+                        <td><small>{{ kq_item.ly_do or '-' }}</small></td>
+                        <td><small>{{ pd.ngay_duyet.strftime('%d/%m/%Y') if pd.ngay_duyet else '-' }}</small></td>
+                        <td>
+                            {% set dx_status = dx.trang_thai %}
+                            {% if dx_status == 'Phê duyệt cuối' %}<span class="badge bg-primary" style="font-size:0.72rem;"><i class="bi bi-shield-check me-1"></i>PD cuối</span>
+                            {% elif dx_status == 'Đang duyệt' %}<span class="badge bg-info" style="font-size:0.72rem;">Đang duyệt</span>
+                            {% elif dx_status == 'Từ chối' %}<span class="badge bg-danger" style="font-size:0.72rem;">Từ chối</span>
+                            {% else %}<span class="badge bg-secondary" style="font-size:0.72rem;">{{ dx_status }}</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <a href="{{ url_for('approval.history_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                                {% if dx.trang_thai != 'Phê duyệt cuối' and pd.ket_qua != 'Chờ duyệt' %}
+                                <form action="{{ url_for('approval.revoke_review', pd_id=pd.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Thu hồi kết quả duyệt?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2" title="Thu hồi duyệt"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-3"><p class="text-muted mb-0">Không có tập thể nào</p></div>
+        {% endif %}
+    </div>
+</div>
+
+{% if individual_results.pages > 1 %}
+<div class="d-flex justify-content-center py-3">
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            {% if individual_results.has_prev %}
+            <li class="page-item"><a class="page-link" href="?page={{ individual_results.prev_num }}&unit={{ unit_filter }}&danh_hieu={{ danh_hieu_filter }}&ket_qua={{ ket_qua_filter }}">&laquo;</a></li>
+            {% endif %}
+            {% for p in individual_results.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+            <li class="page-item {{ 'active' if p == individual_results.page }}">
+                <a class="page-link" href="?page={{ p }}&unit={{ unit_filter }}&danh_hieu={{ danh_hieu_filter }}&ket_qua={{ ket_qua_filter }}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+            {% endfor %}
+            {% if individual_results.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ individual_results.next_num }}&unit={{ unit_filter }}&danh_hieu={{ danh_hieu_filter }}&ket_qua={{ ket_qua_filter }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% if not individual_results.items %}
+<div class="card-section">
+    <div class="empty-state">
+        <i class="bi bi-clock-history d-block"></i>
+        <p>Chưa có lịch sử duyệt nào{{ ' phù hợp bộ lọc' if unit_filter or danh_hieu_filter or ket_qua_filter else '' }}</p>
+        {% if unit_filter or danh_hieu_filter or ket_qua_filter %}
+        <a href="{{ url_for('approval.history') }}" class="btn btn-sm btn-outline-navy"><i class="bi bi-x-lg me-1"></i>Xóa bộ lọc</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
     .stat-mini {
         display: flex;
         align-items: center;

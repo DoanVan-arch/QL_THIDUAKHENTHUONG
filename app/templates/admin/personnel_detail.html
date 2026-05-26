@@ -105,7 +105,7 @@
 <!-- Certificates -->
 <div class="card-section">
     <div class="card-header-custom">
-        <h5><i class="bi bi-award me-2"></i>Bằng khen, Giấy khen, Thành tích</h5>
+        <h5><i class="bi bi-award me-2"></i>Khen thưởng</h5>
         <button class="btn btn-navy btn-sm" data-bs-toggle="modal" data-bs-target="#addCertModal">
             <i class="bi bi-plus-lg me-1"></i> Thêm
         </button>
@@ -290,7 +290,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header modal-header-navy">
-                <h6 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Thêm bằng khen / giấy khen</h6>
+                <h6 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Thêm Khen thưởng</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('admin.admin_add_certificate', id=qn.id) }}" enctype="multipart/form-data">

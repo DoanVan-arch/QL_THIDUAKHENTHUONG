@@ -2,11 +2,17 @@ from flask import Flask, send_from_directory, session, redirect, url_for, flash
 from flask_login import login_required, current_user, logout_user
 from config import Config
 from app.extensions import db, login_manager, csrf, migrate
+import os
 
 
 def create_app(config_class=None):
     app = Flask(__name__)
     app.config.from_object(config_class or Config)
+
+    # Đảm bảo luôn dùng pymysql driver dù DATABASE_URL có prefix gì
+    db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if db_url.startswith('mysql://'):
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace('mysql://', 'mysql+pymysql://', 1)
 
     db.init_app(app)
     login_manager.init_app(app)

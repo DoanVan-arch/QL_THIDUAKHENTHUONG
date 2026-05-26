@@ -88,7 +88,8 @@
 </div>
 {% else %}
 {% set show_evidence = 'nckh_minh_chung' in allowed_fields %}
-{% set display_fields = table_columns %}
+{% set display_fields = [] %}
+{% for _f in table_columns %}{% if _f not in tt_criteria_fields %}{% if display_fields.append(_f) %}{% endif %}{% endif %}{% endfor %}
 {% set is_ttr_role = managed_dept_columns|length > 0 %}
 
 {% if pending_reviews %}
@@ -211,7 +212,7 @@
                 {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
                 {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
                 <tr id="row-{{ pd.id }}-{{ ct.id }}"
-                    class="{% if is_out_of_scope %}table-light text-muted{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
+                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
                     data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
                     data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
                     data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
@@ -338,7 +339,7 @@
                 {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
                 {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
                 <tr id="row-{{ pd.id }}-{{ ct.id }}"
-                    class="{% if is_out_of_scope %}table-light text-muted{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
+                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
                     data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
                     data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
                     data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
@@ -473,6 +474,10 @@
     }
     .stat-mini i { font-size: 1rem; }
     .border-left-dept { border-left: 2px solid #dee2e6 !important; }
+
+    /* Compact col-criteria for cá nhân table */
+    #tableCaNhan .col-criteria { max-width: 80px; }
+    #tableCaNhan .col-criteria small { display: block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* Compact view: hide criteria, evidence, and gate-criteria columns */
     .view-compact .col-criteria,
