@@ -10,7 +10,8 @@
         <small class="text-muted">{{ phong_name }}</small>
     </div>
     {% if pending_reviews %}
-        <div class="d-flex gap-2 align-items-center flex-wrap">
+    <div class="toolbar-wrapper">
+        <div class="toolbar-inner">
             <!-- View mode toggle -->
             <div class="btn-group btn-group-sm" role="group" id="viewModeGroup" title="Chế độ hiển thị">
                 <button type="button" class="btn btn-outline-navy" id="btnViewCompact" title="Rút gọn – chỉ hiện thao tác">
@@ -55,6 +56,7 @@
                 </select>
             </div>
         </div>
+    </div>
     {% endif %}
 </div>
 
@@ -833,6 +835,34 @@ document.addEventListener('DOMContentLoaded', function () {
     .print-timestamp { display: block !important; }
 }
 .print-timestamp { display: none; font-size: 0.82rem; color: #666; margin-bottom: 8px; }
+.toolbar-wrapper {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 100;          /* ← Giảm z-index xuống, thấp hơn sidebar */
+    background: #fff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 6px 0;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.07);
+    width: 100%;
+}
+.sidebar {  /* thay đúng class sidebar của bạn */
+    z-index: 1000 !important;
+}
+    .toolbar-inner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;           /* Không xuống dòng */
+        overflow-x: auto;            /* Scroll ngang khi màn nhỏ */
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 0 4px;
+    }
+    .toolbar-inner::-webkit-scrollbar { display: none; }
+    .toolbar-inner > * { flex-shrink: 0; } /* Không co lại */
+
 </style>
 <div class="print-timestamp">
     Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
