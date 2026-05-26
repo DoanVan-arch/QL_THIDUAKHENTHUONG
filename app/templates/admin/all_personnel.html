@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Hồ sơ cá nhân toàn bộ đơn vị{% endblock %}
+{% block title %}Hồ sơ toàn đơn vị (Admin){% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h4><i class="bi bi-people me-2"></i>Hồ sơ cá nhân toàn bộ đơn vị</h4>
+        <h4><i class="bi bi-people me-2"></i>Hồ sơ cá nhân toàn đơn vị</h4>
         <small class="text-muted">Tổng cộng: {{ personnel.total }} quân nhân</small>
     </div>
     <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
@@ -16,19 +16,16 @@
 <div class="card-section" id="filterBar">
     <div class="card-body-custom">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label mb-1 small">Tìm theo họ tên</label>
-                <input type="text" class="form-control" name="search" value="{{ search }}"
-                       placeholder="Nhập họ tên...">
+                <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="Nhập họ tên...">
             </div>
             <div class="col-md-2">
                 <label class="form-label mb-1 small">Đơn vị</label>
                 <select class="form-select" name="don_vi_id">
                     <option value="">-- Tất cả đơn vị --</option>
                     {% for u in units %}
-                    <option value="{{ u.id }}" {% if don_vi_id|string == u.id|string %}selected{% endif %}>
-                        {{ u.ten_don_vi }}
-                    </option>
+                    <option value="{{ u.id }}" {% if don_vi_id|string == u.id|string %}selected{% endif %}>{{ u.ten_don_vi }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -43,18 +40,42 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label mb-1 small">Cấp bậc</label>
-                <input type="text" class="form-control" name="cap_bac" value="{{ cap_bac_filter }}"
-                       placeholder="Tìm cấp bậc...">
+                <select class="form-select" name="cap_bac">
+                    <option value="">-- Tất cả --</option>
+                    {% for cb in cap_bac_list %}
+                    <option value="{{ cb }}" {% if cap_bac_filter == cb %}selected{% endif %}>{{ cb }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label mb-1 small">Chức vụ</label>
-                <input type="text" class="form-control" name="chuc_vu" value="{{ chuc_vu_filter }}"
-                       placeholder="Tìm chức vụ...">
+                <select class="form-select" name="chuc_vu">
+                    <option value="">-- Tất cả --</option>
+                    {% for cv in chuc_vu_list %}
+                    <option value="{{ cv }}" {% if chuc_vu_filter == cv %}selected{% endif %}>{{ cv }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-1">
-                <button type="submit" class="btn btn-navy w-100"><i class="bi bi-search"></i></button>
+                <label class="form-label mb-1 small">Sắp xếp</label>
+                <select class="form-select" name="sort_by">
+                    <option value="don_vi" {% if sort_by == 'don_vi' %}selected{% endif %}>Đơn vị/Chức vụ</option>
+                    <option value="ho_ten" {% if sort_by == 'ho_ten' %}selected{% endif %}>Họ tên</option>
+                    <option value="cap_bac" {% if sort_by == 'cap_bac' %}selected{% endif %}>Cấp bậc</option>
+                    <option value="doi_tuong" {% if sort_by == 'doi_tuong' %}selected{% endif %}>Đối tượng</option>
+                </select>
             </div>
-            <div class="col-auto">
+            <div class="col-md-1">
+                <label class="form-label mb-1 small">Hiển thị</label>
+                <select class="form-select" name="per_page">
+                    <option value="20" {% if per_page == 20 %}selected{% endif %}>20/trang</option>
+                    <option value="30" {% if per_page == 30 %}selected{% endif %}>30/trang</option>
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50/trang</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100/trang</option>
+                </select>
+            </div>
+            <div class="col-auto d-flex gap-2">
+                <button type="submit" class="btn btn-navy"><i class="bi bi-search"></i></button>
                 <a href="{{ url_for('admin.all_personnel') }}" class="btn btn-outline-secondary" title="Bỏ lọc"><i class="bi bi-x-lg"></i></a>
             </div>
         </form>
@@ -66,9 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const btn = document.getElementById('toggleFilterBar');
     const bar = document.getElementById('filterBar');
     if (btn && bar) {
-        btn.addEventListener('click', function() {
-            bar.classList.toggle('d-none');
-        });
+        btn.addEventListener('click', function() { bar.classList.toggle('d-none'); });
     }
 });
 </script>
@@ -77,10 +96,33 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card-section mt-3">
     <div class="card-body-custom p-0">
         {% if personnel.items %}
+        <!-- Bulk action bar -->
+        <div id="bulkActionBar" class="d-none d-flex align-items-center gap-2 p-2 bg-light border-bottom">
+            <span class="text-muted small" id="selectedCount">0 đã chọn</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnBulkDoiTuong">
+                <i class="bi bi-diagram-2 me-1"></i>Đổi đối tượng
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning" id="btnBulkChuyenVung">
+                <i class="bi bi-geo-alt me-1"></i>Chuyển vùng
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnBulkChuyenDonVi">
+                <i class="bi bi-arrow-left-right me-1"></i>Chuyển đơn vị
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger" id="btnBulkDelete">
+                <i class="bi bi-trash me-1"></i>Xóa
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="btnClearSelection">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-custom mb-0">
                 <thead>
                     <tr>
+                        <th style="width:36px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input" title="Chọn tất cả">
+                        </th>
                         <th>STT</th>
                         <th>Họ và tên</th>
                         <th>Đơn vị</th>
@@ -94,9 +136,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody>
                     {% for qn in personnel.items %}
                     <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input qn-checkbox" value="{{ qn.id }}" data-name="{{ qn.ho_ten }}">
+                        </td>
                         <td>{{ (personnel.page - 1) * personnel.per_page + loop.index }}</td>
                         <td>
-                            <span class="fw-500">{{ qn.ho_ten }}</span>
+                            <a href="{{ url_for('admin.admin_personnel_detail', id=qn.id) }}" class="text-decoration-none fw-500">{{ qn.ho_ten }}</a>
                             {% if qn.la_chi_huy %}<span class="badge bg-primary ms-1" style="font-size:0.65rem">Cấp trưởng</span>{% endif %}
                             {% if qn.la_bi_thu %}<span class="badge bg-info ms-1" style="font-size:0.65rem">BÍ THƯ</span>{% endif %}
                         </td>
@@ -106,12 +151,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>{{ qn.doi_tuong or '-' }}{% if qn.is_student and qn.lop %} <span class="text-muted small">({{ qn.lop }})</span>{% endif %}</td>
                         <td>{{ qn.hoc_vi if qn.hoc_vi and qn.hoc_vi != 'Không' else '-' }}</td>
                         <td class="text-center text-nowrap">
-                            <a href="{{ url_for('admin.admin_personnel_detail', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Xem chi tiết">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{{ url_for('admin.admin_personnel_edit', id=qn.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa">
-                                <i class="bi bi-pencil"></i>
-                            </a>
+                            <a href="{{ url_for('admin.admin_personnel_detail', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                            <a href="{{ url_for('admin.admin_personnel_edit', id=qn.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -120,19 +161,20 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
 
         <!-- Pagination -->
+        {% set pg_args = {'search': search, 'don_vi_id': don_vi_id, 'doi_tuong': doi_tuong_filter, 'cap_bac': cap_bac_filter, 'chuc_vu': chuc_vu_filter, 'sort_by': sort_by, 'per_page': per_page} %}
         {% if personnel.pages > 1 %}
         <div class="d-flex justify-content-center py-3">
             <nav>
                 <ul class="pagination pagination-sm mb-0">
                     {% if personnel.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}">&laquo;</a>
+                        <a class="page-link" href="?page={{ personnel.prev_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}&sort_by={{ sort_by }}&per_page={{ per_page }}">&laquo;</a>
                     </li>
                     {% endif %}
                     {% for p in personnel.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                     {% if p %}
                     <li class="page-item {{ 'active' if p == personnel.page }}">
-                        <a class="page-link" href="?page={{ p }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}">{{ p }}</a>
+                        <a class="page-link" href="?page={{ p }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}&sort_by={{ sort_by }}&per_page={{ per_page }}">{{ p }}</a>
                     </li>
                     {% else %}
                     <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -140,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endfor %}
                     {% if personnel.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}">&raquo;</a>
+                        <a class="page-link" href="?page={{ personnel.next_num }}&search={{ search }}&don_vi_id={{ don_vi_id }}&doi_tuong={{ doi_tuong_filter }}&cap_bac={{ cap_bac_filter }}&chuc_vu={{ chuc_vu_filter }}&sort_by={{ sort_by }}&per_page={{ per_page }}">&raquo;</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -156,4 +198,163 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     </div>
 </div>
+
+<!-- Bulk: Đổi đối tượng modal -->
+<div class="modal fade" id="bulkDoiTuongModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"><i class="bi bi-diagram-2 me-1"></i>Đổi đối tượng hàng loạt</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2 text-muted small" id="bulkDoiTuongInfo"></p>
+                <label class="form-label">Đối tượng mới</label>
+                <select class="form-select" id="bulkDoiTuongSelect">
+                    {% for dt in doi_tuong_list %}
+                    <option value="{{ dt }}">{{ dt }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-navy" id="confirmBulkDoiTuong">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk: Chuyển đơn vị modal -->
+<div class="modal fade" id="bulkChuyenDonViModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"><i class="bi bi-arrow-left-right me-1"></i>Chuyển đơn vị hàng loạt</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2 text-muted small" id="bulkChuyenDonViInfo"></p>
+                <label class="form-label">Chọn đơn vị đích</label>
+                <select class="form-select" id="bulkDonViSelect">
+                    {% for u in units %}
+                    <option value="{{ u.id }}">{{ u.ten_don_vi }}</option>
+                    {% endfor %}
+                </select>
+                <div class="mt-2">
+                    <label class="form-label">Lý do chuyển</label>
+                    <input type="text" class="form-control" id="bulkChuyenLyDo" placeholder="Nhập lý do...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="confirmBulkChuyenDonVi">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]') ?
+        document.querySelector('meta[name="csrf-token"]').content : '';
+
+    const selectAll = document.getElementById('selectAll');
+    const bulkActionBar = document.getElementById('bulkActionBar');
+    const selectedCountEl = document.getElementById('selectedCount');
+
+    function getSelectedIds() {
+        return Array.from(document.querySelectorAll('.qn-checkbox:checked')).map(cb => parseInt(cb.value));
+    }
+    function getSelectedNames() {
+        return Array.from(document.querySelectorAll('.qn-checkbox:checked')).map(cb => cb.dataset.name);
+    }
+    function updateBulkBar() {
+        const ids = getSelectedIds();
+        if (ids.length > 0) {
+            bulkActionBar.classList.remove('d-none');
+            bulkActionBar.classList.add('d-flex');
+            selectedCountEl.textContent = `${ids.length} đã chọn`;
+        } else {
+            bulkActionBar.classList.add('d-none');
+            bulkActionBar.classList.remove('d-flex');
+        }
+    }
+    selectAll && selectAll.addEventListener('change', function() {
+        document.querySelectorAll('.qn-checkbox').forEach(cb => cb.checked = this.checked);
+        updateBulkBar();
+    });
+    document.querySelectorAll('.qn-checkbox').forEach(cb => cb.addEventListener('change', updateBulkBar));
+    document.getElementById('btnClearSelection') && document.getElementById('btnClearSelection').addEventListener('click', function() {
+        document.querySelectorAll('.qn-checkbox').forEach(cb => cb.checked = false);
+        if (selectAll) selectAll.checked = false;
+        updateBulkBar();
+    });
+
+    async function doAdminBulkAction(payload) {
+        const res = await fetch('{{ url_for("admin.admin_bulk_action") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Lỗi server: ' + res.status);
+        return res.json();
+    }
+
+    // Đổi đối tượng
+    document.getElementById('btnBulkDoiTuong') && document.getElementById('btnBulkDoiTuong').addEventListener('click', function() {
+        const names = getSelectedNames();
+        document.getElementById('bulkDoiTuongInfo').textContent = `${names.length} quân nhân: ${names.slice(0,3).join(', ')}${names.length>3?' ...':''}`;
+        new bootstrap.Modal(document.getElementById('bulkDoiTuongModal')).show();
+    });
+    document.getElementById('confirmBulkDoiTuong') && document.getElementById('confirmBulkDoiTuong').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const doi_tuong = document.getElementById('bulkDoiTuongSelect').value;
+        this.disabled = true;
+        try {
+            const data = await doAdminBulkAction({ action: 'doi_tuong', ids, doi_tuong });
+            if (data.success) location.reload(); else alert(data.message || 'Có lỗi xảy ra');
+        } catch(e) { alert(e.message); } finally { this.disabled = false; }
+    });
+
+    // Chuyển vùng
+    document.getElementById('btnBulkChuyenVung') && document.getElementById('btnBulkChuyenVung').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const names = getSelectedNames();
+        if (!confirm(`Chuyển vùng ${ids.length} quân nhân (${names.slice(0,3).join(', ')}${names.length>3?' ...':''})?`)) return;
+        try {
+            const data = await doAdminBulkAction({ action: 'chuyen_vung', ids });
+            if (data.success) location.reload(); else alert(data.message || 'Có lỗi xảy ra');
+        } catch(e) { alert(e.message); }
+    });
+
+    // Chuyển đơn vị
+    document.getElementById('btnBulkChuyenDonVi') && document.getElementById('btnBulkChuyenDonVi').addEventListener('click', function() {
+        const names = getSelectedNames();
+        document.getElementById('bulkChuyenDonViInfo').textContent = `${names.length} quân nhân: ${names.slice(0,3).join(', ')}${names.length>3?' ...':''}`;
+        new bootstrap.Modal(document.getElementById('bulkChuyenDonViModal')).show();
+    });
+    document.getElementById('confirmBulkChuyenDonVi') && document.getElementById('confirmBulkChuyenDonVi').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const don_vi_id = parseInt(document.getElementById('bulkDonViSelect').value);
+        const ly_do = document.getElementById('bulkChuyenLyDo').value.trim();
+        this.disabled = true;
+        try {
+            const data = await doAdminBulkAction({ action: 'chuyen_don_vi', ids, don_vi_id, ly_do });
+            if (data.success) location.reload(); else alert(data.message || 'Có lỗi xảy ra');
+        } catch(e) { alert(e.message); } finally { this.disabled = false; }
+    });
+
+    // Xóa
+    document.getElementById('btnBulkDelete') && document.getElementById('btnBulkDelete').addEventListener('click', async function() {
+        const ids = getSelectedIds();
+        const names = getSelectedNames();
+        if (!confirm(`Xóa ${ids.length} quân nhân (${names.slice(0,3).join(', ')}${names.length>3?' ...':''})?\nDữ liệu sẽ vào danh sách xóa.`)) return;
+        this.disabled = true;
+        try {
+            const data = await doAdminBulkAction({ action: 'delete', ids });
+            if (data.success) location.reload(); else alert(data.message || 'Có lỗi xảy ra');
+        } catch(e) { alert(e.message); } finally { this.disabled = false; }
+    });
+});
+</script>
 {% endblock %}
