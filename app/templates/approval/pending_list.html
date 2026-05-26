@@ -186,8 +186,8 @@
                         <th style="width:74px;"><small>{{ mcol }}</small></th>
                         {% endfor %}
                     {% endif %}
-                    <th style="width:100px;" class="text-center">Đang chờ</th>
-                    <th style="width:40px;" class="text-center">Chi tiết</th>
+                    <th style="width:100px;" class="text-center col-pending">Đang chờ</th>
+                    <th style="width:40px;" class="text-center col-action">Chi tiết</th>
                 </tr>
                 {% if is_ttr_role and gate_dept_fields %}
                 <tr class="table-light col-gate-criteria" style="font-size:0.72rem;">
@@ -266,7 +266,7 @@
                         <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
                         {% endfor %}
                     {% endif %}
-                    <td class="text-center">
+                    <td class="text-center col-pending">
                         {% if is_out_of_scope %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input" type="checkbox" checked disabled style="width:2.5em; height:1.3em; opacity:0.5;"></div>
                         <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
@@ -282,7 +282,7 @@
                         {% if ct_gate and ct_gate.pending %}<small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chưa duyệt: {{ ct_gate.pending|join(', ') }}</small>{% endif %}
                         {% endif %}
                     </td>
-                    <td class="text-center"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
+                    <td class="text-center col-action"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
                 </tr>
                 {% if not is_out_of_scope %}
                 <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row">
@@ -327,8 +327,8 @@
                         <th style="width:74px;"><small>{{ mcol }}</small></th>
                         {% endfor %}
                     {% endif %}
-                    <th style="width:100px;" class="text-center">Đang chờ</th>
-                    <th style="width:40px;" class="text-center">Chi tiết</th>
+                    <th style="width:100px;" class="text-center col-pending">Đang chờ</th>
+                    <th style="width:40px;" class="text-center col-action">Chi tiết</th>
                 </tr>
             </thead>
             <tbody>
@@ -372,7 +372,7 @@
                         <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
                         {% endfor %}
                     {% endif %}
-                    <td class="text-center">
+                    <td class="text-center col-pending">
                         {% if is_out_of_scope %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input" type="checkbox" checked disabled style="width:2.5em; height:1.3em; opacity:0.5;"></div>
                         <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
@@ -385,7 +385,7 @@
                         {% if ct_gate and ct_gate.pending %}<small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chưa duyệt: {{ ct_gate.pending|join(', ') }}</small>{% endif %}
                         {% endif %}
                     </td>
-                    <td class="text-center"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
+                    <td class="text-center col-action"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
                 </tr>
                 {% if not is_out_of_scope %}
                 <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row">
@@ -835,6 +835,9 @@ document.addEventListener('DOMContentLoaded', function () {
     .reject-reason-row, nav.pagination, .btn, button { display: none !important; }
     .card-section { border: none !important; box-shadow: none !important; }
     .print-timestamp { display: block !important; }
+    /* Ẩn các cột không thuộc tiêu chí của ban mình */
+    .col-gate-criteria, .col-evidence,
+    .col-pending, .col-action { display: none !important; }
 }
 .print-timestamp { display: none; font-size: 0.82rem; color: #666; margin-bottom: 8px; }
 .toolbar-wrapper {

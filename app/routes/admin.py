@@ -3365,7 +3365,10 @@ def report_summary():
 def admin_deleted_personnel():
     search = request.args.get('search', '').strip()
     don_vi_id = request.args.get('don_vi_id', '', type=str)
-    query = QuanNhan.query.filter_by(is_deleted=True).join(DonVi)
+    try:
+        query = QuanNhan.query.filter(QuanNhan.is_deleted == True).join(DonVi)
+    except Exception:
+        query = QuanNhan.query.filter(QuanNhan.id == -1)  # empty safe fallback
     if search:
         query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
     if don_vi_id:
