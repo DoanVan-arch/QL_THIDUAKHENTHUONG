@@ -93,7 +93,7 @@ class QuanNhan(db.Model):
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     deleted_at = Column(DateTime, nullable=True)
-    deleted_by_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    deleted_by_id = Column(Integer, nullable=True)
     is_chuyen_vung = Column(Boolean, default=False, nullable=False)
     ngay_chuyen_vung = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())
