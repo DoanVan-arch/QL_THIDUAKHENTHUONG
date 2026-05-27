@@ -981,8 +981,12 @@ function applyCriteriaVisibilityByGroup() {
         if (allFields.indexOf(f) < 0) allFields.push(f);
     });
 
+    // Fields managed separately by onPersonnelSelect — skip here
+    var PERSONNEL_MANAGED_FIELDS = {'xep_loai_dang_vien': true};
+
     // Apply visibility per field
     allFields.forEach(function(fieldName) {
+        if (PERSONNEL_MANAGED_FIELDS[fieldName]) return;
         var input = document.querySelector('[name="' + fieldName + '"]');
         if (!input) return;
         var wrap = input.closest('.col-md-4, .col-md-6, .col-md-8, .col-md-12');

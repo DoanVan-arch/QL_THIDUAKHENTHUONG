@@ -38,6 +38,7 @@ class DoiTuong(enum.Enum):
     CCQP = 'Công chức quốc phòng'
     QNCN = 'Quân nhân chuyên nghiệp'
     CNV = 'Công nhân viên'
+    HSQCS = 'Hạ sĩ quan, chiến sĩ'
     SV_NAM1 = 'Học viên năm thứ I'
     SV_NAM2 = 'Học viên năm thứ II'
     SV_NAM3 = 'Học viên năm thứ III'
