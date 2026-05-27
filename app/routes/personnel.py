@@ -1258,7 +1258,7 @@ def deleted_personnel():
 @login_required
 def restore_personnel(id):
     """Chỉ admin mới được khôi phục."""
-    if current_user.role not in (Role.ADMIN, Role.SUPER_ADMIN):
+    if current_user.role != Role.ADMIN:
         flash('Không có quyền thực hiện thao tác này.', 'danger')
         return redirect(url_for('personnel.deleted_personnel'))
     qn = QuanNhan.query.get_or_404(id)
@@ -1278,7 +1278,7 @@ def restore_personnel(id):
 @login_required
 def hard_delete_personnel(id):
     """Chỉ admin mới được xóa hẳn."""
-    if current_user.role not in (Role.ADMIN, Role.SUPER_ADMIN):
+    if current_user.role != Role.ADMIN:
         flash('Không có quyền thực hiện thao tác này.', 'danger')
         return redirect(url_for('personnel.deleted_personnel'))
     qn = QuanNhan.query.get_or_404(id)
