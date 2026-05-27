@@ -87,69 +87,252 @@
     </div>
     <div class="card-body-custom">
         <div class="accordion" id="guideUnit">
+
+            <!-- 1. Quản lý quân nhân -->
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
                     <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit1">
-                        <i class="bi bi-people me-2"></i>Quản lý quân nhân
+                        <i class="bi bi-people me-2"></i>1. Quản lý quân nhân
                     </button>
                 </h2>
                 <div id="guideUnit1" class="accordion-collapse collapse show" data-bs-parent="#guideUnit">
                     <div class="accordion-body small">
+                        <p class="mb-2">Vào menu <strong>Quân nhân → Danh sách quân nhân</strong> để quản lý toàn bộ nhân sự của đơn vị.</p>
+                        <h6 class="fw-semibold mt-3">Thêm mới từng quân nhân</h6>
                         <ol>
-                            <li>Vào menu <strong>Quân nhân</strong> ở thanh bên trái.</li>
-                            <li>Bấm <strong>Thêm quân nhân</strong> để tạo mới, điền đầy đủ thông tin: họ tên, cấp bậc, chức vụ, đối tượng, ngày sinh, năm nhập ngũ, trình độ...</li>
-                            <li>Có thể chỉnh sửa hoặc vô hiệu hóa quân nhân đã tạo.</li>
-                            <li>Hệ thống phân loại quân nhân theo <strong>đối tượng</strong>: Sĩ quan, Giảng viên, Học viên, Quân nhân chuyên nghiệp, Công nhân viên, Công chức quốc phòng...</li>
+                            <li>Bấm nút <span class="badge bg-primary"><i class="bi bi-plus me-1"></i>Thêm quân nhân</span>.</li>
+                            <li>Điền đầy đủ thông tin bắt buộc: <strong>Họ tên, Cấp bậc, Chức vụ, Đối tượng, Ngày sinh</strong>.</li>
+                            <li>Điền thêm thông tin tùy chọn: năm nhập ngũ (MM/YYYY), học vị, trình độ, CCCD/CMND, số điện thoại...</li>
+                            <li>Đánh dấu các cờ: <strong>Đảng viên</strong>, <strong>Đoàn viên</strong>, <strong>Hội viên phụ nữ</strong>, <strong>Chỉ huy</strong>, <strong>Bí thư</strong> nếu đúng.</li>
+                            <li>Bấm <strong>Lưu</strong>.</li>
                         </ol>
-                    </div>
-                </div>
-            </div>
-            <div class="accordion-item border-0">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit2">
-                        <i class="bi bi-award me-2"></i>Tạo và gửi đề xuất khen thưởng
-                    </button>
-                </h2>
-                <div id="guideUnit2" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
-                    <div class="accordion-body small">
+                        <h6 class="fw-semibold mt-3"><i class="bi bi-file-earmark-excel text-success me-1"></i>Nhập hàng loạt từ file Excel mẫu</h6>
                         <ol>
-                            <li>Vào menu <strong>Đề xuất khen thưởng</strong>.</li>
-                            <li>Bấm <strong>Tạo đề xuất mới</strong>, chọn năm học.</li>
-                            <li>Thêm từng cá nhân vào đề xuất, chọn <strong>danh hiệu</strong> (Chiến sĩ thi đua, Chiến sĩ tiên tiến, Đơn vị quyết thắng, Đơn vị tiên tiến).</li>
-                            <li>Điền đầy đủ các tiêu chí đánh giá cho mỗi cá nhân:
-                                <ul>
-                                    <li><strong>Chung:</strong> Mức độ hoàn thành, Phiếu tín nhiệm, KT Chính trị, KT Điều lệnh, Kỹ năng số, ĐHQS, Bắn súng, Thể lực...</li>
-                                    <li><strong>Giảng viên:</strong> Danh hiệu GV giỏi, Định mức giảng dạy, KT giảng, Tiến độ PGS, LĐ Khoa học...</li>
-                                    <li><strong>Học viên:</strong> Danh hiệu HV giỏi, Điểm tổng kết, Thực hành...</li>
-                                    <li><strong>Khoa học:</strong> Điểm NCKH, Nội dung NCKH, Minh chứng NCKH...</li>
+                            <li>Bấm nút <span class="badge bg-success"><i class="bi bi-download me-1"></i>Tải Excel mẫu</span> để tải file mẫu về máy.</li>
+                            <li>Mở file Excel, điền thông tin quân nhân vào các cột theo đúng định dạng:
+                                <ul class="mt-1">
+                                    <li><strong>ho_ten</strong>: Họ và tên đầy đủ.</li>
+                                    <li><strong>ngay_sinh</strong>: Định dạng <code>dd/mm/yyyy</code> (VD: <code>15/03/1990</code>).</li>
+                                    <li><strong>ngay_nhap_ngu</strong>: Định dạng <code>MM/YYYY</code> (VD: <code>09/2010</code>).</li>
+                                    <li><strong>doi_tuong</strong>: Đúng chính xác tên đối tượng (Sĩ quan, Giảng viên, Học viên, QNCN, CNV, CCQP...).</li>
+                                    <li><strong>la_dang_vien, la_doan_vien, la_hoi_vien_phu_nu, la_chi_huy, la_bi_thu</strong>: Điền <code>1</code> (có) hoặc <code>0</code> (không).</li>
                                 </ul>
                             </li>
-                            <li>Đính kèm minh chứng (file) nếu cần.</li>
-                            <li>Bấm <strong>Lưu nháp</strong> để lưu tạm, hoặc <strong>Gửi đề xuất</strong> để chuyển sang các cơ quan duyệt.</li>
+                            <li>Lưu file Excel, quay lại hệ thống, bấm <span class="badge bg-success"><i class="bi bi-upload me-1"></i>Import Excel</span>.</li>
+                            <li>Chọn file vừa điền, bấm <strong>Upload</strong>. Hệ thống sẽ kiểm tra lỗi và thông báo kết quả import.</li>
                         </ol>
                         <div class="alert alert-warning py-2 mt-2 mb-0" style="font-size:0.82rem;">
                             <i class="bi bi-exclamation-triangle me-1"></i>
-                            <strong>Lưu ý:</strong> Sau khi gửi đề xuất, đơn vị không thể chỉnh sửa. Nếu cần sửa, hãy thu hồi đề xuất (nếu chưa có cơ quan nào duyệt).
+                            <strong>Lưu ý:</strong> Không thay đổi tên tiêu đề cột trong file mẫu. Số CCCD/CMND phải là duy nhất trong toàn hệ thống (nếu điền).
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- 2. Chỉnh sửa / Chuyển vùng / Chuyển đơn vị -->
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit2">
+                        <i class="bi bi-arrow-left-right me-2"></i>2. Chỉnh sửa, Chuyển vùng, Chuyển đơn vị
+                    </button>
+                </h2>
+                <div id="guideUnit2" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <h6 class="fw-semibold">Chỉnh sửa thông tin</h6>
+                        <ol>
+                            <li>Trong danh sách quân nhân, bấm biểu tượng <i class="bi bi-pencil text-primary"></i> ở cột Thao tác.</li>
+                            <li>Cập nhật thông tin cần sửa, bấm <strong>Lưu</strong>.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Chuyển vùng (thay đổi diện quản lý)</h6>
+                        <ol>
+                            <li>Trong danh sách, tích chọn một hoặc nhiều quân nhân.</li>
+                            <li>Bấm nút <strong>Chuyển vùng</strong> trong thanh thao tác hàng loạt.</li>
+                            <li>Chọn diện quản lý mới (<em>Quân lực</em> hoặc <em>Cán bộ</em>), bấm <strong>Xác nhận</strong>.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Chuyển đơn vị</h6>
+                        <ol>
+                            <li>Tích chọn quân nhân cần chuyển.</li>
+                            <li>Bấm nút <strong>Chuyển đơn vị</strong> trong thanh thao tác hàng loạt.</li>
+                            <li>Chọn đơn vị mới trong danh sách, bấm <strong>Xác nhận</strong>. Quân nhân sẽ biến mất khỏi danh sách đơn vị hiện tại và xuất hiện ở đơn vị mới.</li>
+                        </ol>
+                        <div class="alert alert-info py-2 mt-2 mb-0" style="font-size:0.82rem;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Chuyển đơn vị chỉ có thể thực hiện bởi <strong>quản trị viên</strong>. Đơn vị thường chỉ có thể <em>yêu cầu</em> chuyển.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Xóa quân nhân -->
             <div class="accordion-item border-0">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit3">
-                        <i class="bi bi-clock-history me-2"></i>Theo dõi kết quả và thông báo
+                        <i class="bi bi-trash me-2"></i>3. Xóa quân nhân (Soft-delete)
                     </button>
                 </h2>
                 <div id="guideUnit3" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
                     <div class="accordion-body small">
+                        <p>Hệ thống áp dụng <strong>xóa mềm</strong> — quân nhân bị xóa sẽ không hiện trong danh sách hoạt động nhưng vẫn được lưu trong cơ sở dữ liệu để khôi phục khi cần.</p>
+                        <h6 class="fw-semibold">Xóa từng quân nhân</h6>
                         <ol>
-                            <li><strong>Lịch sử đề xuất:</strong> Xem tất cả đề xuất đã gửi, trạng thái hiện tại (Chờ duyệt, Đang duyệt, Đã duyệt, Phê duyệt cuối, Từ chối).</li>
-                            <li><strong>Thông báo:</strong> Nhận thông báo khi có cơ quan từ chối hoặc phê duyệt. Biểu tượng <i class="bi bi-bell"></i> trên thanh trên cùng hiển thị số thông báo chưa đọc.</li>
-                            <li>Bấm vào từng đề xuất trong lịch sử để xem chi tiết kết quả duyệt của từng cơ quan.</li>
+                            <li>Trong danh sách, bấm biểu tượng <i class="bi bi-trash text-danger"></i> ở cột Thao tác.</li>
+                            <li>Xác nhận xóa trong hộp thoại.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Xóa hàng loạt</h6>
+                        <ol>
+                            <li>Tích chọn nhiều quân nhân.</li>
+                            <li>Bấm nút <span class="badge bg-danger"><i class="bi bi-trash me-1"></i>Xóa</span> trong thanh thao tác hàng loạt.</li>
+                            <li>Xác nhận.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Xem danh sách đã xóa</h6>
+                        <ol>
+                            <li>Vào menu <strong>Quân nhân → Danh sách đã xóa</strong>.</li>
+                            <li>Xem danh sách quân nhân đã bị xóa. Liên hệ <strong>quản trị viên</strong> để khôi phục nếu cần.</li>
+                        </ol>
+                        <div class="alert alert-warning py-2 mt-2 mb-0" style="font-size:0.82rem;">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Chỉ <strong>quản trị viên</strong> mới có thể khôi phục hoặc xóa vĩnh viễn quân nhân.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Đề xuất khen thưởng -->
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit4">
+                        <i class="bi bi-award me-2"></i>4. Tạo và gửi đề xuất khen thưởng
+                    </button>
+                </h2>
+                <div id="guideUnit4" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <h6 class="fw-semibold">Tạo đề xuất mới</h6>
+                        <ol>
+                            <li>Vào menu <strong>Đề xuất khen thưởng → Tạo đề xuất mới</strong>.</li>
+                            <li>Chọn <strong>Năm học</strong>, điền Ghi chú nếu cần, bấm <strong>Tạo</strong>.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Thêm cá nhân / tập thể vào đề xuất</h6>
+                        <ol>
+                            <li>Trong trang chỉnh sửa đề xuất, chọn <strong>Danh hiệu đề xuất</strong> (Chiến sĩ thi đua, Chiến sĩ tiên tiến, Đơn vị quyết thắng, Đơn vị tiên tiến).</li>
+                            <li>Với danh hiệu cá nhân: chọn <strong>Quân nhân</strong> từ danh sách, hệ thống tự điền đối tượng.</li>
+                            <li>Với danh hiệu tập thể: nhập <strong>Tên tập thể</strong> (VD: Đại đội 1, Tiểu đoàn 6...).</li>
+                            <li>Điền các <strong>tiêu chí đánh giá</strong>:
+                                <ul class="mt-1">
+                                    <li><strong>Tiêu chí chung:</strong> Mức độ hoàn thành nhiệm vụ, Phiếu tín nhiệm, KT Chính trị, KT Điều lệnh, Tin học, ĐHQS, Bắn súng, Thể lực, Xếp loại đảng viên (nếu là đảng viên), Xếp loại đoàn viên (nếu là đoàn viên), Phụ nữ (nếu là hội viên phụ nữ)...</li>
+                                    <li><strong>Giảng viên:</strong> Danh hiệu GV giỏi, Định mức giảng dạy, KT giảng, Tiến độ PGS, LĐ Khoa học.</li>
+                                    <li><strong>Học viên:</strong> Danh hiệu HV giỏi, Điểm tổng kết, Thực hành, Rèn luyện.</li>
+                                    <li><strong>Nghiên cứu khoa học:</strong> Điểm NCKH, Nội dung NCKH, Minh chứng NCKH.</li>
+                                </ul>
+                            </li>
+                            <li>Đính kèm <strong>minh chứng</strong> (file PDF, ảnh...) nếu cần bấm nút <i class="bi bi-paperclip"></i>.</li>
+                            <li>Bấm <span class="badge bg-navy"><i class="bi bi-plus me-1"></i>Thêm vào đề xuất</span> để lưu cá nhân/tập thể vào danh sách.</li>
+                            <li>Lặp lại cho các cá nhân/tập thể tiếp theo.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Gửi đề xuất</h6>
+                        <ol>
+                            <li>Khi đã thêm đủ các cá nhân, bấm nút <span class="badge bg-warning text-dark"><i class="bi bi-send me-1"></i>Gửi duyệt</span> ở góc trên phải.</li>
+                            <li>Xác nhận gửi. Đề xuất chuyển sang trạng thái <span class="badge-status badge-pending">Chờ duyệt</span>.</li>
+                        </ol>
+                        <div class="alert alert-warning py-2 mt-2 mb-0" style="font-size:0.82rem;">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <strong>Lưu ý:</strong> Sau khi gửi, đơn vị <strong>không thể chỉnh sửa</strong>. Nếu cần sửa, bấm <strong>Thu hồi</strong> (chỉ được nếu chưa có cơ quan nào duyệt).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Thông báo -->
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit5">
+                        <i class="bi bi-bell me-2"></i>5. Thông báo
+                    </button>
+                </h2>
+                <div id="guideUnit5" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Biểu tượng <i class="bi bi-bell"></i> trên thanh điều hướng trên cùng hiển thị <span class="badge bg-danger">số</span> thông báo chưa đọc.</li>
+                            <li>Bấm vào <i class="bi bi-bell"></i> để xem danh sách thông báo gần nhất.</li>
+                            <li>Bấm <strong>Xem tất cả thông báo</strong> để vào trang thông báo đầy đủ.</li>
+                            <li>Các loại thông báo đơn vị nhận được:
+                                <ul class="mt-1">
+                                    <li><span class="badge bg-danger">Từ chối</span> — Một cơ quan đã từ chối đề xuất của đơn vị, kèm lý do.</li>
+                                    <li><span class="badge bg-success">Đồng ý</span> — Một cơ quan đã đồng ý.</li>
+                                    <li><span class="badge bg-primary">Phê duyệt cuối</span> — Ban Tuyên huấn đã phê duyệt, đề xuất được lưu vào danh sách khen thưởng.</li>
+                                </ul>
+                            </li>
+                            <li>Bấm vào từng thông báo để xem chi tiết và điều hướng đến đề xuất liên quan.</li>
+                            <li>Bấm <strong>Đánh dấu đã đọc tất cả</strong> để xóa số hiển thị trên chuông.</li>
                         </ol>
                     </div>
                 </div>
             </div>
+
+            <!-- 6. Theo dõi kết quả / lịch sử -->
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit6">
+                        <i class="bi bi-clock-history me-2"></i>6. Theo dõi kết quả đề xuất
+                    </button>
+                </h2>
+                <div id="guideUnit6" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <ol>
+                            <li>Vào menu <strong>Đề xuất khen thưởng → Lịch sử đề xuất</strong>.</li>
+                            <li>Xem danh sách tất cả đề xuất đã tạo với trạng thái hiện tại.</li>
+                            <li>Bấm vào một đề xuất để xem chi tiết: từng cá nhân, trạng thái duyệt của từng trong 6 cơ quan, lý do từ chối (nếu có).</li>
+                            <li>Có thể lọc theo <strong>năm học</strong> hoặc <strong>trạng thái</strong> để tìm nhanh.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Đánh giá xếp loại hằng năm -->
+            <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guideUnit7">
+                        <i class="bi bi-clipboard-data me-2"></i>7. Đánh giá xếp loại hằng năm
+                    </button>
+                </h2>
+                <div id="guideUnit7" class="accordion-collapse collapse" data-bs-parent="#guideUnit">
+                    <div class="accordion-body small">
+                        <p>Trang đánh giá giúp đơn vị nhập xếp loại năm học cho toàn bộ quân nhân theo 4 tiêu chí: <strong>Đảng viên, Cán bộ, Đoàn viên, Phụ nữ</strong>.</p>
+                        <h6 class="fw-semibold">Truy cập</h6>
+                        <ol>
+                            <li>Vào menu <strong>Quân nhân → Đánh giá xếp loại hằng năm</strong>.</li>
+                            <li>Chọn <strong>Năm học</strong> cần nhập đánh giá (VD: <code>2024-2025</code>), bấm <strong>Tìm</strong>.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Nhập đánh giá từng quân nhân</h6>
+                        <ol>
+                            <li>Bảng hiển thị toàn bộ quân nhân của đơn vị, mỗi dòng gồm 4 ô xếp loại.</li>
+                            <li>Chọn xếp loại cho từng ô:
+                                <ul class="mt-1">
+                                    <li><strong>Xếp loại đảng viên:</strong> Hoàn thành xuất sắc, Hoàn thành tốt, Hoàn thành, Vi phạm... (chỉ áp dụng cho quân nhân là đảng viên).</li>
+                                    <li><strong>Xếp loại cán bộ:</strong> Hoàn thành xuất sắc nhiệm vụ, Hoàn thành tốt, Hoàn thành, Không hoàn thành.</li>
+                                    <li><strong>Xếp loại đoàn viên:</strong> Xuất sắc, Tốt, Khá, Trung bình (chỉ áp dụng cho đoàn viên).</li>
+                                    <li><strong>Xếp loại phụ nữ:</strong> Xuất sắc, Tốt, Khá, Trung bình (chỉ áp dụng cho hội viên phụ nữ).</li>
+                                </ul>
+                            </li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Áp dụng hàng loạt</h6>
+                        <ol>
+                            <li>Phía trên bảng có 4 ô <strong>Áp dụng cho toàn đơn vị</strong> — chọn xếp loại muốn áp dụng cho tất cả.</li>
+                            <li>Bấm nút <strong>Áp dụng</strong> để điền tự động vào toàn bộ cột tương ứng.</li>
+                            <li>Sau đó có thể sửa từng dòng riêng lẻ nếu có cá nhân đặc biệt.</li>
+                        </ol>
+                        <h6 class="fw-semibold mt-3">Lưu kết quả</h6>
+                        <ol>
+                            <li>Bấm nút <span class="badge bg-primary"><i class="bi bi-save me-1"></i>Lưu đánh giá</span> ở cuối trang.</li>
+                            <li>Hệ thống xác nhận đã lưu và dữ liệu đánh giá sẽ được dùng trong quá trình xét đề xuất khen thưởng.</li>
+                        </ol>
+                        <div class="alert alert-info py-2 mt-2 mb-0" style="font-size:0.82rem;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Dữ liệu đánh giá hằng năm <strong>độc lập</strong> với đề xuất khen thưởng — có thể nhập trước hoặc sau khi tạo đề xuất.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>

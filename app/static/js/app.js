@@ -165,8 +165,12 @@ function onPersonnelSelect(selectEl) {
         var isPN = option.getAttribute('data-lahoivienphunu') === '1';
         var isChiHuy = option.getAttribute('data-lachihuy') === '1';
         var isBiThu = option.getAttribute('data-labithu') === '1';
+        var isDangVien = option.getAttribute('data-ladangvien') === '1';
         if (secDoan) secDoan.classList.toggle('hidden', !isDoan);
         if (secPN) secPN.classList.toggle('hidden', !isPN);
+        // xep_loai_dang_vien: only show for đảng viên
+        var dangVienWrap = document.getElementById('wrap-xep-loai-dang-vien');
+        if (dangVienWrap) dangVienWrap.classList.toggle('hidden', !isDangVien);
         // chu_tri_don_vi_danh_hieu: only show for cap truong or bi thu
         var chuTriWrap = (function() {
             var inp = document.querySelector('[name="chu_tri_don_vi_danh_hieu"]');
