@@ -63,6 +63,14 @@ def create_app(config_class=None):
     def not_found(e):
         return '<h1>404 - Không tìm thấy trang</h1><a href="/">Về trang chủ</a>', 404
 
+    @app.teardown_request
+    def teardown_request_handler(exception):
+        if exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
     @app.context_processor
     def inject_notification_count():
         from flask_login import current_user
