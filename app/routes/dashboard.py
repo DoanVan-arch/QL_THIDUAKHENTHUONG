@@ -88,34 +88,87 @@ def download_user_guide_word():
     doc.add_heading('III. HƯỚNG DẪN DÀNH CHO ĐƠN VỊ', level=1)
 
     doc.add_heading('1. Quản lý quân nhân', level=2)
+    doc.add_paragraph('Vào menu Quân nhân → Danh sách quân nhân để quản lý toàn bộ nhân sự của đơn vị.')
+    p = doc.add_paragraph(); p.add_run('Thêm mới từng quân nhân:').bold = True
     for item in [
-        'Vào menu Quân nhân ở thanh bên trái.',
-        'Bấm Thêm quân nhân để tạo mới, điền đầy đủ thông tin: họ tên, cấp bậc, chức vụ, đối tượng, ngày sinh, năm nhập ngũ, trình độ...',
-        'Có thể chỉnh sửa hoặc vô hiệu hóa quân nhân đã tạo.',
-        'Hệ thống phân loại quân nhân theo đối tượng: Sĩ quan, Giảng viên, Học viên, Quân nhân chuyên nghiệp, Công nhân viên, Công chức quốc phòng...',
+        'Bấm nút Thêm quân nhân.',
+        'Điền đầy đủ thông tin bắt buộc: Họ tên, Cấp bậc, Chức vụ, Đối tượng, Ngày sinh.',
+        'Điền thêm: năm nhập ngũ (MM/YYYY), học vị, trình độ, CCCD/CMND, số điện thoại...',
+        'Đánh dấu các cờ: Đảng viên, Đoàn viên, Hội viên phụ nữ, Chỉ huy, Bí thư nếu đúng.',
+        'Bấm Lưu.',
     ]:
         doc.add_paragraph(item, style='List Number 2')
 
-    doc.add_heading('2. Tạo và gửi đề xuất khen thưởng', level=2)
+    p = doc.add_paragraph(); p.add_run('Nhập hàng loạt từ file Excel mẫu:').bold = True
     for item in [
-        'Vào menu Đề xuất khen thưởng.',
-        'Bấm Tạo đề xuất mới, chọn năm học.',
-        'Thêm từng cá nhân vào đề xuất, chọn danh hiệu (Chiến sĩ thi đua, Chiến sĩ tiên tiến, Đơn vị quyết thắng, Đơn vị tiên tiến).',
-        'Điền đầy đủ các tiêu chí đánh giá cho mỗi cá nhân (Chung, Giảng viên, Học viên, Khoa học).',
-        'Đính kèm minh chứng (file) nếu cần.',
-        'Bấm Lưu nháp để lưu tạm, hoặc Gửi đề xuất để chuyển sang các cơ quan duyệt.',
+        'Bấm nút Tải Excel mẫu để tải file mẫu về máy.',
+        'Điền thông tin quân nhân vào đúng các cột: ho_ten, ngay_sinh (dd/mm/yyyy), ngay_nhap_ngu (MM/YYYY), doi_tuong (tên chính xác), la_dang_vien / la_doan_vien / la_hoi_vien_phu_nu / la_chi_huy / la_bi_thu (1 = có, 0 = không).',
+        'Lưu file, quay lại hệ thống, bấm Import Excel, chọn file, bấm Upload.',
+        'Hệ thống kiểm tra lỗi và thông báo kết quả import.',
+        'Lưu ý: Không thay đổi tên tiêu đề cột. Số CCCD phải là duy nhất toàn hệ thống.',
     ]:
         doc.add_paragraph(item, style='List Number 2')
-    doc.add_paragraph(
-        'Lưu ý: Sau khi gửi đề xuất, đơn vị không thể chỉnh sửa. Nếu cần sửa, hãy thu hồi đề xuất '
-        '(nếu chưa có cơ quan nào duyệt).'
-    ).italic = True
 
-    doc.add_heading('3. Theo dõi kết quả và thông báo', level=2)
+    doc.add_heading('2. Chỉnh sửa, Chuyển vùng, Chuyển đơn vị', level=2)
     for item in [
-        'Lịch sử đề xuất: Xem tất cả đề xuất đã gửi, trạng thái hiện tại.',
-        'Thông báo: Nhận thông báo khi có cơ quan từ chối hoặc phê duyệt.',
-        'Bấm vào từng đề xuất trong lịch sử để xem chi tiết kết quả duyệt của từng cơ quan.',
+        'Chỉnh sửa: Bấm biểu tượng bút chì ở cột Thao tác → cập nhật thông tin → Lưu.',
+        'Chuyển vùng: Tích chọn quân nhân → bấm Chuyển vùng → chọn diện quản lý mới (Quân lực / Cán bộ) → Xác nhận.',
+        'Chuyển đơn vị: Tích chọn quân nhân → bấm Chuyển đơn vị → chọn đơn vị mới → Xác nhận. (Chức năng này do quản trị viên thực hiện.)',
+    ]:
+        doc.add_paragraph(item, style='List Number 2')
+
+    doc.add_heading('3. Xóa quân nhân (Soft-delete)', level=2)
+    doc.add_paragraph('Hệ thống áp dụng xóa mềm — quân nhân bị xóa vẫn được lưu trong CSDL, có thể khôi phục.')
+    for item in [
+        'Xóa từng người: Bấm biểu tượng thùng rác ở cột Thao tác → xác nhận.',
+        'Xóa hàng loạt: Tích chọn nhiều quân nhân → bấm Xóa trong thanh thao tác hàng loạt → xác nhận.',
+        'Xem danh sách đã xóa: Vào menu Quân nhân → Danh sách đã xóa.',
+        'Khôi phục: Chỉ quản trị viên mới có thể khôi phục hoặc xóa vĩnh viễn.',
+    ]:
+        doc.add_paragraph(item, style='List Number 2')
+
+    doc.add_heading('4. Tạo và gửi đề xuất khen thưởng', level=2)
+    for item in [
+        'Vào menu Đề xuất khen thưởng → Tạo đề xuất mới.',
+        'Chọn Năm học, điền Ghi chú nếu cần, bấm Tạo.',
+        'Chọn Danh hiệu đề xuất (Chiến sĩ thi đua, Chiến sĩ tiên tiến, Đơn vị quyết thắng, Đơn vị tiên tiến).',
+        'Với danh hiệu cá nhân: chọn Quân nhân từ danh sách, hệ thống tự điền đối tượng.',
+        'Với danh hiệu tập thể: nhập Tên tập thể (VD: Đại đội 1, Tiểu đoàn 6...).',
+        'Điền tiêu chí đánh giá: Chung (Hoàn thành, Phiếu tín nhiệm, KT Chính trị, KT Điều lệnh, Tin học, ĐHQS, Bắn súng, Thể lực, Xếp loại đảng viên nếu là đảng viên, Đoàn viên, Phụ nữ...), Giảng viên, Học viên, NCKH.',
+        'Đính kèm minh chứng (file PDF, ảnh) nếu cần.',
+        'Bấm Thêm vào đề xuất. Lặp lại cho các cá nhân tiếp theo.',
+        'Khi đủ, bấm Gửi duyệt ở góc trên phải. Đề xuất chuyển sang trạng thái Chờ duyệt.',
+        'Lưu ý: Sau khi gửi không thể chỉnh sửa. Dùng Thu hồi nếu chưa có cơ quan nào duyệt.',
+    ]:
+        doc.add_paragraph(item, style='List Number 2')
+
+    doc.add_heading('5. Thông báo', level=2)
+    for item in [
+        'Biểu tượng chuông trên thanh điều hướng hiển thị số thông báo chưa đọc.',
+        'Bấm chuông để xem danh sách gần nhất; bấm Xem tất cả thông báo để vào trang đầy đủ.',
+        'Loại thông báo: Từ chối (kèm lý do), Đồng ý, Phê duyệt cuối.',
+        'Bấm vào từng thông báo để xem chi tiết và điều hướng đến đề xuất.',
+        'Bấm Đánh dấu đã đọc tất cả để xóa số hiển thị trên chuông.',
+    ]:
+        doc.add_paragraph(item, style='List Number 2')
+
+    doc.add_heading('6. Theo dõi kết quả đề xuất', level=2)
+    for item in [
+        'Vào menu Đề xuất khen thưởng → Lịch sử đề xuất.',
+        'Xem trạng thái và kết quả duyệt của từng cơ quan cho tất cả đề xuất đã tạo.',
+        'Lọc theo năm học hoặc trạng thái để tìm nhanh.',
+    ]:
+        doc.add_paragraph(item, style='List Number 2')
+
+    doc.add_heading('7. Đánh giá xếp loại hằng năm', level=2)
+    doc.add_paragraph('Nhập xếp loại năm học cho toàn đơn vị theo 4 tiêu chí: Đảng viên, Cán bộ, Đoàn viên, Phụ nữ.')
+    for item in [
+        'Vào menu Quân nhân → Đánh giá xếp loại hằng năm.',
+        'Chọn Năm học cần nhập (VD: 2024-2025), bấm Tìm.',
+        'Nhập xếp loại cho từng quân nhân trong bảng (4 cột xếp loại).',
+        'Sử dụng 4 ô Áp dụng cho toàn đơn vị ở phía trên để điền nhanh hàng loạt, sau đó sửa từng dòng riêng lẻ nếu cần.',
+        'Bấm Lưu đánh giá ở cuối trang để lưu kết quả.',
+        'Lưu ý: Dữ liệu đánh giá hằng năm độc lập với đề xuất khen thưởng.',
     ]:
         doc.add_paragraph(item, style='List Number 2')
 

@@ -183,6 +183,7 @@
                                     data-lahoivienphunu="{{ '1' if p.la_hoi_vien_phu_nu else '0' }}"
                                     data-lachihuy="{{ '1' if p.la_chi_huy else '0' }}"
                                     data-labithu="{{ '1' if p.la_bi_thu else '0' }}"
+                                    data-ladangvien="{{ '1' if p.la_dang_vien else '0' }}"
                                     {% if is_nominated %}disabled{% endif %}>
                                 {{ p.ho_ten }} - {{ p.cap_bac or '' }} - {{ p.chuc_vu or '' }}{% if is_nominated %} (Đã đề xuất){% endif %}
                             </option>
@@ -298,7 +299,7 @@
                         <label class="form-label">Kết quả kiểm tra địa hình quân sự - Xếp loại</label>
                         {{ tc_input('dia_ly_quan_su', 'VD: Khá') }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4 hidden" id="wrap-xep-loai-dang-vien">
                         <label class="form-label">Xếp loại đảng viên hằng năm</label>
                         {{ tc_input('xep_loai_dang_vien') }}
                     </div>
@@ -1136,6 +1137,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (_secPN) _secPN.classList.toggle('hidden', _opt.getAttribute('data-lahoivienphunu') !== '1');
         var _chuTriWrap = _getChuTriWrap();
         if (_chuTriWrap) _chuTriWrap.classList.toggle('hidden', !(_opt.getAttribute('data-lachihuy') === '1' || _opt.getAttribute('data-labithu') === '1'));
+        var _dangVienWrap = document.getElementById('wrap-xep-loai-dang-vien');
+        if (_dangVienWrap) _dangVienWrap.classList.toggle('hidden', _opt.getAttribute('data-ladangvien') !== '1');
     } else {
         if (_secDoan) _secDoan.classList.add('hidden');
         if (_secPN) _secPN.classList.add('hidden');
