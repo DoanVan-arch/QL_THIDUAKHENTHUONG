@@ -3381,6 +3381,38 @@ def admin_deleted_personnel():
                            don_vi_id=don_vi_id,
                            units=units)
 
+
+@admin_bp.route('/personnel/deleted/bulk-action', methods=['POST'])
+@login_required
+@admin_required
+def admin_bulk_deleted_action():
+    """Bulk restore hoặc hard-delete nhiều quân nhân từ trang deleted."""
+    action = request.form.get('action', '').strip()
+    ids = request.form.getlist('ids')
+    if not ids:
+        flash('Chưa chọn quân nhân nào.', 'warning')
+        return redirect(url_for('admin.admin_deleted_personnel'))
+    ids = [int(i) for i in ids if i.isdigit()]
+    personnel = QuanNhan.query.filter(QuanNhan.id.in_(ids), QuanNhan.is_deleted == True).all()
+    if action == 'restore':
+        for qn in personnel:
+            qn.is_deleted = False
+            qn.is_active = True
+            qn.deleted_at = None
+            qn.deleted_by_id = None
+        db.session.commit()
+        flash(f'Đã khôi phục {len(personnel)} quân nhân.', 'success')
+    elif action == 'hard_delete':
+        names = [qn.ho_ten for qn in personnel]
+        for qn in personnel:
+            db.session.delete(qn)
+        db.session.commit()
+        flash(f'Đã xóa vĩnh viễn {len(names)} quân nhân.', 'danger')
+    else:
+        flash('Hành động không hợp lệ.', 'danger')
+    return redirect(url_for('admin.admin_deleted_personnel'))
+
+
 # ------------------------------------------------------------------
 @admin_bp.route('/personnel')
 @login_required

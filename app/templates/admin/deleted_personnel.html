@@ -32,10 +32,26 @@
 <div class="card-section">
     <div class="card-body-custom p-0">
         {% if deleted_list %}
+
+        <!-- Bulk action bar -->
+        <div id="bulkBar" class="d-none px-3 py-2 border-bottom d-flex gap-2 align-items-center" style="background:#fff8f8;">
+            <span id="bulkCount" class="text-danger fw-semibold me-2">0 đã chọn</span>
+            <button type="button" class="btn btn-sm btn-outline-success" onclick="bulkRestore()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục đã chọn
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="bulkHardDelete()">
+                <i class="bi bi-trash3-fill me-1"></i>Xóa vĩnh viễn đã chọn
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" onclick="clearSelection()">Bỏ chọn tất cả</button>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
                 <thead>
                     <tr>
+                        <th style="width:35px;">
+                            <input type="checkbox" id="checkAll" class="form-check-input" title="Chọn tất cả">
+                        </th>
                         <th style="width:35px;">STT</th>
                         <th>Họ tên</th>
                         <th>Đơn vị</th>
@@ -49,6 +65,9 @@
                 <tbody>
                     {% for qn in deleted_list %}
                     <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input row-check" value="{{ qn.id }}" data-name="{{ qn.ho_ten }}">
+                        </td>
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">{{ qn.ho_ten }}</td>
                         <td><small>{{ qn.don_vi.ten_don_vi }}</small></td>
@@ -84,6 +103,19 @@
         <div class="p-2 text-muted" style="font-size:0.8rem;">
             Tổng: <strong>{{ deleted_list|length }}</strong> quân nhân trong danh sách xóa
         </div>
+
+        <!-- Hidden bulk forms -->
+        <form id="formBulkRestore" action="{{ url_for('admin.admin_bulk_deleted_action') }}" method="POST" class="d-none">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="restore">
+            <div id="bulkRestoreIds"></div>
+        </form>
+        <form id="formBulkHardDelete" action="{{ url_for('admin.admin_bulk_deleted_action') }}" method="POST" class="d-none">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="hard_delete">
+            <div id="bulkHardDeleteIds"></div>
+        </form>
+
         {% else %}
         <div class="empty-state py-4">
             <i class="bi bi-trash d-block" style="font-size:2rem;"></i>
@@ -92,4 +124,76 @@
         {% endif %}
     </div>
 </div>
+
+{% if deleted_list %}
+<script>
+var checkAll = document.getElementById('checkAll');
+var bulkBar = document.getElementById('bulkBar');
+var bulkCount = document.getElementById('bulkCount');
+
+function getChecked() {
+    return Array.from(document.querySelectorAll('.row-check:checked'));
+}
+
+function updateBulkBar() {
+    var checked = getChecked();
+    if (checked.length > 0) {
+        bulkBar.classList.remove('d-none');
+        bulkBar.classList.add('d-flex');
+        bulkCount.textContent = checked.length + ' đã chọn';
+    } else {
+        bulkBar.classList.add('d-none');
+        bulkBar.classList.remove('d-flex');
+    }
+}
+
+checkAll.addEventListener('change', function() {
+    document.querySelectorAll('.row-check').forEach(function(cb) { cb.checked = checkAll.checked; });
+    updateBulkBar();
+});
+
+document.querySelectorAll('.row-check').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        var all = document.querySelectorAll('.row-check');
+        var allChecked = Array.from(all).every(function(c) { return c.checked; });
+        checkAll.checked = allChecked;
+        updateBulkBar();
+    });
+});
+
+function clearSelection() {
+    document.querySelectorAll('.row-check').forEach(function(cb) { cb.checked = false; });
+    checkAll.checked = false;
+    updateBulkBar();
+}
+
+function buildIds(containerId) {
+    var checked = getChecked();
+    var container = document.getElementById(containerId);
+    container.innerHTML = '';
+    checked.forEach(function(cb) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'ids';
+        inp.value = cb.value;
+        container.appendChild(inp);
+    });
+    return checked.length;
+}
+
+function bulkRestore() {
+    var n = buildIds('bulkRestoreIds');
+    if (n === 0) return;
+    if (!confirm('Khôi phục ' + n + ' quân nhân đã chọn?')) return;
+    document.getElementById('formBulkRestore').submit();
+}
+
+function bulkHardDelete() {
+    var n = buildIds('bulkHardDeleteIds');
+    if (n === 0) return;
+    if (!confirm('XÓA VĨNH VIỄN ' + n + ' quân nhân? Không thể hoàn tác!')) return;
+    document.getElementById('formBulkHardDelete').submit();
+}
+</script>
+{% endif %}
 {% endblock %}
