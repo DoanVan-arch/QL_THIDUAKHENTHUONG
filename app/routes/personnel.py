@@ -536,7 +536,86 @@ def import_personnel_excel():
         return redirect(url_for('personnel.list_personnel'))
 
     header_row = [str(c).strip() if c is not None else '' for c in rows[0]]
-    headers = {h.lower(): idx for idx, h in enumerate(header_row) if h}
+
+    # Map from Vietnamese display names (in template) to internal field names
+    VIET_TO_FIELD = {
+        'họ và tên': 'ho_ten',
+        'ho va ten': 'ho_ten',
+        'họ tên': 'ho_ten',
+        'ho ten': 'ho_ten',
+        'ho_ten': 'ho_ten',
+        'cấp bậc': 'cap_bac',
+        'cap bac': 'cap_bac',
+        'cap_bac': 'cap_bac',
+        'đối tượng': 'doi_tuong',
+        'doi tuong': 'doi_tuong',
+        'doi_tuong': 'doi_tuong',
+        'lớp': 'lop',
+        'lop': 'lop',
+        'chức vụ': 'chuc_vu',
+        'chuc vu': 'chuc_vu',
+        'chuc_vu': 'chuc_vu',
+        'căn cước công dân': 'can_cuoc_cong_dan',
+        'can cuoc cong dan': 'can_cuoc_cong_dan',
+        'can_cuoc_cong_dan': 'can_cuoc_cong_dan',
+        'cccd': 'can_cuoc_cong_dan',
+        'đơn vị trực thuộc': 'don_vi_truc_thuoc',
+        'don vi truc thuoc': 'don_vi_truc_thuoc',
+        'don_vi_truc_thuoc': 'don_vi_truc_thuoc',
+        'ngày sinh': 'ngay_sinh',
+        'ngay sinh': 'ngay_sinh',
+        'ngay_sinh': 'ngay_sinh',
+        'ngày nhập ngũ': 'ngay_nhap_ngu',
+        'nhập ngũ': 'ngay_nhap_ngu',
+        'ngay nhap ngu': 'ngay_nhap_ngu',
+        'ngay_nhap_ngu': 'ngay_nhap_ngu',
+        'học hàm': 'hoc_ham',
+        'hoc ham': 'hoc_ham',
+        'hoc_ham': 'hoc_ham',
+        'học vị': 'hoc_vi',
+        'hoc vi': 'hoc_vi',
+        'hoc_vi': 'hoc_vi',
+        'trình độ học vấn': 'trinh_do_hoc_van',
+        'trinh do hoc van': 'trinh_do_hoc_van',
+        'trinh_do_hoc_van': 'trinh_do_hoc_van',
+        'trình độ': 'trinh_do_hoc_van',
+        'ngoại ngữ': 'ngoai_ngu',
+        'ngoai ngu': 'ngoai_ngu',
+        'ngoai_ngu': 'ngoai_ngu',
+        'cấp trưởng': 'la_chi_huy',
+        'cap truong': 'la_chi_huy',
+        'la_chi_huy': 'la_chi_huy',
+        'bí thư': 'la_bi_thu',
+        'bi thu': 'la_bi_thu',
+        'la_bi_thu': 'la_bi_thu',
+        'đảng viên': 'la_dang_vien',
+        'dang vien': 'la_dang_vien',
+        'la_dang_vien': 'la_dang_vien',
+        'đoàn viên': 'la_doan_vien',
+        'doan vien': 'la_doan_vien',
+        'la_doan_vien': 'la_doan_vien',
+        'hội viên phụ nữ': 'la_hoi_vien_phu_nu',
+        'hoi vien phu nu': 'la_hoi_vien_phu_nu',
+        'la_hoi_vien_phu_nu': 'la_hoi_vien_phu_nu',
+        'phụ nữ': 'la_hoi_vien_phu_nu',
+    }
+
+    # Normalize headers: strip, lowercase, map to field names
+    headers = {}
+    for idx, h in enumerate(header_row):
+        if not h:
+            continue
+        import unicodedata
+        h_lower = h.lower().strip()
+        field = VIET_TO_FIELD.get(h_lower)
+        if not field:
+            # Try removing diacritics
+            h_ascii = ''.join(
+                c for c in unicodedata.normalize('NFD', h_lower)
+                if unicodedata.category(c) != 'Mn'
+            ).strip()
+            field = VIET_TO_FIELD.get(h_ascii, h_lower.replace(' ', '_'))
+        headers[field] = idx
 
     required_cols = ['ho_ten']
     optional_cols = [
@@ -548,24 +627,31 @@ def import_personnel_excel():
     ]
     missing = [c for c in required_cols if c not in headers]
     if missing:
-        flash('Thiếu cột bắt buộc trong file Excel: ' + ', '.join(missing), 'danger')
+        found = list(headers.keys())[:8]
+        flash(
+            f'Thiếu cột bắt buộc: {", ".join(missing)}. '
+            f'Các cột nhận diện được: {", ".join(found)}. '
+            f'Vui lòng dùng file mẫu hoặc đặt đúng tên cột.',
+            'danger'
+        )
         return redirect(url_for('personnel.list_personnel'))
 
     created = 0
     skipped = 0
     errors = 0
     replaced = 0
+    error_details = []
 
     cap_bac_values = set(_get_cap_bac_list())
     doi_tuong_values = {e.value for e in DoiTuong}
     hoc_ham_values = {e.value for e in HocHam}
     hoc_vi_values = {e.value for e in HocVi}
 
-    for row in rows[1:]:
+    for row_idx, row in enumerate(rows[1:], start=2):
         try:
             ho_ten = row[headers['ho_ten']] if headers.get('ho_ten') is not None else None
             ho_ten = str(ho_ten).strip() if ho_ten is not None else ''
-            if not ho_ten:
+            if not ho_ten or ho_ten.lower() in ('none', 'nan', ''):
                 skipped += 1
                 continue
 
@@ -590,17 +676,19 @@ def import_personnel_excel():
             hoc_vi_val = str(row[headers['hoc_vi']]).strip() if headers.get('hoc_vi') is not None and row[headers['hoc_vi']] is not None else 'Không'
 
             if cap_bac_val and cap_bac_val not in cap_bac_values:
+                error_details.append(f'Dòng {row_idx} ({ho_ten}): Cấp bậc "{cap_bac_val}" không hợp lệ.')
                 errors += 1
                 continue
             if doi_tuong_val and doi_tuong_val not in doi_tuong_values:
+                error_details.append(f'Dòng {row_idx} ({ho_ten}): Đối tượng "{doi_tuong_val}" không hợp lệ.')
                 errors += 1
                 continue
             if hoc_ham_val and hoc_ham_val not in hoc_ham_values:
-                errors += 1
-                continue
+                # Fallback to 'Không' instead of skipping
+                hoc_ham_val = 'Không'
             if hoc_vi_val and hoc_vi_val not in hoc_vi_values:
-                errors += 1
-                continue
+                # Fallback to 'Không' instead of skipping
+                hoc_vi_val = 'Không'
 
             qn = QuanNhan(
                 don_vi_id=current_user.don_vi_id,
@@ -626,16 +714,17 @@ def import_personnel_excel():
             )
             db.session.add(qn)
             created += 1
-        except Exception:
+        except Exception as e:
+            error_details.append(f'Dòng {row_idx}: Lỗi kỹ thuật ({str(e)[:80]}).')
             errors += 1
 
     if created > 0:
         db.session.commit()
 
-    flash(
-        f'Đã nhập {created} quân nhân. Bỏ qua: {skipped}. Thay thế theo CCCD: {replaced}. Lỗi: {errors}.',
-        'success' if created > 0 else 'warning'
-    )
+    msg = f'Đã nhập {created} quân nhân. Bỏ qua (trống): {skipped}. Thay thế theo CCCD: {replaced}. Lỗi: {errors}.'
+    flash(msg, 'success' if created > 0 else 'warning')
+    if error_details:
+        flash('Chi tiết lỗi: ' + ' | '.join(error_details[:10]) + (f' ... và {len(error_details)-10} lỗi khác.' if len(error_details) > 10 else ''), 'danger')
     return redirect(url_for('personnel.list_personnel'))
 
 
