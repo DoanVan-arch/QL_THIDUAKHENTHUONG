@@ -317,6 +317,8 @@ def pending_list():
             _DeXuat.nam_hoc == nam_hoc_filter
         )
     pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
+    # Filter out orphaned PheDuyet (de_xuat đã bị xóa khỏi DB)
+    pending_reviews = [pd for pd in pending_reviews if pd.de_xuat is not None]
 
     # Ensure per-item records exist for all chi_tiets
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items
