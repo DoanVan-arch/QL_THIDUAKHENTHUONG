@@ -1025,8 +1025,8 @@ def export_nomination_word(id):
     for section in doc.sections:
         section.top_margin = Cm(2)
         section.bottom_margin = Cm(2)
-        section.left_margin = Cm(3)
-        section.right_margin = Cm(2)
+        section.left_margin = Cm(3.5)
+        section.right_margin = Cm(1.5)
 
     # --- Header 2 cột: đơn vị bên trái, quốc hiệu bên phải ---
     tbl_header = doc.add_table(rows=1, cols=2)
@@ -1043,16 +1043,19 @@ def export_nomination_word(id):
 
     left_cell = tbl_header.rows[0].cells[0]
     right_cell = tbl_header.rows[0].cells[1]
-
+    left_width = Cm(6.5)
+    right_width = Cm(10.5)
+    left_cell.width = left_width
+    right_cell.width = right_width
     # Left: TRƯỜNG SĨ QUAN CHÍNH TRỊ / ĐƠN VỊ
     p_l1 = left_cell.paragraphs[0]
     p_l1.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = p_l1.add_run('TRƯỜNG SĨ QUAN CHÍNH TRỊ')
-    set_font(r, bold=False, size=12)
+    set_font(r, bold=False, size=13)
     p_l2 = left_cell.add_paragraph()
     p_l2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r2 = p_l2.add_run(don_vi_ten.upper())
-    set_font(r2, bold=True, size=12)
+    set_font(r2, bold=True, size=13)
     # Gạch dưới đơn vị
     p_l2.paragraph_format.space_after = Pt(0)
     r2.underline = True
@@ -1061,11 +1064,11 @@ def export_nomination_word(id):
     p_r1 = right_cell.paragraphs[0]
     p_r1.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_r1 = p_r1.add_run('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM')
-    set_font(r_r1, bold=True, size=12)
+    set_font(r_r1, bold=True, size=13)
     p_r2 = right_cell.add_paragraph()
     p_r2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_r2 = p_r2.add_run('Độc lập - Tự do - Hạnh phúc')
-    set_font(r_r2, bold=True, size=12)
+    set_font(r_r2, bold=True, size=13)
     r_r2.underline = True
     p_r3 = right_cell.add_paragraph()
     p_r3.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -1085,7 +1088,7 @@ def export_nomination_word(id):
 
     # --- I. Đơn vị quyết thắng ---
     p_i = doc.add_paragraph()
-    para_font(p_i, 'I. Đơn vị quyết thắng', bold=True, size=11)
+    para_font(p_i, 'I. Danh hiệu Đơn vị quyết thắng', bold=True, size=11)
     if ds_quyet_thang:
         for ct in ds_quyet_thang:
             p = doc.add_paragraph()
@@ -1095,11 +1098,11 @@ def export_nomination_word(id):
     else:
         p = doc.add_paragraph()
         p.paragraph_format.left_indent = Cm(1)
-        para_font(p, 'Lấy tên đơn vị đề nghị', size=11, italic=True)
+        para_font(p, 'không', size=11, italic=True)
 
     # --- II. Đơn vị tiên tiến ---
     p_ii = doc.add_paragraph()
-    para_font(p_ii, 'II. Đơn vị tiên tiến', bold=True, size=11)
+    para_font(p_ii, 'II. Danh hiệu Đơn vị tiên tiến', bold=True, size=11)
     if ds_tien_tien_dv:
         for ct in ds_tien_tien_dv:
             p = doc.add_paragraph()
@@ -1109,13 +1112,13 @@ def export_nomination_word(id):
     else:
         p = doc.add_paragraph()
         p.paragraph_format.left_indent = Cm(1)
-        para_font(p, 'Lấy tên đơn vị đề nghị', size=11, italic=True)
+        para_font(p, 'không', size=11, italic=True)
 
     # --- III. Chiến sĩ thi đua cơ sở ---
     stt = add_personnel_table(doc, ds_chien_si_tdcs, 'III. Danh hiệu Chiến sĩ thi đua cơ sở')
 
     # --- IV. Chiến sĩ tiên tiến ---
-    add_personnel_table(doc, ds_chien_si_tt, 'IV. Chiến sĩ tiên tiến')
+    add_personnel_table(doc, ds_chien_si_tt, 'IV. Danh hiệu Chiến sĩ tiên tiến')
 
     # --- Các danh hiệu khác ---
     roman = ['V', 'VI', 'VII', 'VIII', 'IX', 'X']
@@ -1142,7 +1145,7 @@ def export_nomination_word(id):
     # Ký xác nhận bên trái
     p_sl = left_sign.paragraphs[0]
     p_sl.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para_font(p_sl, 'XÁC NHẬN CỦA CẤP TRÊN', bold=True, size=11)
+   # para_font(p_sl, 'XÁC NHẬN CỦA CẤP TRÊN', bold=True, size=11)
     left_sign.add_paragraph()
     left_sign.add_paragraph()
     left_sign.add_paragraph()
