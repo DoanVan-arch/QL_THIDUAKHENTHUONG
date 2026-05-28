@@ -99,6 +99,7 @@ class User(db.Model, UserMixin):
     @property
     def is_department(self):
         return self.role in (
+            Role.PHONG_CHINHTRI, Role.PHONG_THAMMUU, Role.THU_TRUONG_PHONG_CHINHTRI,
             Role.PHONG_KHOAHOC, Role.PHONG_DAOTAO,
             Role.THU_TRUONG_PHONG_TMHC,
             Role.BAN_CANBO, Role.BAN_TOCHUC, Role.BAN_TUYENHUAN,
@@ -109,6 +110,7 @@ class User(db.Model, UserMixin):
             Role.BAN_QUANLUC,
             Role.PHONG_HAUCANKYTHUAT,
             Role.BAN_SAUDAIHOC,
+            Role.BAN_KEHOACH_TONGHOP,
         )
 
     @property
