@@ -72,7 +72,7 @@
                 <tbody>
                     {% for pd in recent_pending %}
                     <tr>
-                        <td>{{ pd.de_xuat.don_vi.ten_don_vi }}</td>
+                        <td>{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</td>
                         <td>{{ pd.de_xuat.nam_hoc }}</td>
                         <td>{{ pd.de_xuat.chi_tiets|length }}</td>
                         <td>{{ pd.de_xuat.ngay_gui.strftime('%d/%m/%Y') if pd.de_xuat.ngay_gui else '-' }}</td>

@@ -105,9 +105,9 @@
     {% set results_pd = all_item_results[pd.id] if pd.id in all_item_results else {} %}
     {% for ct in pd.de_xuat.chi_tiets %}
         {% if ct.quan_nhan_id %}
-            {% if all_cn.append({'ct': ct, 'pd': pd, 'results': results_pd, 'don_vi': pd.de_xuat.don_vi.ten_don_vi}) %}{% endif %}
+            {% if all_cn.append({'ct': ct, 'pd': pd, 'results': results_pd, 'don_vi': pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—'}) %}{% endif %}
         {% else %}
-            {% if all_tt.append({'ct': ct, 'pd': pd, 'results': results_pd, 'don_vi': pd.de_xuat.don_vi.ten_don_vi}) %}{% endif %}
+            {% if all_tt.append({'ct': ct, 'pd': pd, 'results': results_pd, 'don_vi': pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—'}) %}{% endif %}
         {% endif %}
     {% endfor %}
 {% endfor %}
@@ -221,9 +221,9 @@
                     data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
                     data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
                     data-doi-tuong="{{ ct.doi_tuong or '' }}"
-                    data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi }}">
+                    data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
                     <td>{{ loop.index }}</td>
-                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi }}">{{ pd.de_xuat.don_vi.ten_don_vi }}</small></td>
+                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                     <td class="fw-semibold">
                         <span class="text-ellipsis" title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span>
                     </td>
@@ -348,12 +348,12 @@
                     data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
                     data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
                     data-doi-tuong=""
-                    data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi }}">
+                    data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
                     <td>{{ loop.index }}</td>
-                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi }}">{{ pd.de_xuat.don_vi.ten_don_vi }}</small></td>
+                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                     <td class="fw-semibold">
                         <i class="bi bi-building text-secondary me-1"></i>
-                        {{ ct.ten_don_vi_de_xuat or pd.de_xuat.don_vi.ten_don_vi }}
+                        {{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}
                     </td>
                     <td>
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>

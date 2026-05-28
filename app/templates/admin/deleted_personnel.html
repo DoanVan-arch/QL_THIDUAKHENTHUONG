@@ -70,7 +70,7 @@
                         </td>
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">{{ qn.ho_ten }}</td>
-                        <td><small>{{ qn.don_vi.ten_don_vi }}</small></td>
+                        <td><small>{{ qn.don_vi.ten_don_vi if qn.don_vi else '—' }}</small></td>
                         <td>{{ qn.cap_bac or '-' }}</td>
                         <td>{{ qn.chuc_vu or '-' }}</td>
                         <td>{{ qn.doi_tuong or '-' }}</td>
