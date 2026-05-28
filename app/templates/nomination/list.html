@@ -95,6 +95,9 @@
                             <a href="{{ url_for('nomination.detail_nomination', id=dx.id) }}" class="btn btn-sm btn-outline-navy" title="Chi tiết">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            <a href="{{ url_for('nomination.export_nomination_word', id=dx.id) }}" class="btn btn-sm btn-outline-success" title="Xuất Word">
+                                <i class="bi bi-file-earmark-word"></i>
+                            </a>
                             {% if dx.trang_thai in ('Nháp', 'Từ chối') %}
                             <a href="{{ url_for('nomination.edit_nomination', id=dx.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa">
                                 <i class="bi bi-pencil"></i>

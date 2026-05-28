@@ -38,6 +38,10 @@
         </form>
         {% endif %}
         {% endif %}
+        <a href="{{ url_for('nomination.export_nomination_word', id=de_xuat.id) }}"
+           class="btn btn-sm btn-outline-success" title="Xuất file Word">
+            <i class="bi bi-file-earmark-word me-1"></i>Xuất Word
+        </a>
         <span class="badge-status {{ status_class.get(de_xuat.trang_thai, 'badge-draft') }}" style="font-size:0.9rem;">
             {{ de_xuat.trang_thai }}
         </span>
