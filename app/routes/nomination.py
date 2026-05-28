@@ -857,3 +857,315 @@ def revoke_nomination(id):
     db.session.commit()
     flash('Đã thu hồi đề xuất. Đề xuất đã chuyển về trạng thái Nháp.', 'success')
     return redirect(url_for('nomination.detail_nomination', id=id))
+
+
+# ---------------------------------------------------------------------------
+# Export đề xuất ra file Word theo mẫu
+# ---------------------------------------------------------------------------
+@nomination_bp.route('/<int:id>/export-word')
+@login_required
+@unit_user_required
+def export_nomination_word(id):
+    from docx import Document
+    from docx.shared import Pt, Cm, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+    from io import BytesIO
+    from flask import send_file
+    from datetime import date
+
+    de_xuat = DeXuat.query.get_or_404(id)
+    if de_xuat.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền xuất đề xuất này.', 'danger')
+        return redirect(url_for('nomination.list_nominations'))
+
+    don_vi_ten = de_xuat.don_vi.ten_don_vi if de_xuat.don_vi else ''
+    nam_hoc = de_xuat.nam_hoc or ''
+
+    # Phân nhóm chi tiết
+    ds_quyet_thang = []   # Đơn vị quyết thắng
+    ds_tien_tien_dv = []  # Đơn vị tiên tiến
+    ds_chien_si_tdcs = [] # Chiến sĩ thi đua cơ sở
+    ds_chien_si_tt = []   # Chiến sĩ tiên tiến
+    ds_khac = {}          # Danh hiệu khác → list
+
+    for ct in de_xuat.chi_tiets:
+        dh = (ct.loai_danh_hieu or '').strip()
+        if dh == 'Đơn vị quyết thắng':
+            ds_quyet_thang.append(ct)
+        elif dh == 'Đơn vị tiên tiến':
+            ds_tien_tien_dv.append(ct)
+        elif dh == 'Chiến sĩ thi đua':
+            ds_chien_si_tdcs.append(ct)
+        elif dh == 'Chiến sĩ tiên tiến':
+            ds_chien_si_tt.append(ct)
+        else:
+            ds_khac.setdefault(dh, []).append(ct)
+
+    # ---- Helpers ----
+    def set_font(run, bold=False, size=11, italic=False, color=None):
+        run.bold = bold
+        run.italic = italic
+        run.font.size = Pt(size)
+        run.font.name = 'Times New Roman'
+        if color:
+            run.font.color.rgb = RGBColor(*color)
+
+    def para_font(para, text, bold=False, size=11, align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
+        para.alignment = align
+        run = para.add_run(text)
+        set_font(run, bold=bold, size=size, italic=italic)
+        return run
+
+    def set_cell_border(cell, **kwargs):
+        """Set borders on a table cell."""
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        tcBorders = OxmlElement('w:tcBorders')
+        for edge in ('top', 'left', 'bottom', 'right'):
+            val = kwargs.get(edge, 'single')
+            sz = kwargs.get(edge + '_sz', 4)
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), val)
+            tag.set(qn('w:sz'), str(sz))
+            tag.set(qn('w:space'), '0')
+            tag.set(qn('w:color'), '000000')
+            tcBorders.append(tag)
+        tcPr.append(tcBorders)
+
+    def cell_para(cell, text, bold=False, size=10, align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        p = cell.paragraphs[0]
+        p.alignment = align
+        p.paragraph_format.space_before = Pt(1)
+        p.paragraph_format.space_after = Pt(1)
+        run = p.add_run(text)
+        set_font(run, bold=bold, size=size, italic=italic)
+
+    def add_cell(cell, text, bold=False, size=10, align=WD_ALIGN_PARAGRAPH.LEFT):
+        cell_para(cell, text, bold=bold, size=size, align=align)
+
+    def build_tom_tat(ct):
+        """Tóm tắt thành tích từ các trường."""
+        parts = []
+        qn_obj = ct.quan_nhan
+        if ct.muc_do_hoan_thanh:
+            parts.append(ct.muc_do_hoan_thanh)
+        if ct.ket_qua_ren_luyen:
+            parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+        if ct.diem_tong_ket:
+            parts.append(f'ĐTK: {ct.diem_tong_ket}')
+        if ct.nckh_noi_dung:
+            parts.append(f'NCKH: {ct.nckh_noi_dung}')
+        if ct.thanh_tich_ca_nhan_khac:
+            parts.append(ct.thanh_tich_ca_nhan_khac)
+        if ct.ket_qua_doan_the:
+            parts.append(f'Đoàn thể: {ct.ket_qua_doan_the}')
+        if ct.xep_loai_dang_vien:
+            parts.append(f'ĐV: {ct.xep_loai_dang_vien}')
+        return '; '.join(parts) if parts else ''
+
+    def get_don_vi_truc_thuoc(ct):
+        """Lấy đơn vị trực thuộc (Đại đội / Tiểu đoàn)."""
+        if ct.quan_nhan and ct.quan_nhan.don_vi_truc_thuoc:
+            return ct.quan_nhan.don_vi_truc_thuoc
+        return ''
+
+    def add_personnel_table(doc, chi_tiets, section_label, stt_start=1):
+        """Thêm bảng danh sách cá nhân (Chiến sĩ thi đua / tiên tiến)."""
+        # Section header
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after = Pt(2)
+        para_font(p, section_label, bold=True, size=11)
+
+        if not chi_tiets:
+            p2 = doc.add_paragraph()
+            para_font(p2, '(Không có)', size=10, italic=True)
+            return stt_start
+
+        # Table: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt thành tích | Ghi chú
+        tbl = doc.add_table(rows=1, cols=7)
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style = 'Table Grid'
+
+        # Column widths (cm)
+        widths = [0.8, 3.2, 2.0, 2.5, 2.5, 5.5, 1.5]
+        for i, w in enumerate(widths):
+            for row in tbl.rows:
+                row.cells[i].width = Cm(w)
+
+        # Header row
+        headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
+        hrow = tbl.rows[0]
+        for i, h in enumerate(headers_txt):
+            add_cell(hrow.cells[i], h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
+
+        stt = stt_start
+        for ct in chi_tiets:
+            qn_obj = ct.quan_nhan
+            row = tbl.add_row()
+            add_cell(row.cells[0], str(stt), align=WD_ALIGN_PARAGRAPH.CENTER)
+            add_cell(row.cells[1], qn_obj.ho_ten if qn_obj else '')
+            add_cell(row.cells[2], qn_obj.cap_bac if qn_obj else '')
+            add_cell(row.cells[3], qn_obj.chuc_vu if qn_obj and qn_obj.chuc_vu else '')
+            add_cell(row.cells[4], get_don_vi_truc_thuoc(ct))
+            add_cell(row.cells[5], build_tom_tat(ct))
+            add_cell(row.cells[6], ct.ghi_chu or '')
+            stt += 1
+
+        return stt
+
+    # ---- Build document ----
+    doc = Document()
+
+    # Page margins
+    for section in doc.sections:
+        section.top_margin = Cm(2)
+        section.bottom_margin = Cm(2)
+        section.left_margin = Cm(3)
+        section.right_margin = Cm(2)
+
+    # --- Header 2 cột: đơn vị bên trái, quốc hiệu bên phải ---
+    tbl_header = doc.add_table(rows=1, cols=2)
+    tbl_header.alignment = WD_TABLE_ALIGNMENT.CENTER
+    # Remove borders
+    for cell in tbl_header.rows[0].cells:
+        for edge in ('top','left','bottom','right'):
+            tc = cell._tc; tcPr = tc.get_or_add_tcPr()
+            b = OxmlElement('w:tcBorders')
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), 'none')
+            b.append(tag)
+            tcPr.append(b)
+
+    left_cell = tbl_header.rows[0].cells[0]
+    right_cell = tbl_header.rows[0].cells[1]
+
+    # Left: TRƯỜNG SĨ QUAN CHÍNH TRỊ / ĐƠN VỊ
+    p_l1 = left_cell.paragraphs[0]
+    p_l1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p_l1.add_run('TRƯỜNG SĨ QUAN CHÍNH TRỊ')
+    set_font(r, bold=False, size=12)
+    p_l2 = left_cell.add_paragraph()
+    p_l2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r2 = p_l2.add_run(don_vi_ten.upper())
+    set_font(r2, bold=True, size=12)
+    # Gạch dưới đơn vị
+    p_l2.paragraph_format.space_after = Pt(0)
+    r2.underline = True
+
+    # Right: CỘNG HÒA...
+    p_r1 = right_cell.paragraphs[0]
+    p_r1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_r1 = p_r1.add_run('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM')
+    set_font(r_r1, bold=True, size=12)
+    p_r2 = right_cell.add_paragraph()
+    p_r2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_r2 = p_r2.add_run('Độc lập - Tự do - Hạnh phúc')
+    set_font(r_r2, bold=True, size=12)
+    r_r2.underline = True
+    p_r3 = right_cell.add_paragraph()
+    p_r3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    today = date.today()
+    r_r3 = p_r3.add_run(f'Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}')
+    set_font(r_r3, size=11, italic=True)
+
+    doc.add_paragraph()  # spacer
+
+    # --- Tiêu đề ---
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_title = p_title.add_run(f'DANH SÁCH ĐỀ NGHỊ KHEN THƯỞNG NĂM HỌC {nam_hoc}')
+    set_font(r_title, bold=True, size=13)
+
+    doc.add_paragraph()  # spacer
+
+    # --- I. Đơn vị quyết thắng ---
+    p_i = doc.add_paragraph()
+    para_font(p_i, 'I. Đơn vị quyết thắng', bold=True, size=11)
+    if ds_quyet_thang:
+        for ct in ds_quyet_thang:
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Cm(1)
+            ten = ct.ten_don_vi_de_xuat or ''
+            para_font(p, f'- {ten}', size=11)
+    else:
+        p = doc.add_paragraph()
+        p.paragraph_format.left_indent = Cm(1)
+        para_font(p, 'Lấy tên đơn vị đề nghị', size=11, italic=True)
+
+    # --- II. Đơn vị tiên tiến ---
+    p_ii = doc.add_paragraph()
+    para_font(p_ii, 'II. Đơn vị tiên tiến', bold=True, size=11)
+    if ds_tien_tien_dv:
+        for ct in ds_tien_tien_dv:
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Cm(1)
+            ten = ct.ten_don_vi_de_xuat or ''
+            para_font(p, f'- {ten}', size=11)
+    else:
+        p = doc.add_paragraph()
+        p.paragraph_format.left_indent = Cm(1)
+        para_font(p, 'Lấy tên đơn vị đề nghị', size=11, italic=True)
+
+    # --- III. Chiến sĩ thi đua cơ sở ---
+    stt = add_personnel_table(doc, ds_chien_si_tdcs, 'III. Danh hiệu Chiến sĩ thi đua cơ sở')
+
+    # --- IV. Chiến sĩ tiên tiến ---
+    add_personnel_table(doc, ds_chien_si_tt, 'IV. Chiến sĩ tiên tiến')
+
+    # --- Các danh hiệu khác ---
+    roman = ['V', 'VI', 'VII', 'VIII', 'IX', 'X']
+    for idx, (dh_name, chi_tiets) in enumerate(ds_khac.items()):
+        label = f'{roman[idx] if idx < len(roman) else str(idx+5)}. {dh_name}'
+        add_personnel_table(doc, chi_tiets, label)
+
+    # --- Ký tên ---
+    doc.add_paragraph()
+    tbl_sign = doc.add_table(rows=1, cols=2)
+    tbl_sign.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for cell in tbl_sign.rows[0].cells:
+        for edge in ('top','left','bottom','right'):
+            tc = cell._tc; tcPr = tc.get_or_add_tcPr()
+            b = OxmlElement('w:tcBorders')
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), 'none')
+            b.append(tag)
+            tcPr.append(b)
+
+    left_sign = tbl_sign.rows[0].cells[0]
+    right_sign = tbl_sign.rows[0].cells[1]
+
+    # Ký xác nhận bên trái
+    p_sl = left_sign.paragraphs[0]
+    p_sl.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    para_font(p_sl, 'XÁC NHẬN CỦA CẤP TRÊN', bold=True, size=11)
+    left_sign.add_paragraph()
+    left_sign.add_paragraph()
+    left_sign.add_paragraph()
+
+    # Ký đơn vị bên phải
+    p_sr = right_sign.paragraphs[0]
+    p_sr.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    para_font(p_sr, 'THỦ TRƯỞNG ĐƠN VỊ', bold=True, size=11)
+    p_sr2 = right_sign.add_paragraph()
+    p_sr2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True)
+
+    # --- Stream to response ---
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    safe_name = don_vi_ten.replace(' ', '_').replace('/', '-')
+    filename = f'DeXuat_KhenThuong_{safe_name}_{nam_hoc}.docx'.replace(' ', '_')
+
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
