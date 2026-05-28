@@ -303,7 +303,7 @@
                 {% set dx_tt = item.dx %}
                 <tr class="{% if ct_can_approve %}table-info{% endif %}">
                     <td>{{ loop.index }}</td>
-                    <td class="fw-semibold sticky-name-col"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or dx_tt.don_vi.ten_don_vi }}</td>
+                    <td class="fw-semibold sticky-name-col"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}</td>
                     <td><small>{{ item.don_vi }}</small></td>
                     <td>
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
