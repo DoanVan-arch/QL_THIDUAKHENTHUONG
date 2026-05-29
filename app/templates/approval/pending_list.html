@@ -161,7 +161,7 @@
             <thead>
                 <tr>
                     <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
-                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
+                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
                     <th class="col-don-vi">Đơn vị</th>
                     <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
                     <th class="col-doi-tuong">Đối tượng</th>
@@ -210,7 +210,7 @@
                     data-doi-tuong="{{ ct.doi_tuong or '' }}"
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
                     <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
+                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.08);">
                         <div class="name-btn-group">
                             <div class="name-text"><span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span></div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
@@ -299,7 +299,7 @@
             <thead>
                 <tr>
                     <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
-                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
+                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
                     <th class="col-don-vi">Đơn vị</th>
                     <th class="col-danh-hieu">Danh hiệu</th>
                     <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
@@ -335,7 +335,7 @@
                     data-doi-tuong=""
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
                     <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
+                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.08);">
                         <div class="name-btn-group">
                             <div class="name-text"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}</div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
@@ -450,7 +450,7 @@
 <style>
     .toggle-approval:checked { background-color: #198754; border-color: #198754; }
     .toggle-approval { background-color: #adb5bd; border-color: #adb5bd; }
-    .table-custom th { white-space: nowrap; }
+    .table-custom th, .table-custom td { white-space: nowrap; }
     .reject-link:hover { text-decoration: underline !important; }
     /* ===== TABLE SCROLL WRAPPER ===== */
     .tbl-scroll {
@@ -490,8 +490,10 @@
         left: 34px;
         z-index: 2;
         background: #fff;
-        min-width: 160px;
-        max-width: 220px;
+        width: 190px;
+        min-width: 190px;
+        max-width: 190px;
+        overflow: hidden;
         box-shadow: 2px 0 5px rgba(0,0,0,0.08);
     }
     .tbl-scroll thead .sticky-stt,
