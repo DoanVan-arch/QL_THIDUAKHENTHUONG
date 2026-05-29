@@ -1024,6 +1024,19 @@ function openDetailModal(ctId) {
                 });
                 html += '</table>';
             }
+            if (d.dept_results && d.dept_results.some(r => r.ket_qua)) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-2" style="font-size:0.8rem;">';
+                d.dept_results.forEach(r => {
+                    let badge = '';
+                    if (r.ket_qua === 'auto') badge = '<span class="badge bg-secondary">Không áp dụng</span>';
+                    else if (r.ket_qua === 'Đồng ý') badge = '<span class="badge bg-success">Đồng ý</span>';
+                    else if (r.ket_qua === 'Từ chối') badge = '<span class="badge bg-danger">Từ chối</span>';
+                    else if (r.ket_qua) badge = `<span class="badge bg-info text-dark">${r.ket_qua}</span>`;
+                    else badge = '<span class="text-muted">—</span>';
+                    html += `<tr><td style="width:40%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:0.75rem;">${r.ngay_duyet ? '<i class="bi bi-clock me-1"></i>'+r.ngay_duyet : ''}</td><td class="text-muted" style="font-size:0.75rem;">${r.ghi_chu||''}</td></tr>`;
+                });
+                html += '</table>';
+            }
             if (d.votes && d.votes.some(v => v.ket_qua)) {
                 html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:0.8rem;">';
                 d.votes.filter(v => v.ket_qua).forEach(v => {
