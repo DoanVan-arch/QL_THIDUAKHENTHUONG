@@ -162,10 +162,10 @@
                 <tr>
                     <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
                     <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
-                    <th style="min-width:75px;max-width:95px;">Đơn vị</th>
-                    <th style="min-width:100px;max-width:130px;">Cấp bậc / Chức vụ</th>
-                    <th style="min-width:65px;max-width:80px;">Đối tượng</th>
-                    <th style="min-width:60px;max-width:75px;">Danh hiệu</th>
+                    <th class="col-don-vi">Đơn vị</th>
+                    <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
+                    <th class="col-doi-tuong">Đối tượng</th>
+                    <th class="col-danh-hieu">Danh hiệu</th>
                     {% if display_fields %}
                     {% for field in display_fields %}
                     <th class="col-criteria"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
@@ -228,14 +228,14 @@
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
-                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td>
+                    <td class="col-don-vi"><small title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
+                    <td class="col-cap-bac">
                         <small title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
-                            <span class="text-ellipsis-sm">{{ ct.quan_nhan.cap_bac or '' }}</span>{% if ct.quan_nhan.chuc_vu %}<br><span class="text-ellipsis-sm">{{ ct.quan_nhan.chuc_vu }}</span>{% endif %}
+                            {{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}
                         </small>
                     </td>
-                    <td><small class="text-ellipsis-sm" title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
-                    <td>
+                    <td class="col-doi-tuong"><small title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
+                    <td class="col-danh-hieu">
                         {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
                         {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
                         {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
@@ -314,8 +314,8 @@
                 <tr>
                     <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
                     <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
-                    <th style="min-width:75px;max-width:95px;">Đơn vị</th>
-                    <th>Danh hiệu</th>
+                    <th class="col-don-vi">Đơn vị</th>
+                    <th class="col-danh-hieu">Danh hiệu</th>
                     <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                     <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
                     {% for f in tt_criteria_fields %}
@@ -355,8 +355,8 @@
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
-                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td>
+                    <td class="col-don-vi"><small title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
+                    <td class="col-danh-hieu">
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
                         {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
                         {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
@@ -541,6 +541,16 @@
     /* Compact col-criteria for cá nhân table */
     #tableCaNhan .col-criteria { max-width: 80px; }
     #tableCaNhan .col-criteria small { display: block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ===== CELL PADDING — compact ===== */
+    .tbl-scroll th,
+    .tbl-scroll td { padding: 3px 5px !important; vertical-align: middle; }
+
+    /* Clamp narrow columns */
+    .tbl-scroll .col-danh-hieu { min-width:70px;  max-width:100px;  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tbl-scroll .col-doi-tuong { min-width:65px;  max-width:90px;   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tbl-scroll .col-don-vi    { min-width:75px;  max-width:95px;   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tbl-scroll .col-cap-bac   { min-width:100px; max-width:150px;  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
     /* Compact view: hide criteria, evidence, and gate-criteria columns */
     .view-compact .col-criteria,
