@@ -169,20 +169,20 @@
                 <tr>
                     <th style="width:35px;">STT</th>
                     <th class="sticky-name-col">Họ tên</th>
-                    <th style="min-width:110px;">Đơn vị</th>
+                    <th style="min-width:100px;">Đơn vị</th>
                     <th>Cấp bậc / Chức vụ</th>
                     <th>Đối tượng</th>
                     <th>Danh hiệu</th>
                     {% if view_mode == 'detail' %}
                     <th>Năm học</th>
                     {% for field in all_fields %}
-                    <th class="text-center" style="min-width:70px;font-size:0.72rem;">{{ all_field_labels[field] }}</th>
+                    <th class="text-center" style="font-size:0.72rem;">{{ all_field_labels[field] }}</th>
                     {% endfor %}
                     {% endif %}
                     {% for col in tracking_dept_columns %}
                     <th class="text-center">{{ col.label }}</th>
                     {% endfor %}
-                    <th class="text-center sticky-action-col" style="width:120px;">Thao tác</th>
+                    <th class="text-center sticky-action-col" style="width:80px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -198,15 +198,20 @@
                 <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
                     <td>{{ loop.index }}</td>
                     <td class="fw-semibold sticky-name-col">
-                        {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
-                        {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
-                        <div class="d-flex flex-wrap gap-1 mt-1">
-                        {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
-                        {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
-                        {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
-                        {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                        <div class="name-btn-group">
+                            <div class="name-text">
+                            {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
+                            {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                            {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
+                            {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
+                            {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
+                            {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                            </div>
+                            {% endif %}
+                            </div>
+                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
-                        {% endif %}
                     </td>
                     <td><small class="text-ellipsis-sm" title="{{ ct_data.don_vi }}">{{ ct_data.don_vi }}</small></td>
                     <td>
@@ -245,7 +250,6 @@
                     {% endfor %}
                     <td class="text-center sticky-action-col">
                         <div class="d-flex gap-1 justify-content-center">
-                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                             {% if ct_can_approve %}
                             <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
                                     onclick="openIndividualApproveModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
@@ -283,16 +287,16 @@
                     <th>Đơn vị đề xuất</th>
                     <th>Danh hiệu</th>
                     <th>Năm học</th>
-                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
-                    <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
+                    <th class="text-center" style="font-size:0.72rem;">Mức độ HTNV</th>
+                    <th class="text-center" style="font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
                     {% for f in tt_criteria_fields %}
-                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
+                    <th class="text-center" style="font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
                     {% endfor %}
-                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Thành tích khác</th>
+                    <th class="text-center" style="font-size:0.72rem;">Thành tích khác</th>
                     {% for col in tracking_dept_columns %}
                     <th class="text-center">{{ col.label }}</th>
                     {% endfor %}
-                    <th class="text-center" style="width:100px;">Thao tác</th>
+                    <th class="text-center" style="width:80px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -303,7 +307,12 @@
                 {% set dx_tt = item.dx %}
                 <tr class="{% if ct_can_approve %}table-info{% endif %}">
                     <td>{{ loop.index }}</td>
-                    <td class="fw-semibold sticky-name-col"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}</td>
+                    <td class="fw-semibold sticky-name-col">
+                        <div class="name-btn-group">
+                            <div class="name-text"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}</div>
+                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                        </div>
+                    </td>
                     <td><small>{{ item.don_vi }}</small></td>
                     <td>
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
@@ -341,7 +350,6 @@
                     {% endfor %}
                     <td class="text-center">
                         <div class="d-flex gap-1 justify-content-center">
-                            <a href="{{ url_for('admin.tracking_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                             {% if ct_can_approve %}
                             <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
                                     onclick="openIndividualApproveModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat|e }}')">
@@ -587,7 +595,8 @@
         z-index: 1;
         background: #fff !important;
         box-shadow: 2px 0 4px rgba(0,0,0,0.06);
-        min-width: 130px;
+        min-width: 160px;
+        max-width: 200px;
     }
     thead th.sticky-name-col {
         background: var(--navy-primary) !important;
@@ -597,6 +606,21 @@
     tr.table-info td.sticky-name-col  { background: #cff4fc !important; }
     tr.table-danger td.sticky-name-col { background: #f8d7da !important; }
     .table-custom tbody tr:hover td.sticky-name-col { background: #F8F9FB !important; }
+    /* STT col sticky */
+    th:first-child, td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 1;
+        background: #fff !important;
+    }
+    thead th:first-child { background: var(--navy-primary) !important; z-index: 2; }
+    tr.table-info td:first-child  { background: #cff4fc !important; }
+    tr.table-danger td:first-child { background: #f8d7da !important; }
+    .table-custom tbody tr:hover td:first-child { background: #F8F9FB !important; }
+    /* Auto-size columns — no forced min-width */
+    .table-custom th, .table-custom td { white-space: nowrap; }
+    .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
+    .name-btn-group .name-text { flex: 1; min-width: 0; }
 
     /* ===== BTN NAVY ===== */
     .btn-navy {

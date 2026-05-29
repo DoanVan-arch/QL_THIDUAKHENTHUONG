@@ -161,8 +161,8 @@
             <thead>
                 <tr>
                     <th style="width:35px;">STT</th>
-                    <th style="min-width:120px;">Đơn vị</th>
-                    <th style="min-width:130px;">Họ tên</th>
+                    <th style="min-width:100px;">Đơn vị</th>
+                    <th class="sticky-name-col">Họ tên</th>
                     <th>Cấp bậc / Chức vụ</th>
                     <th>Đối tượng</th>
                     <th>Danh hiệu</th>
@@ -187,7 +187,6 @@
                         {% endfor %}
                     {% endif %}
                     <th style="width:100px;" class="text-center col-pending">Đang chờ</th>
-                    <th style="width:40px;" class="text-center col-action">Chi tiết</th>
                 </tr>
                 {% if is_ttr_role and gate_dept_fields %}
                 <tr class="table-light col-gate-criteria" style="font-size:0.72rem;">
@@ -200,7 +199,7 @@
                         {% endfor %}
                     {% endfor %}
                     {% for mcol in managed_dept_columns %}<th></th>{% endfor %}
-                    <th colspan="2"></th>
+                    <th colspan="1"></th>
                 </tr>
                 {% endif %}
             </thead>
@@ -224,8 +223,11 @@
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
                     <td>{{ loop.index }}</td>
                     <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td class="fw-semibold">
-                        <span class="text-ellipsis" title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span>
+                    <td class="fw-semibold sticky-name-col">
+                        <div class="name-btn-group">
+                            <div class="name-text"><span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span></div>
+                            <a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                        </div>
                     </td>
                     <td>
                         <small title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
@@ -282,8 +284,6 @@
                         {% if ct_gate and ct_gate.pending %}<small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chưa duyệt: {{ ct_gate.pending|join(', ') }}</small>{% endif %}
                         {% endif %}
                     </td>
-                    <td class="text-center col-action"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
-                </tr>
                 {% if not is_out_of_scope %}
                 <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row">
                     <td colspan="20"><div class="d-flex gap-2 align-items-center py-1 ps-3"><small class="text-danger fw-semibold text-nowrap"><i class="bi bi-x-circle me-1"></i>Lý do:</small><input type="text" class="form-control form-control-sm" id="reason-input-{{ pd.id }}-{{ ct.id }}" placeholder="Nhập lý do không nhất trí..." value="{{ kq.ly_do if kq and kq.ly_do else '' }}" style="max-width:400px;"><button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"><i class="bi bi-check me-1"></i>Lưu</button><button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">Hủy</button></div></td>
@@ -313,8 +313,8 @@
             <thead>
                 <tr>
                     <th style="width:35px;">STT</th>
-                    <th style="min-width:120px;">Đơn vị</th>
-                    <th style="min-width:160px;">Tên tập thể</th>
+                    <th style="min-width:100px;">Đơn vị</th>
+                    <th class="sticky-name-col">Tên tập thể</th>
                     <th>Danh hiệu</th>
                     <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                     <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
@@ -328,7 +328,6 @@
                         {% endfor %}
                     {% endif %}
                     <th style="width:100px;" class="text-center col-pending">Đang chờ</th>
-                    <th style="width:40px;" class="text-center col-action">Chi tiết</th>
                 </tr>
             </thead>
             <tbody>
@@ -351,9 +350,11 @@
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
                     <td>{{ loop.index }}</td>
                     <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td class="fw-semibold">
-                        <i class="bi bi-building text-secondary me-1"></i>
-                        {{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}
+                    <td class="fw-semibold sticky-name-col">
+                        <div class="name-btn-group">
+                            <div class="name-text"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}</div>
+                            <a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                        </div>
                     </td>
                     <td>
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
@@ -385,7 +386,6 @@
                         {% if ct_gate and ct_gate.pending %}<small class="text-danger d-block text-ellipsis-sm" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chưa duyệt: {{ ct_gate.pending|join(', ') }}</small>{% endif %}
                         {% endif %}
                     </td>
-                    <td class="text-center col-action"><a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
                 </tr>
                 {% if not is_out_of_scope %}
                 <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row">
@@ -494,6 +494,36 @@
         color: #fff;
         border-color: var(--navy-primary);
     }
+    /* ===== STICKY COLS ===== */
+    th:first-child, td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 1;
+        background: #fff !important;
+    }
+    thead th:first-child { background: var(--navy-primary, #1a3a5c) !important; z-index: 2; }
+    tr.table-success td:first-child { background: #d1e7dd !important; }
+    tr.table-danger td:first-child  { background: #f8d7da !important; }
+    .table-custom tbody tr:hover td:first-child { background: #F8F9FB !important; }
+    .sticky-name-col {
+        position: sticky !important;
+        left: 35px !important;
+        z-index: 1;
+        background: #fff !important;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+        min-width: 160px;
+        max-width: 220px;
+    }
+    thead th.sticky-name-col {
+        background: var(--navy-primary, #1a3a5c) !important;
+        color: #fff !important;
+        z-index: 2;
+    }
+    tr.table-success td.sticky-name-col { background: #d1e7dd !important; }
+    tr.table-danger  td.sticky-name-col { background: #f8d7da !important; }
+    .table-custom tbody tr:hover td.sticky-name-col { background: #F8F9FB !important; }
+    .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
+    .name-btn-group .name-text { flex: 1; min-width: 0; }
 </style>
 
 <script>
