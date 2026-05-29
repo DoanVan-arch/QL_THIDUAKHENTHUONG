@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Phê duyệt khen thưởng{% endblock %}
 
 {% block content %}
@@ -156,11 +156,11 @@
             <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
         </button>
     </div>
-    <div class="table-responsive">
+    <div class="tbl-scroll">
         <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
             <thead>
                 <tr>
-                    <th style="width:35px;">STT</th>
+                    <th class="sticky-stt">STT</th>
                     <th style="min-width:100px;">Đơn vị</th>
                     <th class="sticky-name-col">Họ tên</th>
                     <th>Cấp bậc / Chức vụ</th>
@@ -221,12 +221,12 @@
                     data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
                     data-doi-tuong="{{ ct.doi_tuong or '' }}"
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td>{{ loop.index }}</td>
+                    <td class="sticky-stt">{{ loop.index }}</td>
                     <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                     <td class="fw-semibold sticky-name-col">
                         <div class="name-btn-group">
                             <div class="name-text"><span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span></div>
-                            <a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
                     <td>
@@ -308,11 +308,11 @@
             <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
         </button>
     </div>
-    <div class="table-responsive">
+    <div class="tbl-scroll">
         <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe" style="font-size:0.82rem;">
             <thead>
                 <tr>
-                    <th style="width:35px;">STT</th>
+                    <th class="sticky-stt">STT</th>
                     <th style="min-width:100px;">Đơn vị</th>
                     <th class="sticky-name-col">Tên tập thể</th>
                     <th>Danh hiệu</th>
@@ -348,12 +348,12 @@
                     data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
                     data-doi-tuong=""
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td>{{ loop.index }}</td>
+                    <td class="sticky-stt">{{ loop.index }}</td>
                     <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                     <td class="fw-semibold sticky-name-col">
                         <div class="name-btn-group">
                             <div class="name-text"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}</div>
-                            <a href="{{ url_for('approval.history_detail', ct_id=ct.id, back=url_for('approval.pending_list')) }}" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
                     <td>
@@ -466,6 +466,55 @@
     .toggle-approval { background-color: #adb5bd; border-color: #adb5bd; }
     .table-custom th { white-space: nowrap; }
     .reject-link:hover { text-decoration: underline !important; }
+    /* ===== TABLE SCROLL WRAPPER ===== */
+    .tbl-scroll {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tbl-scroll table {
+        border-collapse: collapse;
+        width: max-content;
+        min-width: 100%;
+    }
+    /* ===== STICKY COLS ===== */
+    .tbl-scroll .sticky-stt {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #fff;
+        width: 34px;
+        min-width: 34px;
+        max-width: 34px;
+    }
+    .tbl-scroll .sticky-name-col {
+        position: sticky;
+        left: 34px;
+        z-index: 2;
+        background: #fff;
+        min-width: 160px;
+        max-width: 220px;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.08);
+    }
+    .tbl-scroll thead .sticky-stt,
+    .tbl-scroll thead .sticky-name-col {
+        background: var(--navy-primary, #1a3a5c) !important;
+        color: #fff !important;
+        z-index: 3;
+    }
+    .tbl-scroll tr.table-success .sticky-stt,
+    .tbl-scroll tr.table-success .sticky-name-col { background: #d1e7dd !important; }
+    .tbl-scroll tr.table-danger .sticky-stt,
+    .tbl-scroll tr.table-danger .sticky-name-col { background: #f8d7da !important; }
+    .tbl-scroll tbody tr:hover .sticky-stt,
+    .tbl-scroll tbody tr:hover .sticky-name-col { background: #f0f4f8 !important; }
+    /* column helpers */
+    .col-sm  { max-width: 80px;  overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+    .col-md  { max-width: 120px; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+    .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
+    .name-btn-group .name-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .stat-mini {
         display: flex;
         align-items: center;
@@ -494,36 +543,6 @@
         color: #fff;
         border-color: var(--navy-primary);
     }
-    /* ===== STICKY COLS ===== */
-    th:first-child, td:first-child {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 1;
-        background: #fff !important;
-    }
-    thead th:first-child { background: var(--navy-primary, #1a3a5c) !important; z-index: 2; }
-    tr.table-success td:first-child { background: #d1e7dd !important; }
-    tr.table-danger td:first-child  { background: #f8d7da !important; }
-    .table-custom tbody tr:hover td:first-child { background: #F8F9FB !important; }
-    .sticky-name-col {
-        position: sticky !important;
-        left: 35px !important;
-        z-index: 1;
-        background: #fff !important;
-        box-shadow: 2px 0 4px rgba(0,0,0,0.06);
-        min-width: 160px;
-        max-width: 220px;
-    }
-    thead th.sticky-name-col {
-        background: var(--navy-primary, #1a3a5c) !important;
-        color: #fff !important;
-        z-index: 2;
-    }
-    tr.table-success td.sticky-name-col { background: #d1e7dd !important; }
-    tr.table-danger  td.sticky-name-col { background: #f8d7da !important; }
-    .table-custom tbody tr:hover td.sticky-name-col { background: #F8F9FB !important; }
-    .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
-    .name-btn-group .name-text { flex: 1; min-width: 0; }
 </style>
 
 <script>
@@ -928,6 +947,71 @@ function onNamHocChange(sel) {
     if (sel.value) { localStorage.setItem('sharedNamHoc', sel.value); }
     else { localStorage.removeItem('sharedNamHoc'); }
     sel.form.submit();
+}
+</script>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title fw-semibold"><i class="bi bi-person-lines-fill me-1"></i>Chi tiết</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailModalBody" style="font-size:0.85rem;"></div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openDetailModal(ctId) {
+    const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+    const body = document.getElementById('detailModalBody');
+    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
+    modal.show();
+    fetch('/admin/api/chi-tiet/' + ctId)
+        .then(r => r.json())
+        .then(d => {
+            const p = d.personal || {}, n = d.nomination || {};
+            const badges = [
+                p.la_chi_huy ? '<span class="badge bg-danger">Cấp trưởng</span>' : '',
+                p.la_bi_thu  ? '<span class="badge bg-primary">Bí thư</span>' : '',
+                p.la_doan_vien ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
+                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>' : '',
+            ].filter(Boolean).join(' ');
+            let html = `
+            <div class="row g-2 mb-3">
+              <div class="col-12"><h6 class="fw-bold mb-0">${p.ho_ten||'—'}</h6>${badges}</div>
+              <div class="col-6"><small class="text-muted">Đơn vị</small><div>${n.don_vi||'—'}</div></div>
+              <div class="col-6"><small class="text-muted">Năm học</small><div>${n.nam_hoc||'—'}</div></div>
+              <div class="col-6"><small class="text-muted">Cấp bậc</small><div>${p.cap_bac||'—'}</div></div>
+              <div class="col-6"><small class="text-muted">Chức vụ</small><div>${p.chuc_vu||'—'}</div></div>
+              <div class="col-6"><small class="text-muted">Đối tượng</small><div>${p.doi_tuong||'—'}</div></div>
+              <div class="col-6"><small class="text-muted">Danh hiệu</small><div>${n.loai_danh_hieu||'—'}</div></div>
+              <div class="col-6"><small class="text-muted">Học hàm/vị</small><div>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div></div>
+              <div class="col-6"><small class="text-muted">Trạng thái</small><div>${n.trang_thai||'—'}</div></div>
+            </div>`;
+            if (d.criteria && d.criteria.length) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí</h6><table class="table table-sm table-bordered mb-2" style="font-size:0.8rem;">';
+                d.criteria.forEach(c => {
+                    html += `<tr><td class="text-muted" style="width:55%">${c.label}</td><td>${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
+                });
+                html += '</table>';
+            }
+            if (d.votes && d.votes.some(v => v.ket_qua)) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:0.8rem;">';
+                d.votes.filter(v => v.ket_qua).forEach(v => {
+                    const cls = v.ket_qua === 'Đồng ý' ? 'text-success' : 'text-danger';
+                    html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
+                });
+                html += '</table>';
+            }
+            body.innerHTML = html;
+        })
+        .catch(() => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu.</div>'; });
 }
 </script>
 {% endblock %}
