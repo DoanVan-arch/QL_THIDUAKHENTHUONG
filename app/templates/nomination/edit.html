@@ -1501,7 +1501,10 @@ function updateSubmitButtonState() {
 
               <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_tot_nghiep">
                 <label class="form-label">Hình thức thi tốt nghiệp</label>
-                <input type="text" name="hinh_thuc_tot_nghiep" class="form-control" placeholder="VD: Xuất sắc, Giỏi, Khá...">
+                <select name="hinh_thuc_tot_nghiep" class="form-select">
+                  <option value="">-- Chọn --</option>
+                  {% for tc in tieu_chi_list %}{% if tc.ma_truong == 'hinh_thuc_tot_nghiep' %}{% for opt in tc.gia_tri_chon %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}{% endif %}{% endfor %}
+                </select>
               </div>
               <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ctd">
                 <label class="form-label">Điểm CTĐ (TN)</label>
@@ -1531,9 +1534,28 @@ function updateSubmitButtonState() {
               {# ── Nhóm 8: NCKH ── #}
               <div class="col-12"><div class="form-section-title mt-1" style="color:#dc3545;font-size:0.85rem;"><i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học</div></div>
 
-              <div class="col-md-9 edit-field-wrap" data-field="nckh_noi_dung">
+              <div class="col-md-12 edit-field-wrap" data-field="nckh_noi_dung">
                 <label class="form-label">Nội dung kết quả NCKH</label>
-                <textarea name="nckh_noi_dung_text" class="form-control" rows="2" placeholder="Nhập nội dung NCKH hoặc chọn từ danh sách trong form Thêm"></textarea>
+                <div class="border rounded p-2" style="max-height:220px;overflow:auto;" id="editNckhCheckboxes">
+                  {%- set nckh_opts = [
+                    "Tham gia nghiên cứu đề tài, sáng kiến khoa học các cấp đúng tiến độ, nghiệm thu đạt khá trở lên hoặc hướng dẫn học viên nghiên cứu đề tài, sáng kiến khoa học đạt giải Ba cấp hệ, tiểu đoàn trở lên.",
+                    "Tham gia biên soạn giáo trình, tài liệu dạy học đúng tiến độ, đảm bảo chất lượng, được nghiệm thu.",
+                    "Có sáng kiến được ứng dụng hiệu quả trong giảng dạy và các mặt công tác, được hội đồng khoa học cấp đầu mối trực thuộc Nhà trường nghiệm thu đạt khá trở lên.",
+                    "Chỉ đạo, hướng dẫn, tổ chức thực hiện hoặc phát hiện, mạnh dạn đề xuất giải pháp công tác mang tính đột phá, đem lại hiệu quả cao trong thực tế; hoặc có tham mưu, đề xuất đổi mới công tác, lĩnh vực chuyên môn được các cấp ghi nhận, tập thể đơn vị thừa nhận.",
+                    "Học viên Sau đại học tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên.",
+                    "Học viên Văn bằng 2 tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên.",
+                    "Học viên năm thứ I tối thiểu phải có 01 bài đăng Website hoặc 01 bài đăng Bản tin thi đua của Nhà trường.",
+                    "Học viên năm thứ II tối thiểu phải nghiên cứu chuyên đề khoa học đạt giải Nhì cấp hệ, tiểu đoàn trở lên.",
+                    "Học viên năm thứ III trở lên tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên."
+                  ] -%}
+                  {% for opt in nckh_opts %}
+                  <div class="form-check mb-1">
+                    <input class="form-check-input edit-nckh-cb" type="checkbox" name="nckh_noi_dung" value="{{ opt }}" id="edit_nckh_{{ loop.index }}">
+                    <label class="form-check-label" for="edit_nckh_{{ loop.index }}" style="font-size:0.82rem;">{{ opt }}</label>
+                  </div>
+                  {% endfor %}
+                </div>
+                <input type="hidden" name="nckh_noi_dung_text" id="edit_nckh_noi_dung_text">
               </div>
               <div class="col-md-3 edit-field-wrap" data-field="diem_nckh">
                 <label class="form-label">Điểm NCKH</label>
@@ -1664,6 +1686,20 @@ function openEditItemModal(ctId) {
             });
             var nEl = form.querySelector('[name="nckh_noi_dung_text"]');
             if (nEl) nEl.value = d.nckh_noi_dung || '';
+            // Populate NCKH checkboxes from saved value
+            var nckhVal = d.nckh_noi_dung || '';
+            var nckhParts = nckhVal.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+            form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
+                cb.checked = nckhParts.indexOf(cb.value.trim()) !== -1;
+            });
+            // Sync hidden field on checkbox change
+            form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
+                cb.addEventListener('change', function() {
+                    var checked = Array.from(form.querySelectorAll('.edit-nckh-cb:checked')).map(function(c){ return c.value; });
+                    var hid = form.querySelector('[name="nckh_noi_dung_text"]');
+                    if (hid) hid.value = checked.join('\n');
+                });
+            });
             var gcEl = form.querySelector('[name="ghi_chu_item"]');
             if (gcEl) gcEl.value = d.ghi_chu || '';
 
