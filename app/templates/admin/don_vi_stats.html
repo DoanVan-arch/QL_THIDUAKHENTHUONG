@@ -180,3 +180,23 @@
 <div class="alert alert-secondary">Chọn năm học để xem thống kê.</div>
 {% endif %}
 {% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var LS_KEY = 'sharedNamHoc';
+    var currentNamHoc = '{{ nam_hoc_filter }}';
+    if (!currentNamHoc) {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('nam_hoc', saved);
+            window.location.replace(url.toString());
+            return;
+        }
+    } else {
+        localStorage.setItem(LS_KEY, currentNamHoc);
+    }
+})();
+</script>
+{% endblock %}

@@ -1271,6 +1271,15 @@ def export_nomination_word(id):
         label = f'{roman[idx] if idx < len(roman) else str(idx+5)}. {dh_name}'
         add_personnel_table(doc, chi_tiets, label)
 
+    # --- Ngày giờ in ---
+    now_str = datetime.now().strftime('%H:%M ngày %d tháng %m năm %Y')
+    p_print = doc.add_paragraph()
+    p_print.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    run_print = p_print.add_run(f'(In lúc {now_str})')
+    run_print.font.size = Pt(9)
+    run_print.font.italic = True
+    run_print.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+
     # --- Ký tên ---
     doc.add_paragraph()
     tbl_sign = doc.add_table(rows=1, cols=2)

@@ -109,3 +109,23 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var LS_KEY = 'sharedNamHoc';
+    var currentNamHoc = '{{ nam_hoc }}';
+    if (!currentNamHoc) {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('nam_hoc', saved);
+            window.location.replace(url.toString());
+            return;
+        }
+    } else {
+        localStorage.setItem(LS_KEY, currentNamHoc);
+    }
+})();
+</script>
+{% endblock %}
