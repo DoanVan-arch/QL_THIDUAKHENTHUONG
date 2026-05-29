@@ -176,7 +176,9 @@
                     {% endif %}
                     {% if is_ttr_role %}
                         {% for gdept in gate_dept_fields %}
-                        <th class="text-center bg-light col-gate-criteria" colspan="{{ gdept.fields|length }}" style="font-size:0.72rem; border-left:2px solid #dee2e6;">{{ gdept.dept }}</th>
+                            {% for field in gdept.fields %}
+                            <th class="text-center col-gate-criteria {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.7rem; width:60px; max-width:70px;" title="{{ gdept.dept ~ ': ' ~ (field_labels[field] if field in field_labels else field) }}"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
+                            {% endfor %}
                         {% endfor %}
                         {% for mcol in managed_dept_columns %}
                         <th class="text-center" style="width:74px; font-size:0.72rem;"><small>{{ mcol }}</small></th>
@@ -188,20 +190,6 @@
                     {% endif %}
                     <th style="width:100px;" class="text-center col-pending">Đang chờ</th>
                 </tr>
-                {% if is_ttr_role and gate_dept_fields %}
-                <tr class="table-light col-gate-criteria" style="font-size:0.72rem;">
-                    <th colspan="6"></th>
-                    {% if display_fields %}{% for f in display_fields %}<th class="col-criteria"></th>{% endfor %}{% endif %}
-                    {% if show_evidence %}<th class="col-evidence"></th>{% endif %}
-                    {% for gdept in gate_dept_fields %}
-                        {% for field in gdept.fields %}
-                        <th class="text-center {% if loop.first %}border-left-dept{% endif %}" title="{{ field_labels[field] if field in field_labels else field }}">{{ field_labels[field] if field in field_labels else field }}</th>
-                        {% endfor %}
-                    {% endfor %}
-                    {% for mcol in managed_dept_columns %}<th></th>{% endfor %}
-                    <th colspan="1"></th>
-                </tr>
-                {% endif %}
             </thead>
             <tbody>
                 {% for item in all_cn %}

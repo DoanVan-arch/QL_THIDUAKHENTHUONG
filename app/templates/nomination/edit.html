@@ -1589,6 +1589,33 @@ function updateSubmitButtonState() {
 
 <script>
 // ===== Modal Sửa: điền dữ liệu + ẩn/hiện tiêu chí theo đối tượng/danh hiệu =====
+
+// Graduation score fields map (same as main form's HTTN_MAP)
+var MODAL_HTTN_MAP = {
+    'Thi 4 môn (CTĐ , CT , TA , môn thứ 4)':                ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4'],
+    'Thi 4 môn (chuyên ngành, bảo vệ KL , TA ,môn thứ 4)':  ['diem_tn_chuyennganh','diem_tn_baove','diem_tn_ta','diem_tn_mon4'],
+    'Thi 2 môn (CTĐ , CT)':                                   ['diem_tn_ctd','diem_tn_ct'],
+};
+var MODAL_ALL_DIEM_TN = ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4','diem_tn_chuyennganh','diem_tn_baove'];
+
+// Fields that are graduation sub-fields — controlled by hinh_thuc_tot_nghiep value
+var MODAL_DIEM_TN_SET = {};
+MODAL_ALL_DIEM_TN.forEach(function(f){ MODAL_DIEM_TN_SET[f] = true; });
+
+function applyModalDiemTotNghiep() {
+    var form = document.getElementById('editItemForm');
+    if (!form) return;
+    var htSelect = form.querySelector('[name="hinh_thuc_tot_nghiep"]');
+    var chosen = htSelect ? (htSelect.value || '') : '';
+    var show = MODAL_HTTN_MAP[chosen] || [];
+    MODAL_ALL_DIEM_TN.forEach(function(f) {
+        var wrap = form.querySelector('.edit-field-wrap[data-field="' + f + '"]');
+        if (!wrap) return;
+        if (show.indexOf(f) >= 0) { wrap.style.display = ''; }
+        else { wrap.style.display = 'none'; var el = wrap.querySelector('input,select,textarea'); if (el) el.value = ''; }
+    });
+}
+
 function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
     // Reuse fieldVisibility() đã có sẵn trên trang
     var currentCriteria = (selectedDanhHieu && DANH_HIEU_TIEU_CHI && DANH_HIEU_TIEU_CHI[selectedDanhHieu])
@@ -1596,10 +1623,8 @@ function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
 
     var phamVi = (selectedDanhHieu && DANH_HIEU_PHAM_VI && DANH_HIEU_PHAM_VI[selectedDanhHieu]) || 'Cá nhân';
     var isTapThe = (phamVi === 'Đơn vị');
-    // Với tập thể, dùng placeholder để pass các check doi_tuong
     var effDoiTuong = isTapThe ? '__tap_the__' : (selectedDoiTuong || '');
 
-    // Tập hợp tất cả field names trong modal
     var allFieldNames = [];
     document.querySelectorAll('#edit-criteria-row .edit-field-wrap[data-field]').forEach(function(wrap) {
         allFieldNames.push(wrap.getAttribute('data-field'));
@@ -1608,6 +1633,9 @@ function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
     allFieldNames.forEach(function(fieldName) {
         var wrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="' + fieldName + '"]');
         if (!wrap) return;
+
+        // diem_tn_* fields are managed by applyModalDiemTotNghiep, not by fieldVisibility
+        if (MODAL_DIEM_TN_SET[fieldName]) return;
 
         var vis;
         try {
@@ -1618,23 +1646,65 @@ function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
 
         if (vis === 'hide') {
             wrap.style.display = 'none';
-            // Clear field value khi ẩn để không submit dữ liệu sai
             var inp = wrap.querySelector('input,select,textarea');
             if (inp) inp.value = '';
         } else if (vis === 'show') {
             wrap.style.display = '';
         } else {
-            // no_opinion: ẩn nếu không có đối tượng
+            // no_opinion: hide if no doi_tuong or tap_the with no criteria
             wrap.style.display = (!effDoiTuong && !isTapThe) ? 'none' : '';
         }
     });
 
-    // Xếp loại đảng viên: chỉ hiện nếu là đảng viên (quản lý riêng)
-    // Để đơn giản trong modal, hiện nếu đối tượng có trong criteria
+    // hinh_thuc_tot_nghiep: treat as OPTIONAL_CRITERIA_FIELDS (hide if not in criteria when danh_hieu selected)
+    var htnWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="hinh_thuc_tot_nghiep"]');
+    if (htnWrap) {
+        var htnVisible = selectedDanhHieu
+            ? (currentCriteria.indexOf('hinh_thuc_tot_nghiep') >= 0)
+            : !!effDoiTuong;
+        htnWrap.style.display = htnVisible ? '' : 'none';
+    }
+
+    // diem_tn_* visibility: first apply section visibility, then sub-field by hinh_thuc value
+    var htnInCriteria = selectedDanhHieu
+        ? (currentCriteria.indexOf('hinh_thuc_tot_nghiep') >= 0)
+        : !!effDoiTuong;
+    if (!htnInCriteria) {
+        // Hide all diem_tn fields if graduation section is hidden
+        MODAL_ALL_DIEM_TN.forEach(function(f) {
+            var wrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="' + f + '"]');
+            if (wrap) wrap.style.display = 'none';
+        });
+    } else {
+        applyModalDiemTotNghiep();
+    }
+
+    // Xếp loại đảng viên: only show if in criteria
     var dangVienWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="xep_loai_dang_vien"]');
     if (dangVienWrap) {
         var inCriteria = currentCriteria.indexOf('xep_loai_dang_vien') >= 0;
         dangVienWrap.style.display = (inCriteria || !selectedDanhHieu) ? '' : 'none';
+    }
+
+    // Hide section-title col-12 divs when all following fields in their group are hidden
+    var criteriaRow = document.getElementById('edit-criteria-row');
+    if (criteriaRow) {
+        var children = Array.from(criteriaRow.children);
+        children.forEach(function(child, idx) {
+            // Section title: col-12 containing .form-section-title
+            if (child.classList.contains('col-12') && child.querySelector('.form-section-title')) {
+                // Check if any subsequent field-wrap (before next section title) is visible
+                var hasVisible = false;
+                for (var i = idx + 1; i < children.length; i++) {
+                    var sib = children[i];
+                    if (sib.classList.contains('col-12') && sib.querySelector('.form-section-title')) break;
+                    if (sib.classList.contains('edit-field-wrap') && sib.style.display !== 'none') {
+                        hasVisible = true; break;
+                    }
+                }
+                child.style.display = hasVisible ? '' : 'none';
+            }
+        });
     }
 }
 
@@ -1705,6 +1775,12 @@ function openEditItemModal(ctId) {
 
             // Áp dụng visibility theo đối tượng + danh hiệu
             applyModalFieldVisibility(d.loai_danh_hieu || '', d.doi_tuong || '');
+
+            // Wire hinh_thuc_tot_nghiep change in modal
+            var htSelect = document.getElementById('editItemForm').querySelector('[name="hinh_thuc_tot_nghiep"]');
+            if (htSelect) {
+                htSelect.onchange = function() { applyModalDiemTotNghiep(); };
+            }
         })
         .catch(function(err) {
             loading.innerHTML = '<div class="alert alert-danger">Không tải được dữ liệu.</div>';
