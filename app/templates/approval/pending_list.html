@@ -229,10 +229,8 @@
                         </div>
                     </td>
                     <td class="col-don-vi"><small title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td class="col-cap-bac">
-                        <small title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
-                            {{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}
-                        </small>
+                    <td class="col-cap-bac" title="{{ (ct.quan_nhan.cap_bac or '') ~ (' / ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
+                        <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
                     </td>
                     <td class="col-doi-tuong"><small title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
                     <td class="col-danh-hieu">
@@ -547,10 +545,14 @@
     .tbl-scroll td { padding: 3px 5px !important; vertical-align: middle; }
 
     /* Clamp narrow columns */
-    .tbl-scroll .col-danh-hieu { min-width:70px;  max-width:100px;  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .tbl-scroll .col-doi-tuong { min-width:65px;  max-width:90px;   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .tbl-scroll .col-don-vi    { min-width:75px;  max-width:95px;   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .tbl-scroll .col-cap-bac   { min-width:100px; max-width:150px;  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tbl-scroll .col-danh-hieu { width:80px;  max-width:80px; }
+    .tbl-scroll .col-doi-tuong { width:70px;  max-width:70px; }
+    .tbl-scroll .col-don-vi    { width:90px;  max-width:90px; }
+    .tbl-scroll .col-cap-bac   { width:110px; max-width:110px; }
+    .tbl-scroll .col-danh-hieu small,
+    .tbl-scroll .col-doi-tuong small,
+    .tbl-scroll .col-don-vi small,
+    .tbl-scroll .col-cap-bac small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
     /* Compact view: hide criteria, evidence, and gate-criteria columns */
     .view-compact .col-criteria,
@@ -1024,18 +1026,20 @@ function openDetailModal(ctId) {
                 });
                 html += '</table>';
             }
-            if (d.dept_results && d.dept_results.some(r => r.ket_qua)) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-2" style="font-size:0.8rem;">';
-                d.dept_results.forEach(r => {
-                    let badge = '';
-                    if (r.ket_qua === 'auto') badge = '<span class="badge bg-secondary">Không áp dụng</span>';
-                    else if (r.ket_qua === 'Đồng ý') badge = '<span class="badge bg-success">Đồng ý</span>';
-                    else if (r.ket_qua === 'Từ chối') badge = '<span class="badge bg-danger">Từ chối</span>';
-                    else if (r.ket_qua) badge = `<span class="badge bg-info text-dark">${r.ket_qua}</span>`;
-                    else badge = '<span class="text-muted">—</span>';
-                    html += `<tr><td style="width:40%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:0.75rem;">${r.ngay_duyet ? '<i class="bi bi-clock me-1"></i>'+r.ngay_duyet : ''}</td><td class="text-muted" style="font-size:0.75rem;">${r.ghi_chu||''}</td></tr>`;
+            const deptActed = (d.dept_results || []).filter(r => r.ket_qua && r.ket_qua !== 'auto');
+            const deptPending = (d.dept_results || []).filter(r => !r.ket_qua);
+            if (deptActed.length) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:0.8rem;">';
+                deptActed.forEach(r => {
+                    let badge = r.ket_qua === 'Đồng ý'
+                        ? '<span class="badge bg-success">Đồng ý</span>'
+                        : '<span class="badge bg-danger">Từ chối</span>';
+                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:0.75rem;">${r.ngay_duyet ? '<i class="bi bi-clock me-1"></i>'+r.ngay_duyet : ''}</td><td class="text-muted" style="font-size:0.75rem;">${r.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
+                if (deptPending.length) {
+                    html += `<p class="text-muted mb-2" style="font-size:0.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
+                }
             }
             if (d.votes && d.votes.some(v => v.ket_qua)) {
                 html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:0.8rem;">';
