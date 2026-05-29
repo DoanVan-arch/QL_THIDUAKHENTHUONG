@@ -164,11 +164,11 @@
         <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cá nhân — {{ flat_ca_nhan|length }} người</h6>
     </div>
     <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
+        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;border-collapse:separate;border-spacing:0;">
             <thead>
                 <tr>
-                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:50px;max-width:50px;">STT</th>
-                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:170px;max-width:170px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
+                    <th class="sticky-stt-col" style="position:sticky;left:0;z-index:4;background:var(--navy-primary,#1a3a5c);width:36px;min-width:36px;max-width:36px;padding:4px 6px;">STT</th>
+                    <th class="sticky-name-col" style="position:sticky;left:36px;z-index:4;background:var(--navy-primary,#1a3a5c);width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.18);">Họ tên</th>
                     <th class="col-don-vi">Đơn vị</th>
                     <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
                     <th class="col-doi-tuong">Đối tượng</th>
@@ -196,10 +196,10 @@
                     {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
                 {% endfor %}
                 <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
-                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
+                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:36px;min-width:36px;max-width:36px;border-right:1px solid #dee2e6;padding:4px 6px;">{{ loop.index }}</td>
+                    <td class="fw-semibold" style="position:sticky;left:36px;z-index:2;background:inherit;width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.08);overflow:hidden;">
                         <div class="name-btn-group">
-                            <div class="name-text">
+                            <div class="name-text" style="max-width:108px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                             {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
                             {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
                             <div class="d-flex flex-wrap gap-1 mt-1">
@@ -279,24 +279,24 @@
         <h6 class="mb-0"><i class="bi bi-building me-2"></i>Tập thể — {{ flat_tap_the|length }} đơn vị</h6>
     </div>
     <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
+        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;border-collapse:separate;border-spacing:0;">
             <thead>
                 <tr>
-                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
-                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
+                    <th style="position:sticky;left:0;z-index:4;background:var(--navy-primary,#1a3a5c);width:36px;min-width:36px;max-width:36px;padding:4px 6px;">STT</th>
+                    <th style="position:sticky;left:36px;z-index:4;background:var(--navy-primary,#1a3a5c);width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.18);">Tên tập thể</th>
                     <th class="col-don-vi">Đơn vị đề xuất</th>
                     <th class="col-danh-hieu">Danh hiệu</th>
                     <th>Năm học</th>
-                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
-                    <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
+                    <th class="text-center" style="min-width:80px;font-size:0.72rem;">Mức độ HTNV</th>
+                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">Chủ trì ĐV</th>
                     {% for f in tt_criteria_fields %}
-                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
+                    <th class="text-center" style="min-width:80px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
                     {% endfor %}
-                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Thành tích khác</th>
+                    <th class="text-center" style="min-width:80px;font-size:0.72rem;">T.tích khác</th>
                     {% for col in tracking_dept_columns %}
                     <th class="text-center col-dept-approval" title="{{ col.label }}"><small>{{ col.label }}</small></th>
                     {% endfor %}
-                    <th class="text-center" style="width:100px;">Thao tác</th>
+                    <th class="text-center" style="width:80px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -306,10 +306,10 @@
                 {% set ct_can_approve = item.can_final_approve %}
                 {% set dx_tt = item.dx %}
                 <tr class="{% if ct_can_approve %}table-info{% endif %}">
-                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
+                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:36px;min-width:36px;max-width:36px;border-right:1px solid #dee2e6;padding:4px 6px;">{{ loop.index }}</td>
+                    <td class="fw-semibold" style="position:sticky;left:36px;z-index:2;background:inherit;width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.08);overflow:hidden;">
                         <div class="name-btn-group">
-                            <div class="name-text"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}</div>
+                            <div class="name-text" style="max-width:108px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}</div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
@@ -656,7 +656,7 @@
     thead th.sticky-action-col {
         background: var(--navy-primary) !important;
         color: #fff !important;
-        z-index: 3;
+        z-index: 4;
     }
     tr.table-info td.sticky-action-col  { background: #cff4fc !important; }
     tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
