@@ -28,6 +28,47 @@
     </div>
 </div>
 
+{# ===== Filters (đưa lên đầu trang) ===== #}
+<div class="card-section mb-3 no-print" id="filterCard">
+    <div class="card-body-custom py-2">
+        <form method="GET" id="filterForm" class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
+            <select class="form-select form-select-sm {% if not nam_hoc_filter %}border-warning{% endif %}"
+                    name="nam_hoc" id="selectNamHoc" style="width:auto;" onchange="onNamHocChange(this)">
+                <option value="">-- Chọn năm học --</option>
+                {% for nh in nam_hoc_list %}
+                <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
+                {% endfor %}
+            </select>
+            {% if nam_hoc_filter %}
+            <select class="form-select form-select-sm" name="unit" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả đơn vị</option>
+                {% for u in unit_names %}
+                <option value="{{ u }}" {% if unit_filter == u %}selected{% endif %}>{{ u }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" name="danh_hieu" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả danh hiệu</option>
+                {% for dh in danh_hieu_list %}
+                <option value="{{ dh }}" {% if danh_hieu_filter == dh %}selected{% endif %}>{{ dh }}</option>
+                {% endfor %}
+            </select>
+            <div class="input-group input-group-sm" style="width:220px;">
+                <input type="text" class="form-control" name="q" value="{{ search_query }}"
+                       placeholder="Tìm tên...">
+                <button type="submit" class="btn btn-outline-navy"><i class="bi bi-search"></i></button>
+            </div>
+            {% endif %}
+            {% if nam_hoc_filter or unit_filter or danh_hieu_filter or search_query %}
+            <a href="{{ url_for('admin.reward_list') }}" class="btn btn-sm btn-outline-secondary"
+               onclick="localStorage.removeItem('rewardListNamHoc')">
+                <i class="bi bi-x-lg me-1"></i>Xóa lọc
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
 {% if cstd_non_consecutive or cstd_consecutive %}
 <div class="card-section mb-3 no-print">
     <div class="card-header-custom">
@@ -68,7 +109,7 @@
 </div>
 {% endif %}
 
-{% if can_view_pending_final and nam_hoc_filter %}
+{% if can_view_pending_final %}
 {# ===== BẢNG 1: HOI_DONG chờ Admin phê duyệt ===== #}
 <div class="card-section mb-3 print-section" id="printBang1">
     <div class="card-header-custom d-flex align-items-center justify-content-between">
@@ -599,46 +640,6 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
     {% endfor %}
 </div>
 {% endif %}
-
-{# ===== Filters ===== #}
-<div class="card-section mb-3 no-print">
-    <div class="card-body-custom py-2">
-        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
-            <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
-            <select class="form-select form-select-sm {% if not nam_hoc_filter %}border-warning{% endif %}"
-                    name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
-                <option value="">-- Chọn năm học --</option>
-                {% for nh in nam_hoc_list %}
-                <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
-                {% endfor %}
-            </select>
-            {% if nam_hoc_filter %}
-            <select class="form-select form-select-sm" name="unit" style="width:auto;" onchange="this.form.submit()">
-                <option value="">Tất cả đơn vị</option>
-                {% for u in unit_names %}
-                <option value="{{ u }}" {% if unit_filter == u %}selected{% endif %}>{{ u }}</option>
-                {% endfor %}
-            </select>
-            <select class="form-select form-select-sm" name="danh_hieu" style="width:auto;" onchange="this.form.submit()">
-                <option value="">Tất cả danh hiệu</option>
-                {% for dh in danh_hieu_list %}
-                <option value="{{ dh }}" {% if danh_hieu_filter == dh %}selected{% endif %}>{{ dh }}</option>
-                {% endfor %}
-            </select>
-            <div class="input-group input-group-sm" style="width:220px;">
-                <input type="text" class="form-control" name="q" value="{{ search_query }}"
-                       placeholder="Tìm tên...">
-                <button type="submit" class="btn btn-outline-navy"><i class="bi bi-search"></i></button>
-            </div>
-            {% endif %}
-            {% if nam_hoc_filter or unit_filter or danh_hieu_filter or search_query %}
-            <a href="{{ url_for('admin.reward_list') }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-x-lg me-1"></i>Xóa lọc
-            </a>
-            {% endif %}
-        </form>
-    </div>
-</div>
 
 {% if not nam_hoc_filter %}
 <div class="card-section">
@@ -1271,5 +1272,36 @@ function printSection(sectionId, title) {
             .catch(() => { body.innerHTML = '<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>'; });
     });
 })();
+</script>
+
+<script>
+// Lưu/khôi phục năm học đã chọn qua localStorage
+(function() {
+    var LS_KEY = 'rewardListNamHoc';
+    var currentNamHoc = '{{ nam_hoc_filter }}';
+
+    // Nếu URL không có nam_hoc nhưng localStorage có → tự redirect
+    if (!currentNamHoc) {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('nam_hoc', saved);
+            window.location.replace(url.toString());
+            return;
+        }
+    } else {
+        // Có nam_hoc trong URL → lưu vào localStorage
+        localStorage.setItem(LS_KEY, currentNamHoc);
+    }
+})();
+
+function onNamHocChange(sel) {
+    if (sel.value) {
+        localStorage.setItem('rewardListNamHoc', sel.value);
+    } else {
+        localStorage.removeItem('rewardListNamHoc');
+    }
+    sel.form.submit();
+}
 </script>
 {% endblock %}
