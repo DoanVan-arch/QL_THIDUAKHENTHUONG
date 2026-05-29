@@ -29,7 +29,7 @@
                 <option value="Phê duyệt cuối" {% if status_filter == 'Phê duyệt cuối' %}selected{% endif %}>Phê duyệt cuối</option>
                 <option value="Từ chối" {% if status_filter == 'Từ chối' %}selected{% endif %}>Từ chối</option>
             </select>
-            <select class="form-select form-select-sm" name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
+            <select class="form-select form-select-sm" name="nam_hoc" style="width:auto;" onchange="onNamHocChange(this)">
                 <option value="">Tất cả năm học</option>
                 {% for nh in nam_hoc_list %}
                 <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
@@ -151,4 +151,29 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var LS_KEY = 'sharedNamHoc';
+    var currentNamHoc = '{{ nam_hoc_filter }}';
+    if (!currentNamHoc) {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('nam_hoc', saved);
+            window.location.replace(url.toString());
+            return;
+        }
+    } else {
+        localStorage.setItem(LS_KEY, currentNamHoc);
+    }
+})();
+function onNamHocChange(sel) {
+    if (sel.value) { localStorage.setItem('sharedNamHoc', sel.value); }
+    else { localStorage.removeItem('sharedNamHoc'); }
+    sel.form.submit();
+}
+</script>
 {% endblock %}

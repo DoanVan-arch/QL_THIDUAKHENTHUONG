@@ -1277,7 +1277,7 @@ function printSection(sectionId, title) {
 <script>
 // Lưu/khôi phục năm học đã chọn qua localStorage
 (function() {
-    var LS_KEY = 'rewardListNamHoc';
+    var LS_KEY = 'sharedNamHoc';
     var currentNamHoc = '{{ nam_hoc_filter }}';
 
     // Nếu URL không có nam_hoc nhưng localStorage có → tự redirect
@@ -1297,9 +1297,9 @@ function printSection(sectionId, title) {
 
 function onNamHocChange(sel) {
     if (sel.value) {
-        localStorage.setItem('rewardListNamHoc', sel.value);
+        localStorage.setItem('sharedNamHoc', sel.value);
     } else {
-        localStorage.removeItem('rewardListNamHoc');
+        localStorage.removeItem('sharedNamHoc');
     }
     sel.form.submit();
 }

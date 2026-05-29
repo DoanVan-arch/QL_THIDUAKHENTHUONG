@@ -101,7 +101,7 @@
             <input type="hidden" name="view" value="{{ view_mode }}">
             <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
             <select class="form-select form-select-sm {% if not nam_hoc_filter %}border-warning{% endif %}"
-                    name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
+                    name="nam_hoc" style="width:auto;" onchange="onNamHocChange(this)">
                 <option value="">-- Chọn năm học --</option>
                 {% for nh in nam_hoc_list %}
                 <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
@@ -736,6 +736,28 @@ function printTracking() {
         ' ngày ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
     ts.style.display = 'block';
     window.print();
+}
+</script>
+<script>
+(function() {
+    var LS_KEY = 'sharedNamHoc';
+    var currentNamHoc = '{{ nam_hoc_filter }}';
+    if (!currentNamHoc) {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('nam_hoc', saved);
+            window.location.replace(url.toString());
+            return;
+        }
+    } else {
+        localStorage.setItem(LS_KEY, currentNamHoc);
+    }
+})();
+function onNamHocChange(sel) {
+    if (sel.value) { localStorage.setItem('sharedNamHoc', sel.value); }
+    else { localStorage.removeItem('sharedNamHoc'); }
+    sel.form.submit();
 }
 </script>
 {% endblock %}
