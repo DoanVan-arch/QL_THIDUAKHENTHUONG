@@ -670,11 +670,33 @@ def api_chi_tiet_detail(ct_id):
             'ghi_chu': bq.ghi_chu if bq else None,
         })
 
+    # Dept approval results
+    dept_results = []
+    for dept in DEPT_NAMES:
+        is_auto = _is_auto_scope_approved(dept, ct.doi_tuong)
+        if is_auto:
+            dept_results.append({'dept': dept, 'ket_qua': 'auto', 'ghi_chu': None})
+            continue
+        pd_dept = PheDuyet.query.filter_by(de_xuat_id=dx.id, phong_duyet=dept).first()
+        if not pd_dept:
+            dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None})
+            continue
+        kq_ct = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd_dept.id, chi_tiet_id=ct.id).first()
+        if pd_dept.ket_qua == KetQuaDuyet.DONG_Y.value:
+            dept_results.append({'dept': dept, 'ket_qua': 'Đồng ý', 'ghi_chu': pd_dept.ghi_chu})
+        elif pd_dept.ket_qua == KetQuaDuyet.TU_CHOI.value:
+            dept_results.append({'dept': dept, 'ket_qua': 'Từ chối', 'ghi_chu': pd_dept.ghi_chu})
+        elif kq_ct:
+            dept_results.append({'dept': dept, 'ket_qua': kq_ct.ket_qua, 'ghi_chu': kq_ct.ghi_chu})
+        else:
+            dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None})
+
     return jsonify({
         'personal': personal,
         'nomination': nomination,
         'criteria': criteria,
         'votes': votes,
+        'dept_results': dept_results,
     })
 
 

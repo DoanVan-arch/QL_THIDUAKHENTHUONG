@@ -161,11 +161,11 @@
             <thead>
                 <tr>
                     <th class="sticky-stt">STT</th>
-                    <th style="min-width:100px;">Đơn vị</th>
                     <th class="sticky-name-col">Họ tên</th>
-                    <th>Cấp bậc / Chức vụ</th>
-                    <th>Đối tượng</th>
-                    <th>Danh hiệu</th>
+                    <th style="min-width:80px;max-width:100px;">Đơn vị</th>
+                    <th style="width:110px;max-width:130px;">Cấp bậc / Chức vụ</th>
+                    <th style="width:70px;max-width:90px;">Đối tượng</th>
+                    <th style="width:70px;max-width:80px;">Danh hiệu</th>
                     {% if display_fields %}
                     {% for field in display_fields %}
                     <th class="col-criteria"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
@@ -222,13 +222,13 @@
                     data-doi-tuong="{{ ct.doi_tuong or '' }}"
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
                     <td class="sticky-stt">{{ loop.index }}</td>
-                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                     <td class="fw-semibold sticky-name-col">
                         <div class="name-btn-group">
                             <div class="name-text"><span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span></div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
+                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                     <td>
                         <small title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
                             <span class="text-ellipsis-sm">{{ ct.quan_nhan.cap_bac or '' }}</span>{% if ct.quan_nhan.chuc_vu %}<br><span class="text-ellipsis-sm">{{ ct.quan_nhan.chuc_vu }}</span>{% endif %}
@@ -475,10 +475,20 @@
         -webkit-overflow-scrolling: touch;
     }
     .tbl-scroll table {
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         width: max-content;
         min-width: 100%;
     }
+    /* Restore borders lost from border-collapse:separate */
+    .tbl-scroll table th,
+    .tbl-scroll table td {
+        border-bottom: 1px solid #dee2e6;
+        border-right: 1px solid #dee2e6;
+    }
+    .tbl-scroll table th:first-child,
+    .tbl-scroll table td:first-child { border-left: 1px solid #dee2e6; }
+    .tbl-scroll table thead th { border-top: 1px solid #dee2e6; }
     /* ===== STICKY COLS ===== */
     .tbl-scroll .sticky-stt {
         position: sticky;

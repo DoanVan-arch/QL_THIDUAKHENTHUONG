@@ -596,10 +596,20 @@
         -webkit-overflow-scrolling: touch;
     }
     .tbl-scroll table {
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         width: max-content;
         min-width: 100%;
     }
+    /* Restore borders lost from border-collapse:separate */
+    .tbl-scroll table th,
+    .tbl-scroll table td {
+        border-bottom: 1px solid #dee2e6;
+        border-right: 1px solid #dee2e6;
+    }
+    .tbl-scroll table th:first-child,
+    .tbl-scroll table td:first-child { border-left: 1px solid #dee2e6; }
+    .tbl-scroll table thead th { border-top: 1px solid #dee2e6; }
 
     /* ===== STICKY COLS (scoped to .tbl-scroll) ===== */
     .tbl-scroll .sticky-stt {
@@ -798,6 +808,19 @@ function openDetailModal(ctId) {
                 html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí</h6><table class="table table-sm table-bordered mb-2" style="font-size:0.8rem;">';
                 d.criteria.forEach(c => {
                     html += `<tr><td class="text-muted" style="width:55%">${c.label}</td><td>${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
+                });
+                html += '</table>';
+            }
+            if (d.dept_results && d.dept_results.some(r => r.ket_qua)) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-2" style="font-size:0.8rem;">';
+                d.dept_results.forEach(r => {
+                    let badge = '';
+                    if (r.ket_qua === 'auto') badge = '<span class="badge bg-secondary">Không áp dụng</span>';
+                    else if (r.ket_qua === 'Đồng ý') badge = '<span class="badge bg-success">Đồng ý</span>';
+                    else if (r.ket_qua === 'Từ chối') badge = '<span class="badge bg-danger">Từ chối</span>';
+                    else if (r.ket_qua) badge = `<span class="badge bg-info text-dark">${r.ket_qua}</span>`;
+                    else badge = '<span class="text-muted">—</span>';
+                    html += `<tr><td style="width:55%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:0.75rem;">${r.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
             }
