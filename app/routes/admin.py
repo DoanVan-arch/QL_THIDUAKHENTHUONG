@@ -648,17 +648,32 @@ def api_chi_tiet_detail(ct_id):
     ]
 
     criteria = []
-    for field, label, score_field in criteria_fields:
-        val = getattr(ct, field, None)
-        if val is None or val == '':
-            continue
-        # Display boolean-ish strings
-        if val == 'true':
-            val = 'Có'
-        elif val == 'false':
-            val = 'Không'
-        score = getattr(ct, score_field, None) if score_field else None
-        criteria.append({'label': label, 'value': str(val), 'score': str(score) if score is not None else None})
+    if qn is None:
+        # Tập thể: get criteria from tap_the_dict + common fields
+        tap_the_dict = ct.tap_the_dict or {}
+        for k, v in tap_the_dict.items():
+            if v is not None and v != '':
+                criteria.append({'label': k, 'value': str(v), 'score': None})
+        for field, label, score_field in [
+            ('muc_do_hoan_thanh', 'Mức độ hoàn thành NV', None),
+            ('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV danh hiệu', None),
+            ('thanh_tich_ca_nhan_khac', 'Thành tích khác', None),
+            ('ghi_chu', 'Ghi chú', None),
+        ]:
+            val = getattr(ct, field, None)
+            if val:
+                criteria.append({'label': label, 'value': str(val), 'score': None})
+    else:
+        for field, label, score_field in criteria_fields:
+            val = getattr(ct, field, None)
+            if val is None or val == '':
+                continue
+            if val == 'true':
+                val = 'Có'
+            elif val == 'false':
+                val = 'Không'
+            score = getattr(ct, score_field, None) if score_field else None
+            criteria.append({'label': label, 'value': str(val), 'score': str(score) if score is not None else None})
 
     # Hội đồng votes
     votes = []
@@ -687,7 +702,7 @@ def api_chi_tiet_detail(ct_id):
         elif pd_dept.ket_qua == KetQuaDuyet.TU_CHOI.value:
             dept_results.append({'dept': dept, 'ket_qua': 'Từ chối', 'ghi_chu': pd_dept.ghi_chu})
         elif kq_ct:
-            dept_results.append({'dept': dept, 'ket_qua': kq_ct.ket_qua, 'ghi_chu': kq_ct.ghi_chu})
+            dept_results.append({'dept': dept, 'ket_qua': kq_ct.ket_qua, 'ghi_chu': kq_ct.ly_do})
         else:
             dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None})
 

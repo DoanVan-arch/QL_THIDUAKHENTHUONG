@@ -169,10 +169,10 @@
                 <tr>
                     <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
                     <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
-                    <th style="min-width:100px;">Đơn vị</th>
-                    <th>Cấp bậc / Chức vụ</th>
-                    <th>Đối tượng</th>
-                    <th>Danh hiệu</th>
+                    <th class="col-don-vi">Đơn vị</th>
+                    <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
+                    <th class="col-doi-tuong">Đối tượng</th>
+                    <th class="col-danh-hieu">Danh hiệu</th>
                     {% if view_mode == 'detail' %}
                     <th>Năm học</th>
                     {% for field in all_fields %}
@@ -213,13 +213,13 @@
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
-                    <td title="{{ ct_data.don_vi }}"><small class="col-md">{{ ct_data.don_vi }}</small></td>
-                    <td>
+                    <td class="col-don-vi" title="{{ ct_data.don_vi }}"><small>{{ ct_data.don_vi }}</small></td>
+                    <td class="col-cap-bac">
                         {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
                         {% else %}<small class="text-muted">-</small>{% endif %}
                     </td>
-                    <td><small>{{ ct.doi_tuong or '-' }}</small></td>
-                    <td>
+                    <td class="col-doi-tuong"><small>{{ ct.doi_tuong or '-' }}</small></td>
+                    <td class="col-danh-hieu">
                         {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
                         {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
                         {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
@@ -284,8 +284,8 @@
                 <tr>
                     <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
                     <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
-                    <th>Đơn vị đề xuất</th>
-                    <th>Danh hiệu</th>
+                    <th class="col-don-vi">Đơn vị đề xuất</th>
+                    <th class="col-danh-hieu">Danh hiệu</th>
                     <th>Năm học</th>
                     <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
                     <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
@@ -313,8 +313,8 @@
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
-                    <td><small>{{ item.don_vi }}</small></td>
-                    <td>
+                    <td class="col-don-vi"><small>{{ item.don_vi }}</small></td>
+                    <td class="col-danh-hieu">
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
                         {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
                         {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
@@ -662,6 +662,10 @@
     tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
     .table-custom tbody tr:hover td.sticky-action-col { background: #f0f4f8 !important; }
 
+    /* ===== CELL PADDING — compact ===== */
+    .tbl-scroll th,
+    .tbl-scroll td { padding: 3px 5px !important; vertical-align: middle; }
+
     /* ===== COLUMN WIDTHS ===== */
     .table-custom th, .table-custom td { white-space: nowrap; }
     .col-sm  { max-width: 80px;  overflow: hidden; text-overflow: ellipsis; }
@@ -669,6 +673,11 @@
     .col-lg  { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
     .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
     .name-btn-group .name-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* Clamp narrow columns so content cannot blow up width */
+    .tbl-scroll .col-danh-hieu  { min-width:70px;  max-width:100px;  overflow:hidden; text-overflow:ellipsis; }
+    .tbl-scroll .col-doi-tuong  { min-width:65px;  max-width:90px;   overflow:hidden; text-overflow:ellipsis; }
+    .tbl-scroll .col-don-vi     { min-width:80px;  max-width:120px;  overflow:hidden; text-overflow:ellipsis; }
+    .tbl-scroll .col-cap-bac    { min-width:100px; max-width:160px;  overflow:hidden; text-overflow:ellipsis; }
 
     /* ===== BTN NAVY ===== */
     .btn-navy {
