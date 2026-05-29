@@ -690,21 +690,24 @@ def api_chi_tiet_detail(ct_id):
     for dept in DEPT_NAMES:
         is_auto = _is_auto_scope_approved(dept, ct.doi_tuong)
         if is_auto:
-            dept_results.append({'dept': dept, 'ket_qua': 'auto', 'ghi_chu': None})
+            dept_results.append({'dept': dept, 'ket_qua': 'auto', 'ghi_chu': None, 'ngay_duyet': None})
             continue
         pd_dept = PheDuyet.query.filter_by(de_xuat_id=dx.id, phong_duyet=dept).first()
         if not pd_dept:
-            dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None})
+            dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None, 'ngay_duyet': None})
             continue
         kq_ct = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd_dept.id, chi_tiet_id=ct.id).first()
         if pd_dept.ket_qua == KetQuaDuyet.DONG_Y.value:
-            dept_results.append({'dept': dept, 'ket_qua': 'Đồng ý', 'ghi_chu': pd_dept.ghi_chu})
+            dept_results.append({'dept': dept, 'ket_qua': 'Đồng ý', 'ghi_chu': pd_dept.ghi_chu,
+                                  'ngay_duyet': pd_dept.ngay_duyet.strftime('%d/%m/%Y %H:%M') if pd_dept.ngay_duyet else None})
         elif pd_dept.ket_qua == KetQuaDuyet.TU_CHOI.value:
-            dept_results.append({'dept': dept, 'ket_qua': 'Từ chối', 'ghi_chu': pd_dept.ghi_chu})
+            dept_results.append({'dept': dept, 'ket_qua': 'Từ chối', 'ghi_chu': pd_dept.ghi_chu,
+                                  'ngay_duyet': pd_dept.ngay_duyet.strftime('%d/%m/%Y %H:%M') if pd_dept.ngay_duyet else None})
         elif kq_ct:
-            dept_results.append({'dept': dept, 'ket_qua': kq_ct.ket_qua, 'ghi_chu': kq_ct.ly_do})
+            dept_results.append({'dept': dept, 'ket_qua': kq_ct.ket_qua, 'ghi_chu': kq_ct.ly_do,
+                                  'ngay_duyet': pd_dept.ngay_duyet.strftime('%d/%m/%Y %H:%M') if pd_dept.ngay_duyet else None})
         else:
-            dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None})
+            dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None, 'ngay_duyet': None})
 
     return jsonify({
         'personal': personal,
