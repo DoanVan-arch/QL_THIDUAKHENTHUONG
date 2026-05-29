@@ -200,9 +200,11 @@ def get_field_labels():
 
 
 def get_phong_table_columns():
-    """Get department -> table column fields (excluding long text/file fields)."""
+    """Get department -> table column fields (excluding long text/file fields and collective-only fields)."""
+    from app.models.nomination import DeXuatChiTiet as _DX
+    _ca_nhan_cols = {c.key for c in _DX.__table__.columns}
     phong_fields = get_phong_fields()
-    return {role: [f for f in fields if f not in _LONG_TEXT_FIELDS]
+    return {role: [f for f in fields if f not in _LONG_TEXT_FIELDS and f in _ca_nhan_cols]
             for role, fields in phong_fields.items()}
 
 

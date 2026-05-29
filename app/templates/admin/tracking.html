@@ -180,7 +180,7 @@
                     {% endfor %}
                     {% endif %}
                     {% for col in tracking_dept_columns %}
-                    <th class="text-center">{{ col.label }}</th>
+                    <th class="text-center col-dept-approval" title="{{ col.label }}"><small>{{ col.label }}</small></th>
                     {% endfor %}
                     <th class="text-center sticky-action-col" style="width:80px;">Thao tác</th>
                 </tr>
@@ -294,7 +294,7 @@
                     {% endfor %}
                     <th class="text-center" style="min-width:100px;font-size:0.72rem;">Thành tích khác</th>
                     {% for col in tracking_dept_columns %}
-                    <th class="text-center">{{ col.label }}</th>
+                    <th class="text-center col-dept-approval" title="{{ col.label }}"><small>{{ col.label }}</small></th>
                     {% endfor %}
                     <th class="text-center" style="width:100px;">Thao tác</th>
                 </tr>
@@ -682,6 +682,10 @@
     .tbl-scroll .col-doi-tuong small,
     .tbl-scroll .col-don-vi small,
     .tbl-scroll .col-cap-bac small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* Dept approval badge columns — narrow */
+    .tbl-scroll .col-dept-approval { width:52px; max-width:60px; }
+    .tbl-scroll .col-dept-approval small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.65rem; line-height:1.2; }
 
     /* ===== BTN NAVY ===== */
     .btn-navy {

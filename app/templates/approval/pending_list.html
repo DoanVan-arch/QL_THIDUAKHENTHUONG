@@ -994,7 +994,7 @@ function openDetailModal(ctId) {
     const body = document.getElementById('detailModalBody');
     body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
     modal.show();
-    fetch('/admin/api/chi-tiet/' + ctId)
+    fetch('/admin/api/chi-tiet/' + ctId + '?dept_only=1')
         .then(r => {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
