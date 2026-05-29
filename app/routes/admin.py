@@ -613,6 +613,9 @@ def api_chi_tiet_detail(ct_id):
     }
 
     # Criteria
+    # When called from dept approval view, only show fields relevant to current user's dept
+    dept_only = request.args.get('dept_only') == '1'
+
     criteria_fields = [
         ('muc_do_hoan_thanh', 'Hoàn thành nhiệm vụ', None),
         ('phieu_tin_nhiem', 'Phiếu tín nhiệm', None),
@@ -673,7 +676,14 @@ def api_chi_tiet_detail(ct_id):
             elif val == 'false':
                 val = 'Không'
             score = getattr(ct, score_field, None) if score_field else None
-            criteria.append({'label': label, 'value': str(val), 'score': str(score) if score is not None else None})
+            criteria.append({'field': field, 'label': label, 'value': str(val), 'score': str(score) if score is not None else None})
+
+    # Filter criteria to dept-specific fields when requested
+    if dept_only and qn is not None:
+        from app.routes.approval import get_phong_fields as _get_phong_fields
+        dept_fields = set(_get_phong_fields().get(current_user.role, []))
+        if dept_fields:
+            criteria = [c for c in criteria if c.get('field') in dept_fields]
 
     # Hội đồng votes
     votes = []
