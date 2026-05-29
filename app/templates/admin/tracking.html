@@ -629,7 +629,9 @@
         z-index: 2;
         background: #fff;
         min-width: 170px;
-        max-width: 220px;
+        max-width: 200px;
+        width: 200px;
+        overflow: hidden;
         box-shadow: 2px 0 5px rgba(0,0,0,0.08);
     }
     .tbl-scroll thead .sticky-stt,
@@ -667,15 +669,12 @@
     .tbl-scroll td { padding: 3px 5px !important; vertical-align: middle; }
 
     /* ===== COLUMN WIDTHS ===== */
-    /* Remove global nowrap — let fixed columns control width */
-    .table-custom th, .table-custom td { white-space: normal; word-break: break-word; }
-    /* But keep single-line for badge/icon cells */
-    .table-custom td.text-center { white-space: nowrap; }
+    .table-custom th, .table-custom td { white-space: nowrap; }
     .col-sm  { width:72px;  max-width:72px; }
     .col-md  { width:110px; max-width:110px; }
     .col-lg  { width:160px; max-width:160px; }
     .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
-    .name-btn-group .name-text { flex: 1; min-width: 0; }
+    .name-btn-group .name-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
     /* Clamp narrow columns — use width on th + overflow div inside td */
     .tbl-scroll .col-danh-hieu  { width:80px;  max-width:80px; }
     .tbl-scroll .col-doi-tuong  { width:70px;  max-width:70px; }
