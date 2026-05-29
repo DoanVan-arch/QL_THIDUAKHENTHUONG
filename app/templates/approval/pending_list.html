@@ -160,12 +160,12 @@
         <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
             <thead>
                 <tr>
-                    <th class="sticky-stt">STT</th>
-                    <th class="sticky-name-col">Họ tên</th>
-                    <th style="min-width:80px;max-width:100px;">Đơn vị</th>
-                    <th style="width:110px;max-width:130px;">Cấp bậc / Chức vụ</th>
-                    <th style="width:70px;max-width:90px;">Đối tượng</th>
-                    <th style="width:70px;max-width:80px;">Danh hiệu</th>
+                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
+                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
+                    <th style="min-width:75px;max-width:95px;">Đơn vị</th>
+                    <th style="min-width:100px;max-width:130px;">Cấp bậc / Chức vụ</th>
+                    <th style="min-width:65px;max-width:80px;">Đối tượng</th>
+                    <th style="min-width:60px;max-width:75px;">Danh hiệu</th>
                     {% if display_fields %}
                     {% for field in display_fields %}
                     <th class="col-criteria"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
@@ -221,8 +221,8 @@
                     data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
                     data-doi-tuong="{{ ct.doi_tuong or '' }}"
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td class="sticky-stt">{{ loop.index }}</td>
-                    <td class="fw-semibold sticky-name-col">
+                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
+                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
                         <div class="name-btn-group">
                             <div class="name-text"><span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span></div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
@@ -312,9 +312,9 @@
         <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe" style="font-size:0.82rem;">
             <thead>
                 <tr>
-                    <th class="sticky-stt">STT</th>
-                    <th style="min-width:100px;">Đơn vị</th>
-                    <th class="sticky-name-col">Tên tập thể</th>
+                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
+                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
+                    <th style="min-width:75px;max-width:95px;">Đơn vị</th>
                     <th>Danh hiệu</th>
                     <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                     <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
@@ -348,14 +348,14 @@
                     data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
                     data-doi-tuong=""
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td class="sticky-stt">{{ loop.index }}</td>
-                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td class="fw-semibold sticky-name-col">
+                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
+                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:160px;max-width:210px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
                         <div class="name-btn-group">
                             <div class="name-text"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}</div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
+                    <td><small class="text-ellipsis-sm" title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                     <td>
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
                         {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
@@ -983,7 +983,10 @@ function openDetailModal(ctId) {
     body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
     modal.show();
     fetch('/admin/api/chi-tiet/' + ctId)
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
         .then(d => {
             const p = d.personal || {}, n = d.nomination || {};
             const badges = [
@@ -1021,7 +1024,7 @@ function openDetailModal(ctId) {
             }
             body.innerHTML = html;
         })
-        .catch(() => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu.</div>'; });
+        .catch(e => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu: ' + e.message + '</div>'; });
 }
 </script>
 {% endblock %}
