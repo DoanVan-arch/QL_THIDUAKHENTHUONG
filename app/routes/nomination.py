@@ -14,6 +14,7 @@ from app.utils.file_upload import save_upload
 from datetime import datetime
 from sqlalchemy.exc import ProgrammingError, OperationalError
 
+import hashlib, binascii, os
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
     'Phòng Khoa học', 'Phòng Đào tạo',
@@ -697,6 +698,150 @@ def delete_nomination_item(id):
     return redirect(url_for('nomination.edit_nomination', id=de_xuat.id))
 
 
+@nomination_bp.route('/item/<int:ct_id>/data', methods=['GET'])
+@login_required
+@unit_user_required
+def get_nomination_item_data(ct_id):
+    """Return JSON data for a chi_tiet (for edit modal population)."""
+    import json as _json
+    chi_tiet = DeXuatChiTiet.query.get_or_404(ct_id)
+    de_xuat = chi_tiet.de_xuat
+    if de_xuat.don_vi_id != current_user.don_vi_id or not de_xuat.is_editable:
+        return jsonify({'error': 'Không có quyền'}), 403
+
+    tap_the_data = {}
+    if chi_tiet.tap_the_data:
+        try:
+            tap_the_data = _json.loads(chi_tiet.tap_the_data)
+        except Exception:
+            tap_the_data = {}
+
+    data = {
+        'ct_id': chi_tiet.id,
+        'de_xuat_id': de_xuat.id,
+        'quan_nhan_id': chi_tiet.quan_nhan_id,
+        'ho_ten': (chi_tiet.quan_nhan.ho_ten if chi_tiet.quan_nhan else ''),
+        'ten_don_vi_de_xuat': chi_tiet.ten_don_vi_de_xuat or '',
+        'loai_danh_hieu': chi_tiet.loai_danh_hieu or '',
+        'doi_tuong': chi_tiet.doi_tuong or '',
+        'muc_do_hoan_thanh': chi_tiet.muc_do_hoan_thanh or '',
+        'kiem_tra_tin_hoc': chi_tiet.kiem_tra_tin_hoc or '',
+        'diem_kiem_tra_tin_hoc': chi_tiet.diem_kiem_tra_tin_hoc or '',
+        'kiem_tra_dieu_lenh': chi_tiet.kiem_tra_dieu_lenh or '',
+        'diem_kiem_tra_dieu_lenh': chi_tiet.diem_kiem_tra_dieu_lenh or '',
+        'dia_ly_quan_su': chi_tiet.dia_ly_quan_su or '',
+        'diem_dia_ly_quan_su': chi_tiet.diem_dia_ly_quan_su or '',
+        'ban_sung': chi_tiet.ban_sung or '',
+        'diem_ban_sung': chi_tiet.diem_ban_sung or '',
+        'the_luc': chi_tiet.the_luc or '',
+        'diem_the_luc': chi_tiet.diem_the_luc or '',
+        'kiem_tra_chinh_tri': chi_tiet.kiem_tra_chinh_tri or '',
+        'diem_kiem_tra_chinh_tri': chi_tiet.diem_kiem_tra_chinh_tri or '',
+        'phieu_tin_nhiem': chi_tiet.phieu_tin_nhiem or '',
+        'xep_loai_dang_vien': chi_tiet.xep_loai_dang_vien or '',
+        'ket_qua_doan_the': chi_tiet.ket_qua_doan_the or '',
+        'xep_loai_doan_vien': chi_tiet.xep_loai_doan_vien or '',
+        'hinh_thuc_khen_thuong_qc': chi_tiet.hinh_thuc_khen_thuong_qc or '',
+        'ket_qua_phu_nu': chi_tiet.ket_qua_phu_nu or '',
+        'hinh_thuc_khen_thuong_pn': chi_tiet.hinh_thuc_khen_thuong_pn or '',
+        'chu_tri_don_vi_danh_hieu': chi_tiet.chu_tri_don_vi_danh_hieu or '',
+        'danh_hieu_gv_gioi': chi_tiet.danh_hieu_gv_gioi or '',
+        'tien_do_pgs': chi_tiet.tien_do_pgs or '',
+        'dinh_muc_giang_day': chi_tiet.dinh_muc_giang_day or '',
+        'thoi_gian_lao_dong_kh': chi_tiet.thoi_gian_lao_dong_kh or '',
+        'ket_qua_kiem_tra_giang': chi_tiet.ket_qua_kiem_tra_giang or '',
+        'danh_hieu_hv_gioi': chi_tiet.danh_hieu_hv_gioi or '',
+        'diem_tong_ket': chi_tiet.diem_tong_ket or '',
+        'ket_qua_thuc_hanh': chi_tiet.ket_qua_thuc_hanh or '',
+        'ket_qua_ren_luyen': chi_tiet.ket_qua_ren_luyen or '',
+        'hinh_thuc_tot_nghiep': chi_tiet.hinh_thuc_tot_nghiep or '',
+        'diem_tn_ctd': chi_tiet.diem_tn_ctd or '',
+        'diem_tn_ct': chi_tiet.diem_tn_ct or '',
+        'diem_tn_ta': chi_tiet.diem_tn_ta or '',
+        'diem_tn_mon4': chi_tiet.diem_tn_mon4 or '',
+        'diem_tn_chuyennganh': chi_tiet.diem_tn_chuyennganh or '',
+        'diem_tn_baove': chi_tiet.diem_tn_baove or '',
+        'nckh_noi_dung': chi_tiet.nckh_noi_dung or '',
+        'diem_nckh': str(chi_tiet.diem_nckh) if chi_tiet.diem_nckh is not None else '',
+        'thanh_tich_ca_nhan_khac': chi_tiet.thanh_tich_ca_nhan_khac or '',
+        'ghi_chu': chi_tiet.ghi_chu or '',
+        'tap_the_data': tap_the_data,
+    }
+    return jsonify(data)
+
+
+@nomination_bp.route('/item/<int:ct_id>/update', methods=['POST'])
+@login_required
+@unit_user_required
+def update_nomination_item(ct_id):
+    """Update an existing chi_tiet (all criteria fields, keep quan_nhan/danh_hieu unchanged)."""
+    import json as _json
+    chi_tiet = DeXuatChiTiet.query.get_or_404(ct_id)
+    de_xuat = chi_tiet.de_xuat
+
+    if de_xuat.don_vi_id != current_user.don_vi_id or not de_xuat.is_editable:
+        flash('Không có quyền thao tác.', 'danger')
+        return redirect(url_for('nomination.list_nominations'))
+
+    # Allow changing ten_don_vi_de_xuat if tap_the
+    dh_obj = DanhHieu.query.filter_by(ten_danh_hieu=chi_tiet.loai_danh_hieu, is_active=True).first()
+    is_tap_the = dh_obj and (dh_obj.pham_vi or 'Cá nhân') == 'Đơn vị'
+    if is_tap_the:
+        new_ten = request.form.get('ten_don_vi_de_xuat', '').strip()
+        if new_ten:
+            chi_tiet.ten_don_vi_de_xuat = new_ten
+        # Update tap_the_data
+        if dh_obj and dh_obj.tieu_chi:
+            from app.models.nomination import TieuChi as _TC
+            _tc_list = _TC.query.filter(_TC.ma_truong.in_(dh_obj.tieu_chi), _TC.is_active == True).all()
+            tap_the_data_dict = {}
+            for tc in _tc_list:
+                val = request.form.get(tc.ma_truong, '').strip()
+                if val:
+                    tap_the_data_dict[tc.ma_truong] = val
+            chi_tiet.tap_the_data = _json.dumps(tap_the_data_dict, ensure_ascii=False) if tap_the_data_dict else None
+
+    # Update all standard criteria fields
+    simple_fields = [
+        'muc_do_hoan_thanh', 'kiem_tra_tin_hoc', 'diem_kiem_tra_tin_hoc',
+        'kiem_tra_dieu_lenh', 'diem_kiem_tra_dieu_lenh',
+        'dia_ly_quan_su', 'diem_dia_ly_quan_su',
+        'ban_sung', 'diem_ban_sung', 'the_luc', 'diem_the_luc',
+        'kiem_tra_chinh_tri', 'diem_kiem_tra_chinh_tri',
+        'phieu_tin_nhiem', 'xep_loai_dang_vien', 'ket_qua_doan_the',
+        'xep_loai_doan_vien', 'hinh_thuc_khen_thuong_qc', 'ket_qua_phu_nu',
+        'hinh_thuc_khen_thuong_pn', 'chu_tri_don_vi_danh_hieu',
+        'danh_hieu_gv_gioi', 'tien_do_pgs', 'dinh_muc_giang_day',
+        'thoi_gian_lao_dong_kh', 'ket_qua_kiem_tra_giang',
+        'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh', 'ket_qua_ren_luyen',
+        'hinh_thuc_tot_nghiep', 'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta',
+        'diem_tn_mon4', 'diem_tn_chuyennganh', 'diem_tn_baove',
+        'thanh_tich_ca_nhan_khac',
+    ]
+    for field in simple_fields:
+        val = request.form.get(field, '').strip()
+        setattr(chi_tiet, field, val or None)
+
+    # NCKH
+    nckh_text = request.form.get('nckh_noi_dung_text', '').strip()
+    if not nckh_text:
+        nckh_list = [x.strip() for x in request.form.getlist('nckh_noi_dung') if x and x.strip()]
+        nckh_text = '; '.join(nckh_list)
+    chi_tiet.nckh_noi_dung = nckh_text or None
+
+    diem_nckh_raw = request.form.get('diem_nckh', '').strip()
+    chi_tiet.diem_nckh = float(diem_nckh_raw) if diem_nckh_raw else None
+
+    # ghi_chu
+    chi_tiet.ghi_chu = request.form.get('ghi_chu_item', '').strip() or None
+
+    db.session.commit()
+
+    name = chi_tiet.quan_nhan.ho_ten if chi_tiet.quan_nhan else (chi_tiet.ten_don_vi_de_xuat or 'Mục')
+    flash(f'Đã cập nhật thông tin cho: {name}', 'success')
+    return redirect(url_for('nomination.edit_nomination', id=de_xuat.id))
+
+
 @nomination_bp.route('/<int:id>/submit', methods=['POST'])
 @login_required
 @unit_user_required
@@ -1158,6 +1303,9 @@ def export_nomination_word(id):
     p_sr2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True)
 
+    # --- Khóa tài liệu: chỉ cho sửa định dạng, không cho sửa nội dung ---
+    protect_document_formatting_only(doc, 'bth123')
+
     # --- Stream to response ---
     buf = BytesIO()
     doc.save(buf)
@@ -1172,3 +1320,42 @@ def export_nomination_word(id):
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+
+
+def protect_document_formatting_only(doc, password: str):
+    """
+    Khóa tài liệu: chỉ cho phép chỉnh định dạng (lề, bảng...),
+    không cho sửa nội dung. Mật khẩu được hash theo chuẩn OOXML.
+    """
+    # Tạo salt ngẫu nhiên (16 bytes)
+    salt = os.urandom(16)
+    salt_b64 = binascii.b2a_base64(salt).strip().decode()
+
+    # Hash mật khẩu theo chuẩn OOXML (SHA-1, 100000 vòng)
+    key = hashlib.sha1(salt + password.encode('utf-16-le')).digest()
+    for _ in range(99999):
+        key = hashlib.sha1(key).digest()
+    hash_b64 = binascii.b2a_base64(key).strip().decode()
+
+    # Lấy hoặc tạo thẻ <w:settings>
+    settings = doc.settings.element
+
+    # Xóa thẻ documentProtection cũ nếu có
+    for old in settings.findall(qn('w:documentProtection')):
+        settings.remove(old)
+
+    # Tạo thẻ <w:documentProtection>
+    doc_prot = OxmlElement('w:documentProtection')
+    doc_prot.set(qn('w:edit'),              'readOnly')       # chỉ đọc nội dung
+    doc_prot.set(qn('w:formatting'),        '1')              # CHO PHÉP sửa định dạng
+    doc_prot.set(qn('w:enforcement'),       '1')              # bật bảo vệ
+    doc_prot.set(qn('w:cryptProviderType'), 'rsaFull')
+    doc_prot.set(qn('w:cryptAlgorithmClass'), 'hash')
+    doc_prot.set(qn('w:cryptAlgorithmType'), 'typeAny')
+    doc_prot.set(qn('w:cryptAlgorithmSid'), '4')              # SHA-1
+    doc_prot.set(qn('w:cryptSpinCount'),    '100000')
+    doc_prot.set(qn('w:hash'),              hash_b64)
+    doc_prot.set(qn('w:salt'),              salt_b64)
+
+    # Chèn vào đầu <w:settings>
+    settings.insert(0, doc_prot)

@@ -121,6 +121,10 @@
                             {% endif %}
                         </td>
                         <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                    onclick="openEditItemModal({{ ct.id }})" title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </button>
                             <form id="delItem{{ ct.id }}" method="POST"
                                   action="{{ url_for('nomination.delete_nomination_item', id=ct.id) }}" style="display:inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -1311,5 +1315,273 @@ function updateSubmitButtonState() {
     document.addEventListener('DOMContentLoaded', function() { applyDiemTotNghiep(); });
     setTimeout(applyDiemTotNghiep, 300);
 })();
+</script>
+
+<!-- Modal Sửa Cá nhân/Đơn vị -->
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editItemModalLabel"><i class="bi bi-pencil-square me-2"></i>Sửa thông tin đề xuất</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editItemForm" method="POST" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div id="editItemLoading" class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Đang tải...</p></div>
+          <div id="editItemContent" style="display:none">
+            <!-- Tên đơn vị (tập thể) -->
+            <div id="edit-wrap-tap-the" class="mb-3" style="display:none">
+              <label class="form-label fw-semibold">Tên đơn vị đề xuất</label>
+              <input type="text" name="ten_don_vi_de_xuat" id="edit-ten_don_vi_de_xuat" class="form-control">
+            </div>
+            <!-- Tên cá nhân (hiển thị, không sửa) -->
+            <div id="edit-wrap-ca-nhan" class="mb-3 p-3 bg-light rounded" style="display:none">
+              <strong><i class="bi bi-person me-1"></i>Cá nhân:</strong> <span id="edit-hoten-display"></span>
+              <span class="ms-3 text-muted" id="edit-danh-hieu-display"></span>
+            </div>
+
+            <!-- Tiêu chí chung -->
+            <div class="row g-3">
+              <div class="col-md-4 edit-field-wrap" data-field="muc_do_hoan_thanh">
+                <label class="form-label">Mức độ hoàn thành</label>
+                <select name="muc_do_hoan_thanh" class="form-select">
+                  <option value="">-- Chọn --</option>
+                  {% for m in muc_do_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="phieu_tin_nhiem">
+                <label class="form-label">Phiếu tín nhiệm</label>
+                <input type="text" name="phieu_tin_nhiem" class="form-control" placeholder="VD: Tín nhiệm cao">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_ren_luyen">
+                <label class="form-label">Kết quả rèn luyện</label>
+                <input type="text" name="ket_qua_ren_luyen" class="form-control">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_tin_hoc">
+                <label class="form-label">Điểm kỹ năng số</label>
+                <input type="number" name="diem_kiem_tra_tin_hoc" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_tin_hoc">
+                <label class="form-label">Xếp loại kỹ năng số</label>
+                <input type="text" name="kiem_tra_tin_hoc" class="form-control">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_dieu_lenh">
+                <label class="form-label">Điểm điều lệnh</label>
+                <input type="number" name="diem_kiem_tra_dieu_lenh" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_dieu_lenh">
+                <label class="form-label">Xếp loại điều lệnh</label>
+                <input type="text" name="kiem_tra_dieu_lenh" class="form-control">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="diem_dia_ly_quan_su">
+                <label class="form-label">Điểm ĐHQS</label>
+                <input type="number" name="diem_dia_ly_quan_su" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="dia_ly_quan_su">
+                <label class="form-label">Xếp loại ĐHQS</label>
+                <input type="text" name="dia_ly_quan_su" class="form-control">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="diem_ban_sung">
+                <label class="form-label">Điểm bắn súng</label>
+                <input type="number" name="diem_ban_sung" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="ban_sung">
+                <label class="form-label">Xếp loại bắn súng</label>
+                <input type="text" name="ban_sung" class="form-control">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="diem_the_luc">
+                <label class="form-label">Điểm thể lực</label>
+                <input type="number" name="diem_the_luc" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="the_luc">
+                <label class="form-label">Xếp loại thể lực</label>
+                <input type="text" name="the_luc" class="form-control">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_chinh_tri">
+                <label class="form-label">Điểm chính trị</label>
+                <input type="number" name="diem_kiem_tra_chinh_tri" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_chinh_tri">
+                <label class="form-label">Xếp loại chính trị</label>
+                <input type="text" name="kiem_tra_chinh_tri" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="xep_loai_dang_vien">
+                <label class="form-label">Xếp loại đảng viên</label>
+                <input type="text" name="xep_loai_dang_vien" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_doan_the">
+                <label class="form-label">Kết quả đoàn thể</label>
+                <input type="text" name="ket_qua_doan_the" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="xep_loai_doan_vien">
+                <label class="form-label">Xếp loại đoàn viên</label>
+                <input type="text" name="xep_loai_doan_vien" class="form-control">
+              </div>
+              <!-- Học viên -->
+              <div class="col-md-4 edit-field-wrap" data-field="diem_tong_ket">
+                <label class="form-label">Điểm tổng kết</label>
+                <input type="number" name="diem_tong_ket" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_thuc_hanh">
+                <label class="form-label">Kết quả thực hành</label>
+                <input type="text" name="ket_qua_thuc_hanh" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="danh_hieu_hv_gioi">
+                <label class="form-label">Danh hiệu HV giỏi</label>
+                <input type="text" name="danh_hieu_hv_gioi" class="form-control">
+              </div>
+              <!-- Tốt nghiệp -->
+              <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_tot_nghiep">
+                <label class="form-label">Hình thức tốt nghiệp</label>
+                <input type="text" name="hinh_thuc_tot_nghiep" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ctd">
+                <label class="form-label">Điểm CTĐ (TN)</label>
+                <input type="number" name="diem_tn_ctd" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ct">
+                <label class="form-label">Điểm CT (TN)</label>
+                <input type="number" name="diem_tn_ct" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ta">
+                <label class="form-label">Điểm TA (TN)</label>
+                <input type="number" name="diem_tn_ta" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_mon4">
+                <label class="form-label">Điểm môn 4 (TN)</label>
+                <input type="number" name="diem_tn_mon4" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_chuyennganh">
+                <label class="form-label">Điểm CN (TN)</label>
+                <input type="number" name="diem_tn_chuyennganh" class="form-control" step="0.01">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_baove">
+                <label class="form-label">Điểm BV KL (TN)</label>
+                <input type="number" name="diem_tn_baove" class="form-control" step="0.01">
+              </div>
+              <!-- Giảng viên -->
+              <div class="col-md-4 edit-field-wrap" data-field="danh_hieu_gv_gioi">
+                <label class="form-label">Danh hiệu GV giỏi</label>
+                <input type="text" name="danh_hieu_gv_gioi" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="dinh_muc_giang_day">
+                <label class="form-label">Định mức giảng dạy</label>
+                <input type="text" name="dinh_muc_giang_day" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_kiem_tra_giang">
+                <label class="form-label">KT giảng</label>
+                <input type="text" name="ket_qua_kiem_tra_giang" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="thoi_gian_lao_dong_kh">
+                <label class="form-label">Thời gian LĐKH (giờ)</label>
+                <input type="number" name="thoi_gian_lao_dong_kh" class="form-control" step="0.1">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="tien_do_pgs">
+                <label class="form-label">Tiến độ PGS</label>
+                <input type="text" name="tien_do_pgs" class="form-control">
+              </div>
+              <!-- NCKH -->
+              <div class="col-md-6 edit-field-wrap" data-field="nckh_noi_dung">
+                <label class="form-label">Nội dung NCKH</label>
+                <textarea name="nckh_noi_dung_text" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="col-md-3 edit-field-wrap" data-field="diem_nckh">
+                <label class="form-label">Điểm NCKH</label>
+                <input type="number" name="diem_nckh" class="form-control" step="0.01">
+              </div>
+              <!-- Phong trào -->
+              <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_qc">
+                <label class="form-label">KT phong trào QC</label>
+                <input type="text" name="hinh_thuc_khen_thuong_qc" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_phu_nu">
+                <label class="form-label">Kết quả phụ nữ</label>
+                <input type="text" name="ket_qua_phu_nu" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_pn">
+                <label class="form-label">KT phụ nữ</label>
+                <input type="text" name="hinh_thuc_khen_thuong_pn" class="form-control">
+              </div>
+              <div class="col-md-4 edit-field-wrap" data-field="chu_tri_don_vi_danh_hieu">
+                <label class="form-label">Chủ trì đơn vị danh hiệu</label>
+                <input type="text" name="chu_tri_don_vi_danh_hieu" class="form-control">
+              </div>
+              <!-- Thành tích khác -->
+              <div class="col-md-12 edit-field-wrap" data-field="thanh_tich_ca_nhan_khac">
+                <label class="form-label">Thành tích cá nhân khác</label>
+                <textarea name="thanh_tich_ca_nhan_khac" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Ghi chú</label>
+                <textarea name="ghi_chu_item" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Lưu thay đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function openEditItemModal(ctId) {
+    var modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+    var loading = document.getElementById('editItemLoading');
+    var content = document.getElementById('editItemContent');
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    document.getElementById('editItemForm').action = '/nomination/item/' + ctId + '/update';
+    modal.show();
+
+    fetch('/nomination/item/' + ctId + '/data')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            loading.style.display = 'none';
+            content.style.display = 'block';
+
+            // Cá nhân vs tập thể
+            var isTapThe = !d.quan_nhan_id;
+            document.getElementById('edit-wrap-tap-the').style.display = isTapThe ? '' : 'none';
+            document.getElementById('edit-wrap-ca-nhan').style.display = isTapThe ? 'none' : '';
+            if (!isTapThe) {
+                document.getElementById('edit-hoten-display').textContent = d.ho_ten || ('ID: ' + d.quan_nhan_id);
+            }
+            document.getElementById('edit-danh-hieu-display').textContent = d.loai_danh_hieu;
+
+            // Fill all fields
+            var form = document.getElementById('editItemForm');
+            var fields = [
+                'ten_don_vi_de_xuat','muc_do_hoan_thanh','phieu_tin_nhiem','ket_qua_ren_luyen',
+                'diem_kiem_tra_tin_hoc','kiem_tra_tin_hoc','diem_kiem_tra_dieu_lenh','kiem_tra_dieu_lenh',
+                'diem_dia_ly_quan_su','dia_ly_quan_su','diem_ban_sung','ban_sung','diem_the_luc','the_luc',
+                'diem_kiem_tra_chinh_tri','kiem_tra_chinh_tri','xep_loai_dang_vien','ket_qua_doan_the',
+                'xep_loai_doan_vien','hinh_thuc_khen_thuong_qc','ket_qua_phu_nu','hinh_thuc_khen_thuong_pn',
+                'chu_tri_don_vi_danh_hieu','danh_hieu_gv_gioi','tien_do_pgs','dinh_muc_giang_day',
+                'thoi_gian_lao_dong_kh','ket_qua_kiem_tra_giang','danh_hieu_hv_gioi','diem_tong_ket',
+                'ket_qua_thuc_hanh','hinh_thuc_tot_nghiep','diem_tn_ctd','diem_tn_ct','diem_tn_ta',
+                'diem_tn_mon4','diem_tn_chuyennganh','diem_tn_baove','diem_nckh',
+                'thanh_tich_ca_nhan_khac'
+            ];
+            fields.forEach(function(f) {
+                var el = form.querySelector('[name="' + f + '"]');
+                if (el && d[f] !== undefined) el.value = d[f];
+            });
+            // nckh_noi_dung → textarea nckh_noi_dung_text
+            var nEl = form.querySelector('[name="nckh_noi_dung_text"]');
+            if (nEl) nEl.value = d.nckh_noi_dung || '';
+            // ghi_chu → ghi_chu_item
+            var gcEl = form.querySelector('[name="ghi_chu_item"]');
+            if (gcEl) gcEl.value = d.ghi_chu || '';
+        })
+        .catch(function(err) {
+            loading.innerHTML = '<div class="alert alert-danger">Không tải được dữ liệu.</div>';
+            console.error(err);
+        });
+}
 </script>
 {% endblock %}

@@ -46,8 +46,8 @@ TRACKING_DEPT_COLUMNS = [
     {'key': 'Ban Tác huấn', 'label': 'Ban Tác huấn'},
     {'key': 'Ban Quân lực', 'label': 'Ban Quân lực'},
     {'key': 'Thủ trưởng Phòng TM-HC', 'label': 'TT phòng TM-HC'},
-    {'key': 'Phòng Đào tạo', 'label': '(Phòng Đào tạo)'},
-    {'key': 'Phòng Khoa học', 'label': '(Phòng Khoa học quân sự)'},
+    {'key': 'Phòng Đào tạo', 'label': 'Phòng Đào tạo'},
+    {'key': 'Phòng Khoa học', 'label': 'Phòng Khoa học quân sự'},
     {'key': 'Ban Khảo thí', 'label': 'Ban Khảo thí'},
     {'key': 'Ủy ban Kiểm tra', 'label': 'Ủy ban Kiểm tra'},
 ]
@@ -63,8 +63,8 @@ TRACKING_DEPT_COLUMNS = [
     {'key': 'Ban Tác huấn', 'label': 'Ban Tác huấn'},
     {'key': 'Ban Quân lực', 'label': 'Ban Quân lực'},
     {'key': 'Thủ trưởng Phòng TM-HC', 'label': 'TT phòng TM-HC'},
-    {'key': 'Phòng Đào tạo', 'label': '(Phòng Đào tạo)'},
-    {'key': 'Phòng Khoa học', 'label': '(Phòng Khoa học quân sự)'},
+    {'key': 'Phòng Đào tạo', 'label': 'Phòng Đào tạo'},
+    {'key': 'Phòng Khoa học', 'label': 'Phòng Khoa học quân sự'},
     {'key': 'Ban Khảo thí', 'label': 'Ban Khảo thí'},
     {'key': 'Ủy ban Kiểm tra', 'label': 'Ủy ban Kiểm tra'},
 ]
@@ -118,6 +118,10 @@ def _is_individual_dept_approved(de_xuat_id, ct, dept_name):
 
     if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
         return False
+
+    # Nếu phòng đã đồng ý ở cấp đề xuất (pd-level) → tính là đồng ý cho mọi cá nhân
+    if pd.ket_qua == KetQuaDuyet.DONG_Y.value:
+        return True
 
     kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
     if not kq:
