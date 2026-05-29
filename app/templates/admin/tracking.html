@@ -167,8 +167,8 @@
         <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
             <thead>
                 <tr>
-                    <th class="sticky-stt">STT</th>
-                    <th class="sticky-name-col">Họ tên</th>
+                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
+                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
                     <th style="min-width:100px;">Đơn vị</th>
                     <th>Cấp bậc / Chức vụ</th>
                     <th>Đối tượng</th>
@@ -196,8 +196,8 @@
                     {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
                 {% endfor %}
                 <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
-                    <td class="sticky-stt">{{ loop.index }}</td>
-                    <td class="fw-semibold sticky-name-col">
+                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
+                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
                         <div class="name-btn-group">
                             <div class="name-text">
                             {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
@@ -214,15 +214,15 @@
                         </div>
                     </td>
                     <td title="{{ ct_data.don_vi }}"><small class="col-md">{{ ct_data.don_vi }}</small></td>
-                    <td title="{{ (ct.quan_nhan.cap_bac or '') ~ (' - ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan and ct.quan_nhan.chuc_vu else '') }}">
+                    <td>
                         {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %}<br>{{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
                         {% else %}<small class="text-muted">-</small>{% endif %}
                     </td>
-                    <td title="{{ ct.doi_tuong or '' }}"><small>{{ ct.doi_tuong or '-' }}</small></td>
-                    <td title="{{ ct.loai_danh_hieu or '' }}">
-                        {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTD</span>
+                    <td><small>{{ ct.doi_tuong or '-' }}</small></td>
+                    <td>
+                        {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
                         {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
-                        {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">DVQT</span>
+                        {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
                         {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
                     </td>
                     {% if view_mode == 'detail' %}
@@ -231,7 +231,9 @@
                     <td class="text-center" style="font-size:0.75rem;">
                         {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
                         {% if val is not none and val != '' and val != 0 %}
-                            <span class="col-sm d-inline-block" title="{{ val }}">{{ val }}</span>
+                            {% if field in ('nckh_noi_dung', 'thanh_tich_ca_nhan_khac', 'nckh_minh_chung') %}
+                            <span style="display:block;max-width:140px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:help;" title="{{ val }}">{{ val }}</span>
+                            {% else %}{{ val }}{% endif %}
                         {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% endfor %}
@@ -246,7 +248,7 @@
                         {% else %}<span class="text-muted" title="Chưa có">-</span>{% endif %}
                     </td>
                     {% endfor %}
-                    <td class="text-center sticky-action-col">
+                    <td class="text-center">
                         <div class="d-flex gap-1 justify-content-center">
                             {% if ct_can_approve %}
                             <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
@@ -278,23 +280,23 @@
     </div>
     <div class="tbl-scroll">
         <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
-            <thead class="table-light">
+            <thead>
                 <tr>
-                    <th class="sticky-stt">STT</th>
-                    <th class="sticky-name-col">Tên tập thể</th>
+                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
+                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
                     <th>Đơn vị đề xuất</th>
                     <th>Danh hiệu</th>
                     <th>Năm học</th>
-                    <th class="text-center" style="font-size:0.72rem;">Mức độ HTNV</th>
-                    <th class="text-center" style="font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
+                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Mức độ HTNV</th>
+                    <th class="text-center" style="min-width:120px;font-size:0.72rem;">Chủ trì ĐV danh hiệu</th>
                     {% for f in tt_criteria_fields %}
-                    <th class="text-center" style="font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
+                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
                     {% endfor %}
-                    <th class="text-center" style="font-size:0.72rem;">Thành tích khác</th>
+                    <th class="text-center" style="min-width:100px;font-size:0.72rem;">Thành tích khác</th>
                     {% for col in tracking_dept_columns %}
                     <th class="text-center">{{ col.label }}</th>
                     {% endfor %}
-                    <th class="text-center" style="width:80px;">Thao tác</th>
+                    <th class="text-center" style="width:100px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -304,8 +306,8 @@
                 {% set ct_can_approve = item.can_final_approve %}
                 {% set dx_tt = item.dx %}
                 <tr class="{% if ct_can_approve %}table-info{% endif %}">
-                    <td class="sticky-stt">{{ loop.index }}</td>
-                    <td class="fw-semibold sticky-name-col">
+                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
+                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;min-width:170px;max-width:220px;box-shadow:2px 0 5px rgba(0,0,0,.08);">
                         <div class="name-btn-group">
                             <div class="name-text"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}</div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
@@ -783,7 +785,10 @@ function openDetailModal(ctId) {
     body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
     modal.show();
     fetch('/admin/api/chi-tiet/' + ctId)
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
         .then(d => {
             const p = d.personal || {}, n = d.nomination || {};
             const badges = [
@@ -834,7 +839,7 @@ function openDetailModal(ctId) {
             }
             body.innerHTML = html;
         })
-        .catch(() => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu.</div>'; });
+        .catch(e => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu: ' + e.message + '</div>'; });
 }
 
 function openRejectIndividualModal(ctId, hoTen) {
