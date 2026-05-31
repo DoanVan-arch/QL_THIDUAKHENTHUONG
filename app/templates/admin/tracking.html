@@ -10,7 +10,6 @@
     'Từ chối': 'badge-rejected'
 } %}
 
-<!-- ===== PAGE HEADER (tiêu đề, không chứa toolbar) ===== -->
 <div class="page-header">
     <div>
         <h4><i class="bi bi-eye me-2"></i>Theo dõi quy trình phê duyệt</h4>
@@ -18,83 +17,45 @@
     </div>
 </div>
 
-<!-- ===== TOOLBAR CỐ ĐỊNH CĂNG TRÁI (tách khỏi page-header) ===== -->
 {% if unit_groups %}
 <div class="toolbar-wrapper">
     <div class="toolbar-inner">
-        <select class="form-select form-select-sm" id="unitFilter" style="width:220px; min-width:220px;">
+        <select class="form-select form-select-sm" id="unitFilter" style="width:220px;min-width:220px;">
             <option value="">Tất cả đơn vị ({{ unit_groups|length }})</option>
             {% for ug in unit_groups %}
             <option value="{{ ug.unit_name }}" {% if unit_filter == ug.unit_name %}selected{% endif %}>{{ ug.unit_name }}</option>
             {% endfor %}
         </select>
-
-        <!-- View mode toggle -->
-        <div class="btn-group btn-group-sm" role="group" title="Chế độ xem">
+        <div class="btn-group btn-group-sm" role="group">
             <a href="{{ url_for('admin.approval_tracking', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view='compact') }}"
-               class="btn {{ 'btn-navy' if view_mode == 'compact' else 'btn-outline-navy' }}" title="Xem gọn">
-                <i class="bi bi-list"></i>
-            </a>
+               class="btn {{ 'btn-navy' if view_mode == 'compact' else 'btn-outline-navy' }}" title="Xem gọn"><i class="bi bi-list"></i></a>
             <a href="{{ url_for('admin.approval_tracking', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view='detail') }}"
-               class="btn {{ 'btn-navy' if view_mode == 'detail' else 'btn-outline-navy' }}" title="Xem chi tiết">
-                <i class="bi bi-table"></i>
-            </a>
+               class="btn {{ 'btn-navy' if view_mode == 'detail' else 'btn-outline-navy' }}" title="Xem chi tiết"><i class="bi bi-table"></i></a>
         </div>
-
-        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll"
-                title="Phê duyệt cuối tất cả đề xuất sẵn sàng">
+        <button type="button" class="btn btn-sm btn-success" id="btnApproveAll">
             <i class="bi bi-shield-check me-1"></i>PD cuối toàn bộ
         </button>
-
         <a href="{{ url_for('admin.export_tracking_excel', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
-           class="btn btn-sm btn-outline-success" title="Xuất Excel chi tiết">
-            <i class="bi bi-file-earmark-excel me-1"></i>Excel
-        </a>
-
-        <button class="btn btn-sm btn-outline-danger" onclick="printTracking()" title="In PDF toàn bộ">
-            <i class="bi bi-printer me-1"></i>In PDF
-        </button>
+           class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+        <button class="btn btn-sm btn-outline-danger" onclick="printTracking()"><i class="bi bi-printer me-1"></i>In PDF</button>
     </div>
 </div>
 {% endif %}
 
-<!-- Summary stats (chỉ hiện khi đã chọn năm học) -->
 {% if nam_hoc_filter %}
 <div class="d-flex gap-3 mb-3 flex-wrap">
-    <div class="stat-mini">
-        <i class="bi bi-people-fill text-primary"></i>
-        <span>Cá nhân: <strong>{{ total_individuals }}</strong></span>
-    </div>
-    <div class="stat-mini">
-        <i class="bi bi-folder2-open text-secondary"></i>
-        <span>Đề xuất: <strong>{{ stats.total }}</strong></span>
-    </div>
-    <div class="stat-mini">
-        <i class="bi bi-hourglass-split text-warning"></i>
-        <span>Chờ duyệt: <strong>{{ stats.pending }}</strong></span>
-    </div>
-    <div class="stat-mini">
-        <i class="bi bi-arrow-repeat text-info"></i>
-        <span>Đang duyệt: <strong>{{ stats.reviewing }}</strong></span>
-    </div>
-    <div class="stat-mini">
-        <i class="bi bi-check-circle text-success"></i>
-        <span>6 CQ duyệt: <strong>{{ stats.dept_approved }}</strong></span>
-    </div>
-    <div class="stat-mini">
-        <i class="bi bi-shield-check text-primary"></i>
-        <span>PD cuối: <strong>{{ stats.final_approved }}</strong></span>
-    </div>
+    <div class="stat-mini"><i class="bi bi-people-fill text-primary"></i><span>Cá nhân: <strong>{{ total_individuals }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-folder2-open text-secondary"></i><span>Đề xuất: <strong>{{ stats.total }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-hourglass-split text-warning"></i><span>Chờ duyệt: <strong>{{ stats.pending }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-arrow-repeat text-info"></i><span>Đang duyệt: <strong>{{ stats.reviewing }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-check-circle text-success"></i><span>6 CQ duyệt: <strong>{{ stats.dept_approved }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-shield-check text-primary"></i><span>PD cuối: <strong>{{ stats.final_approved }}</strong></span></div>
     {% if stats.rejected > 0 %}
-    <div class="stat-mini">
-        <i class="bi bi-x-circle text-danger"></i>
-        <span>Từ chối: <strong>{{ stats.rejected }}</strong></span>
-    </div>
+    <div class="stat-mini"><i class="bi bi-x-circle text-danger"></i><span>Từ chối: <strong>{{ stats.rejected }}</strong></span></div>
     {% endif %}
 </div>
 {% endif %}
 
-<!-- Filters -->
 <div class="card-section mb-3">
     <div class="card-body-custom py-2">
         <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
@@ -110,21 +71,15 @@
             {% if nam_hoc_filter %}
             <select class="form-select form-select-sm" name="status" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Tất cả trạng thái</option>
-                {% for s in status_list %}
-                <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
+                {% for s in status_list %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
             </select>
             <select class="form-select form-select-sm" name="unit" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Tất cả đơn vị</option>
-                {% for u in unit_names %}
-                <option value="{{ u }}" {% if unit_filter == u %}selected{% endif %}>{{ u }}</option>
-                {% endfor %}
+                {% for u in unit_names %}<option value="{{ u }}" {% if unit_filter == u %}selected{% endif %}>{{ u }}</option>{% endfor %}
             </select>
             <select class="form-select form-select-sm" name="danh_hieu" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Tất cả danh hiệu</option>
-                {% for dh in danh_hieu_list %}
-                <option value="{{ dh }}" {% if danh_hieu_filter == dh %}selected{% endif %}>{{ dh }}</option>
-                {% endfor %}
+                {% for dh in danh_hieu_list %}<option value="{{ dh }}" {% if danh_hieu_filter == dh %}selected{% endif %}>{{ dh }}</option>{% endfor %}
             </select>
             <select class="form-select form-select-sm" name="scope" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Tất cả diện QL</option>
@@ -132,11 +87,8 @@
                 <option value="can_bo" {% if scope_filter == 'can_bo' %}selected{% endif %}>Diện Cán bộ</option>
             </select>
             <div class="input-group input-group-sm" style="width:220px;">
-                <input type="text" class="form-control" name="q" value="{{ search_query }}"
-                       placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
-                <button class="btn btn-outline-navy" type="submit" title="Tìm kiếm">
-                    <i class="bi bi-search"></i>
-                </button>
+                <input type="text" class="form-control" name="q" value="{{ search_query }}" placeholder="Tìm theo họ tên...">
+                <button class="btn btn-outline-navy" type="submit"><i class="bi bi-search"></i></button>
             </div>
             {% endif %}
             {% if nam_hoc_filter or status_filter or unit_filter or danh_hieu_filter or scope_filter or search_query %}
@@ -160,29 +112,32 @@
 {# ===== BẢNG CÁ NHÂN ===== #}
 {% if flat_ca_nhan %}
 <div class="card-section mb-4">
-    <div class="card-header-custom d-flex justify-content-between align-items-center">
+    <div class="card-header-custom">
         <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cá nhân — {{ flat_ca_nhan|length }} người</h6>
     </div>
+    <div class="tbl-outer">
     <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;border-collapse:separate;border-spacing:0;">
+        <table class="table table-custom table-hover mb-0 align-middle">
             <thead>
                 <tr>
-                    <th class="sticky-stt-col" style="position:sticky;left:0;z-index:4;background:var(--navy-primary,#1a3a5c);width:36px;min-width:36px;max-width:36px;padding:4px 6px;">STT</th>
-                    <th class="sticky-name-col" style="position:sticky;left:36px;z-index:4;background:var(--navy-primary,#1a3a5c);width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.18);">Họ tên</th>
-                    <th class="col-don-vi">Đơn vị</th>
-                    <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
-                    <th class="col-doi-tuong">Đối tượng</th>
-                    <th class="col-danh-hieu">Danh hiệu</th>
+                    <th class="col-stt">STT</th>
+                    <th class="col-name">Họ tên</th>
+                    <th class="col-donvi">Đơn vị</th>
+                    <th class="col-capbac">Cấp bậc / Chức vụ</th>
+                    <th class="col-doituong">Đối tượng</th>
+                    <th class="col-danhhieu">Danh hiệu</th>
                     {% if view_mode == 'detail' %}
-                    <th>Năm học</th>
+                    <th class="col-namhoc">Năm học</th>
                     {% for field in all_fields %}
-                    <th class="text-center" style="font-size:0.72rem;">{{ all_field_labels[field] }}</th>
+                    <th class="col-detail" style="font-size:0.72rem;">{{ all_field_labels[field] }}</th>
                     {% endfor %}
                     {% endif %}
                     {% for col in tracking_dept_columns %}
-                    <th class="text-center col-dept-approval" title="{{ col.label }}"><small>{{ col.label }}</small></th>
+                    <th class="col-dept text-center" title="{{ col.label }}">
+                        <div class="dept-label">{{ col.label }}</div>
+                    </th>
                     {% endfor %}
-                    <th class="text-center sticky-action-col" style="width:80px;">Thao tác</th>
+                    <th class="col-action text-center">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -196,43 +151,44 @@
                     {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
                 {% endfor %}
                 <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
-                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:36px;min-width:36px;max-width:36px;border-right:1px solid #dee2e6;padding:4px 6px;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:36px;z-index:2;background:inherit;width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.08);overflow:hidden;">
+                    <td class="col-stt">{{ loop.index }}</td>
+                    <td class="col-name fw-semibold">
                         <div class="name-btn-group">
-                            <div class="name-text" style="max-width:108px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                            {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
-                            {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
-                            <div class="d-flex flex-wrap gap-1 mt-1">
-                            {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
-                            {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
-                            {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
-                            {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                            <div class="name-text">
+                                {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
+                                {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
+                                    {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
+                                    {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
+                                    {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                                </div>
+                                {% endif %}
                             </div>
-                            {% endif %}
-                            </div>
-                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
+                               class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
-                    <td class="col-don-vi" title="{{ ct_data.don_vi }}"><small>{{ ct_data.don_vi }}</small></td>
-                    <td class="col-cap-bac" title="{% if ct.quan_nhan %}{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}{% endif %}">
+                    <td class="col-donvi" title="{{ ct_data.don_vi }}"><small>{{ ct_data.don_vi }}</small></td>
+                    <td class="col-capbac" title="{% if ct.quan_nhan %}{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}{% endif %}">
                         {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
                         {% else %}<small class="text-muted">-</small>{% endif %}
                     </td>
-                    <td class="col-doi-tuong" title="{{ ct.doi_tuong or '-' }}"><small>{{ ct.doi_tuong or '-' }}</small></td>
-                    <td class="col-danh-hieu" title="{{ ct.loai_danh_hieu or '-' }}">
+                    <td class="col-doituong" title="{{ ct.doi_tuong or '-' }}"><small>{{ ct.doi_tuong or '-' }}</small></td>
+                    <td class="col-danhhieu" title="{{ ct.loai_danh_hieu or '-' }}">
                         {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
                         {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
                         {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                        {% else %}<span class="badge bg-secondary" style="display:block;overflow:hidden;text-overflow:ellipsis;max-width:78px;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                        {% else %}<span class="badge bg-secondary" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;display:block;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
                     </td>
                     {% if view_mode == 'detail' %}
-                    <td><small>{{ dx.nam_hoc }}</small></td>
+                    <td class="col-namhoc"><small>{{ dx.nam_hoc }}</small></td>
                     {% for field in all_fields %}
-                    <td class="text-center" style="font-size:0.75rem;">
+                    <td class="col-detail text-center" style="font-size:0.75rem;">
                         {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
                         {% if val is not none and val != '' and val != 0 %}
-                            {% if field in ('nckh_noi_dung', 'thanh_tich_ca_nhan_khac', 'nckh_minh_chung') %}
-                            <span style="display:block;max-width:140px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:help;" title="{{ val }}">{{ val }}</span>
+                            {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac','nckh_minh_chung') %}
+                            <span class="d-block text-truncate" style="max-width:130px;" title="{{ val }}">{{ val }}</span>
                             {% else %}{{ val }}{% endif %}
                         {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
@@ -240,25 +196,30 @@
                     {% endif %}
                     {% for col in tracking_dept_columns %}
                     {% set dn = col.key %}
-                    <td class="text-center">
+                    <td class="col-dept text-center">
                         {% set kq_obj = dept_results[dn] %}
-                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}"><i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}</span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}<span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}<span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                        {% else %}<span class="text-muted" title="Chưa có">-</span>{% endif %}
+                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
+                            <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
+                                <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
+                            </span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
+                            <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
+                            <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% endfor %}
-                    <td class="text-center">
+                    <td class="col-action text-center">
                         <div class="d-flex gap-1 justify-content-center">
                             {% if ct_can_approve %}
                             <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
-                                    onclick="openIndividualApproveModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                                    onclick="openIndividualApproveModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
                                 <i class="bi bi-shield-check"></i>
                             </button>
                             {% endif %}
-                            {% if dx.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối cá nhân này"
-                                    onclick="openRejectIndividualModal({{ ct.id }}, '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                            {% if dx.trang_thai in ['Xét duyệt của cơ quan thường trực','Đang duyệt','Phê duyệt cuối'] %}
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
+                                    onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
                                 <i class="bi bi-x-circle"></i>
                             </button>
                             {% endif %}
@@ -269,34 +230,37 @@
             </tbody>
         </table>
     </div>
+    </div>
 </div>
 {% endif %}
 
 {# ===== BẢNG TẬP THỂ ===== #}
 {% if flat_tap_the %}
 <div class="card-section mb-4">
-    <div class="card-header-custom d-flex justify-content-between align-items-center">
+    <div class="card-header-custom">
         <h6 class="mb-0"><i class="bi bi-building me-2"></i>Tập thể — {{ flat_tap_the|length }} đơn vị</h6>
     </div>
     <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;border-collapse:separate;border-spacing:0;">
+        <table class="table table-custom table-hover mb-0 align-middle">
             <thead>
                 <tr>
-                    <th style="position:sticky;left:0;z-index:4;background:var(--navy-primary,#1a3a5c);width:36px;min-width:36px;max-width:36px;padding:4px 6px;">STT</th>
-                    <th style="position:sticky;left:36px;z-index:4;background:var(--navy-primary,#1a3a5c);width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.18);">Tên tập thể</th>
-                    <th class="col-don-vi">Đơn vị đề xuất</th>
-                    <th class="col-danh-hieu">Danh hiệu</th>
-                    <th>Năm học</th>
-                    <th class="text-center" style="min-width:80px;font-size:0.72rem;">Mức độ HTNV</th>
-                    <th class="text-center" style="min-width:90px;font-size:0.72rem;">Chủ trì ĐV</th>
+                    <th class="col-stt">STT</th>
+                    <th class="col-name">Tên tập thể</th>
+                    <th class="col-donvi">Đơn vị đề xuất</th>
+                    <th class="col-danhhieu">Danh hiệu</th>
+                    <th class="col-namhoc">Năm học</th>
+                    <th class="col-normal text-center">Mức độ HTNV</th>
+                    <th class="col-normal text-center">Chủ trì ĐV</th>
                     {% for f in tt_criteria_fields %}
-                    <th class="text-center" style="min-width:80px;font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
+                    <th class="col-normal text-center" style="font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
                     {% endfor %}
-                    <th class="text-center" style="min-width:80px;font-size:0.72rem;">T.tích khác</th>
+                    <th class="col-normal text-center">T.tích khác</th>
                     {% for col in tracking_dept_columns %}
-                    <th class="text-center col-dept-approval" title="{{ col.label }}"><small>{{ col.label }}</small></th>
+                    <th class="col-dept text-center" title="{{ col.label }}">
+                        <div class="dept-label">{{ col.label }}</div>
+                    </th>
                     {% endfor %}
-                    <th class="text-center" style="width:80px;">Thao tác</th>
+                    <th class="col-action text-center">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -306,59 +270,71 @@
                 {% set ct_can_approve = item.can_final_approve %}
                 {% set dx_tt = item.dx %}
                 <tr class="{% if ct_can_approve %}table-info{% endif %}">
-                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:36px;min-width:36px;max-width:36px;border-right:1px solid #dee2e6;padding:4px 6px;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:36px;z-index:2;background:inherit;width:145px;min-width:145px;max-width:145px;box-shadow:2px 0 4px rgba(0,0,0,.08);overflow:hidden;">
+                    <td class="col-stt">{{ loop.index }}</td>
+                    <td class="col-name fw-semibold">
                         <div class="name-btn-group">
-                            <div class="name-text" style="max-width:108px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><i class="bi bi-building text-primary me-1"></i>{{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}</div>
-                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                            <div class="name-text">
+                                <i class="bi bi-building text-primary me-1"></i>
+                                {{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}
+                            </div>
+                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
+                               class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
-                    <td class="col-don-vi" title="{{ item.don_vi }}"><small>{{ item.don_vi }}</small></td>
-                    <td class="col-danh-hieu" title="{{ ct.loai_danh_hieu or '-' }}">
+                    <td class="col-donvi" title="{{ item.don_vi }}"><small>{{ item.don_vi }}</small></td>
+                    <td class="col-danhhieu" title="{{ ct.loai_danh_hieu or '-' }}">
                         {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
                         {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
-                        {% else %}<span class="badge bg-secondary" style="display:block;overflow:hidden;text-overflow:ellipsis;max-width:78px;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                        {% else %}<span class="badge bg-secondary" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;display:block;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
                     </td>
-                    <td><small>{{ dx_tt.nam_hoc }}</small></td>
-                    <td class="text-center" style="font-size:0.75rem;">
-                        {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
+                    <td class="col-namhoc"><small>{{ dx_tt.nam_hoc }}</small></td>
+                    <td class="col-normal text-center" style="font-size:0.75rem;">
+                        {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
-                    <td class="text-center" style="font-size:0.75rem;">
-                        {% if ct.chu_tri_don_vi_danh_hieu %}<span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
+                    <td class="col-normal text-center" style="font-size:0.75rem;">
+                        {% if ct.chu_tri_don_vi_danh_hieu %}
+                        <span class="d-block text-truncate" style="max-width:130px;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
                         {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% set ttd = ct.tap_the_dict or {} %}
                     {% for f in tt_criteria_fields %}
-                    <td class="text-center" style="font-size:0.75rem;">
-                        {% set fval = ttd.get(f, '') %}
+                    <td class="col-normal text-center" style="font-size:0.75rem;">
+                        {% set fval = ttd.get(f,'') %}
                         {% if fval %}<span>{{ fval }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% endfor %}
-                    <td class="text-center" style="font-size:0.75rem;">
-                        {% if ct.thanh_tich_ca_nhan_khac %}<span style="display:block;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
+                    <td class="col-normal text-center" style="font-size:0.75rem;">
+                        {% if ct.thanh_tich_ca_nhan_khac %}
+                        <span class="d-block text-truncate" style="max-width:120px;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
                         {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% for col in tracking_dept_columns %}
                     {% set dn = col.key %}
-                    <td class="text-center">
+                    <td class="col-dept text-center">
                         {% set kq_obj = dept_results[dn] %}
-                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}"><i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}</span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}<span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}<span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                        {% else %}<span class="text-muted" title="Chưa có">-</span>{% endif %}
+                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
+                            <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
+                                <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
+                            </span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
+                            <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
+                            <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% endfor %}
-                    <td class="text-center">
+                    <td class="col-action text-center">
                         <div class="d-flex gap-1 justify-content-center">
                             {% if ct_can_approve %}
                             <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
-                                    onclick="openIndividualApproveModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat|e }}')">
+                                    onclick="openIndividualApproveModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
                                 <i class="bi bi-shield-check"></i>
                             </button>
                             {% endif %}
-                            {% if dx_tt.trang_thai in ['Xét duyệt của cơ quan thường trực', 'Đang duyệt', 'Phê duyệt cuối'] %}
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối tập thể này"
-                                    onclick="openRejectIndividualModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat|e }}')">
+                            {% if dx_tt.trang_thai in ['Xét duyệt của cơ quan thường trực','Đang duyệt','Phê duyệt cuối'] %}
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
+                                    onclick="openRejectIndividualModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
                                 <i class="bi bi-x-circle"></i>
                             </button>
                             {% endif %}
@@ -388,343 +364,390 @@
 {% endif %}
 {% endif %}
 
-<!-- Individual final approve modal -->
+<!-- MODALS (giữ nguyên) -->
 <div class="modal fade" id="individualApproveModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="individualApproveForm" method="POST" action="">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-primary), var(--navy-light)); color: #fff;">
-                    <h6 class="modal-title"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối cá nhân</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Phê duyệt cuối sẽ lưu cá nhân này vào danh sách khen thưởng.
-                    </div>
-                    <p class="mb-2" style="font-size:0.9rem;">
-                        Cá nhân: <strong id="approveIndividualName"></strong>
-                    </p>
-                    <div class="mb-3">
-                        <label class="form-label small">Ghi chú (tùy chọn)</label>
-                        <textarea class="form-control form-control-sm" name="ghi_chu" rows="2" placeholder="Ghi chú thêm..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Batch approve confirmation modal -->
-<div class="modal fade" id="batchFinalModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-primary), var(--navy-light)); color: #fff;">
-                <h6 class="modal-title" id="batchFinalTitle"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối</h6>
+    <div class="modal-dialog"><div class="modal-content">
+        <form id="individualApproveForm" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--navy-primary),var(--navy-light));color:#fff;">
+                <h6 class="modal-title"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối cá nhân</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p id="batchFinalMessage"></p>
-                <div class="mb-3">
-                    <label class="form-label small">Ghi chú (tùy chọn)</label>
-                    <textarea class="form-control form-control-sm" id="batchGhiChu" rows="2" placeholder="Ghi chú thêm..."></textarea>
-                </div>
+                <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;"><i class="bi bi-info-circle me-1"></i>Phê duyệt cuối sẽ lưu cá nhân này vào danh sách khen thưởng.</div>
+                <p class="mb-2" style="font-size:0.9rem;">Cá nhân: <strong id="approveIndividualName"></strong></p>
+                <div class="mb-3"><label class="form-label small">Ghi chú (tùy chọn)</label>
+                <textarea class="form-control form-control-sm" name="ghi_chu" rows="2"></textarea></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-success" id="batchFinalConfirm">
-                    <i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt
-                </button>
+                <button type="submit" class="btn btn-success"><i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt</button>
             </div>
-        </div>
-    </div>
+        </form>
+    </div></div>
 </div>
-
-<!-- Reject individual modal -->
+<div class="modal fade" id="batchFinalModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,var(--navy-primary),var(--navy-light));color:#fff;">
+            <h6 class="modal-title" id="batchFinalTitle"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <p id="batchFinalMessage"></p>
+            <div class="mb-3"><label class="form-label small">Ghi chú (tùy chọn)</label>
+            <textarea class="form-control form-control-sm" id="batchGhiChu" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-success" id="batchFinalConfirm"><i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt</button>
+        </div>
+    </div></div>
+</div>
 <div class="modal fade" id="rejectIndividualModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="rejectIndividualForm" method="POST" action="">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-header bg-danger text-white">
-                    <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối cá nhân</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        Thao tác này sẽ từ chối cá nhân và gửi thông báo lý do về đơn vị.
-                    </div>
-                    <p class="mb-2" style="font-size:0.9rem;">
-                        Cá nhân: <strong id="rejectIndividualName"></strong>
-                    </p>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
-                        <textarea class="form-control form-control-sm" name="ly_do" rows="3"
-                                  placeholder="Nhập lý do từ chối để thông báo về đơn vị..." required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div class="modal-dialog"><div class="modal-content">
+        <form id="rejectIndividualForm" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header bg-danger text-white">
+                <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối cá nhân</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;"><i class="bi bi-exclamation-triangle me-1"></i>Thao tác này sẽ từ chối cá nhân và gửi thông báo lý do về đơn vị.</div>
+                <p class="mb-2" style="font-size:0.9rem;">Cá nhân: <strong id="rejectIndividualName"></strong></p>
+                <div class="mb-3"><label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                <textarea class="form-control form-control-sm" name="ly_do" rows="3" required></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận từ chối</button>
+            </div>
+        </form>
+    </div></div>
 </div>
-
-<!-- Reject nomination modal -->
 <div class="modal fade" id="rejectNominationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="rejectNominationForm" method="POST" action="">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-header bg-danger text-white">
-                    <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối toàn bộ đề xuất</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-danger py-2 mb-3" style="font-size:0.85rem;">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        Thao tác này sẽ từ chối <strong>toàn bộ đề xuất</strong> và gửi thông báo lý do về đơn vị.
-                    </div>
-                    <p class="mb-2" style="font-size:0.9rem;">
-                        Đề xuất: <strong id="rejectNominationName"></strong>
-                    </p>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
-                        <textarea class="form-control form-control-sm" name="ly_do" rows="3"
-                                  placeholder="Nhập lý do từ chối để thông báo về đơn vị..." required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div class="modal-dialog"><div class="modal-content">
+        <form id="rejectNominationForm" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header bg-danger text-white">
+                <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối toàn bộ đề xuất</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger py-2 mb-3" style="font-size:0.85rem;"><i class="bi bi-exclamation-triangle me-1"></i>Thao tác này sẽ từ chối <strong>toàn bộ đề xuất</strong>.</div>
+                <p class="mb-2" style="font-size:0.9rem;">Đề xuất: <strong id="rejectNominationName"></strong></p>
+                <div class="mb-3"><label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                <textarea class="form-control form-control-sm" name="ly_do" rows="3" required></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận từ chối</button>
+            </div>
+        </form>
+    </div></div>
 </div>
-
-<!-- Detail Modal -->
 <div class="modal fade" id="detailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h6 class="modal-title fw-semibold"><i class="bi bi-person-lines-fill me-1"></i>Chi tiết</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="detailModalBody" style="font-size:0.85rem;"></div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header py-2">
+            <h6 class="modal-title fw-semibold"><i class="bi bi-person-lines-fill me-1"></i>Chi tiết</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-    </div>
+        <div class="modal-body" id="detailModalBody" style="font-size:0.85rem;"></div>
+        <div class="modal-footer py-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+    </div></div>
 </div>
 
-<!-- Nomination ID data for batch approve -->
 <script type="application/json" id="nominationData">
-{% if unit_groups %}
-[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Xét duyệt của cơ quan thường trực' %}{"id": {{ nom_data.dx.id }}, "unit": "{{ ug.unit_name }}", "name": "{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
-{% else %}
-[]
-{% endif %}
+{% if unit_groups %}[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Xét duyệt của cơ quan thường trực' %}{"id":{{ nom_data.dx.id }},"unit":"{{ ug.unit_name }}","name":"{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
+{% else %}[]{% endif %}
 </script>
 
 <style>
-    /* ===== STAT MINI ===== */
-    .stat-mini {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 0.4rem 0.75rem;
-        font-size: 0.82rem;
-    }
-    .stat-mini i { font-size: 1rem; }
+/* ============================================================
+   STAT MINI
+============================================================ */
+.stat-mini {
+    display:flex; align-items:center; gap:.4rem;
+    background:#fff; border:1px solid var(--border-color);
+    border-radius:8px; padding:.4rem .75rem; font-size:.82rem;
+}
+.stat-mini i { font-size:1rem; }
 
-    /* ===== TOOLBAR CỐ ĐỊNH CĂNG TRÁI ===== */
-    /* ===== TOOLBAR CỐ ĐỊNH CĂNG TRÁI ===== */
+/* ============================================================
+   TOOLBAR
+============================================================ */
 .toolbar-wrapper {
+    position:sticky; top:0; z-index:100;
+    background:#fff; border-bottom:1px solid #dee2e6;
+    padding:6px 0; margin-bottom:12px;
+    box-shadow:0 2px 6px rgba(0,0,0,.07);
+}
+.toolbar-inner {
+    display:flex; align-items:center; gap:8px;
+    flex-wrap:nowrap; overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; padding:0 4px;
+}
+.toolbar-inner::-webkit-scrollbar { display:none; }
+.toolbar-inner > * { flex-shrink:0; }
+
+/* ============================================================
+   TABLE SCROLL WRAPPER
+   QUAN TRỌNG:
+     - display:block  → wrapper là block, không phải table
+     - overflow-x:auto → cho phép scroll ngang
+     - KHÔNG đặt position:relative (không cần, đôi khi gây hại)
+     - KHÔNG đặt height/max-height (gây hại cho sticky)
+============================================================ */
+.tbl-scroll {
     display: block;
-    position: sticky;
-    top: 0;
-    z-index: 100;          /* ← Giảm z-index xuống, thấp hơn sidebar */
-    background: #fff;
-    border-bottom: 1px solid #dee2e6;
-    padding: 6px 0;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.07);
     width: 100%;
+    overflow-x: auto !important;   /* ← chỉ scroll NGANG */
+    overflow-y: visible !important; /* ← KHÔNG scroll dọc */
+    -webkit-overflow-scrolling: touch;
 }
-.sidebar {  /* thay đúng class sidebar của bạn */
-    z-index: 1000 !important;
+
+
+/* ============================================================
+   TABLE
+   QUAN TRỌNG:
+     - border-collapse: SEPARATE  (collapse phá sticky)
+     - table-layout: auto          (fixed phá sticky)
+     - width: max-content          (rộng theo nội dung)
+     - min-width: 100%             (tối thiểu bằng container)
+============================================================ */
+.tbl-scroll table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    table-layout: auto !important;
+    width: max-content !important;
+    /* KHÔNG có min-width: 100% */
+    font-size: 0.82rem;
 }
-    .toolbar-inner {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: nowrap;           /* Không xuống dòng */
-        overflow-x: auto;            /* Scroll ngang khi màn nhỏ */
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding: 0 4px;
-    }
-    .toolbar-inner::-webkit-scrollbar { display: none; }
-    .toolbar-inner > * { flex-shrink: 0; } /* Không co lại */
+/* Base borders (bù lại do border-collapse:separate) */
+.tbl-scroll th,
+.tbl-scroll td {
+    border-bottom: 1px solid #dee2e6;
+    border-right:  1px solid #dee2e6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 4px 7px !important;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+.tbl-scroll th:first-child,
+.tbl-scroll td:first-child { border-left: 1px solid #dee2e6; }
+.tbl-scroll thead th       { border-top:  1px solid #dee2e6; }
 
-    /* ===== TABLE STICKY ACTION ===== */
-    .unit-card.filtered-out { display: none !important; }
+/* ============================================================
+   WIDTH CÁC CỘT — đặt min-width để header không bị cắt chữ
+============================================================ */
+.tbl-scroll .col-stt      { width:42px;  min-width:42px;  max-width:42px; }
+.tbl-scroll .col-name     { width:210px; min-width:210px; }
+.tbl-scroll .col-donvi    { width:130px; min-width:110px; }
+.tbl-scroll .col-capbac   { width:185px; min-width:150px; }
+.tbl-scroll .col-doituong { width:120px; min-width:100px; }
+.tbl-scroll .col-danhhieu { width:110px; min-width:90px;  }
+.tbl-scroll .col-namhoc   { width:90px;  min-width:80px;  }
+.tbl-scroll .col-normal   { width:130px; min-width:100px; }
+.tbl-scroll .col-detail   { width:115px; min-width:100px; }
+.tbl-scroll .col-action   { width:92px;  min-width:92px;  max-width:92px; }
 
-    /* ===== TABLE SCROLL WRAPPER ===== */
-    .tbl-scroll {
-        display: block;
-        width: 100%;
-        overflow-x: auto;
-        overflow-y: visible;
-        -webkit-overflow-scrolling: touch;
-    }
-    .tbl-scroll table {
-        border-collapse: separate;
-        border-spacing: 0;
-        width: max-content;
-        min-width: 100%;
-    }
-    /* Restore borders lost from border-collapse:separate */
-    .tbl-scroll table th,
-    .tbl-scroll table td {
-        border-bottom: 1px solid #dee2e6;
-        border-right: 1px solid #dee2e6;
-    }
-    .tbl-scroll table th:first-child,
-    .tbl-scroll table td:first-child { border-left: 1px solid #dee2e6; }
-    .tbl-scroll table thead th { border-top: 1px solid #dee2e6; }
+/* Dept columns: đủ rộng để header hiện chữ, body dùng badge nhỏ */
+.tbl-scroll .col-dept { width:72px; min-width:72px; max-width:80px; }
 
-    /* ===== STICKY COLS (scoped to .tbl-scroll) ===== */
-    .tbl-scroll .sticky-stt {
-        position: sticky;
-        left: 0;
-        z-index: 2;
-        background: #fff;
-        width: 34px;
-        min-width: 34px;
-        max-width: 34px;
-    }
-    .tbl-scroll .sticky-name-col {
-        position: sticky;
-        left: 34px;
-        z-index: 2;
-        background: #fff;
-        min-width: 170px;
-        max-width: 200px;
-        width: 200px;
-        overflow: hidden;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.08);
-    }
-    .tbl-scroll thead .sticky-stt,
-    .tbl-scroll thead .sticky-name-col {
-        background: var(--navy-primary, #1a3a5c) !important;
-        color: #fff !important;
-        z-index: 3;
-    }
-    .tbl-scroll tr.table-info .sticky-stt,
-    .tbl-scroll tr.table-info .sticky-name-col { background: #cff4fc !important; }
-    .tbl-scroll tr.table-danger .sticky-stt,
-    .tbl-scroll tr.table-danger .sticky-name-col { background: #f8d7da !important; }
-    .tbl-scroll tbody tr:hover .sticky-stt,
-    .tbl-scroll tbody tr:hover .sticky-name-col { background: #f0f4f8 !important; }
+/* Header dept: cho phép wrap để hiện đủ tên */
+.tbl-scroll thead .col-dept {
+    white-space: normal !important;
+    overflow: visible !important;
+    vertical-align: bottom;
+    padding: 4px 3px !important;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    word-break: break-word;
+    text-align: center;
+}
 
-    /* ===== STICKY ACTION RIGHT ===== */
-    .sticky-action-col {
-        position: sticky !important;
-        right: 0 !important;
-        z-index: 2;
-        background: #fff !important;
-        box-shadow: -2px 0 4px rgba(0,0,0,0.08);
-    }
-    thead th.sticky-action-col {
-        background: var(--navy-primary) !important;
-        color: #fff !important;
-        z-index: 4;
-    }
-    tr.table-info td.sticky-action-col  { background: #cff4fc !important; }
-    tr.table-danger td.sticky-action-col { background: #f8d7da !important; }
-    .table-custom tbody tr:hover td.sticky-action-col { background: #f0f4f8 !important; }
+/* ============================================================
+   STICKY TRÁI: STT  (left: 0)
+   - z-index:3 cho tbody, z-index:5 cho thead
+   - background PHẢI được đặt rõ ràng
+============================================================ */
+.tbl-scroll .col-stt {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 3;
+    background: #fff;
+    border-right: 2px solid #b0bec5 !important;
+}
+.tbl-scroll thead .col-stt {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
 
-    /* ===== CELL PADDING — compact ===== */
-    .tbl-scroll th,
-    .tbl-scroll td { padding: 3px 5px !important; vertical-align: middle; }
+/* ============================================================
+   STICKY TRÁI: HỌ TÊN  (left: 42px)
+============================================================ */
+.tbl-scroll .col-name {
+    position: sticky !important;
+    left: 42px !important;
+    z-index: 3;
+    background: #fff;
+    box-shadow: 3px 0 6px rgba(0,0,0,.12);
+}
+.tbl-scroll thead .col-name {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
 
-    /* ===== COLUMN WIDTHS ===== */
-    .table-custom th, .table-custom td { white-space: nowrap; }
-    .col-sm  { width:72px;  max-width:72px; }
-    .col-md  { width:110px; max-width:110px; }
-    .col-lg  { width:160px; max-width:160px; }
-    .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
-    .name-btn-group .name-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
-    /* Clamp narrow columns — use width on th + overflow div inside td */
-    .tbl-scroll .col-danh-hieu  { width:80px;  max-width:80px; }
-    .tbl-scroll .col-doi-tuong  { width:70px;  max-width:70px; }
-    .tbl-scroll .col-don-vi     { width:90px;  max-width:90px; }
-    .tbl-scroll .col-cap-bac    { width:110px; max-width:110px; }
-    .tbl-scroll .col-danh-hieu small,
-    .tbl-scroll .col-doi-tuong small,
-    .tbl-scroll .col-don-vi small,
-    .tbl-scroll .col-cap-bac small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Màu nền sticky theo trạng thái hàng */
+.tbl-scroll tr.table-info   .col-stt,
+.tbl-scroll tr.table-info   .col-name   { background: #cff4fc !important; }
+.tbl-scroll tr.table-danger .col-stt,
+.tbl-scroll tr.table-danger .col-name   { background: #f8d7da !important; }
+.tbl-scroll tbody tr:hover  .col-stt,
+.tbl-scroll tbody tr:hover  .col-name   { background: #eef2f7 !important; }
 
-    /* Dept approval badge columns — narrow */
-    .tbl-scroll .col-dept-approval { width:52px; max-width:60px; }
-    .tbl-scroll .col-dept-approval small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.65rem; line-height:1.2; }
+/* ============================================================
+   STICKY PHẢI: THAO TÁC  (right: 0)
+============================================================ */
+.tbl-scroll .col-action {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 3;
+    background: #fff;
+    box-shadow: -3px 0 6px rgba(0,0,0,.10);
+}
+.tbl-scroll thead .col-action {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
+.tbl-scroll tr.table-info   .col-action { background: #cff4fc !important; }
+.tbl-scroll tr.table-danger .col-action { background: #f8d7da !important; }
+.tbl-scroll tbody tr:hover  .col-action { background: #eef2f7 !important; }
 
-    /* ===== BTN NAVY ===== */
-    .btn-navy {
-        background: var(--navy-primary);
-        color: #fff;
-        border-color: var(--navy-primary);
-    }
-    .btn-navy:hover { background: var(--navy-dark); color: #fff; }
-    .btn-outline-navy {
-        color: var(--navy-primary);
-        border-color: var(--navy-primary);
-        background: transparent;
-    }
-    .btn-outline-navy:hover { background: var(--navy-primary); color: #fff; }
+/* ============================================================
+   NAME CELL
+============================================================ */
+.name-btn-group { display:flex; align-items:flex-start; gap:4px; }
+.name-btn-group .name-text {
+    flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
 
-    /* ===== PRINT ===== */
-    @media print {
-        .no-print, .toolbar-wrapper { display: none !important; }
-        .card-section { box-shadow: none !important; border: 1px solid #ccc !important; }
-        .collapse, .accordion-collapse { display: block !important; }
-        body { font-size: 10pt; }
-        .badge { border: 1px solid #666; color: #000 !important; background: transparent !important; }
-        #trackingPrintTimestamp { display: block !important; }
-    }
+/* ============================================================
+   BTN NAVY
+============================================================ */
+.btn-navy { background:var(--navy-primary); color:#fff; border-color:var(--navy-primary); }
+.btn-navy:hover { background:var(--navy-dark); color:#fff; }
+.btn-outline-navy { color:var(--navy-primary); border-color:var(--navy-primary); background:transparent; }
+.btn-outline-navy:hover { background:var(--navy-primary); color:#fff; }
+
+.unit-card.filtered-out { display:none !important; }
+
+/* ============================================================
+   PRINT
+============================================================ */
+@media print {
+    .no-print, .toolbar-wrapper { display:none !important; }
+    .card-section { box-shadow:none !important; border:1px solid #ccc !important; }
+    body { font-size:10pt; }
+    .badge { border:1px solid #666; color:#000 !important; background:transparent !important; }
+    #trackingPrintTimestamp { display:block !important; }
+}
+/* ===== FIX STICKY: Override mọi thứ từ base.html ===== */
+
+/* 1. Tăng specificity cho border-collapse */
+.tbl-scroll > table,
+.tbl-scroll > .table,
+div.tbl-scroll table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    table-layout: auto !important;
+    width: max-content !important;
+}
+
+/* 2. Bỏ overflow:hidden trên các wrapper phổ biến */
+.card-section,
+.card-body-custom,
+.card-body {
+    overflow: visible !important;
+}
+
+/* 3. Đảm bảo sticky hoạt động với specificity cao nhất */
+div.tbl-scroll th.col-stt,
+div.tbl-scroll td.col-stt {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 3 !important;
+    background: #fff;
+}
+div.tbl-scroll th.col-name,
+div.tbl-scroll td.col-name {
+    position: sticky !important;
+    left: 42px !important;
+    z-index: 3 !important;
+    background: #fff;
+}
+div.tbl-scroll th.col-action,
+div.tbl-scroll td.col-action {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 3 !important;
+    background: #fff;
+}
+/* Thử fix overflow trên các wrapper phổ biến */
+.card-section,
+.card-body-custom,
+.card-body,
+.main-content,
+.content-wrapper,
+.content-area,
+.page-content,
+.main-panel,
+.wrapper {
+    overflow: visible !important;
+}
+/* Outer: chỉ scroll ngang, không ảnh hưởng sticky */
+.tbl-outer {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Inner: không overflow gì cả → sticky hoạt động */
+.tbl-scroll {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+}
+
+/* Table giữ nguyên */
+.tbl-scroll table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    table-layout: auto !important;
+    width: 100% !important;
+}
+
+/* Chỉ .tbl-scroll mới được overflow-x: auto */
+
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-
     let nominations = [];
     try {
         const raw = document.getElementById('nominationData').textContent.trim();
         nominations = JSON.parse(raw.replace(/,\s*\]/, ']'));
     } catch(e) { console.warn('Parse error:', e); }
 
-    // ===== UNIT FILTER =====
     const unitFilter = document.getElementById('unitFilter');
     if (unitFilter) {
         unitFilter.addEventListener('change', function () {
@@ -735,9 +758,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ===== BATCH FINAL APPROVE =====
     let batchIds = [];
-
     document.querySelectorAll('.btn-approve-unit').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -774,9 +795,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const ghiChu = document.getElementById('batchGhiChu').value.trim();
         try {
             const res = await fetch('/admin/batch-final-approve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ ids: batchIds, ghi_chu: ghiChu }),
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+                body:JSON.stringify({ids:batchIds, ghi_chu:ghiChu}),
             });
             const data = await res.json();
             if (data.success) {
@@ -793,31 +814,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function openIndividualApproveModal(ctId, hoTen) {
     document.getElementById('individualApproveForm').action =
-        '{{ url_for("admin.final_approve_individual", ct_id=0) }}'.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+        '{{ url_for("admin.final_approve_individual", ct_id=0) }}'.replace('/0/','/'+ctId+'/').replace('/0','/'+ctId);
     document.getElementById('approveIndividualName').textContent = hoTen;
     new bootstrap.Modal(document.getElementById('individualApproveModal')).show();
 }
 
 function openDetailModal(ctId) {
     const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-    const body = document.getElementById('detailModalBody');
+    const body  = document.getElementById('detailModalBody');
     body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
     modal.show();
     fetch('/admin/api/chi-tiet/' + ctId)
-        .then(r => {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        })
+        .then(r => { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(d => {
-            const p = d.personal || {}, n = d.nomination || {};
+            const p = d.personal||{}, n = d.nomination||{};
             const badges = [
-                p.la_chi_huy ? '<span class="badge bg-danger">Cấp trưởng</span>' : '',
-                p.la_bi_thu  ? '<span class="badge bg-primary">Bí thư</span>' : '',
-                p.la_doan_vien ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
-                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>' : '',
+                p.la_chi_huy         ? '<span class="badge bg-danger">Cấp trưởng</span>' : '',
+                p.la_bi_thu          ? '<span class="badge bg-primary">Bí thư</span>'    : '',
+                p.la_doan_vien       ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
+                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>'       : '',
             ].filter(Boolean).join(' ');
-            let html = `
-            <div class="row g-2 mb-3">
+            let html = `<div class="row g-2 mb-3">
               <div class="col-12"><h6 class="fw-bold mb-0">${p.ho_ten||'—'}</h6>${badges}</div>
               <div class="col-6"><small class="text-muted">Đơn vị</small><div>${n.don_vi||'—'}</div></div>
               <div class="col-6"><small class="text-muted">Năm học</small><div>${n.nam_hoc||'—'}</div></div>
@@ -829,43 +846,37 @@ function openDetailModal(ctId) {
               <div class="col-6"><small class="text-muted">Trạng thái</small><div>${n.trang_thai||'—'}</div></div>
             </div>`;
             if (d.criteria && d.criteria.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí</h6><table class="table table-sm table-bordered mb-2" style="font-size:0.8rem;">';
-                d.criteria.forEach(c => {
-                    html += `<tr><td class="text-muted" style="width:55%">${c.label}</td><td>${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
-                });
+                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí</h6><table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
+                d.criteria.forEach(c => { html += `<tr><td class="text-muted" style="width:55%">${c.label}</td><td>${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`; });
                 html += '</table>';
             }
-            const deptActed = (d.dept_results || []).filter(r => r.ket_qua && r.ket_qua !== 'auto');
-            const deptPending = (d.dept_results || []).filter(r => !r.ket_qua);
+            const deptActed   = (d.dept_results||[]).filter(r => r.ket_qua && r.ket_qua !== 'auto');
+            const deptPending = (d.dept_results||[]).filter(r => !r.ket_qua);
             if (deptActed.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:0.8rem;">';
+                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:.8rem;">';
                 deptActed.forEach(r => {
-                    let badge = r.ket_qua === 'Đồng ý'
-                        ? '<span class="badge bg-success">Đồng ý</span>'
-                        : '<span class="badge bg-danger">Từ chối</span>';
-                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:0.75rem;">${r.ngay_duyet ? '<i class="bi bi-clock me-1"></i>'+r.ngay_duyet : ''}</td><td class="text-muted" style="font-size:0.75rem;">${r.ghi_chu||''}</td></tr>`;
+                    const badge = r.ket_qua==='Đồng ý' ? '<span class="badge bg-success">Đồng ý</span>' : '<span class="badge bg-danger">Từ chối</span>';
+                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:.75rem;">${r.ngay_duyet?'<i class="bi bi-clock me-1"></i>'+r.ngay_duyet:''}</td><td class="text-muted" style="font-size:.75rem;">${r.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
-                if (deptPending.length) {
-                    html += `<p class="text-muted mb-2" style="font-size:0.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
-                }
+                if (deptPending.length) html += `<p class="text-muted mb-2" style="font-size:.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
             }
-            if (d.votes && d.votes.some(v => v.ket_qua)) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:0.8rem;">';
-                d.votes.filter(v => v.ket_qua).forEach(v => {
-                    const cls = v.ket_qua === 'Đồng ý' ? 'text-success' : 'text-danger';
+            if (d.votes && d.votes.some(v=>v.ket_qua)) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:.8rem;">';
+                d.votes.filter(v=>v.ket_qua).forEach(v => {
+                    const cls = v.ket_qua==='Đồng ý' ? 'text-success' : 'text-danger';
                     html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
             }
             body.innerHTML = html;
         })
-        .catch(e => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu: ' + e.message + '</div>'; });
+        .catch(e => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu: '+e.message+'</div>'; });
 }
 
 function openRejectIndividualModal(ctId, hoTen) {
     document.getElementById('rejectIndividualForm').action =
-        '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'.replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+        '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'.replace('/0/','/'+ctId+'/').replace('/0','/'+ctId);
     document.getElementById('rejectIndividualName').textContent = hoTen;
     document.querySelector('#rejectIndividualForm textarea[name="ly_do"]').value = '';
     new bootstrap.Modal(document.getElementById('rejectIndividualModal')).show();
@@ -873,7 +884,7 @@ function openRejectIndividualModal(ctId, hoTen) {
 
 function openRejectNominationModal(dxId, label) {
     document.getElementById('rejectNominationForm').action =
-        '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0/', '/' + dxId + '/').replace('/0', '/' + dxId);
+        '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0/','/'+dxId+'/').replace('/0','/'+dxId);
     document.getElementById('rejectNominationName').textContent = label;
     document.querySelector('#rejectNominationForm textarea[name="ly_do"]').value = '';
     new bootstrap.Modal(document.getElementById('rejectNominationModal')).show();
@@ -882,18 +893,17 @@ function openRejectNominationModal(dxId, label) {
 function printTracking() {
     var ts = document.getElementById('trackingPrintTimestamp');
     if (!ts) {
-        ts = document.createElement('div');
-        ts.id = 'trackingPrintTimestamp';
+        ts = document.createElement('div'); ts.id = 'trackingPrintTimestamp';
         ts.style.cssText = 'display:none;position:fixed;bottom:10px;right:10px;font-size:9pt;color:#666;';
         document.body.appendChild(ts);
     }
-    var now = new Date(), pad = n => n < 10 ? '0'+n : n;
-    ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) +
-        ' ngày ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
+    var now = new Date(), pad = n => n<10?'0'+n:n;
+    ts.textContent = 'In lúc: '+pad(now.getHours())+':'+pad(now.getMinutes())+' ngày '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
     ts.style.display = 'block';
     window.print();
 }
 </script>
+
 <script>
 (function() {
     var LS_KEY = 'sharedNamHoc';
@@ -906,9 +916,7 @@ function printTracking() {
             window.location.replace(url.toString());
             return;
         }
-    } else {
-        localStorage.setItem(LS_KEY, currentNamHoc);
-    }
+    } else { localStorage.setItem(LS_KEY, currentNamHoc); }
 })();
 function onNamHocChange(sel) {
     if (sel.value) { localStorage.setItem('sharedNamHoc', sel.value); }

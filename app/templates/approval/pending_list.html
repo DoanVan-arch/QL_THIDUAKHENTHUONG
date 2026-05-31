@@ -147,20 +147,22 @@
 {# ══ BẢNG CÁ NHÂN ══ #}
 {% if all_cn %}
 <div class="card-section mb-3">
-    <div class="card-header-custom d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-person-fill me-2 text-primary"></i>Danh hiệu cá nhân
-            <span class="badge bg-primary ms-1">{{ all_cn|length }}</span>
-        </h6>
-        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" id="btnApproveAllCN"
-                title="Nhất trí tất cả cá nhân chưa duyệt">
-            <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
-        </button>
-    </div>
-    <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
-            <thead>
-                <tr>
-                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
+    <div class="card-body-custom py-2">
+   <!-- <div class="card-header-custom d-flex align-items-center gap-2"> -->
+    <h6 class="mb-0"><i class="bi bi-person-fill me-2 text-primary"></i>Danh hiệu cá nhân
+        <span class="badge bg-primary ms-1">{{ all_cn|length }}</span>
+    </h6>
+    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" id="btnApproveAllCN"
+            title="Nhất trí tất cả cá nhân chưa duyệt">
+        <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
+    </button>
+   </div>
+    <div class="tbl-outer">
+        <div class="tbl-scroll">
+            <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
+                <thead>
+                    <tr>
+                        <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
                     <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
                     <th class="col-don-vi">Đơn vị</th>
                     <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
@@ -277,7 +279,8 @@
                 {% endif %}
                 {% endfor %}
             </tbody>
-        </table>
+            </table>
+         </div>
     </div>
 </div>
 {% endif %}
@@ -285,15 +288,17 @@
 {# ══ BẢNG TẬP THỂ ══ #}
 {% if all_tt %}
 <div class="card-section mb-3">
-    <div class="card-header-custom d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-building-fill me-2 text-secondary"></i>Danh hiệu tập thể
-            <span class="badge bg-secondary ms-1">{{ all_tt|length }}</span>
-        </h6>
-        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" id="btnApproveAllTT"
-                title="Nhất trí tất cả tập thể chưa duyệt">
-            <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
-        </button>
+    <div class="card-body-custom py-2">
+    <!--  -->
+    <h6 class="mb-0"><i class="bi bi-building-fill me-2 text-secondary"></i>Danh hiệu tập thể
+        <span class="badge bg-secondary ms-1">{{ all_tt|length }}</span>
+    </h6>
+    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" id="btnApproveAllTT"
+            title="Nhất trí tất cả tập thể chưa duyệt">
+        <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
+    </button>
     </div>
+    <div class="tbl-outer">
     <div class="tbl-scroll">
         <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe" style="font-size:0.82rem;">
             <thead>
@@ -382,6 +387,7 @@
             </tbody>
         </table>
     </div>
+    </div>
 </div>
 {% endif %}
 
@@ -448,114 +454,202 @@
 {% endif %}
 
 <style>
-    .toggle-approval:checked { background-color: #198754; border-color: #198754; }
-    .toggle-approval { background-color: #adb5bd; border-color: #adb5bd; }
-    .table-custom th, .table-custom td { white-space: nowrap; }
-    .reject-link:hover { text-decoration: underline !important; }
-    /* ===== TABLE SCROLL WRAPPER ===== */
-    .tbl-scroll {
-        display: block;
-        width: 100%;
-        overflow-x: auto;
-        overflow-y: visible;
-        -webkit-overflow-scrolling: touch;
-    }
-    .tbl-scroll table {
-        border-collapse: separate;
-        border-spacing: 0;
-        width: max-content;
-        min-width: 100%;
-    }
-    /* Restore borders lost from border-collapse:separate */
-    .tbl-scroll table th,
-    .tbl-scroll table td {
-        border-bottom: 1px solid #dee2e6;
-        border-right: 1px solid #dee2e6;
-    }
-    .tbl-scroll table th:first-child,
-    .tbl-scroll table td:first-child { border-left: 1px solid #dee2e6; }
-    .tbl-scroll table thead th { border-top: 1px solid #dee2e6; }
-    /* ===== STICKY COLS ===== */
-    .tbl-scroll .sticky-stt {
-        position: sticky;
-        left: 0;
-        z-index: 2;
-        background: #fff;
-        width: 34px;
-        min-width: 34px;
-        max-width: 34px;
-    }
-    .tbl-scroll .sticky-name-col {
-        position: sticky;
-        left: 34px;
-        z-index: 2;
-        background: #fff;
-        width: 190px;
-        min-width: 190px;
-        max-width: 190px;
-        overflow: hidden;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.08);
-    }
-    .tbl-scroll thead .sticky-stt,
-    .tbl-scroll thead .sticky-name-col {
-        background: var(--navy-primary, #1a3a5c) !important;
-        color: #fff !important;
-        z-index: 3;
-    }
-    .tbl-scroll tr.table-success .sticky-stt,
-    .tbl-scroll tr.table-success .sticky-name-col { background: #d1e7dd !important; }
-    .tbl-scroll tr.table-danger .sticky-stt,
-    .tbl-scroll tr.table-danger .sticky-name-col { background: #f8d7da !important; }
-    .tbl-scroll tbody tr:hover .sticky-stt,
-    .tbl-scroll tbody tr:hover .sticky-name-col { background: #f0f4f8 !important; }
-    /* column helpers */
-    .col-sm  { max-width: 80px;  overflow: hidden; text-overflow: ellipsis; display: inline-block; }
-    .col-md  { max-width: 120px; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
-    .name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
-    .name-btn-group .name-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .stat-mini {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 0.4rem 0.75rem;
-        font-size: 0.82rem;
-    }
-    .stat-mini i { font-size: 1rem; }
-    .border-left-dept { border-left: 2px solid #dee2e6 !important; }
+/* ── TOOLBAR ─────────────────────────────────────────── */
+.toolbar-wrapper {
+    display: block; position: sticky; top: 0; z-index: 100;
+    background: #fff; border-bottom: 1px solid #dee2e6;
+    padding: 6px 0; margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.07); width: 100%;
+}
+.toolbar-inner {
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: nowrap; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; padding: 0 4px;
+}
+.toolbar-inner::-webkit-scrollbar { display: none; }
+.toolbar-inner > * { flex-shrink: 0; }
 
-    /* Compact col-criteria for cá nhân table */
-    #tableCaNhan .col-criteria { max-width: 80px; }
-    #tableCaNhan .col-criteria small { display: block; max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ── STAT MINI ───────────────────────────────────────── */
+.stat-mini {
+    display: flex; align-items: center; gap: .4rem;
+    background: #fff; border: 1px solid var(--border-color);
+    border-radius: 8px; padding: .4rem .75rem; font-size: .82rem;
+}
+.stat-mini i { font-size: 1rem; }
 
-    /* ===== CELL PADDING — compact ===== */
-    .tbl-scroll th,
-    .tbl-scroll td { padding: 3px 5px !important; vertical-align: middle; }
+/* ── 2-LAYER WRAPPER ─────────────────────────────────── */
+.tbl-outer {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+.tbl-scroll {
+    display: block;
+    /* KHÔNG set overflow ở đây */
+}
 
-    /* Clamp narrow columns */
-    .tbl-scroll .col-danh-hieu { width:80px;  max-width:80px; }
-    .tbl-scroll .col-doi-tuong { width:70px;  max-width:70px; }
-    .tbl-scroll .col-don-vi    { width:90px;  max-width:90px; }
-    .tbl-scroll .col-cap-bac   { width:110px; max-width:110px; }
-    .tbl-scroll .col-danh-hieu small,
-    .tbl-scroll .col-doi-tuong small,
-    .tbl-scroll .col-don-vi small,
-    .tbl-scroll .col-cap-bac small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* ── TABLE ───────────────────────────────────────────── */
+.tbl-scroll table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    table-layout: auto !important;
+    width: max-content !important;
+    font-size: 0.82rem;
+}
 
-    /* Compact view: hide criteria, evidence, and gate-criteria columns */
-    .view-compact .col-criteria,
-    .view-compact .col-evidence,
-    .view-compact .col-gate-criteria { display: none !important; }
+/* Restore borders */
+.tbl-scroll th,
+.tbl-scroll td {
+    border-bottom: 1px solid #dee2e6;
+    border-right:  1px solid #dee2e6;
+    padding: 4px 8px !important;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+.tbl-scroll th:first-child,
+.tbl-scroll td:first-child { border-left: 1px solid #dee2e6; }
+.tbl-scroll thead th        { border-top: 1px solid #dee2e6; }
 
-    /* Active state for view mode buttons */
-    #viewModeGroup .btn.active {
-        background: var(--navy-primary);
-        color: #fff;
-        border-color: var(--navy-primary);
-    }
+/* ── HEADER: cho phép xuống dòng, không cắt chữ ─────── */
+.tbl-scroll thead th {
+    white-space: normal !important;   /* ← xuống dòng khi cần */
+    word-break: break-word;
+    vertical-align: bottom;
+    line-height: 1.3;
+    text-align: center;
+}
+/* Các cột sticky header vẫn nowrap để không bị vỡ layout */
+.tbl-scroll thead th[style*="position:sticky"],
+.tbl-scroll thead .sticky-stt,
+.tbl-scroll thead .sticky-name,
+.tbl-scroll thead .sticky-action {
+    white-space: nowrap !important;
+    text-align: left;
+}
+
+/* ── BODY CELLS: nowrap để không vỡ dữ liệu ─────────── */
+.tbl-scroll tbody td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── COLUMN WIDTHS — rộng hơn, đủ hiện tên cột ─────── */
+.tbl-scroll .col-don-vi        { width: 120px; min-width: 120px; }
+.tbl-scroll .col-cap-bac       { width: 160px; min-width: 160px; }
+.tbl-scroll .col-doi-tuong     { width: 90px;  min-width: 90px;  }
+.tbl-scroll .col-danh-hieu     { width: 75px;  min-width: 75px;  }
+.tbl-scroll .col-criteria      { width: 95px;  min-width: 90px;  }
+.tbl-scroll .col-evidence      { width: 60px;  min-width: 60px; text-align: center; }
+.tbl-scroll .col-gate-criteria { width: 72px;  min-width: 68px; }
+.tbl-scroll .col-managed       { width: 80px;  min-width: 74px;  }
+.tbl-scroll .col-pending       { width: 110px; min-width: 110px; }
+
+/* Truncate text bên trong cell body */
+.tbl-scroll .col-don-vi small,
+.tbl-scroll .col-cap-bac small,
+.tbl-scroll .col-doi-tuong small,
+.tbl-scroll .col-criteria small,
+.tbl-scroll .col-gate-criteria small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+/* ── STICKY LEFT: STT (left:0) ───────────────────────── */
+.tbl-scroll td[style*="position:sticky"][style*="left:0"],
+.tbl-scroll th[style*="position:sticky"][style*="left:0"] {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 2;
+    width: 34px; min-width: 34px; max-width: 34px;
+    border-right: 2px solid #b0bec5 !important;
+}
+.tbl-scroll thead th[style*="position:sticky"][style*="left:0"] {
+    z-index: 4 !important;
+}
+
+/* ── STICKY LEFT: HỌ TÊN (left:34px) ────────────────── */
+.tbl-scroll td[style*="position:sticky"][style*="left:34px"],
+.tbl-scroll th[style*="position:sticky"][style*="left:34px"] {
+    position: sticky !important;
+    left: 34px !important;
+    z-index: 2;
+    width: 190px; min-width: 190px; max-width: 190px;
+    box-shadow: 3px 0 6px rgba(0,0,0,.10);
+}
+.tbl-scroll thead th[style*="position:sticky"][style*="left:34px"] {
+    z-index: 4 !important;
+}
+
+/* ── STICKY RIGHT: ĐANG CHỜ ─────────────────────────── */
+.tbl-scroll .col-pending {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 2;
+    background: #fff;
+    box-shadow: -3px 0 6px rgba(0,0,0,.10);
+}
+.tbl-scroll thead .col-pending {
+    z-index: 4 !important;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
+
+/* Row-state backgrounds cho sticky cols */
+.tbl-scroll tr.table-success td[style*="position:sticky"],
+.tbl-scroll tr.table-success .col-pending { background: #d1e7dd !important; }
+.tbl-scroll tr.table-danger  td[style*="position:sticky"],
+.tbl-scroll tr.table-danger  .col-pending { background: #f8d7da !important; }
+.tbl-scroll tbody tr:hover   td[style*="position:sticky"],
+.tbl-scroll tbody tr:hover   .col-pending { background: #f0f4f8 !important; }
+
+/* ── NAME CELL ───────────────────────────────────────── */
+.name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
+.name-btn-group .name-text {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── MISC ────────────────────────────────────────────── */
+.toggle-approval:checked { background-color: #198754; border-color: #198754; }
+.toggle-approval { background-color: #adb5bd; border-color: #adb5bd; }
+.reject-link:hover { text-decoration: underline !important; }
+.border-left-dept { border-left: 2px solid #dee2e6 !important; }
+.btn-navy { background: var(--navy-primary); color: #fff; border-color: var(--navy-primary); }
+.btn-navy:hover { background: var(--navy-dark); color: #fff; }
+.btn-outline-navy { color: var(--navy-primary); border-color: var(--navy-primary); background: transparent; }
+.btn-outline-navy:hover { background: var(--navy-primary); color: #fff; }
+
+/* Compact view */
+.view-compact .col-criteria,
+.view-compact .col-evidence,
+.view-compact .col-gate-criteria { display: none !important; }
+
+/* Active view mode button */
+#viewModeGroup .btn.active {
+    background: var(--navy-primary);
+    color: #fff;
+    border-color: var(--navy-primary);
+}
+
+/* ── PRINT ───────────────────────────────────────────── */
+.print-timestamp { display: none; font-size: 0.82rem; color: #666; margin-bottom: 8px; }
+@media print {
+    .sidebar, .toolbar-wrapper, #filterBar, #globalStats,
+    .toggle-approval, .reject-link, .reject-reason-row,
+    .btn, button { display: none !important; }
+    .card-section { border: none !important; box-shadow: none !important; }
+    .print-timestamp { display: block !important; }
+    .col-gate-criteria, .col-evidence, .col-pending { display: none !important; }
+}
 </style>
+
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
