@@ -4619,3 +4619,44 @@ def delete_tieu_chi(id):
     db.session.commit()
     flash(f'Đã xóa tiêu chí: {tc.ten}', 'success')
     return redirect(url_for('admin.manage_tieu_chi'))
+
+
+# ------------------------------------------------------------------
+# Admin: Clear all nomination + approval data (reset for testing)
+# ------------------------------------------------------------------
+@admin_bp.route('/clear-data', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def clear_data():
+    if request.method == 'GET':
+        counts = {
+            'de_xuat': DeXuat.query.count(),
+            'chi_tiet': DeXuatChiTiet.query.count(),
+            'phe_duyet': PheDuyet.query.count(),
+            'ket_qua_ct': KetQuaDuyetChiTiet.query.count(),
+            'khen_thuong': KhenThuong.query.count(),
+            'hoi_dong': HoiDongBieuQuyet.query.count(),
+            'thong_bao': ThongBao.query.count(),
+        }
+        return render_template('admin/clear_data.html', counts=counts)
+
+    # POST: confirm=yes required
+    if request.form.get('confirm') != 'XAC_NHAN_XOA':
+        flash('Mã xác nhận không đúng. Thao tác bị hủy.', 'danger')
+        return redirect(url_for('admin.clear_data'))
+
+    try:
+        KetQuaDuyetChiTiet.query.delete()
+        KhenThuong.query.delete()
+        HoiDongBieuQuyet.query.delete()
+        ThongBao.query.delete()
+        PheDuyet.query.delete()
+        DeXuatChiTiet.query.delete()
+        DeXuat.query.delete()
+        db.session.commit()
+        flash('Đã xóa toàn bộ dữ liệu đề xuất và phê duyệt.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Lỗi khi xóa dữ liệu: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.approval_tracking'))
