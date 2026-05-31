@@ -221,35 +221,35 @@
         <div class="main-content">
             <!-- Top Navbar -->
             <nav class="top-navbar">
-                <button class="btn btn-link sidebar-toggle" onclick="toggleSidebar()">
-                    <i class="bi bi-list fs-4"></i>
-                </button>
-                <div class="d-flex align-items-center">
-                    {% if current_user.is_unit_user and current_user.don_vi %}
-                    <span class="badge bg-navy me-3">
-                        <i class="bi bi-building"></i> {{ current_user.don_vi.ten_don_vi }}
-                    </span>
-                    {% endif %}
-                    {% if current_user.is_unit_user and unread_notification_count|default(0) > 0 %}
-                    <a href="{{ url_for('nomination.notifications') }}" class="btn btn-link position-relative me-2 text-dark" title="Thông báo">
-                        <i class="bi bi-bell fs-5"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;">
-                            {{ unread_notification_count }}
-                        </span>
-                    </a>
-                    {% endif %}
-                    <div class="dropdown">
-                        <button class="btn btn-link dropdown-toggle text-dark" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle me-1"></i> {{ current_user.ho_ten }}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
-                                <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
-                            </a></li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
+    <button class="btn btn-link sidebar-toggle" onclick="toggleSidebar()">
+        <i class="bi bi-list fs-4"></i>
+    </button>
+    <div class="d-flex align-items-center">
+        {% if current_user.is_unit_user and current_user.don_vi %}
+        <span class="badge bg-navy me-3">
+            <i class="bi bi-building"></i> {{ current_user.don_vi.ten_don_vi }}
+        </span>
+        {% endif %}
+        {% if current_user.is_unit_user and unread_notification_count|default(0) > 0 %}
+        <a href="{{ url_for('nomination.notifications') }}" class="btn btn-link position-relative me-2 text-dark" title="Thông báo">
+            <i class="bi bi-bell fs-5"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;">
+                {{ unread_notification_count }}
+            </span>
+        </a>
+        {% endif %}
+        <div class="dropdown">
+            <button class="btn btn-link dropdown-toggle text-dark" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle me-1"></i> {{ current_user.ho_ten }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" style="right:0;left:auto;">
+                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                    <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
             <!-- Flash Messages -->
             <div class="content-area">

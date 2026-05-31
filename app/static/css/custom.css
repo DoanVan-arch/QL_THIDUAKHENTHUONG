@@ -45,6 +45,28 @@ body {
 .main-content.sidebar-collapsed {
     margin-left: 0;
 }
+/* Đảm bảo top-navbar không bị tràn */
+.top-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;          /* ← cho phép co lại */
+    overflow: visible;     /* ← không cắt dropdown */
+}
+
+/* Phần bên phải không bị ép ra ngoài màn hình */
+.top-navbar .d-flex {
+    flex-shrink: 0;        /* ← không co lại */
+    margin-left: auto;     /* ← luôn đẩy sang phải */
+}
+
+/* Dropdown menu luôn hiện trong viewport */
+.top-navbar .dropdown-menu {
+    position: fixed !important;   /* ← thoát khỏi overflow:hidden */
+    right: 12px !important;
+    left: auto !important;
+    top: auto !important;
+}
 
 /* ---- Sidebar ---- */
 .sidebar {
