@@ -104,14 +104,34 @@ def _get_group_gate_for_ct(role, de_xuat_id, ct_id):
         }
 
     required_groups = sorted(list(_GROUP_CONFIRMATION[role]))
-    rows = db.session.query(PheDuyet.phong_duyet, KetQuaDuyetChiTiet.ket_qua).outerjoin(
+
+    # Query both the dept-level ket_qua and per-ct ket_qua in one shot
+    rows = db.session.query(
+        PheDuyet.phong_duyet,
+        PheDuyet.ket_qua.label('pd_ket_qua'),
+        KetQuaDuyetChiTiet.ket_qua.label('ct_ket_qua')
+    ).outerjoin(
         KetQuaDuyetChiTiet,
         (KetQuaDuyetChiTiet.phe_duyet_id == PheDuyet.id) & (KetQuaDuyetChiTiet.chi_tiet_id == ct_id)
     ).filter(
         PheDuyet.de_xuat_id == de_xuat_id,
         PheDuyet.phong_duyet.in_(required_groups)
     ).all()
-    result_map = {phong: ket_qua for phong, ket_qua in rows}
+
+    # A dept is "approved" for this ct if:
+    # 1. Per-ct KetQuaDuyetChiTiet.ket_qua == DONG_Y, OR
+    # 2. PheDuyet.ket_qua == DONG_Y (dept fully finalized — all cts processed/auto-approved)
+    result_map = {}
+    for phong, pd_ket_qua, ct_ket_qua in rows:
+        if ct_ket_qua == KetQuaDuyet.DONG_Y.value:
+            result_map[phong] = KetQuaDuyet.DONG_Y.value
+        elif pd_ket_qua == KetQuaDuyet.DONG_Y.value:
+            # Dept fully approved → treat this ct as approved by that dept
+            result_map[phong] = KetQuaDuyet.DONG_Y.value
+        elif ct_ket_qua == KetQuaDuyet.TU_CHOI.value or pd_ket_qua == KetQuaDuyet.TU_CHOI.value:
+            result_map[phong] = KetQuaDuyet.TU_CHOI.value
+        else:
+            result_map[phong] = ct_ket_qua  # None or CHO_DUYET
 
     approved = [d for d in required_groups if result_map.get(d) == KetQuaDuyet.DONG_Y.value]
     rejected = [d for d in required_groups if result_map.get(d) == KetQuaDuyet.TU_CHOI.value]
