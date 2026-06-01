@@ -583,6 +583,7 @@ def add_nomination_item(id):
         # NCKH
         nckh_noi_dung=(request.form.get('nckh_noi_dung_text', '').strip() or '; '.join([x.strip() for x in request.form.getlist('nckh_noi_dung') if x and x.strip()]) or None),
         diem_nckh=float(request.form.get('diem_nckh')) if request.form.get('diem_nckh', '').strip() else None,
+        mo_ta_khoa_hoc=request.form.get('mo_ta_khoa_hoc', '').strip() or None,
         thanh_tich_ca_nhan_khac=request.form.get('thanh_tich_ca_nhan_khac', '').strip() or None,
         ghi_chu=(
             (request.form.get('ghi_chu_item', '').strip() or '') +
@@ -763,6 +764,7 @@ def get_nomination_item_data(ct_id):
         'diem_tn_baove': chi_tiet.diem_tn_baove or '',
         'nckh_noi_dung': chi_tiet.nckh_noi_dung or '',
         'diem_nckh': str(chi_tiet.diem_nckh) if chi_tiet.diem_nckh is not None else '',
+        'mo_ta_khoa_hoc': chi_tiet.mo_ta_khoa_hoc or '',
         'thanh_tich_ca_nhan_khac': chi_tiet.thanh_tich_ca_nhan_khac or '',
         'ghi_chu': chi_tiet.ghi_chu or '',
         'tap_the_data': tap_the_data,
@@ -831,6 +833,7 @@ def update_nomination_item(ct_id):
 
     diem_nckh_raw = request.form.get('diem_nckh', '').strip()
     chi_tiet.diem_nckh = float(diem_nckh_raw) if diem_nckh_raw else None
+    chi_tiet.mo_ta_khoa_hoc = request.form.get('mo_ta_khoa_hoc', '').strip() or None
 
     # ghi_chu
     chi_tiet.ghi_chu = request.form.get('ghi_chu_item', '').strip() or None
