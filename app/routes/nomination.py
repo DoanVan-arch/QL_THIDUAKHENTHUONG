@@ -924,6 +924,15 @@ def submit_nomination(id):
     de_xuat.trang_thai = TrangThaiDeXuat.CHO_DUYET.value
     de_xuat.ngay_gui = datetime.utcnow()
     db.session.commit()
+
+    # Auto-finalize scope-limited depts (BAN_QUANLUC, BAN_CANBO) immediately
+    # so TTPhongTMHC gate works without requiring those depts to visit their page first
+    try:
+        from app.routes.approval import _auto_finalize_scope_dept
+        _auto_finalize_scope_dept(de_xuat.id)
+    except Exception:
+        pass  # non-critical, will be re-tried when TTPhongTMHC loads their page
+
     flash('Đã gửi đề xuất lên cấp trên. Chờ các cơ quan phê duyệt.', 'success')
     return redirect(url_for('nomination.detail_nomination', id=id))
 

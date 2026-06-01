@@ -53,6 +53,23 @@ def create_app(config_class=None):
     @app.route('/uploads/<path:filename>')
     @login_required
     def uploaded_file(filename):
+        import os as _os
+        full_path = _os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not _os.path.isfile(full_path):
+            # Return a friendly SVG placeholder instead of 404 HTML
+            ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+            if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'):
+                svg = (
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150">'
+                    '<rect width="200" height="150" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2" rx="6"/>'
+                    '<text x="100" y="70" font-family="sans-serif" font-size="13" fill="#adb5bd" text-anchor="middle">Không tìm thấy ảnh</text>'
+                    '<text x="100" y="90" font-family="sans-serif" font-size="11" fill="#ced4da" text-anchor="middle">(File không tồn tại)</text>'
+                    '</svg>'
+                )
+                from flask import Response
+                return Response(svg, status=200, mimetype='image/svg+xml')
+            from flask import abort
+            abort(404)
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
     @app.errorhandler(403)

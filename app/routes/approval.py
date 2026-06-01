@@ -12,6 +12,58 @@ from io import BytesIO
 
 approval_bp = Blueprint('approval', __name__)
 
+# Scope-limited depts that need auto-finalize when all their items are out-of-scope
+_SCOPE_LIMITED_PHONGS = [
+    PhongDuyet.BAN_QUANLUC.value,
+    PhongDuyet.BAN_CANBO.value,
+]
+
+def _auto_finalize_scope_dept(de_xuat_id):
+    """For BAN_QUANLUC and BAN_CANBO: if a PheDuyet has ALL chi_tiets out-of-scope,
+    auto-create KetQuaDuyetChiTiet = DONG_Y for each and finalize PheDuyet.ket_qua = DONG_Y.
+    Safe to call multiple times (idempotent).
+    Returns list of auto-finalized phong_duyet names.
+    """
+    from app.models.nomination import DeXuat as _DX
+    de_xuat = _DX.query.get(de_xuat_id)
+    if not de_xuat:
+        return []
+    finalized = []
+    for phong_val in _SCOPE_LIMITED_PHONGS:
+        pd = PheDuyet.query.filter_by(
+            de_xuat_id=de_xuat_id,
+            phong_duyet=phong_val,
+        ).first()
+        if not pd or pd.ket_qua == KetQuaDuyet.DONG_Y.value:
+            continue  # already done or not created yet
+        # Determine scope role for this phong
+        scope_role = _PHONG_TO_ROLE.get(phong_val)
+        if scope_role is None:
+            continue
+        # Ensure KetQuaDuyetChiTiet records exist for all chi_tiets
+        existing = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
+        for ct in de_xuat.chi_tiets:
+            if ct.id not in existing:
+                in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
+                db.session.add(KetQuaDuyetChiTiet(
+                    phe_duyet_id=pd.id,
+                    chi_tiet_id=ct.id,
+                    ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
+                ))
+        db.session.flush()
+        # Re-check: if no CHO_DUYET remains → auto-finalize
+        pending = KetQuaDuyetChiTiet.query.filter_by(
+            phe_duyet_id=pd.id,
+            ket_qua=KetQuaDuyet.CHO_DUYET.value,
+        ).count()
+        if pending == 0:
+            pd.ket_qua = KetQuaDuyet.DONG_Y.value
+            pd.ngay_duyet = datetime.utcnow()
+            pd.ghi_chu = 'Tự động duyệt (không có đối tượng thuộc phạm vi)'
+            finalized.append(phong_val)
+    db.session.commit()
+    return finalized
+
 ROLE_TO_PHONG = {
     Role.PHONG_KHOAHOC: PhongDuyet.PHONG_KHOAHOC.value,
     Role.PHONG_DAOTAO: PhongDuyet.PHONG_DAOTAO.value,
@@ -448,6 +500,14 @@ def pending_list():
     # so the template can show criteria columns grouped by department
     gate_dept_fields = []  # [{'dept': dept_name, 'fields': [field, ...]}, ...]
     if current_user.role in _GROUP_CONFIRMATION:
+        # Eagerly auto-finalize scope-limited depts (BAN_QUANLUC/BAN_CANBO) for all pending de_xuats
+        # This handles nominations submitted before the auto-finalize fix was in place
+        _finalized_de_xuat_ids = set()
+        for pd in pending_reviews:
+            if pd.de_xuat_id not in _finalized_de_xuat_ids:
+                _auto_finalize_scope_dept(pd.de_xuat_id)
+                _finalized_de_xuat_ids.add(pd.de_xuat_id)
+
         phong_fields_all = get_phong_fields()
         field_labels_all = get_field_labels()
         for gate_dept_name in managed_dept_columns:
@@ -459,6 +519,7 @@ def pending_list():
                 fields = [f for f in raw_fields if f not in _LONG_TEXT_FIELDS]
             if fields:
                 gate_dept_fields.append({'dept': gate_dept_name, 'fields': fields})
+
 
     # Group gate status for Thủ trưởng roles
     group_gate_by_pd = {}
