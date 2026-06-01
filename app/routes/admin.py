@@ -142,7 +142,13 @@ ALL_FIELD_LABELS = {
     'kiem_tra_chinh_tri': 'KT Chính trị',
     'kiem_tra_tin_hoc': 'Kỹ năng số',
     'dia_ly_quan_su': 'ĐHQS',
-    'xep_loai_dang_vien': 'Xếp loại đảng viên',
+    'xep_loai_dang_vien': 'XL đảng viên',
+    'ket_qua_doan_the': 'KQ đoàn thể',
+    'xep_loai_doan_vien': 'XL đoàn viên',
+    'hinh_thuc_khen_thuong_qc': 'KT quần chúng',
+    'ket_qua_phu_nu': 'XL phụ nữ',
+    'hinh_thuc_khen_thuong_pn': 'KT phụ nữ',
+    'chu_tri_don_vi_danh_hieu': 'Chủ trì ĐV',
     'danh_hieu_gv_gioi': 'DH GV giỏi',
     'dinh_muc_giang_day': 'Định mức GD',
     'ket_qua_kiem_tra_giang': 'KT giảng',
@@ -160,6 +166,10 @@ ALL_FIELD_LABELS = {
     'diem_tn_chuyennganh': 'Điểm CN (TN)',
     'diem_tn_baove': 'Điểm BV KL (TN)',
     'ket_qua_doan_the': 'KQ Đoàn thể',
+    'xep_loai_doan_vien': 'Xếp loại đoàn viên',
+    'hinh_thuc_khen_thuong_qc': 'KT phong trào QC',
+    'ket_qua_phu_nu': 'Xếp loại phụ nữ',
+    'hinh_thuc_khen_thuong_pn': 'KT hội phụ nữ',
     'chu_tri_don_vi_danh_hieu': 'Chủ trì ĐV',
     'diem_nckh': 'Điểm NCKH',
     'nckh_noi_dung': 'ND NCKH',
@@ -173,14 +183,16 @@ ALL_FIELDS = [
     'kiem_tra_chinh_tri', 'kiem_tra_dieu_lenh', 'kiem_tra_tin_hoc',
     'dia_ly_quan_su', 'ban_sung', 'the_luc',
     'xep_loai_dang_vien',
-    'ket_qua_doan_the', 'chu_tri_don_vi_danh_hieu',
+    'ket_qua_doan_the', 'xep_loai_doan_vien',
+    'hinh_thuc_khen_thuong_qc', 'ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn',
+    'chu_tri_don_vi_danh_hieu',
     'danh_hieu_gv_gioi', 'dinh_muc_giang_day', 'ket_qua_kiem_tra_giang',
     'tien_do_pgs', 'thoi_gian_lao_dong_kh',
     'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh', 'ket_qua_ren_luyen',
     'hinh_thuc_tot_nghiep',
     'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
     'diem_tn_chuyennganh', 'diem_tn_baove',
-    'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
+    'diem_nckh', 'nckh_noi_dung',
     'thanh_tich_ca_nhan_khac',
 ]
 
@@ -546,14 +558,17 @@ def tracking_detail(ct_id):
         'muc_do_hoan_thanh', 'phieu_tin_nhiem',
         'kiem_tra_chinh_tri', 'kiem_tra_dieu_lenh', 'kiem_tra_tin_hoc',
         'dia_ly_quan_su', 'ban_sung', 'the_luc',
-        'ket_qua_doan_the', 'chu_tri_don_vi_danh_hieu',
+        'xep_loai_dang_vien',
+        'ket_qua_doan_the', 'xep_loai_doan_vien',
+        'hinh_thuc_khen_thuong_qc', 'ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn',
+        'chu_tri_don_vi_danh_hieu',
         'danh_hieu_gv_gioi', 'dinh_muc_giang_day', 'ket_qua_kiem_tra_giang',
         'tien_do_pgs', 'thoi_gian_lao_dong_kh',
         'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh', 'ket_qua_ren_luyen',
         'hinh_thuc_tot_nghiep',
         'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
         'diem_tn_chuyennganh', 'diem_tn_baove',
-        'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
+        'diem_nckh', 'nckh_noi_dung',
         'thanh_tich_ca_nhan_khac',
     ]
 
@@ -621,6 +636,10 @@ def api_chi_tiet_detail(ct_id):
         ('phieu_tin_nhiem', 'Phiếu tín nhiệm', None),
         ('xep_loai_dang_vien', 'Xếp loại đảng viên', None),
         ('ket_qua_doan_the', 'Kết quả đoàn thể', None),
+        ('xep_loai_doan_vien', 'Xếp loại đoàn viên', None),
+        ('hinh_thuc_khen_thuong_qc', 'KT phong trào Quần chúng', None),
+        ('ket_qua_phu_nu', 'Xếp loại Phụ nữ hằng năm', None),
+        ('hinh_thuc_khen_thuong_pn', 'KT hội Phụ nữ', None),
         ('kiem_tra_chinh_tri', 'Kiểm tra chính trị', 'diem_kiem_tra_chinh_tri'),
         ('kiem_tra_dieu_lenh', 'Kiểm tra điều lệnh', 'diem_kiem_tra_dieu_lenh'),
         ('kiem_tra_tin_hoc', 'Kỹ năng số', 'diem_kiem_tra_tin_hoc'),
@@ -719,12 +738,26 @@ def api_chi_tiet_detail(ct_id):
         else:
             dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None, 'ngay_duyet': None})
 
+    # Minh chứng files grouped by type
+    minh_chungs = []
+    MINH_CHUNG_LABELS = {
+        'nckh_minh_chung': 'Minh chứng NCKH',
+        'minh_chung_thanh_tich_khac': 'Minh chứng thành tích cá nhân khác',
+        'minh_chung_thanh_tich_ca_nhan_khac': 'Minh chứng thành tích khác',
+    }
+    for mc in ct.minh_chungs:
+        minh_chungs.append({
+            'loai': MINH_CHUNG_LABELS.get(mc.loai_minh_chung, mc.loai_minh_chung),
+            'file_path': mc.file_path,
+        })
+
     return jsonify({
         'personal': personal,
         'nomination': nomination,
         'criteria': criteria,
         'votes': votes,
         'dept_results': dept_results,
+        'minh_chungs': minh_chungs,
     })
 
 
