@@ -212,6 +212,7 @@ class DeXuatChiTiet(db.Model):
     diem_nckh = Column(Float, nullable=True)
     nckh_noi_dung = Column(Text, nullable=True)
     nckh_minh_chung = Column(String(255), nullable=True)
+    mo_ta_khoa_hoc = Column(Text, nullable=True)
 
     thanh_tich_ca_nhan_khac = Column(Text, nullable=True)
 

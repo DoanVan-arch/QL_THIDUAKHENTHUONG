@@ -112,12 +112,15 @@
 {# ===== BẢNG CÁ NHÂN ===== #}
 {% if flat_ca_nhan %}
 <div class="card-section mb-4">
-    <div class="card-header-custom">
+    <div class="card-header-custom d-flex align-items-center justify-content-between">
         <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cá nhân — {{ flat_ca_nhan|length }} người</h6>
+        <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
+            <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
+        </button>
     </div>
     <div class="tbl-outer">
     <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle">
+        <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
             <thead>
                 <tr>
                     <th class="col-stt">STT</th>
@@ -129,7 +132,7 @@
                     {% if view_mode == 'detail' %}
                     <th class="col-namhoc">Năm học</th>
                     {% for field in all_fields %}
-                    <th class="col-detail" style="font-size:0.72rem;">{{ all_field_labels[field] }}</th>
+                    <th class="col-detail" data-col-key="cn_{{ field }}" data-col-label="{{ all_field_labels.get(field, field) }}" style="font-size:0.72rem;">{{ all_field_labels[field] }}</th>
                     {% endfor %}
                     {% endif %}
                     {% for col in tracking_dept_columns %}
@@ -184,7 +187,7 @@
                     {% if view_mode == 'detail' %}
                     <td class="col-namhoc"><small>{{ dx.nam_hoc }}</small></td>
                     {% for field in all_fields %}
-                    <td class="col-detail text-center" style="font-size:0.75rem;">
+                    <td class="col-detail text-center" data-col-key="cn_{{ field }}" style="font-size:0.75rem;">
                         {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
                         {% if val is not none and val != '' and val != 0 %}
                             {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac') %}
@@ -237,11 +240,14 @@
 {# ===== BẢNG TẬP THỂ ===== #}
 {% if flat_tap_the %}
 <div class="card-section mb-4">
-    <div class="card-header-custom">
+    <div class="card-header-custom d-flex align-items-center justify-content-between">
         <h6 class="mb-0"><i class="bi bi-building me-2"></i>Tập thể — {{ flat_tap_the|length }} đơn vị</h6>
+        <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
+            <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
+        </button>
     </div>
     <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle">
+        <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
             <thead>
                 <tr>
                     <th class="col-stt">STT</th>
@@ -252,7 +258,7 @@
                     <th class="col-normal text-center">Mức độ HTNV</th>
                     <th class="col-normal text-center">Chủ trì ĐV</th>
                     {% for f in tt_criteria_fields %}
-                    <th class="col-normal text-center" style="font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
+                    <th class="col-normal text-center" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}" style="font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
                     {% endfor %}
                     <th class="col-normal text-center">T.tích khác</th>
                     {% for col in tracking_dept_columns %}
@@ -299,7 +305,7 @@
                     </td>
                     {% set ttd = ct.tap_the_dict or {} %}
                     {% for f in tt_criteria_fields %}
-                    <td class="col-normal text-center" style="font-size:0.75rem;">
+                    <td class="col-normal text-center" data-col-key="tt_{{ f }}" style="font-size:0.75rem;">
                         {% set fval = ttd.get(f,'') %}
                         {% if fval %}<span>{{ fval }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
@@ -810,7 +816,63 @@ document.addEventListener('DOMContentLoaded', function () {
             this.innerHTML = '<i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt';
         }
     });
+    initColToggle('tableCaNhan', 'btnColToggleCN');
+    initColToggle('tableTapThe', 'btnColToggleTT');
 });
+
+// ---- Column visibility toggle ----
+function initColToggle(tableId, btnId) {
+    const table = document.getElementById(tableId);
+    const btn   = document.getElementById(btnId);
+    if (!table || !btn) return;
+    const storageKey = 'col_toggle_' + tableId;
+    const ths = Array.from(table.querySelectorAll('thead th[data-col-key]'));
+    if (!ths.length) return;
+    let panel = document.getElementById(btnId + '_panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = btnId + '_panel';
+        panel.style.cssText = 'display:none;position:fixed;z-index:2000;min-width:210px;max-height:320px;overflow-y:auto;background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);';
+        document.body.appendChild(panel);
+    }
+    let html = '<div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2"><span class="fw-semibold small">Hiển thị cột</span><button type="button" class="btn-close" style="font-size:.65rem;" onclick="document.getElementById(\'' + btnId + '_panel\').style.display=\'none\'"></button></div>';
+    ths.forEach(th => {
+        const key = th.dataset.colKey, label = (th.dataset.colLabel || th.textContent.trim()).slice(0,35);
+        html += `<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="chk_${tableId}_${key}" data-table="${tableId}" data-col-key="${key}" checked onchange="applyColToggle('${tableId}','${storageKey}')"><label class="form-check-label small" for="chk_${tableId}_${key}" style="cursor:pointer;">${label}</label></div>`;
+    });
+    html += `<div class="border-top pt-1 mt-2 d-flex gap-1"><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',true)">Tất cả</button><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',false)">Ẩn hết</button></div>`;
+    panel.innerHTML = html;
+    try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        ths.forEach(th => { const k = th.dataset.colKey; if (k in saved && !saved[k]) { const c = document.getElementById('chk_'+tableId+'_'+k); if (c) c.checked = false; } });
+    } catch(e) {}
+    applyColToggle(tableId, storageKey);
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const r = btn.getBoundingClientRect();
+        panel.style.top = (r.bottom + 4) + 'px';
+        panel.style.left = Math.max(4, r.right - 210) + 'px';
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', function(e) { if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none'; }, true);
+}
+function applyColToggle(tableId, storageKey) {
+    const table = document.getElementById(tableId); if (!table) return;
+    const state = {};
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => {
+        const key = th.dataset.colKey;
+        const chk = document.getElementById('chk_'+tableId+'_'+key);
+        const visible = chk ? chk.checked : true;
+        state[key] = visible;
+        table.querySelectorAll('[data-col-key="'+key+'"]').forEach(el => { el.style.display = visible ? '' : 'none'; });
+    });
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch(e) {}
+}
+function setAllColToggle(tableId, storageKey, visible) {
+    const table = document.getElementById(tableId); if (!table) return;
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => { const c = document.getElementById('chk_'+tableId+'_'+th.dataset.colKey); if (c) c.checked = visible; });
+    applyColToggle(tableId, storageKey);
+}
 
 function openIndividualApproveModal(ctId, hoTen) {
     document.getElementById('individualApproveForm').action =
@@ -872,8 +934,7 @@ function openDetailModal(ctId) {
             if (d.minh_chungs && d.minh_chungs.length) {
                 html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng đính kèm</h6><ul class="list-unstyled mb-1" style="font-size:.82rem;">';
                 d.minh_chungs.forEach(mc => {
-                    const fname = mc.file_path ? mc.file_path.split('/').pop() : '';
-                    html += `<li><i class="bi bi-paperclip me-1 text-muted"></i><span class="text-muted me-1">${mc.loai}:</span>${fname||mc.file_path||'—'}</li>`;
+                    html += `<li><i class="bi bi-paperclip me-1 text-muted"></i><span class="text-muted me-1">${mc.loai}:</span>${mc.ten_file||'—'}</li>`;
                 });
                 html += '</ul>';
             }

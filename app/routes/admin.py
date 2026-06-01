@@ -174,6 +174,7 @@ ALL_FIELD_LABELS = {
     'diem_nckh': 'Điểm NCKH',
     'nckh_noi_dung': 'ND NCKH',
     'nckh_minh_chung': 'MC NCKH',
+    'mo_ta_khoa_hoc': 'Mô tả thành tích KH',
     'thanh_tich_ca_nhan_khac': 'Thành tích khác',
 }
 
@@ -192,7 +193,7 @@ ALL_FIELDS = [
     'hinh_thuc_tot_nghiep',
     'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
     'diem_tn_chuyennganh', 'diem_tn_baove',
-    'diem_nckh', 'nckh_noi_dung',
+    'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung', 'mo_ta_khoa_hoc',
     'thanh_tich_ca_nhan_khac',
 ]
 
@@ -664,6 +665,8 @@ def api_chi_tiet_detail(ct_id):
         ('diem_tn_baove', 'Điểm bảo vệ KL (tốt nghiệp)', None),
         ('diem_nckh', 'Điểm NCKH', None),
         ('nckh_noi_dung', 'Nội dung NCKH', None),
+        ('nckh_minh_chung', 'Minh chứng NCKH (text)', None),
+        ('mo_ta_khoa_hoc', 'Mô tả thành tích KH', None),
         ('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV danh hiệu', None),
         ('thanh_tich_ca_nhan_khac', 'Thành tích cá nhân khác', None),
         ('ghi_chu', 'Ghi chú', None),
@@ -748,7 +751,7 @@ def api_chi_tiet_detail(ct_id):
     for mc in ct.minh_chungs:
         minh_chungs.append({
             'loai': MINH_CHUNG_LABELS.get(mc.loai_minh_chung, mc.loai_minh_chung),
-            'file_path': mc.file_path,
+            'ten_file': mc.ten_file_goc or mc.duong_dan,
         })
 
     return jsonify({

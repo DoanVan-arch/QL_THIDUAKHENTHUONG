@@ -156,6 +156,9 @@
             title="Nhất trí tất cả cá nhân chưa duyệt">
         <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
     </button>
+    <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
+        <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
+    </button>
    </div>
     <div class="tbl-outer">
         <div class="tbl-scroll">
@@ -170,7 +173,7 @@
                     <th class="col-danh-hieu">Danh hiệu</th>
                     {% if display_fields %}
                     {% for field in display_fields %}
-                    <th class="col-criteria"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
+                    <th class="col-criteria" data-col-key="cn_{{ field }}" data-col-label="{{ field_labels[field] if field in field_labels else field }}"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
                     {% endfor %}
                     {% endif %}
                     {% if show_evidence %}
@@ -230,7 +233,7 @@
                         {% else %}<span class="badge bg-secondary">ĐVTT</span>{% endif %}
                     </td>
                     {% for field in display_fields %}
-                    <td class="col-criteria">
+                    <td class="col-criteria" data-col-key="cn_{{ field }}">
                         {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}<small class="text-muted">-</small>
                         {% elif field == 'nckh_noi_dung' %}{% set val = ct|attr(field) %}{% if val %}<small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
                         {% elif field == 'diem_nckh' %}{% set val = ct|attr(field) %}{% if val is not none %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
@@ -297,6 +300,9 @@
             title="Nhất trí tất cả tập thể chưa duyệt">
         <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
     </button>
+    <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
+        <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
+    </button>
     </div>
     <div class="tbl-outer">
     <div class="tbl-scroll">
@@ -310,7 +316,7 @@
                     <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                     <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
                     {% for f in tt_criteria_fields %}
-                    <th class="col-criteria"><small>{{ tt_field_labels.get(f, f) }}</small></th>
+                    <th class="col-criteria" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}"><small>{{ tt_field_labels.get(f, f) }}</small></th>
                     {% endfor %}
                     <th class="col-criteria">{{ field_labels.get('thanh_tich_ca_nhan_khac', 'Thành tích khác') }}</th>
                     {% if managed_dept_columns %}
@@ -356,7 +362,7 @@
                     <td class="col-criteria"><small>{{ ct.chu_tri_don_vi_danh_hieu or '-' }}</small></td>
                     {% set ttd = ct.tap_the_dict or {} %}
                     {% for f in tt_criteria_fields %}
-                    <td class="col-criteria"><small>{{ ttd.get(f, '-') }}</small></td>
+                    <td class="col-criteria" data-col-key="tt_{{ f }}"><small>{{ ttd.get(f, '-') }}</small></td>
                     {% endfor %}
                     <td class="col-criteria"><small class="text-truncate d-inline-block" style="max-width:160px;" title="{{ ct.thanh_tich_ca_nhan_khac or '' }}">{{ ct.thanh_tich_ca_nhan_khac or '-' }}</small></td>
                     {% if managed_dept_columns %}
@@ -980,7 +986,64 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const btnPrintPDF = document.getElementById('btnPrintPDF');
     if (btnPrintPDF) btnPrintPDF.addEventListener('click', () => window.print());
+
+    initColToggle('tableCaNhan', 'btnColToggleCN');
+    initColToggle('tableTapThe', 'btnColToggleTT');
 });
+
+// ---- Column visibility toggle ----
+function initColToggle(tableId, btnId) {
+    const table = document.getElementById(tableId);
+    const btn   = document.getElementById(btnId);
+    if (!table || !btn) return;
+    const storageKey = 'col_toggle_' + tableId + '_{{ current_user.role }}';
+    const ths = Array.from(table.querySelectorAll('thead th[data-col-key]'));
+    if (!ths.length) return;
+    let panel = document.getElementById(btnId + '_panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = btnId + '_panel';
+        panel.style.cssText = 'display:none;position:fixed;z-index:2000;min-width:210px;max-height:320px;overflow-y:auto;background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);';
+        document.body.appendChild(panel);
+    }
+    let html = '<div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2"><span class="fw-semibold small">Hiển thị cột</span><button type="button" class="btn-close" style="font-size:.65rem;" onclick="document.getElementById(\'' + btnId + '_panel\').style.display=\'none\'"></button></div>';
+    ths.forEach(th => {
+        const key = th.dataset.colKey, label = (th.dataset.colLabel || th.textContent.trim()).slice(0,35);
+        html += `<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="chk_${tableId}_${key}" checked onchange="applyColToggle('${tableId}','${storageKey}')"><label class="form-check-label small" for="chk_${tableId}_${key}" style="cursor:pointer;">${label}</label></div>`;
+    });
+    html += `<div class="border-top pt-1 mt-2 d-flex gap-1"><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',true)">Tất cả</button><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',false)">Ẩn hết</button></div>`;
+    panel.innerHTML = html;
+    try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        ths.forEach(th => { const k = th.dataset.colKey; if (k in saved && !saved[k]) { const c = document.getElementById('chk_'+tableId+'_'+k); if (c) c.checked = false; } });
+    } catch(e) {}
+    applyColToggle(tableId, storageKey);
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const r = btn.getBoundingClientRect();
+        panel.style.top = (r.bottom + 4) + 'px';
+        panel.style.left = Math.max(4, r.right - 210) + 'px';
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', function(e) { if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none'; }, true);
+}
+function applyColToggle(tableId, storageKey) {
+    const table = document.getElementById(tableId); if (!table) return;
+    const state = {};
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => {
+        const key = th.dataset.colKey;
+        const chk = document.getElementById('chk_'+tableId+'_'+key);
+        const visible = chk ? chk.checked : true;
+        state[key] = visible;
+        table.querySelectorAll('[data-col-key="'+key+'"]').forEach(el => { el.style.display = visible ? '' : 'none'; });
+    });
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch(e) {}
+}
+function setAllColToggle(tableId, storageKey, visible) {
+    const table = document.getElementById(tableId); if (!table) return;
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => { const c = document.getElementById('chk_'+tableId+'_'+th.dataset.colKey); if (c) c.checked = visible; });
+    applyColToggle(tableId, storageKey);
+}
 </script>
 
 <style>
