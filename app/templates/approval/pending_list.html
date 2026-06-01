@@ -1239,7 +1239,9 @@ function openDetailModal(ctId) {
                     if (mc.is_image) {
                         html += `<div class="text-center" style="max-width:120px;">
                             <a href="${mc.url}" target="_blank" rel="noopener">
-                                <img src="${mc.url}" alt="${mc.ten_file}" style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;">
+                                <img src="${mc.url}" alt="${mc.ten_file}"
+                                     onerror="this.onerror=null;this.parentNode.innerHTML='<span class=\'text-muted small\'><i class=\'bi bi-image text-muted\'></i><br>Không tìm thấy</span>'"
+                                     style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;">
                             </a>
                             <div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div>
                         </div>`;
