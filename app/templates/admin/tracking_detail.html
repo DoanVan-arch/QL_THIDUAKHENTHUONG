@@ -218,9 +218,7 @@
                 <div class="col-md-4 col-sm-6">
                     <div class="detail-field-item">
                         <small class="text-muted d-block">{{ all_field_labels.get(field, field) }}</small>
-                        {% if field == 'nckh_minh_chung' and val %}
-                        <span class="text-break" style="word-break:break-all;">{{ val }}</span>
-                        {% elif field == 'nckh_noi_dung' and val %}
+                        {% if field == 'nckh_noi_dung' and val %}
                         <span class="text-break">{{ val }}</span>
                         {% elif field == 'diem_nckh' %}
                         <span class="fw-semibold text-primary">{{ val }}</span>

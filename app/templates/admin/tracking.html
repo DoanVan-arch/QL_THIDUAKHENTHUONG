@@ -187,7 +187,7 @@
                     <td class="col-detail text-center" style="font-size:0.75rem;">
                         {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
                         {% if val is not none and val != '' and val != 0 %}
-                            {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac','nckh_minh_chung') %}
+                            {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac') %}
                             <span class="d-block text-truncate" style="max-width:130px;" title="{{ val }}">{{ val }}</span>
                             {% else %}{{ val }}{% endif %}
                         {% else %}<span class="text-muted">-</span>{% endif %}
@@ -868,6 +868,14 @@ function openDetailModal(ctId) {
                     html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
+            }
+            if (d.minh_chungs && d.minh_chungs.length) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng đính kèm</h6><ul class="list-unstyled mb-1" style="font-size:.82rem;">';
+                d.minh_chungs.forEach(mc => {
+                    const fname = mc.file_path ? mc.file_path.split('/').pop() : '';
+                    html += `<li><i class="bi bi-paperclip me-1 text-muted"></i><span class="text-muted me-1">${mc.loai}:</span>${fname||mc.file_path||'—'}</li>`;
+                });
+                html += '</ul>';
             }
             body.innerHTML = html;
         })
