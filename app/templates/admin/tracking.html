@@ -533,18 +533,15 @@
 .toolbar-inner > * { flex-shrink:0; }
 
 /* ============================================================
-   TABLE SCROLL WRAPPER
-   QUAN TRỌNG:
-     - display:block  → wrapper là block, không phải table
-     - overflow-x:auto → cho phép scroll ngang
-     - KHÔNG đặt position:relative (không cần, đôi khi gây hại)
-     - KHÔNG đặt height/max-height (gây hại cho sticky)
+   TABLE SCROLL WRAPPER — KHÔNG phải scroll container
+   Scroll container là .tbl-outer (overflow-x:auto)
+   .tbl-scroll chỉ là block width:max-content, không overflow
 ============================================================ */
 .tbl-scroll {
     display: block;
-    width: 100%;
-    overflow-x: auto !important;   /* ← chỉ scroll NGANG */
-    overflow-y: visible !important; /* ← KHÔNG scroll dọc */
+    width: max-content;
+    min-width: 100%;
+    overflow: visible !important;   /* NOT the scroll container — .tbl-outer handles scroll */
     -webkit-overflow-scrolling: touch;
 }
 
@@ -753,19 +750,14 @@ div.tbl-scroll td.col-action {
 .wrapper {
     overflow: visible !important;
 }
-/* Outer: chỉ scroll ngang, không ảnh hưởng sticky */
+/* Outer: scroll container */
 .tbl-outer {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
-/* Inner: không overflow gì cả → sticky hoạt động */
-.tbl-scroll {
-    display: block;
-    width: max-content;
-    min-width: 100%;
-}
+/* .tbl-scroll defined above — no duplicate needed */
 
 /* Mirror scrollbar trên đầu bảng */
 .tbl-mirror {
@@ -776,16 +768,6 @@ div.tbl-scroll td.col-action {
     border-bottom: 1px solid #dee2e6;
 }
 .tbl-mirror > div { height: 1px; }
-
-/* Table giữ nguyên */
-.tbl-scroll table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    table-layout: auto !important;
-    width: 100% !important;
-}
-
-/* Chỉ .tbl-scroll mới được overflow-x: auto */
 
 /* Detail-only columns hidden/shown via JS */
 .detail-only-col { display: table-cell; }
