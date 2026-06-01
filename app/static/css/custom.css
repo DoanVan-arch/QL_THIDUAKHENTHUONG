@@ -178,6 +178,8 @@ body {
 /* ---- Main Content ---- */
 .main-content {
     flex: 1;
+    min-width: 0;          /* prevent flex item from expanding beyond viewport */
+    overflow-x: clip;      /* clip overflow without creating a scroll container */
     margin-left: var(--sidebar-width);
     min-height: 100vh;
     display: flex;
@@ -207,6 +209,7 @@ body {
 .content-area {
     padding: 1.5rem;
     flex: 1;
+    min-width: 0;
 }
 
 /* ---- Cards ---- */

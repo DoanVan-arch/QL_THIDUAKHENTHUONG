@@ -136,6 +136,7 @@
                     <th class="col-detail" data-col-key="cn_{{ field }}" data-col-label="{{ all_field_labels.get(field, field) }}" style="font-size:0.72rem;">{{ all_field_labels[field] }}</th>
                     {% endfor %}
                     {% endif %}
+                    <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
                     {% for col in tracking_dept_columns %}
                     <th class="col-dept text-center" title="{{ col.label }}">
                         <div class="dept-label">{{ col.label }}</div>
@@ -198,6 +199,11 @@
                     </td>
                     {% endfor %}
                     {% endif %}
+                    <td class="col-mc text-center" data-col-key="cn_minh_chung">
+                        {% if ct.minh_chungs %}
+                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
                     {% for col in tracking_dept_columns %}
                     {% set dn = col.key %}
                     <td class="col-dept text-center">
@@ -264,6 +270,7 @@
                     <th class="col-normal text-center" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}" style="font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
                     {% endfor %}
                     <th class="col-normal text-center">T.tích khác</th>
+                    <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
                     {% for col in tracking_dept_columns %}
                     <th class="col-dept text-center" title="{{ col.label }}">
                         <div class="dept-label">{{ col.label }}</div>
@@ -316,6 +323,11 @@
                     <td class="col-normal text-center" style="font-size:0.75rem;">
                         {% if ct.thanh_tich_ca_nhan_khac %}
                         <span class="d-block text-truncate" style="max-width:120px;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
+                    <td class="col-mc text-center" data-col-key="tt_minh_chung">
+                        {% if ct.minh_chungs %}
+                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
                         {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% for col in tracking_dept_columns %}
