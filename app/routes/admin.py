@@ -4155,6 +4155,7 @@ TIEU_CHI_OPTIONS = [
     ('diem_nckh', 'Điểm NCKH'),
     ('nckh_noi_dung', 'Nội dung NCKH'),
     ('nckh_minh_chung', 'Minh chứng NCKH'),
+    ('mo_ta_khoa_hoc', 'Mô tả thành tích khoa học'),
     ('thanh_tich_ca_nhan_khac', 'Thành tích cá nhân khác'),
 ]
 
@@ -4475,17 +4476,19 @@ def manage_tieu_chi():
     tieu_chis = TieuChi.query.order_by(TieuChi.thu_tu, TieuChi.ten).all()
 
     model_fields = set(col.name for col in DeXuatChiTiet.__table__.columns)
+    _SKIP = {'id', 'de_xuat_id', 'quan_nhan_id', 'loai_danh_hieu', 'doi_tuong', 'nam_hoc',
+             'tap_the_data', 'ten_don_vi_de_xuat', 'admin_approved', 'ghi_chu', 'created_at', 'updated_at'}
     db_fields = set(tc.ma_truong for tc in tieu_chis)
-    missing_fields = sorted([f for f in model_fields if f not in db_fields and f not in {
-        'id', 'de_xuat_id', 'quan_nhan_id', 'loai_danh_hieu', 'doi_tuong', 'nam_hoc',
-        'ghi_chu', 'created_at', 'updated_at'
-    }])
+    missing_fields = sorted([f for f in model_fields if f not in db_fields and f not in _SKIP])
+    # TieuChi records whose ma_truong does NOT exist as a real model column
+    invalid_ma_truong = set(tc.ma_truong for tc in tieu_chis if tc.ma_truong not in model_fields)
 
     return render_template('admin/manage_tieu_chi.html',
                            tieu_chis=tieu_chis,
                            nhom_choices=_get_nhom_tieu_chi_choices(include_inactive=True),
                            phong_duyet_options=PHONG_DUYET_OPTIONS,
-                           missing_fields=missing_fields)
+                           missing_fields=missing_fields,
+                           invalid_ma_truong=invalid_ma_truong)
 
 
 # ------------------------------------------------------------------

@@ -112,13 +112,14 @@
 {# ===== BẢNG CÁ NHÂN ===== #}
 {% if flat_ca_nhan %}
 <div class="card-section mb-4">
-    <div class="card-header-custom d-flex align-items-center justify-content-between">
-        <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cá nhân — {{ flat_ca_nhan|length }} người</h6>
-        <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
+    <div class="card-header-custom d-flex align-items-center gap-2">
+        <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" title="Chọn cột hiển thị">
             <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
         </button>
+        <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cá nhân — {{ flat_ca_nhan|length }} người</h6>
     </div>
-    <div class="tbl-outer">
+    <div class="tbl-mirror" id="mirrorCN"><div></div></div>
+    <div class="tbl-outer" id="tblOuterCN">
     <div class="tbl-scroll">
         <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
             <thead>
@@ -240,12 +241,14 @@
 {# ===== BẢNG TẬP THỂ ===== #}
 {% if flat_tap_the %}
 <div class="card-section mb-4">
-    <div class="card-header-custom d-flex align-items-center justify-content-between">
-        <h6 class="mb-0"><i class="bi bi-building me-2"></i>Tập thể — {{ flat_tap_the|length }} đơn vị</h6>
-        <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
+    <div class="card-header-custom d-flex align-items-center gap-2">
+        <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" title="Chọn cột hiển thị">
             <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
         </button>
+        <h6 class="mb-0"><i class="bi bi-building me-2"></i>Tập thể — {{ flat_tap_the|length }} đơn vị</h6>
     </div>
+    <div class="tbl-mirror" id="mirrorTT"><div></div></div>
+    <div class="tbl-outer" id="tblOuterTT">
     <div class="tbl-scroll">
         <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
             <thead>
@@ -733,6 +736,16 @@ div.tbl-scroll td.col-action {
     min-width: 100%;
 }
 
+/* Mirror scrollbar trên đầu bảng */
+.tbl-mirror {
+    overflow-x: scroll;
+    overflow-y: hidden;
+    height: 14px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+.tbl-mirror > div { height: 1px; }
+
 /* Table giữ nguyên */
 .tbl-scroll table {
     border-collapse: separate !important;
@@ -818,7 +831,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     initColToggle('tableCaNhan', 'btnColToggleCN');
     initColToggle('tableTapThe', 'btnColToggleTT');
+    initMirrorScroll('mirrorCN', 'tblOuterCN');
+    initMirrorScroll('mirrorTT', 'tblOuterTT');
 });
+
+// ---- Mirror scrollbar (top ↔ bottom sync) ----
+function initMirrorScroll(mirrorId, outerId) {
+    const mirror = document.getElementById(mirrorId);
+    const outer  = document.getElementById(outerId);
+    if (!mirror || !outer) return;
+    const inner = mirror.firstElementChild;
+    function syncWidth() { inner.style.width = outer.scrollWidth + 'px'; }
+    syncWidth();
+    if (window.ResizeObserver) new ResizeObserver(syncWidth).observe(outer);
+    let lock = false;
+    mirror.addEventListener('scroll', function () {
+        if (lock) return; lock = true; outer.scrollLeft = mirror.scrollLeft; lock = false;
+    });
+    outer.addEventListener('scroll', function () {
+        if (lock) return; lock = true; mirror.scrollLeft = outer.scrollLeft; lock = false;
+    });
+}
 
 // ---- Column visibility toggle ----
 function initColToggle(tableId, btnId) {

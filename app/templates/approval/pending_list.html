@@ -147,20 +147,20 @@
 {# ══ BẢNG CÁ NHÂN ══ #}
 {% if all_cn %}
 <div class="card-section mb-3">
-    <div class="card-body-custom py-2">
-   <!-- <div class="card-header-custom d-flex align-items-center gap-2"> -->
-    <h6 class="mb-0"><i class="bi bi-person-fill me-2 text-primary"></i>Danh hiệu cá nhân
-        <span class="badge bg-primary ms-1">{{ all_cn|length }}</span>
-    </h6>
-    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" id="btnApproveAllCN"
-            title="Nhất trí tất cả cá nhân chưa duyệt">
-        <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
-    </button>
-    <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
-        <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
-    </button>
-   </div>
-    <div class="tbl-outer">
+    <div class="card-body-custom py-2 d-flex align-items-center gap-2 flex-wrap">
+        <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" title="Chọn cột hiển thị">
+            <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" id="btnApproveAllCN"
+                title="Nhất trí tất cả cá nhân chưa duyệt">
+            <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
+        </button>
+        <h6 class="mb-0 ms-1"><i class="bi bi-person-fill me-2 text-primary"></i>Danh hiệu cá nhân
+            <span class="badge bg-primary ms-1">{{ all_cn|length }}</span>
+        </h6>
+    </div>
+    <div class="tbl-mirror" id="mirrorCN"><div></div></div>
+    <div class="tbl-outer" id="tblOuterCN">
         <div class="tbl-scroll">
             <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
                 <thead>
@@ -291,20 +291,20 @@
 {# ══ BẢNG TẬP THỂ ══ #}
 {% if all_tt %}
 <div class="card-section mb-3">
-    <div class="card-body-custom py-2">
-    <!--  -->
-    <h6 class="mb-0"><i class="bi bi-building-fill me-2 text-secondary"></i>Danh hiệu tập thể
-        <span class="badge bg-secondary ms-1">{{ all_tt|length }}</span>
-    </h6>
-    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" id="btnApproveAllTT"
-            title="Nhất trí tất cả tập thể chưa duyệt">
-        <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
-    </button>
-    <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Chọn cột hiển thị">
-        <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
-    </button>
+    <div class="card-body-custom py-2 d-flex align-items-center gap-2 flex-wrap">
+        <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" title="Chọn cột hiển thị">
+            <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" id="btnApproveAllTT"
+                title="Nhất trí tất cả tập thể chưa duyệt">
+            <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
+        </button>
+        <h6 class="mb-0 ms-1"><i class="bi bi-building-fill me-2 text-secondary"></i>Danh hiệu tập thể
+            <span class="badge bg-secondary ms-1">{{ all_tt|length }}</span>
+        </h6>
     </div>
-    <div class="tbl-outer">
+    <div class="tbl-mirror" id="mirrorTT"><div></div></div>
+    <div class="tbl-outer" id="tblOuterTT">
     <div class="tbl-scroll">
         <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe" style="font-size:0.82rem;">
             <thead>
@@ -495,6 +495,16 @@
     display: block;
     /* KHÔNG set overflow ở đây */
 }
+
+/* Mirror scrollbar trên đầu bảng */
+.tbl-mirror {
+    overflow-x: scroll;
+    overflow-y: hidden;
+    height: 14px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+.tbl-mirror > div { height: 1px; }
 
 /* ── TABLE ───────────────────────────────────────────── */
 .tbl-scroll table {
@@ -1000,7 +1010,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initColToggle('tableCaNhan', 'btnColToggleCN');
     initColToggle('tableTapThe', 'btnColToggleTT');
+    initMirrorScroll('mirrorCN', 'tblOuterCN');
+    initMirrorScroll('mirrorTT', 'tblOuterTT');
 });
+
+// ---- Mirror scrollbar (top ↔ bottom sync) ----
+function initMirrorScroll(mirrorId, outerId) {
+    const mirror = document.getElementById(mirrorId);
+    const outer  = document.getElementById(outerId);
+    if (!mirror || !outer) return;
+    const inner = mirror.firstElementChild;
+    function syncWidth() { inner.style.width = outer.scrollWidth + 'px'; }
+    syncWidth();
+    if (window.ResizeObserver) new ResizeObserver(syncWidth).observe(outer);
+    let lock = false;
+    mirror.addEventListener('scroll', function () {
+        if (lock) return; lock = true; outer.scrollLeft = mirror.scrollLeft; lock = false;
+    });
+    outer.addEventListener('scroll', function () {
+        if (lock) return; lock = true; mirror.scrollLeft = outer.scrollLeft; lock = false;
+    });
+}
 
 // ---- Column visibility toggle ----
 function initColToggle(tableId, btnId) {
