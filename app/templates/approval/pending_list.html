@@ -178,6 +178,8 @@
                     {% endif %}
                     {% if show_evidence %}
                     <th class="col-evidence" style="width:60px;">Minh chứng</th>
+                    {% else %}
+                    <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
                     {% endif %}
                     {% if is_ttr_role %}
                         {% for gdept in gate_dept_fields %}
@@ -244,6 +246,12 @@
                     <td class="col-evidence text-center">
                         {% if ct.minh_chungs %}<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}" title="{{ ct.minh_chungs|length }} minh chứng"><i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small></button>
                         {% else %}<small class="text-muted">-</small>{% endif %}
+                    </td>
+                    {% else %}
+                    <td class="col-mc text-center" data-col-key="cn_minh_chung">
+                        {% if ct.minh_chungs %}
+                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     {% endif %}
                     {% if is_ttr_role %}
@@ -319,6 +327,7 @@
                     <th class="col-criteria" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}"><small>{{ tt_field_labels.get(f, f) }}</small></th>
                     {% endfor %}
                     <th class="col-criteria">{{ field_labels.get('thanh_tich_ca_nhan_khac', 'Thành tích khác') }}</th>
+                    <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
                     {% if managed_dept_columns %}
                         {% for mcol in managed_dept_columns %}
                         <th style="width:74px;"><small>{{ mcol }}</small></th>
@@ -365,6 +374,11 @@
                     <td class="col-criteria" data-col-key="tt_{{ f }}"><small>{{ ttd.get(f, '-') }}</small></td>
                     {% endfor %}
                     <td class="col-criteria"><small class="text-truncate d-inline-block" style="max-width:160px;" title="{{ ct.thanh_tich_ca_nhan_khac or '' }}">{{ ct.thanh_tich_ca_nhan_khac or '-' }}</small></td>
+                    <td class="col-mc text-center" data-col-key="tt_minh_chung">
+                        {% if ct.minh_chungs %}
+                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
+                        {% else %}<span class="text-muted">-</span>{% endif %}
+                    </td>
                     {% if managed_dept_columns %}
                         {% for mcol in managed_dept_columns %}{% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
                         <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
@@ -1183,10 +1197,7 @@ function openDetailModal(ctId) {
     body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
     modal.show();
     fetch('/admin/api/chi-tiet/' + ctId + '?dept_only=1')
-        .then(r => {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        })
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(d => {
             const p = d.personal || {}, n = d.nomination || {};
             const badges = [
@@ -1195,42 +1206,65 @@ function openDetailModal(ctId) {
                 p.la_doan_vien ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
                 p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>' : '',
             ].filter(Boolean).join(' ');
-            let html = `
-            <div class="row g-2 mb-3">
-              <div class="col-12"><h6 class="fw-bold mb-0">${p.ho_ten||'—'}</h6>${badges}</div>
-              <div class="col-6"><small class="text-muted">Đơn vị</small><div>${n.don_vi||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Năm học</small><div>${n.nam_hoc||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Cấp bậc</small><div>${p.cap_bac||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Chức vụ</small><div>${p.chuc_vu||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Đối tượng</small><div>${p.doi_tuong||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Danh hiệu</small><div>${n.loai_danh_hieu||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Học hàm/vị</small><div>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Trạng thái</small><div>${n.trang_thai||'—'}</div></div>
+            let html = `<div class="row g-2 mb-2">
+              <div class="col-12"><h6 class="fw-bold mb-1">${p.ho_ten||'—'}</h6>${badges}</div>
+              <div class="col-6"><small class="text-muted d-block">Đơn vị</small>${n.don_vi||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Năm học</small>${n.nam_hoc||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Cấp bậc</small>${p.cap_bac||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Chức vụ</small>${p.chuc_vu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Đối tượng</small>${p.doi_tuong||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Danh hiệu</small>${n.loai_danh_hieu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Học hàm/vị</small>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Trạng thái</small>${n.trang_thai||'—'}</div>
             </div>`;
+            // Tiêu chí — show ALL, highlight filled ones
             if (d.criteria && d.criteria.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí</h6><table class="table table-sm table-bordered mb-2" style="font-size:0.8rem;">';
-                d.criteria.forEach(c => {
-                    html += `<tr><td class="text-muted" style="width:55%">${c.label}</td><td>${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
+                const filled = d.criteria.filter(c => c.value && c.value !== 'None');
+                const empty  = d.criteria.filter(c => !c.value || c.value === 'None');
+                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.criteria.length + '</span></h6>';
+                html += '<table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
+                filled.forEach(c => {
+                    html += `<tr><td class="text-muted" style="width:52%">${c.label}</td><td class="fw-semibold">${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
                 });
+                if (empty.length) {
+                    html += `<tr class="table-light"><td colspan="2" class="text-muted small py-1 px-2">Chưa nhập (${empty.length} tiêu chí): ${empty.map(c=>c.label).join(', ')}</td></tr>`;
+                }
                 html += '</table>';
             }
+            // Minh chứng — clickable links + image preview
+            if (d.minh_chungs && d.minh_chungs.length) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng đính kèm <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.minh_chungs.length + '</span></h6>';
+                html += '<div class="d-flex flex-wrap gap-2 mb-2">';
+                d.minh_chungs.forEach(mc => {
+                    if (mc.is_image) {
+                        html += `<div class="text-center" style="max-width:120px;">
+                            <a href="${mc.url}" target="_blank" rel="noopener">
+                                <img src="${mc.url}" alt="${mc.ten_file}" style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;">
+                            </a>
+                            <div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div>
+                        </div>`;
+                    } else {
+                        html += `<a href="${mc.url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;" title="${mc.ten_file}">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
+                        </a>`;
+                    }
+                });
+                html += '</div>';
+            }
+            // Dept approvals
             const deptActed = (d.dept_results || []).filter(r => r.ket_qua && r.ket_qua !== 'auto');
             const deptPending = (d.dept_results || []).filter(r => !r.ket_qua);
             if (deptActed.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:0.8rem;">';
+                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:.8rem;">';
                 deptActed.forEach(r => {
-                    let badge = r.ket_qua === 'Đồng ý'
-                        ? '<span class="badge bg-success">Đồng ý</span>'
-                        : '<span class="badge bg-danger">Từ chối</span>';
-                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:0.75rem;">${r.ngay_duyet ? '<i class="bi bi-clock me-1"></i>'+r.ngay_duyet : ''}</td><td class="text-muted" style="font-size:0.75rem;">${r.ghi_chu||''}</td></tr>`;
+                    const badge = r.ket_qua === 'Đồng ý' ? '<span class="badge bg-success">Đồng ý</span>' : '<span class="badge bg-danger">Từ chối</span>';
+                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:.75rem;">${r.ngay_duyet?'<i class="bi bi-clock me-1"></i>'+r.ngay_duyet:''}</td><td class="text-muted" style="font-size:.75rem;">${r.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
-                if (deptPending.length) {
-                    html += `<p class="text-muted mb-2" style="font-size:0.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
-                }
+                if (deptPending.length) html += `<p class="text-muted mb-2" style="font-size:.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
             }
             if (d.votes && d.votes.some(v => v.ket_qua)) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:0.8rem;">';
+                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:.8rem;">';
                 d.votes.filter(v => v.ket_qua).forEach(v => {
                     const cls = v.ket_qua === 'Đồng ý' ? 'text-success' : 'text-danger';
                     html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
