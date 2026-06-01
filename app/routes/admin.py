@@ -741,17 +741,22 @@ def api_chi_tiet_detail(ct_id):
         else:
             dept_results.append({'dept': dept, 'ket_qua': None, 'ghi_chu': None, 'ngay_duyet': None})
 
-    # Minh chứng files grouped by type
+    # Minh chứng files grouped by type — include URL for download/preview
     minh_chungs = []
     MINH_CHUNG_LABELS = {
         'nckh_minh_chung': 'Minh chứng NCKH',
-        'minh_chung_thanh_tich_khac': 'Minh chứng thành tích cá nhân khác',
-        'minh_chung_thanh_tich_ca_nhan_khac': 'Minh chứng thành tích khác',
+        'minh_chung_chung': 'Minh chứng chung',
+        'minh_chung_thanh_tich_khac': 'Minh chứng thành tích khác',
+        'minh_chung_thanh_tich_ca_nhan_khac': 'Minh chứng thành tích cá nhân khác',
     }
+    IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
     for mc in ct.minh_chungs:
+        ext = ('.' + mc.duong_dan.rsplit('.', 1)[-1].lower()) if '.' in mc.duong_dan else ''
         minh_chungs.append({
             'loai': MINH_CHUNG_LABELS.get(mc.loai_minh_chung, mc.loai_minh_chung),
-            'ten_file': mc.ten_file_goc or mc.duong_dan,
+            'ten_file': mc.ten_file_goc or mc.duong_dan.split('/')[-1],
+            'url': '/uploads/' + mc.duong_dan,
+            'is_image': ext in IMAGE_EXTS,
         })
 
     return jsonify({
