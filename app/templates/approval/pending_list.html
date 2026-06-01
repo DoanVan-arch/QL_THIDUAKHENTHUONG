@@ -165,8 +165,8 @@
             <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
-                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.12);">Họ tên</th>
+                        <th class="sticky-stt">STT</th>
+                    <th class="sticky-name">Họ tên</th>
                     <th class="col-don-vi">Đơn vị</th>
                     <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
                     <th class="col-doi-tuong">Đối tượng</th>
@@ -214,8 +214,8 @@
                     data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
                     data-doi-tuong="{{ ct.doi_tuong or '' }}"
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.08);">
+                    <td class="sticky-stt">{{ loop.index }}</td>
+                    <td class="fw-semibold sticky-name">
                         <div class="name-btn-group">
                             <div class="name-text"><span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span></div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
@@ -309,8 +309,8 @@
         <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe" style="font-size:0.82rem;">
             <thead>
                 <tr>
-                    <th style="position:sticky;left:0;z-index:3;background:var(--navy-primary,#1a3a5c);width:34px;min-width:34px;max-width:34px;">STT</th>
-                    <th style="position:sticky;left:34px;z-index:3;background:var(--navy-primary,#1a3a5c);width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.12);">Tên tập thể</th>
+                    <th class="sticky-stt">STT</th>
+                    <th class="sticky-name">Tên tập thể</th>
                     <th class="col-don-vi">Đơn vị</th>
                     <th class="col-danh-hieu">Danh hiệu</th>
                     <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
@@ -345,8 +345,8 @@
                     data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
                     data-doi-tuong=""
                     data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td style="position:sticky;left:0;z-index:2;background:inherit;width:34px;min-width:34px;max-width:34px;border-right:1px solid #dee2e6;">{{ loop.index }}</td>
-                    <td class="fw-semibold" style="position:sticky;left:34px;z-index:2;background:inherit;width:190px;min-width:190px;max-width:190px;overflow:hidden;box-shadow:2px 0 5px rgba(0,0,0,.08);">
+                    <td class="sticky-stt">{{ loop.index }}</td>
+                    <td class="fw-semibold sticky-name">
                         <div class="name-btn-group">
                             <div class="name-text"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}</div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
@@ -527,7 +527,6 @@
     text-align: center;
 }
 /* Các cột sticky header vẫn nowrap để không bị vỡ layout */
-.tbl-scroll thead th[style*="position:sticky"],
 .tbl-scroll thead .sticky-stt,
 .tbl-scroll thead .sticky-name,
 .tbl-scroll thead .sticky-action {
@@ -567,29 +566,38 @@
 }
 
 /* ── STICKY LEFT: STT (left:0) ───────────────────────── */
-.tbl-scroll td[style*="position:sticky"][style*="left:0"],
-.tbl-scroll th[style*="position:sticky"][style*="left:0"] {
+.tbl-scroll .sticky-stt {
     position: sticky !important;
     left: 0 !important;
     z-index: 2;
     width: 34px; min-width: 34px; max-width: 34px;
+    background: #fff;
     border-right: 2px solid #b0bec5 !important;
 }
-.tbl-scroll thead th[style*="position:sticky"][style*="left:0"] {
+.tbl-scroll thead .sticky-stt {
     z-index: 4 !important;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+    text-align: center;
 }
 
 /* ── STICKY LEFT: HỌ TÊN (left:34px) ────────────────── */
-.tbl-scroll td[style*="position:sticky"][style*="left:34px"],
-.tbl-scroll th[style*="position:sticky"][style*="left:34px"] {
+.tbl-scroll .sticky-name {
     position: sticky !important;
     left: 34px !important;
     z-index: 2;
     width: 190px; min-width: 190px; max-width: 190px;
-    box-shadow: 3px 0 6px rgba(0,0,0,.10);
+    background: #fff;
+    box-shadow: 3px 0 6px rgba(0,0,0,.12);
+    overflow: hidden;
 }
-.tbl-scroll thead th[style*="position:sticky"][style*="left:34px"] {
+.tbl-scroll thead .sticky-name {
     z-index: 4 !important;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+    text-align: left;
 }
 
 /* ── STICKY RIGHT: ĐANG CHỜ ─────────────────────────── */
@@ -607,11 +615,14 @@
 }
 
 /* Row-state backgrounds cho sticky cols */
-.tbl-scroll tr.table-success td[style*="position:sticky"],
+.tbl-scroll tr.table-success .sticky-stt,
+.tbl-scroll tr.table-success .sticky-name,
 .tbl-scroll tr.table-success .col-pending { background: #d1e7dd !important; }
-.tbl-scroll tr.table-danger  td[style*="position:sticky"],
+.tbl-scroll tr.table-danger  .sticky-stt,
+.tbl-scroll tr.table-danger  .sticky-name,
 .tbl-scroll tr.table-danger  .col-pending { background: #f8d7da !important; }
-.tbl-scroll tbody tr:hover   td[style*="position:sticky"],
+.tbl-scroll tbody tr:hover   .sticky-stt,
+.tbl-scroll tbody tr:hover   .sticky-name,
 .tbl-scroll tbody tr:hover   .col-pending { background: #f0f4f8 !important; }
 
 /* ── NAME CELL ───────────────────────────────────────── */
