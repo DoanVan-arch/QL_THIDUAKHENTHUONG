@@ -169,13 +169,20 @@ _FALLBACK_FIELD_LABELS = {
     'kiem_tra_dieu_lenh': 'Điều lệnh', 'ban_sung': 'Bắn súng', 'the_luc': 'Thể lực',
     'kiem_tra_chinh_tri': 'Chính trị', 'kiem_tra_tin_hoc': 'Kỹ năng số',
     'dia_ly_quan_su': 'Địa hình QS', 'danh_hieu_gv_gioi': 'GV giỏi',
-    'xep_loai_dang_vien': 'Xếp loại ĐV',
+    'xep_loai_dang_vien': 'Xếp loại ĐV', 'xep_loai_doan_vien': 'Xếp loại đoàn viên',
+    'hinh_thuc_khen_thuong_qc': 'KT quần chúng', 'ket_qua_phu_nu': 'XL phụ nữ',
+    'hinh_thuc_khen_thuong_pn': 'KT phụ nữ',
     'dinh_muc_giang_day': 'Định mức GD', 'ket_qua_kiem_tra_giang': 'KT giảng',
     'thoi_gian_lao_dong_kh': 'LĐ KH', 'tien_do_pgs': 'Tiến độ PGS',
     'danh_hieu_hv_gioi': 'HV giỏi', 'diem_tong_ket': 'Điểm TK',
-    'ket_qua_thuc_hanh': 'Thực hành', 'ket_qua_doan_the': 'Đoàn thể',
+    'ket_qua_thuc_hanh': 'Thực hành', 'ket_qua_ren_luyen': 'KQ rèn luyện',
+    'ket_qua_doan_the': 'Đoàn thể', 'hinh_thuc_tot_nghiep': 'HT thi TN',
+    'diem_tn_ctd': 'Điểm CTĐ (TN)', 'diem_tn_ct': 'Điểm CT (TN)',
+    'diem_tn_ta': 'Điểm TA (TN)', 'diem_tn_mon4': 'Điểm môn 4 (TN)',
+    'diem_tn_chuyennganh': 'Điểm CN (TN)', 'diem_tn_baove': 'Điểm BV KL (TN)',
     'chu_tri_don_vi_danh_hieu': 'Chủ trì ĐV', 'diem_nckh': 'Điểm KH',
     'nckh_noi_dung': 'NCKH', 'nckh_minh_chung': 'MC NCKH',
+    'mo_ta_khoa_hoc': 'Mô tả TT KH',
     'thanh_tich_ca_nhan_khac': 'Thành tích khác',
 }
 
@@ -415,6 +422,27 @@ def pending_list():
     table_columns = get_phong_table_columns().get(current_user.role, [])
     field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
     managed_dept_columns = _managed_gate_columns(current_user.role)
+
+    # Roles with no specific criteria mapping → show ALL ca_nhan criteria fields
+    if not table_columns:
+        from app.models.nomination import DeXuatChiTiet as _DX2
+        _all_cols = {c.name for c in _DX2.__table__.columns}
+        _ALL_CRITERIA = [
+            'muc_do_hoan_thanh', 'phieu_tin_nhiem',
+            'kiem_tra_chinh_tri', 'kiem_tra_dieu_lenh', 'kiem_tra_tin_hoc',
+            'dia_ly_quan_su', 'ban_sung', 'the_luc',
+            'xep_loai_dang_vien', 'ket_qua_doan_the', 'xep_loai_doan_vien',
+            'hinh_thuc_khen_thuong_qc', 'ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn',
+            'chu_tri_don_vi_danh_hieu',
+            'danh_hieu_gv_gioi', 'dinh_muc_giang_day', 'ket_qua_kiem_tra_giang',
+            'tien_do_pgs', 'thoi_gian_lao_dong_kh',
+            'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh', 'ket_qua_ren_luyen',
+            'hinh_thuc_tot_nghiep',
+            'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
+            'diem_tn_chuyennganh', 'diem_tn_baove',
+            'diem_nckh', 'mo_ta_khoa_hoc',
+        ]
+        table_columns = [f for f in _ALL_CRITERIA if f in _all_cols]
 
     # For Thủ trưởng roles: build ordered list of {dept_name, fields} for gate sub-departments
     # so the template can show criteria columns grouped by department

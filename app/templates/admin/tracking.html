@@ -929,22 +929,52 @@ function openDetailModal(ctId) {
                 p.la_doan_vien       ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
                 p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>'       : '',
             ].filter(Boolean).join(' ');
-            let html = `<div class="row g-2 mb-3">
-              <div class="col-12"><h6 class="fw-bold mb-0">${p.ho_ten||'—'}</h6>${badges}</div>
-              <div class="col-6"><small class="text-muted">Đơn vị</small><div>${n.don_vi||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Năm học</small><div>${n.nam_hoc||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Cấp bậc</small><div>${p.cap_bac||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Chức vụ</small><div>${p.chuc_vu||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Đối tượng</small><div>${p.doi_tuong||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Danh hiệu</small><div>${n.loai_danh_hieu||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Học hàm/vị</small><div>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div></div>
-              <div class="col-6"><small class="text-muted">Trạng thái</small><div>${n.trang_thai||'—'}</div></div>
+            let html = `<div class="row g-2 mb-2">
+              <div class="col-12"><h6 class="fw-bold mb-1">${p.ho_ten||'—'}</h6>${badges}</div>
+              <div class="col-6"><small class="text-muted d-block">Đơn vị</small>${n.don_vi||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Năm học</small>${n.nam_hoc||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Cấp bậc</small>${p.cap_bac||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Chức vụ</small>${p.chuc_vu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Đối tượng</small>${p.doi_tuong||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Danh hiệu</small>${n.loai_danh_hieu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Học hàm/vị</small>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Trạng thái</small>${n.trang_thai||'—'}</div>
             </div>`;
+            // Tiêu chí — show ALL, highlight non-empty
             if (d.criteria && d.criteria.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí</h6><table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
-                d.criteria.forEach(c => { html += `<tr><td class="text-muted" style="width:55%">${c.label}</td><td>${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`; });
+                const filled = d.criteria.filter(c => c.value && c.value !== 'None');
+                const empty  = d.criteria.filter(c => !c.value || c.value === 'None');
+                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.criteria.length + '</span></h6>';
+                html += '<table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
+                filled.forEach(c => {
+                    html += `<tr><td class="text-muted" style="width:52%">${c.label}</td><td class="fw-semibold">${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
+                });
+                if (empty.length) {
+                    html += `<tr class="table-light"><td colspan="2" class="text-muted small py-1 px-2">Chưa nhập (${empty.length} tiêu chí): ${empty.map(c=>c.label).join(', ')}</td></tr>`;
+                }
                 html += '</table>';
             }
+            // Minh chứng — clickable links + image preview
+            if (d.minh_chungs && d.minh_chungs.length) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng đính kèm <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.minh_chungs.length + '</span></h6>';
+                html += '<div class="d-flex flex-wrap gap-2 mb-2">';
+                d.minh_chungs.forEach(mc => {
+                    if (mc.is_image) {
+                        html += `<div class="text-center" style="max-width:120px;">
+                            <a href="${mc.url}" target="_blank" rel="noopener">
+                                <img src="${mc.url}" alt="${mc.ten_file}" style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;">
+                            </a>
+                            <div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div>
+                        </div>`;
+                    } else {
+                        html += `<a href="${mc.url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;" title="${mc.ten_file}">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
+                        </a>`;
+                    }
+                });
+                html += '</div>';
+            }
+            // Dept approvals
             const deptActed   = (d.dept_results||[]).filter(r => r.ket_qua && r.ket_qua !== 'auto');
             const deptPending = (d.dept_results||[]).filter(r => !r.ket_qua);
             if (deptActed.length) {
@@ -963,13 +993,6 @@ function openDetailModal(ctId) {
                     html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
-            }
-            if (d.minh_chungs && d.minh_chungs.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng đính kèm</h6><ul class="list-unstyled mb-1" style="font-size:.82rem;">';
-                d.minh_chungs.forEach(mc => {
-                    html += `<li><i class="bi bi-paperclip me-1 text-muted"></i><span class="text-muted me-1">${mc.loai}:</span>${mc.ten_file||'—'}</li>`;
-                });
-                html += '</ul>';
             }
             body.innerHTML = html;
         })
