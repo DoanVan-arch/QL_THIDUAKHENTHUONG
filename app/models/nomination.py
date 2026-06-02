@@ -214,6 +214,10 @@ class DeXuatChiTiet(db.Model):
     nckh_minh_chung = Column(String(255), nullable=True)
     mo_ta_khoa_hoc = Column(Text, nullable=True)
 
+    # Graduation overall score (average) + other-achievement evidence file path
+    diem_tot_nghiep = Column(Float, nullable=True)
+    minh_chung_thanh_tich_khac = Column(String(255), nullable=True)
+
     thanh_tich_ca_nhan_khac = Column(Text, nullable=True)
 
     # For collective (tap_the/don_vi) nominations — unit name being proposed
