@@ -235,11 +235,44 @@ _FALLBACK_FIELD_LABELS = {
     'chu_tri_don_vi_danh_hieu': 'Chủ trì ĐV', 'diem_nckh': 'Điểm KH',
     'nckh_noi_dung': 'NCKH', 'nckh_minh_chung': 'MC NCKH',
     'mo_ta_khoa_hoc': 'Mô tả TT KH',
+    'diem_tot_nghiep': 'Điểm TN (TB)',
+    'minh_chung_thanh_tich_khac': 'MC TT khác',
     'thanh_tich_ca_nhan_khac': 'Thành tích khác',
 }
 
 # Long text / file fields excluded from table columns
 _LONG_TEXT_FIELDS = {'nckh_noi_dung', 'nckh_minh_chung', 'tien_do_pgs', 'thanh_tich_ca_nhan_khac'}
+
+# Roles that view ALL criteria (read-only oversight), regardless of their assigned phong_duyet mapping.
+# They can still only approve/reject the items themselves; this only affects which columns are shown.
+_VIEW_ALL_CRITERIA_ROLES = {
+    Role.BAN_CANBO,
+    Role.BAN_CTCQ,
+    Role.BAN_BAOVE_ANNINH,
+    Role.BAN_TOCHUC,
+}
+
+
+def _all_criteria_columns():
+    """Return list of all ca_nhan criteria fields (excluding long text/file fields)."""
+    from app.models.nomination import DeXuatChiTiet as _DX
+    _all_cols = {c.name for c in _DX.__table__.columns}
+    _ALL_CRITERIA = [
+        'muc_do_hoan_thanh', 'phieu_tin_nhiem',
+        'kiem_tra_chinh_tri', 'kiem_tra_dieu_lenh', 'kiem_tra_tin_hoc',
+        'dia_ly_quan_su', 'ban_sung', 'the_luc',
+        'xep_loai_dang_vien', 'ket_qua_doan_the', 'xep_loai_doan_vien',
+        'hinh_thuc_khen_thuong_qc', 'ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn',
+        'chu_tri_don_vi_danh_hieu',
+        'danh_hieu_gv_gioi', 'dinh_muc_giang_day', 'ket_qua_kiem_tra_giang',
+        'tien_do_pgs', 'thoi_gian_lao_dong_kh',
+        'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh', 'ket_qua_ren_luyen',
+        'hinh_thuc_tot_nghiep',
+        'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
+        'diem_tn_chuyennganh', 'diem_tn_baove',
+        'diem_nckh', 'mo_ta_khoa_hoc', 'diem_tot_nghiep',
+    ]
+    return [f for f in _ALL_CRITERIA if f in _all_cols and f not in _LONG_TEXT_FIELDS]
 
 
 def _load_phong_fields_from_db():
@@ -475,26 +508,10 @@ def pending_list():
     field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
     managed_dept_columns = _managed_gate_columns(current_user.role)
 
-    # Roles with no specific criteria mapping → show ALL ca_nhan criteria fields
-    if not table_columns:
-        from app.models.nomination import DeXuatChiTiet as _DX2
-        _all_cols = {c.name for c in _DX2.__table__.columns}
-        _ALL_CRITERIA = [
-            'muc_do_hoan_thanh', 'phieu_tin_nhiem',
-            'kiem_tra_chinh_tri', 'kiem_tra_dieu_lenh', 'kiem_tra_tin_hoc',
-            'dia_ly_quan_su', 'ban_sung', 'the_luc',
-            'xep_loai_dang_vien', 'ket_qua_doan_the', 'xep_loai_doan_vien',
-            'hinh_thuc_khen_thuong_qc', 'ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn',
-            'chu_tri_don_vi_danh_hieu',
-            'danh_hieu_gv_gioi', 'dinh_muc_giang_day', 'ket_qua_kiem_tra_giang',
-            'tien_do_pgs', 'thoi_gian_lao_dong_kh',
-            'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh', 'ket_qua_ren_luyen',
-            'hinh_thuc_tot_nghiep',
-            'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
-            'diem_tn_chuyennganh', 'diem_tn_baove',
-            'diem_nckh', 'mo_ta_khoa_hoc',
-        ]
-        table_columns = [f for f in _ALL_CRITERIA if f in _all_cols]
+    # Roles in _VIEW_ALL_CRITERIA_ROLES (BAN_CANBO/BAN_CTCQ/BAN_BAOVE_ANNINH/BAN_TOCHUC)
+    # view ALL criteria like admin. Also fallback: if no mapping configured → show ALL.
+    if current_user.role in _VIEW_ALL_CRITERIA_ROLES or not table_columns:
+        table_columns = _all_criteria_columns()
 
     # For Thủ trưởng roles: build ordered list of {dept_name, fields} for gate sub-departments
     # so the template can show criteria columns grouped by department
@@ -627,6 +644,9 @@ def review_nomination(id):
     allowed_fields = get_phong_fields().get(current_user.role, [])
     table_columns = get_phong_table_columns().get(current_user.role, [])
     field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
+
+    if current_user.role in _VIEW_ALL_CRITERIA_ROLES or not table_columns:
+        table_columns = _all_criteria_columns()
 
     return render_template('approval/review.html',
                            de_xuat=de_xuat, phe_duyet=phe_duyet,
@@ -1112,6 +1132,9 @@ def history():
 
     allowed_fields = get_phong_fields().get(current_user.role, [])
     table_columns = get_phong_table_columns().get(current_user.role, [])
+
+    if current_user.role in _VIEW_ALL_CRITERIA_ROLES or not table_columns:
+        table_columns = _all_criteria_columns()
 
     # Build tt_criteria_fields from results for tập thể history table
     tt_keys_seen = set()

@@ -175,6 +175,8 @@ ALL_FIELD_LABELS = {
     'nckh_noi_dung': 'ND NCKH',
     'nckh_minh_chung': 'MC NCKH',
     'mo_ta_khoa_hoc': 'Mô tả thành tích KH',
+    'diem_tot_nghiep': 'Điểm tốt nghiệp',
+    'minh_chung_thanh_tich_khac': 'MC thành tích khác',
     'thanh_tich_ca_nhan_khac': 'Thành tích khác',
 }
 
@@ -194,6 +196,7 @@ ALL_FIELDS = [
     'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
     'diem_tn_chuyennganh', 'diem_tn_baove',
     'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung', 'mo_ta_khoa_hoc',
+    'diem_tot_nghiep', 'minh_chung_thanh_tich_khac',
     'thanh_tich_ca_nhan_khac',
 ]
 
@@ -551,6 +554,9 @@ def tracking_detail(ct_id):
         'diem_nckh': 'Điểm NCKH',
         'nckh_noi_dung': 'Nội dung NCKH',
         'nckh_minh_chung': 'Minh chứng NCKH',
+        'mo_ta_khoa_hoc': 'Mô tả thành tích KH',
+        'diem_tot_nghiep': 'Điểm tốt nghiệp (TB)',
+        'minh_chung_thanh_tich_khac': 'MC thành tích khác',
         'thanh_tich_ca_nhan_khac': 'Thành tích cá nhân khác',
     }
 
@@ -570,6 +576,7 @@ def tracking_detail(ct_id):
         'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
         'diem_tn_chuyennganh', 'diem_tn_baove',
         'diem_nckh', 'nckh_noi_dung',
+        'mo_ta_khoa_hoc', 'diem_tot_nghiep', 'minh_chung_thanh_tich_khac',
         'thanh_tich_ca_nhan_khac',
     ]
 
@@ -667,6 +674,8 @@ def api_chi_tiet_detail(ct_id):
         ('nckh_noi_dung', 'Nội dung NCKH', None),
         ('nckh_minh_chung', 'Minh chứng NCKH (text)', None),
         ('mo_ta_khoa_hoc', 'Mô tả thành tích KH', None),
+        ('diem_tot_nghiep', 'Điểm tốt nghiệp (TB)', None),
+        ('minh_chung_thanh_tich_khac', 'Minh chứng thành tích khác', None),
         ('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV danh hiệu', None),
         ('thanh_tich_ca_nhan_khac', 'Thành tích cá nhân khác', None),
         ('ghi_chu', 'Ghi chú', None),
@@ -819,7 +828,7 @@ def final_approve_individual(ct_id):
     db.session.commit()
     ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
     flash(f'Đã đồng ý cho "{ho_ten}". Khi toàn bộ đề xuất được duyệt sẽ chuyển sang Hội đồng biểu quyết.', 'success')
-    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc, _anchor='bang2'))
 
 
 @admin_bp.route('/tracking/<int:id>/final-approve', methods=['POST'])
@@ -872,7 +881,7 @@ def final_approve_from_tracking(id):
     de_xuat.trang_thai = TrangThaiDeXuat.PHE_DUYET_CUOI.value
     db.session.commit()
     flash('Đã phê duyệt đề xuất. Chuyển sang Hội đồng biểu quyết (Bảng 2).', 'success')
-    return redirect(url_for('admin.approval_tracking'))
+    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc, _anchor='bang2'))
 
 
 @admin_bp.route('/reward-list/confirm-khen-thuong/<int:id>', methods=['POST'])
@@ -3076,6 +3085,9 @@ def reward_detail(kt_id):
         'diem_nckh': 'Điểm NCKH',
         'nckh_noi_dung': 'Nội dung NCKH',
         'nckh_minh_chung': 'Minh chứng NCKH',
+        'mo_ta_khoa_hoc': 'Mô tả thành tích KH',
+        'diem_tot_nghiep': 'Điểm tốt nghiệp (TB)',
+        'minh_chung_thanh_tich_khac': 'MC thành tích khác',
         'thanh_tich_ca_nhan_khac': 'Thành tích cá nhân khác',
     }
 
@@ -3091,6 +3103,7 @@ def reward_detail(kt_id):
         'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
         'diem_tn_chuyennganh', 'diem_tn_baove',
         'diem_nckh', 'nckh_noi_dung', 'nckh_minh_chung',
+        'mo_ta_khoa_hoc', 'diem_tot_nghiep', 'minh_chung_thanh_tich_khac',
         'thanh_tich_ca_nhan_khac',
     ]
 
@@ -4161,6 +4174,8 @@ TIEU_CHI_OPTIONS = [
     ('nckh_noi_dung', 'Nội dung NCKH'),
     ('nckh_minh_chung', 'Minh chứng NCKH'),
     ('mo_ta_khoa_hoc', 'Mô tả thành tích khoa học'),
+    ('diem_tot_nghiep', 'Điểm tốt nghiệp (TB)'),
+    ('minh_chung_thanh_tich_khac', 'Minh chứng thành tích khác'),
     ('thanh_tich_ca_nhan_khac', 'Thành tích cá nhân khác'),
 ]
 
