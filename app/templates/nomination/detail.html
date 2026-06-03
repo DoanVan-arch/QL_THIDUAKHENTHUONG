@@ -321,9 +321,20 @@
                 <small class="text-muted fw-semibold">Minh chứng:</small>
                 <div class="d-flex flex-wrap gap-2 mt-1">
                     {% for mc in ct.minh_chungs %}
-                    <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}"
-                         class="evidence-thumb" alt="{{ mc.ten_file_goc }}"
-                         onclick="showImageModal(this.src)">
+                    {% set ext = mc.duong_dan.rsplit('.', 1)[-1].lower() if '.' in mc.duong_dan else '' %}
+                    {% if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp') %}
+                    <a href="{{ url_for('uploaded_file', filename=mc.duong_dan) }}" target="_blank" rel="noopener">
+                        <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}"
+                             class="evidence-thumb" alt="{{ mc.ten_file_goc }}"
+                             onclick="event.preventDefault(); showImageModal(this.src)">
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('uploaded_file', filename=mc.duong_dan) }}" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;"
+                       title="{{ mc.ten_file_goc }}">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ mc.ten_file_goc or mc.loai_minh_chung }}
+                    </a>
+                    {% endif %}
                     {% endfor %}
                 </div>
             </div>
