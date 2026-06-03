@@ -103,7 +103,7 @@
 {% set all_tt = [] %}
 {% for pd in pending_reviews %}
     {% set results_pd = all_item_results[pd.id] if pd.id in all_item_results else {} %}
-    {% for ct in pd.de_xuat.chi_tiets %}
+    {% for ct in pd.de_xuat.chi_tiets_active %}
         {% if ct.quan_nhan_id %}
             {% if all_cn.append({'ct': ct, 'pd': pd, 'results': results_pd, 'don_vi': pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—'}) %}{% endif %}
         {% else %}
@@ -274,6 +274,7 @@
                         {% elif is_gate_ready %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input toggle-approval" type="checkbox" id="switch-{{ pd.id }}-{{ ct.id }}" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" {% if is_approved %}checked{% endif %} style="cursor:pointer; width:2.5em; height:1.3em;"></div>
                         {% if not is_approved %}<a href="javascript:void(0)" class="reject-link text-danger" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>{% endif %}
+                        <a href="javascript:void(0)" class="request-edit-link text-primary d-block" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tập thể'))|e }}" data-tap-the="false" style="font-size:0.68rem;" title="Yêu cầu đơn vị chỉnh sửa tiêu chí"><i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa</a>
                         {% if is_rejected %}<small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}" style="font-size:0.72rem;" title="{{ kq.ly_do }}">{{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}</small>{% endif %}
                         {% if is_approved or is_rejected %}
                         <a href="javascript:void(0)" class="revoke-item-link text-warning d-block" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.68rem;" title="Thu hồi kết quả duyệt"><i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi</a>
@@ -391,6 +392,7 @@
                         {% elif is_gate_ready %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input toggle-approval" type="checkbox" id="switch-{{ pd.id }}-{{ ct.id }}" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" {% if is_approved %}checked{% endif %} style="cursor:pointer; width:2.5em; height:1.3em;"></div>
                         {% if not is_approved %}<a href="javascript:void(0)" class="reject-link text-danger" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>{% endif %}
+                        <a href="javascript:void(0)" class="request-edit-link text-primary d-block" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" data-name="{{ (ct.ten_don_vi_de_xuat or 'Tập thể')|e }}" data-tap-the="true" style="font-size:0.68rem;" title="Yêu cầu đơn vị chỉnh sửa tiêu chí"><i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa</a>
                         {% if is_rejected %}<small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}" style="font-size:0.72rem;" title="{{ kq.ly_do }}">{{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}</small>{% endif %}
                         {% else %}
                         <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
@@ -414,7 +416,7 @@
 <!-- Evidence Modals -->
 {% if show_evidence %}
 {% for pd in pending_reviews %}
-{% for ct in pd.de_xuat.chi_tiets %}
+{% for ct in pd.de_xuat.chi_tiets_active %}
 {% if ct.minh_chungs %}
 <div class="modal fade" id="mcModal{{ ct.id }}" tabindex="-1">
     <div class="modal-dialog">
@@ -460,6 +462,38 @@
         </div>
     </div>
 </div>
+
+<!-- Request edit (yêu cầu chỉnh sửa) modal -->
+<div class="modal fade" id="requestEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header modal-header-navy">
+                <h6 class="modal-title"><i class="bi bi-pencil-square me-1"></i>Yêu cầu chỉnh sửa</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Yêu cầu đơn vị chỉnh sửa các tiêu chí sau cho: <strong id="reqEditName"></strong></p>
+                <p class="text-muted small">Chỉ các tiêu chí bạn chọn sẽ được mở cho đơn vị chỉnh sửa, mọi thông tin khác giữ nguyên. Sau khi đơn vị sửa, chỉ ban của bạn cần duyệt lại.</p>
+                <div id="reqEditFields" class="border rounded p-2 mb-3" style="max-height:260px; overflow:auto;"></div>
+                <label class="form-label fw-semibold">Lý do yêu cầu</label>
+                <textarea class="form-control" id="reqEditReason" rows="2" placeholder="Nhập lý do cần chỉnh sửa..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="reqEditSubmit">
+                    <i class="bi bi-send me-1"></i>Gửi yêu cầu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="reqEditFieldData">
+{
+  "ca_nhan": [{% for f in table_columns %}{"ma_truong": {{ f|tojson }}, "ten": {{ (field_labels.get(f, f))|tojson }}}{{ "," if not loop.last }}{% endfor %}],
+  "tap_the": [{% for f in tt_criteria_fields %}{"ma_truong": {{ f|tojson }}, "ten": {{ (tt_field_labels.get(f, f))|tojson }}}{{ "," if not loop.last }}{% endfor %}]
+}
+</script>
 
 {% else %}
 <div class="card-section">
@@ -834,6 +868,62 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(() => alert('Lỗi kết nối.'));
         });
     });
+
+    // ===================== REQUEST EDIT (yêu cầu chỉnh sửa) =====================
+    let reqEditFieldData = {ca_nhan: [], tap_the: []};
+    try {
+        reqEditFieldData = JSON.parse(document.getElementById('reqEditFieldData').textContent);
+    } catch (e) {}
+    const reqEditModalEl = document.getElementById('requestEditModal');
+    const reqEditModal = reqEditModalEl ? new bootstrap.Modal(reqEditModalEl) : null;
+    let reqEditCtx = {pdId: null, ctId: null};
+
+    document.querySelectorAll('.request-edit-link').forEach(link => {
+        link.addEventListener('click', function () {
+            reqEditCtx.pdId = this.dataset.pdId;
+            reqEditCtx.ctId = this.dataset.ctId;
+            const isTapThe = this.dataset.tapThe === 'true';
+            document.getElementById('reqEditName').textContent = this.dataset.name || '';
+            document.getElementById('reqEditReason').value = '';
+            const fields = isTapThe ? reqEditFieldData.tap_the : reqEditFieldData.ca_nhan;
+            const box = document.getElementById('reqEditFields');
+            if (!fields.length) {
+                box.innerHTML = '<p class="text-muted small mb-0">Không có tiêu chí nào để chọn.</p>';
+            } else {
+                box.innerHTML = fields.map(f =>
+                    `<div class="form-check"><input class="form-check-input req-edit-field" type="checkbox" value="${f.ma_truong}" id="reqf-${f.ma_truong}"><label class="form-check-label" for="reqf-${f.ma_truong}">${f.ten}</label></div>`
+                ).join('');
+            }
+            if (reqEditModal) reqEditModal.show();
+        });
+    });
+
+    const reqEditSubmit = document.getElementById('reqEditSubmit');
+    if (reqEditSubmit) {
+        reqEditSubmit.addEventListener('click', function () {
+            const checked = Array.from(document.querySelectorAll('.req-edit-field:checked')).map(c => c.value);
+            const reason = document.getElementById('reqEditReason').value.trim();
+            if (!checked.length) { alert('Vui lòng chọn ít nhất một tiêu chí.'); return; }
+            this.disabled = true;
+            fetch(`/approval/request-edit/${reqEditCtx.pdId}/${reqEditCtx.ctId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+                body: JSON.stringify({fields: checked, ly_do: reason}),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    this.disabled = false;
+                    if (data.success) {
+                        if (reqEditModal) reqEditModal.hide();
+                        showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        alert(data.message || 'Không thể gửi yêu cầu.');
+                    }
+                })
+                .catch(() => { this.disabled = false; alert('Lỗi kết nối.'); });
+        });
+    }
 
     // ===================== BATCH APPROVE =====================
     let batchPendingData = null;

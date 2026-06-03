@@ -90,7 +90,7 @@
             </div>
             <div class="col-md-2">
                 <small class="text-muted">Số cá nhân</small>
-                <div class="fw-semibold">{{ de_xuat.chi_tiets|length }}</div>
+                <div class="fw-semibold">{{ de_xuat.chi_tiets_active|length }}</div>
             </div>
             <div class="col-md-2">
                 <small class="text-muted">Trạng thái</small>
@@ -113,7 +113,7 @@
 <!-- Stats summary -->
 {% if phe_duyet.ket_qua == 'Chờ duyệt' %}
 {% set ns_stats = namespace(total=0, reviewed=0, approved=0, rejected=0) %}
-{% for ct in de_xuat.chi_tiets %}
+{% for ct in de_xuat.chi_tiets_active %}
     {% if ct.id not in out_of_scope_ct_ids %}
         {% set ns_stats.total = ns_stats.total + 1 %}
         {% set kq_s = item_results[ct.id] if ct.id in item_results else None %}
@@ -154,7 +154,7 @@
         <h5><i class="bi bi-people me-2"></i>Danh sách cá nhân xét duyệt</h5>
     </div>
     <div class="card-body-custom p-0">
-        {% if de_xuat.chi_tiets %}
+        {% if de_xuat.chi_tiets_active %}
         <div class="table-responsive">
             <table class="table table-custom table-hover mb-0 align-middle" style="font-size:0.82rem;">
                 <thead>
@@ -173,7 +173,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for ct in de_xuat.chi_tiets %}
+                    {% for ct in de_xuat.chi_tiets_active %}
                     {% set kq = item_results[ct.id] if ct.id in item_results else None %}
                     {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
                     {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
@@ -340,7 +340,7 @@
 {% endif %}
 
 <!-- Detail Modals -->
-{% for ct in de_xuat.chi_tiets %}
+{% for ct in de_xuat.chi_tiets_active %}
 <div class="modal fade" id="detailModal{{ ct.id }}" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -430,7 +430,7 @@
 {% endfor %}
 
 <!-- Evidence Modals -->
-{% for ct in de_xuat.chi_tiets %}
+{% for ct in de_xuat.chi_tiets_active %}
 {% if ct.minh_chungs %}
 <div class="modal fade" id="mcModal{{ ct.id }}" tabindex="-1">
     <div class="modal-dialog">

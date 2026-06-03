@@ -146,6 +146,11 @@ class DeXuat(db.Model):
         return self.trang_thai in (TrangThaiDeXuat.NHAP.value, TrangThaiDeXuat.TU_CHOI.value)
 
     @property
+    def chi_tiets_active(self):
+        """Chi_tiets still in the approval process (not removed by a rejecting department)."""
+        return [c for c in self.chi_tiets if not c.bi_loai]
+
+    @property
     def approval_progress(self):
         total = len([p for p in self.phe_duyets if p.phong_duyet != 'Tuyên huấn'])
         approved = len([p for p in self.phe_duyets if p.phong_duyet != 'Tuyên huấn' and p.ket_qua == 'Đồng ý'])
@@ -230,6 +235,14 @@ class DeXuatChiTiet(db.Model):
 
     # Admin pre-approval flag (Bảng 1 → Bảng 2 transition)
     admin_approved = Column(db.Boolean, default=False, nullable=False, server_default='0')
+
+    # Soft-remove: when an approving department rejects this single cá nhân/tập thể,
+    # the item is removed from the active approval process (hidden from pending/tracking)
+    # while the rest of the đề xuất continues. Kept in DB for audit / possible restore.
+    bi_loai = Column(db.Boolean, default=False, nullable=False, server_default='0')
+    ly_do_loai = Column(Text, nullable=True)
+    phong_loai = Column(String(100), nullable=True)
+    ngay_loai = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
