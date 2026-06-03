@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
+from app.models.user import User
 from app.models.personnel import QuanNhan, DoiTuong, MucDoHoanThanh
 from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi
 from app.models.evaluation import NhomTieuChi
@@ -245,6 +246,9 @@ def detail_nomination(id):
             'ct': ct,
             'dept_results': ct_dept_results,
             'is_rewarded': ct.id in approved_ct_ids,
+            'is_removed': ct.bi_loai,
+            'ly_do_loai': ct.ly_do_loai,
+            'phong_loai': ct.phong_loai,
         })
 
     return render_template('nomination/detail.html',
@@ -951,7 +955,21 @@ def notifications():
         page=page, per_page=20, error_out=False
     )
 
-    return render_template('nomination/notifications.html', thong_baos=thong_baos)
+    # Map chi_tiet_id -> open edit-request id (CHO_SUA) for this unit, so the
+    # notification can show a "Chỉnh sửa ngay" action.
+    from app.models.edit_request import YeuCauChinhSua, TrangThaiYeuCauSua
+    ct_ids = [tb.chi_tiet_id for tb in thong_baos.items if tb.chi_tiet_id]
+    edit_requests = {}
+    if ct_ids:
+        open_reqs = YeuCauChinhSua.query.filter(
+            YeuCauChinhSua.chi_tiet_id.in_(ct_ids),
+            YeuCauChinhSua.trang_thai == TrangThaiYeuCauSua.CHO_SUA.value,
+        ).order_by(YeuCauChinhSua.created_at.desc()).all()
+        for r in open_reqs:
+            edit_requests.setdefault(r.chi_tiet_id, r.id)
+
+    return render_template('nomination/notifications.html',
+                           thong_baos=thong_baos, edit_requests=edit_requests)
 
 
 @nomination_bp.route('/notifications/mark-read', methods=['POST'])
@@ -967,6 +985,138 @@ def mark_notifications_read():
     db.session.commit()
     flash('Đã đánh dấu tất cả thông báo đã đọc.', 'success')
     return redirect(url_for('nomination.notifications'))
+
+
+@nomination_bp.route('/edit-request/<int:request_id>', methods=['GET', 'POST'])
+@login_required
+@unit_user_required
+def edit_request(request_id):
+    """Restricted edit screen for the unit: only the criteria flagged by an approving
+    department (via 'Yêu cầu chỉnh sửa') are editable. Everything else stays locked.
+    On submit, only the requesting department must re-review."""
+    import json as _json
+    from app.models.edit_request import YeuCauChinhSua, TrangThaiYeuCauSua
+
+    yc = YeuCauChinhSua.query.get_or_404(request_id)
+    chi_tiet = yc.chi_tiet
+    de_xuat = yc.de_xuat
+
+    if de_xuat is None or chi_tiet is None or de_xuat.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền thao tác.', 'danger')
+        return redirect(url_for('nomination.notifications'))
+
+    if chi_tiet.bi_loai:
+        flash('Mục này đã bị loại khỏi đề xuất, không thể chỉnh sửa.', 'warning')
+        return redirect(url_for('nomination.notifications'))
+
+    if yc.trang_thai != TrangThaiYeuCauSua.CHO_SUA.value:
+        flash('Yêu cầu chỉnh sửa này đã được xử lý.', 'info')
+        return redirect(url_for('nomination.notifications'))
+
+    flagged = yc.cac_truong or []
+    is_tap_the = chi_tiet.quan_nhan_id is None
+
+    # Field metadata for rendering inputs
+    tc_rows = TieuChi.query.filter(
+        TieuChi.ma_truong.in_(flagged), TieuChi.is_active == True
+    ).all()
+    tc_map = {tc.ma_truong: tc for tc in tc_rows}
+
+    if request.method == 'POST':
+        tap_the_data = {}
+        if chi_tiet.tap_the_data:
+            try:
+                tap_the_data = _json.loads(chi_tiet.tap_the_data)
+            except Exception:
+                tap_the_data = {}
+
+        for field in flagged:
+            val = request.form.get(field, '').strip()
+            if is_tap_the:
+                if val:
+                    tap_the_data[field] = val
+                else:
+                    tap_the_data.pop(field, None)
+            else:
+                setattr(chi_tiet, field, val or None)
+
+        if is_tap_the:
+            chi_tiet.tap_the_data = _json.dumps(tap_the_data, ensure_ascii=False) if tap_the_data else None
+
+        yc.trang_thai = TrangThaiYeuCauSua.DA_SUA.value
+        yc.ngay_sua = datetime.utcnow()
+
+        # Reset ONLY the requesting department's result for this item to CHO_DUYET,
+        # so only that department re-reviews; all other departments keep their result.
+        phe_duyet = PheDuyet.query.filter_by(
+            de_xuat_id=de_xuat.id, phong_duyet=yc.phong_yeu_cau
+        ).first()
+        if phe_duyet:
+            kq = KetQuaDuyetChiTiet.query.filter_by(
+                phe_duyet_id=phe_duyet.id, chi_tiet_id=chi_tiet.id
+            ).first()
+            if kq:
+                kq.ket_qua = KetQuaDuyet.CHO_DUYET.value
+                kq.ly_do = None
+            if phe_duyet.ket_qua == KetQuaDuyet.DONG_Y.value:
+                phe_duyet.ket_qua = KetQuaDuyet.CHO_DUYET.value
+                phe_duyet.ngay_duyet = None
+            # Keep đề xuất in review state
+            if de_xuat.trang_thai not in (TrangThaiDeXuat.DANG_DUYET.value,
+                                          TrangThaiDeXuat.HOI_DONG.value):
+                de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
+
+        # Notify the requesting department's account(s)
+        from app.routes.approval import _PHONG_TO_ROLE
+        req_role = _PHONG_TO_ROLE.get(yc.phong_yeu_cau)
+        if req_role:
+            for u in User.query.filter_by(role=req_role).all():
+                name = (chi_tiet.quan_nhan.ho_ten if chi_tiet.quan_nhan else
+                        (chi_tiet.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi))
+                db.session.add(ThongBao(
+                    user_id=u.id,
+                    de_xuat_id=de_xuat.id,
+                    chi_tiet_id=chi_tiet.id,
+                    loai='da_sua',
+                    tieu_de=f'Đơn vị đã chỉnh sửa: {name}',
+                    noi_dung=(f'{de_xuat.don_vi.ten_don_vi} đã chỉnh sửa các tiêu chí theo '
+                              f'yêu cầu. Vui lòng duyệt lại.'),
+                ))
+
+        db.session.commit()
+        flash('Đã chỉnh sửa và gửi lại cho ban yêu cầu.', 'success')
+        return redirect(url_for('nomination.notifications'))
+
+    # GET: build current values + render metadata for flagged fields only
+    tap_the_data = {}
+    if chi_tiet.tap_the_data:
+        try:
+            tap_the_data = _json.loads(chi_tiet.tap_the_data)
+        except Exception:
+            tap_the_data = {}
+
+    fields = []
+    for field in flagged:
+        tc = tc_map.get(field)
+        if is_tap_the:
+            cur = tap_the_data.get(field, '')
+        else:
+            cur = getattr(chi_tiet, field, '') or ''
+        fields.append({
+            'ma_truong': field,
+            'ten': tc.ten if tc else field,
+            'huong_dan': (tc.huong_dan if tc else '') or '',
+            'loai_input': (tc.loai_input if tc else 'textbox') or 'textbox',
+            'gia_tri_chon': (tc.gia_tri_chon if tc else []) or [],
+            'gia_tri': cur,
+        })
+
+    ten_hien_thi = (chi_tiet.quan_nhan.ho_ten if chi_tiet.quan_nhan else
+                    (chi_tiet.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi))
+
+    return render_template('nomination/edit_request.html',
+                           yc=yc, de_xuat=de_xuat, chi_tiet=chi_tiet,
+                           fields=fields, ten_hien_thi=ten_hien_thi)
 
 
 @nomination_bp.route('/<int:id>/revoke', methods=['POST'])

@@ -301,6 +301,10 @@ def approval_tracking():
         for ct in dx.chi_tiets:
             is_tap_the = ct.ten_don_vi_de_xuat is not None or ct.quan_nhan_id is None
 
+            # Skip cá nhân/tập thể removed from the process by a rejecting department
+            if ct.bi_loai:
+                continue
+
             # Skip individuals already in KhenThuong (fully finalized)
             if ct.id in approved_ct_ids:
                 continue
@@ -852,7 +856,7 @@ def final_approve_from_tracking(id):
         ).first()
         if not pd:
             # acceptable only if all individuals are auto-scope for this department
-            has_in_scope = any(not _is_auto_scope_approved(dept_name, ct.doi_tuong) for ct in de_xuat.chi_tiets)
+            has_in_scope = any(not _is_auto_scope_approved(dept_name, ct.doi_tuong) for ct in de_xuat.chi_tiets_active)
             if has_in_scope:
                 flash(f'{dept_name} chưa phê duyệt xong.', 'warning')
                 return redirect(url_for('admin.approval_tracking'))
@@ -865,7 +869,7 @@ def final_approve_from_tracking(id):
     ghi_chu = request.form.get('ghi_chu', '').strip() or None
 
     # Mark all individuals as admin pre-approved
-    for ct in de_xuat.chi_tiets:
+    for ct in de_xuat.chi_tiets_active:
         ct.admin_approved = True
 
     # Update admin PheDuyet record
@@ -899,7 +903,7 @@ def confirm_khen_thuong(id):
 
     # Check that all 6 Hội đồng roles voted DONG_Y for all chi_tiets
     from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y
-    for ct in de_xuat.chi_tiets:
+    for ct in de_xuat.chi_tiets_active:
         for vai_tro in HOI_DONG_VAI_TRO:
             bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
             if not bq or bq.ket_qua != KET_QUA_DONG_Y:
@@ -913,7 +917,7 @@ def confirm_khen_thuong(id):
     ghi_chu = request.form.get('ghi_chu', '').strip() or None
 
     # Create KhenThuong for each individual
-    for ct in de_xuat.chi_tiets:
+    for ct in de_xuat.chi_tiets_active:
         existing = KhenThuong.query.filter_by(de_xuat_id=de_xuat.id, chi_tiet_id=ct.id).first()
         if not existing:
             khen_thuong = KhenThuong(
@@ -1154,7 +1158,7 @@ def reject_individual_from_tracking(ct_id):
         admin_pd = PheDuyet(
             de_xuat_id=de_xuat.id,
             phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
-            ket_qua=KetQuaDuyet.TU_CHOI.value,
+            ket_qua=KetQuaDuyet.CHO_DUYET.value,
         )
         db.session.add(admin_pd)
         db.session.flush()
@@ -1178,8 +1182,16 @@ def reject_individual_from_tracking(ct_id):
     # Reset admin_approved flag if it was set
     ct.admin_approved = False
 
-    # Move nomination back to TU_CHOI state
-    de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
+    # Soft-remove ONLY this cá nhân/tập thể; the rest of the đề xuất continues.
+    if not ct.bi_loai:
+        ct.bi_loai = True
+        ct.ly_do_loai = ly_do
+        ct.phong_loai = PhongDuyet.ADMIN_TUYENHUAN.value
+        ct.ngay_loai = datetime.utcnow()
+
+    # Recompute status of the remaining active items
+    from app.routes.approval import _recompute_de_xuat_status
+    _recompute_de_xuat_status(de_xuat)
     db.session.commit()
 
     # Notify unit account
@@ -1191,14 +1203,14 @@ def reject_individual_from_tracking(ct_id):
             de_xuat_id=de_xuat.id,
             chi_tiet_id=ct.id,
             loai='tu_choi',
-            tieu_de=f'Ban Tuyên huấn (Admin) từ chối: {ho_ten}',
-            noi_dung=f'Lý do: {ly_do}. Đề xuất năm học {de_xuat.nam_hoc}.',
+            tieu_de=f'Ban Tuyên huấn (Admin) loại khỏi đề xuất: {ho_ten}',
+            noi_dung=f'Lý do: {ly_do}. {ho_ten} đã bị loại khỏi đề xuất năm học {de_xuat.nam_hoc}. Các cá nhân/tập thể còn lại vẫn tiếp tục được xét duyệt.',
         )
         db.session.add(thong_bao)
         db.session.commit()
 
     ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
-    flash(f'Đã từ chối "{ho_ten}" và gửi thông báo về đơn vị.', 'warning')
+    flash(f'Đã loại "{ho_ten}" khỏi đề xuất và gửi thông báo về đơn vị.', 'warning')
     return redirect(url_for('admin.approval_tracking'))
 
 

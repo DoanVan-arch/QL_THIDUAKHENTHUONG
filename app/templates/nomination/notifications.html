@@ -28,6 +28,10 @@
                         <div class="d-flex align-items-center gap-2 mb-1">
                             {% if tb.loai == 'tu_choi' %}
                             <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Từ chối</span>
+                            {% elif tb.loai == 'yeu_cau_sua' %}
+                            <span class="badge bg-primary"><i class="bi bi-pencil-square me-1"></i>Yêu cầu chỉnh sửa</span>
+                            {% elif tb.loai == 'da_sua' %}
+                            <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>Đã chỉnh sửa</span>
                             {% else %}
                             <span class="badge bg-info"><i class="bi bi-info-circle me-1"></i>Thông tin</span>
                             {% endif %}
@@ -38,6 +42,12 @@
                         <h6 class="mb-1 fw-semibold" style="font-size:0.9rem;">{{ tb.tieu_de }}</h6>
                         {% if tb.noi_dung %}
                         <p class="mb-1 text-muted" style="font-size:0.85rem;">{{ tb.noi_dung }}</p>
+                        {% endif %}
+                        {% if tb.loai == 'yeu_cau_sua' and edit_requests.get(tb.chi_tiet_id) %}
+                        <a href="{{ url_for('nomination.edit_request', request_id=edit_requests[tb.chi_tiet_id]) }}"
+                           class="btn btn-sm btn-primary mt-1">
+                            <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa ngay
+                        </a>
                         {% endif %}
                     </div>
                     <div class="text-end">

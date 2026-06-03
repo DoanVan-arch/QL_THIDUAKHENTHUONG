@@ -36,7 +36,7 @@ def list_nominations():
         danh_hieu_order = {dh.ten_danh_hieu: dh.thu_tu for dh in DanhHieu.query.all()}
 
         for dx in nominations:
-            for ct in dx.chi_tiets:
+            for ct in dx.chi_tiets_active:
                 my_vote = HoiDongBieuQuyet.query.filter_by(
                     chi_tiet_id=ct.id, vai_tro=vai_tro
                 ).first()
@@ -82,7 +82,7 @@ def detail(id):
     from app.models.nomination import DanhHieu
     danh_hieu_order = {dh.ten_danh_hieu: dh.thu_tu for dh in DanhHieu.query.all()}
     sorted_chi_tiets = sorted(
-        de_xuat.chi_tiets,
+        de_xuat.chi_tiets_active,
         key=lambda ct: (danh_hieu_order.get(ct.loai_danh_hieu, 999),
                         ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat or '')
     )
@@ -184,7 +184,7 @@ def cast_vote_all(id):
 
     now = datetime.utcnow()
     count = 0
-    for ct in de_xuat.chi_tiets:
+    for ct in de_xuat.chi_tiets_active:
         existing = HoiDongBieuQuyet.query.filter_by(
             chi_tiet_id=ct.id, vai_tro=vai_tro
         ).first()

@@ -6,6 +6,7 @@ from app.models.unit import DonVi
 from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, TieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.notification import ThongBao
+from app.models.edit_request import YeuCauChinhSua, TrangThaiYeuCauSua
 from app.utils.decorators import department_required
 from datetime import datetime
 from io import BytesIO
@@ -43,6 +44,8 @@ def _auto_finalize_scope_dept(de_xuat_id):
         # Ensure KetQuaDuyetChiTiet records exist for all chi_tiets
         existing = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
         for ct in de_xuat.chi_tiets:
+            if ct.bi_loai:
+                continue
             if ct.id not in existing:
                 in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
                 db.session.add(KetQuaDuyetChiTiet(
@@ -51,10 +54,12 @@ def _auto_finalize_scope_dept(de_xuat_id):
                     ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
                 ))
         db.session.flush()
-        # Re-check: if no CHO_DUYET remains → auto-finalize
+        # Re-check: if no CHO_DUYET remains among ACTIVE items → auto-finalize
         pending = KetQuaDuyetChiTiet.query.filter_by(
             phe_duyet_id=pd.id,
             ket_qua=KetQuaDuyet.CHO_DUYET.value,
+        ).join(DeXuatChiTiet, KetQuaDuyetChiTiet.chi_tiet_id == DeXuatChiTiet.id).filter(
+            DeXuatChiTiet.bi_loai == False
         ).count()
         if pending == 0:
             pd.ket_qua = KetQuaDuyet.DONG_Y.value
@@ -378,33 +383,91 @@ def _notify_rejections(phe_duyet):
             db.session.add(thong_bao)
 
 
-def _auto_reject_nomination_on_item(phe_duyet, ct_id, ly_do=''):
-    """When any dept rejects an item, immediately reject the whole nomination and notify."""
+def _remove_chi_tiet_on_reject(phe_duyet, ct_id, ly_do=''):
+    """When a department rejects a single cá nhân/tập thể, remove ONLY that item from the
+    active approval process (soft-remove). The rest of the đề xuất continues unaffected.
+    The unit is notified so it can see who was removed and why."""
     de_xuat = phe_duyet.de_xuat
-    # Mark this phe_duyet as rejected immediately
-    phe_duyet.ket_qua = KetQuaDuyet.TU_CHOI.value
-    phe_duyet.nguoi_duyet_id = None
-    phe_duyet.ngay_duyet = datetime.utcnow()
-    phe_duyet.ly_do = ly_do or 'Có cá nhân/tập thể bị từ chối'
-    # Mark the whole nomination as rejected
-    de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
-    # Send notification to unit
+    ct = DeXuatChiTiet.query.get(ct_id)
+    if ct and not ct.bi_loai:
+        ct.bi_loai = True
+        ct.ly_do_loai = ly_do or 'Không đạt yêu cầu'
+        ct.phong_loai = phe_duyet.phong_duyet
+        ct.ngay_loai = datetime.utcnow()
+
+    # Notify the unit account
     unit_user = User.query.filter_by(
         don_vi_id=de_xuat.don_vi_id, role=Role.UNIT_USER
     ).first()
-    if unit_user:
-        ct = DeXuatChiTiet.query.get(ct_id)
-        name = (ct.quan_nhan.ho_ten if ct and ct.quan_nhan else
-                (ct.ten_don_vi_de_xuat if ct else de_xuat.don_vi.ten_don_vi))
+    if unit_user and ct:
+        name = (ct.quan_nhan.ho_ten if ct.quan_nhan else
+                (ct.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi))
         thong_bao = ThongBao(
             user_id=unit_user.id,
             de_xuat_id=de_xuat.id,
             chi_tiet_id=ct_id,
             loai='tu_choi',
-            tieu_de=f'{phe_duyet.phong_duyet} từ chối: {name}',
-            noi_dung=f'Lý do: {ly_do or "Không đạt yêu cầu"}. Đề xuất năm học {de_xuat.nam_hoc} của {de_xuat.don_vi.ten_don_vi} đã bị từ chối.',
+            tieu_de=f'{phe_duyet.phong_duyet} loại khỏi đề xuất: {name}',
+            noi_dung=(f'Lý do: {ly_do or "Không đạt yêu cầu"}. '
+                      f'{name} đã bị loại khỏi đề xuất năm học {de_xuat.nam_hoc} '
+                      f'của {de_xuat.don_vi.ten_don_vi}. Các cá nhân/tập thể còn lại vẫn tiếp tục được xét duyệt.'),
         )
         db.session.add(thong_bao)
+
+    # Recompute đề xuất status now that this item no longer participates
+    _recompute_de_xuat_status(de_xuat)
+
+
+def _recompute_de_xuat_status(de_xuat):
+    """Recompute each department's finalization and the overall đề xuất status,
+    counting ONLY active (non-removed) chi_tiets. Removed items never block or reject.
+    A department finalizes as DONG_Y once none of its active in-scope items are still pending.
+    """
+    active_ct_ids = {ct.id for ct in de_xuat.chi_tiets if not ct.bi_loai}
+
+    dept_pds = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id).filter(
+        PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
+    ).all()
+
+    # If there are no active items left at all, reject the whole đề xuất.
+    if not active_ct_ids:
+        de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
+        return
+
+    for pd in dept_pds:
+        if pd.ket_qua == KetQuaDuyet.DONG_Y.value:
+            continue
+        # Pending = active items in this dept still waiting for a decision
+        pending = [
+            kq for kq in pd.chi_tiet_duyet
+            if kq.chi_tiet_id in active_ct_ids
+            and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
+        ]
+        if not pending:
+            pd.ket_qua = KetQuaDuyet.DONG_Y.value
+            if pd.ngay_duyet is None:
+                pd.ngay_duyet = datetime.utcnow()
+
+    db.session.flush()
+
+    # All departments approved → advance to Hội đồng
+    all_done = all(p.ket_qua == KetQuaDuyet.DONG_Y.value for p in dept_pds)
+    if all_done and dept_pds:
+        if de_xuat.trang_thai not in (TrangThaiDeXuat.HOI_DONG.value,
+                                      TrangThaiDeXuat.PHE_DUYET_CUOI.value):
+            de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
+        existing_admin = PheDuyet.query.filter_by(
+            de_xuat_id=de_xuat.id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
+        ).first()
+        if not existing_admin:
+            db.session.add(PheDuyet(
+                de_xuat_id=de_xuat.id,
+                phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
+                ket_qua=KetQuaDuyet.CHO_DUYET.value,
+            ))
+    else:
+        if de_xuat.trang_thai == TrangThaiDeXuat.TU_CHOI.value:
+            de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
 
 
 @approval_bp.route('/pending')
@@ -431,8 +494,12 @@ def pending_list():
             _DeXuat.nam_hoc == nam_hoc_filter
         )
     pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
-    # Filter out orphaned PheDuyet (de_xuat đã bị xóa khỏi DB)
-    pending_reviews = [pd for pd in pending_reviews if pd.de_xuat is not None]
+    # Filter out orphaned PheDuyet (de_xuat đã bị xóa khỏi DB) and đề xuất
+    # whose cá nhân/tập thể have all been removed (bi_loai).
+    pending_reviews = [
+        pd for pd in pending_reviews
+        if pd.de_xuat is not None and any(not ct.bi_loai for ct in pd.de_xuat.chi_tiets)
+    ]
 
     # Ensure per-item records exist for all chi_tiets
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items
@@ -440,6 +507,8 @@ def pending_list():
     for pd in pending_reviews:
         existing_ct_ids = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
         for ct in pd.de_xuat.chi_tiets:
+            if ct.bi_loai:
+                continue
             if ct.id not in existing_ct_ids:
                 in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
                 kq = KetQuaDuyetChiTiet(
@@ -455,11 +524,13 @@ def pending_list():
         db.session.refresh(pd)
         if pd.ket_qua != KetQuaDuyet.CHO_DUYET.value:
             continue
+        active_ct_ids = {ct.id for ct in pd.de_xuat.chi_tiets if not ct.bi_loai}
         pending_in_scope = [
             kq for kq in pd.chi_tiet_duyet
-            if kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
+            if kq.chi_tiet_id in active_ct_ids
+            and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
         ]
-        if not pending_in_scope:
+        if not pending_in_scope and active_ct_ids:
             # All items are auto-approved (out-of-scope) -> auto-finalize
             pd.ket_qua = KetQuaDuyet.DONG_Y.value
             pd.nguoi_duyet_id = None
@@ -618,6 +689,8 @@ def review_nomination(id):
     # For BAN_QUANLUC/BAN_CANBO: auto-approve out-of-scope items
     existing_ct_ids = {kq.chi_tiet_id for kq in phe_duyet.chi_tiet_duyet}
     for ct in de_xuat.chi_tiets:
+        if ct.bi_loai:
+            continue
         if ct.id not in existing_ct_ids:
             in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
             kq = KetQuaDuyetChiTiet(
@@ -726,12 +799,12 @@ def reject_item(id, ct_id):
 
     kq.ket_qua = KetQuaDuyet.TU_CHOI.value
     kq.ly_do = ly_do
-    _auto_reject_nomination_on_item(phe_duyet, ct_id, ly_do)
+    _remove_chi_tiet_on_reject(phe_duyet, ct_id, ly_do)
     db.session.commit()
 
     ct = DeXuatChiTiet.query.get(ct_id)
-    name = ct.quan_nhan.ho_ten if ct and ct.quan_nhan else 'Đơn vị'
-    flash(f'Đã từ chối: {name}. Đề xuất của đơn vị đã bị từ chối và thông báo đã gửi.', 'warning')
+    name = ct.quan_nhan.ho_ten if ct and ct.quan_nhan else 'Tập thể'
+    flash(f'Đã loại khỏi đề xuất: {name}. Các cá nhân/tập thể còn lại vẫn tiếp tục được xét duyệt. Đã gửi thông báo cho đơn vị.', 'warning')
     return redirect(url_for('approval.review_nomination', id=id))
 
 
@@ -747,6 +820,8 @@ def submit_review(id):
     if current_user.role in _GROUP_CONFIRMATION:
         blocked = []
         for kq in phe_duyet.chi_tiet_duyet:
+            if kq.chi_tiet.bi_loai:
+                continue
             ct_gate = _get_group_gate_for_ct(current_user.role, id, kq.chi_tiet_id)
             if not ct_gate['can_review']:
                 blocked.append(kq.chi_tiet_id)
@@ -754,56 +829,26 @@ def submit_review(id):
             flash(f'Có {len(blocked)} cá nhân chưa đủ điều kiện theo nhóm ban liên quan.', 'warning')
             return redirect(url_for('approval.review_nomination', id=id))
 
-    # Check all items have been reviewed
+    # Check all ACTIVE items have been reviewed (removed items are excluded)
     pending_items = [kq for kq in phe_duyet.chi_tiet_duyet
-                     if kq.ket_qua == KetQuaDuyet.CHO_DUYET.value]
+                     if not kq.chi_tiet.bi_loai and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value]
     if pending_items:
         flash(f'Còn {len(pending_items)} cá nhân chưa được duyệt. Vui lòng duyệt tất cả trước khi hoàn tất.', 'danger')
         return redirect(url_for('approval.review_nomination', id=id))
 
-    has_rejection = any(kq.ket_qua == KetQuaDuyet.TU_CHOI.value for kq in phe_duyet.chi_tiet_duyet)
+    de_xuat = DeXuat.query.get(id)
 
-    if has_rejection:
-        phe_duyet.ket_qua = KetQuaDuyet.TU_CHOI.value
-        phe_duyet.ly_do = 'Một số cá nhân không đạt yêu cầu'
-    else:
-        phe_duyet.ket_qua = KetQuaDuyet.DONG_Y.value
-
+    # Rejecting an item already removed it from the process, so finalize as DONG_Y
+    # based on the remaining active items.
+    phe_duyet.ket_qua = KetQuaDuyet.DONG_Y.value
     phe_duyet.nguoi_duyet_id = current_user.id
     phe_duyet.ngay_duyet = datetime.utcnow()
     phe_duyet.ghi_chu = request.form.get('ghi_chu', '').strip() or None
 
-    de_xuat = DeXuat.query.get(id)
-
-    if has_rejection:
-        de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
-    else:
-        all_dept_approvals = PheDuyet.query.filter_by(de_xuat_id=id).filter(
-            PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
-        ).all()
-
-        if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept_approvals):
-            de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
-            existing_admin = PheDuyet.query.filter_by(
-                de_xuat_id=id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
-            ).first()
-            if not existing_admin:
-                admin_pd = PheDuyet(
-                    de_xuat_id=id,
-                    phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
-                    ket_qua=KetQuaDuyet.CHO_DUYET.value,
-                )
-                db.session.add(admin_pd)
-        else:
-            de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
+    _recompute_de_xuat_status(de_xuat)
 
     db.session.commit()
-    if has_rejection:
-        _notify_rejections(phe_duyet)
-        db.session.commit()
-        flash(f'{phong_name} đã hoàn tất duyệt - có cá nhân không nhất trí.', 'warning')
-    else:
-        flash(f'{phong_name} đã nhất trí toàn bộ đề xuất.', 'success')
+    flash(f'{phong_name} đã hoàn tất duyệt đề xuất.', 'success')
     return redirect(url_for('approval.pending_list'))
 
 
@@ -837,68 +882,41 @@ def toggle_item(pd_id, ct_id):
     if approved:
         kq.ket_qua = KetQuaDuyet.DONG_Y.value
         kq.ly_do = None
+        db.session.commit()
     else:
         if not ly_do:
             return jsonify({'success': False, 'message': 'Vui lòng nhập lý do'}), 400
         kq.ket_qua = KetQuaDuyet.TU_CHOI.value
         kq.ly_do = ly_do
-        _auto_reject_nomination_on_item(phe_duyet, ct_id, ly_do)
+        # Reject = remove ONLY this cá nhân/tập thể; the rest of the đề xuất continues.
+        _remove_chi_tiet_on_reject(phe_duyet, ct_id, ly_do)
+        db.session.commit()
 
-    db.session.commit()
+    de_xuat = phe_duyet.de_xuat
 
-    # Check if all items decided -> auto-finalize
+    # Auto-finalize this department once none of its ACTIVE (non-removed) in-scope
+    # items are still pending. Removed items never block or reject.
+    active_ct_ids = {ct.id for ct in de_xuat.chi_tiets if not ct.bi_loai}
     pending_count = KetQuaDuyetChiTiet.query.filter_by(
         phe_duyet_id=phe_duyet.id,
         ket_qua=KetQuaDuyet.CHO_DUYET.value
+    ).join(DeXuatChiTiet, KetQuaDuyetChiTiet.chi_tiet_id == DeXuatChiTiet.id).filter(
+        DeXuatChiTiet.bi_loai == False
     ).count()
 
     auto_finalized = False
-    if pending_count == 0:
-        has_rejection = KetQuaDuyetChiTiet.query.filter_by(
-            phe_duyet_id=phe_duyet.id,
-            ket_qua=KetQuaDuyet.TU_CHOI.value
-        ).count() > 0
-
-        if has_rejection:
-            phe_duyet.ket_qua = KetQuaDuyet.TU_CHOI.value
-            phe_duyet.ly_do = 'Có cá nhân không đạt yêu cầu'
-        else:
+    if pending_count == 0 and active_ct_ids:
+        if phe_duyet.ket_qua != KetQuaDuyet.DONG_Y.value:
             phe_duyet.ket_qua = KetQuaDuyet.DONG_Y.value
-
-        phe_duyet.nguoi_duyet_id = current_user.id
-        phe_duyet.ngay_duyet = datetime.utcnow()
-
-        de_xuat = phe_duyet.de_xuat
-        if has_rejection:
-            de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
-        else:
-            all_dept = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id).filter(
-                PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
-            ).all()
-            if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept):
-                de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
-                existing_admin = PheDuyet.query.filter_by(
-                    de_xuat_id=de_xuat.id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
-                ).first()
-                if not existing_admin:
-                    admin_pd = PheDuyet(
-                        de_xuat_id=de_xuat.id,
-                        phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
-                        ket_qua=KetQuaDuyet.CHO_DUYET.value,
-                    )
-                    db.session.add(admin_pd)
-            else:
-                de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
-
+            phe_duyet.nguoi_duyet_id = current_user.id
+            phe_duyet.ngay_duyet = datetime.utcnow()
+        # Advance the whole đề xuất if every department has now approved.
+        _recompute_de_xuat_status(de_xuat)
         db.session.commit()
         auto_finalized = True
 
-        if has_rejection:
-            _notify_rejections(phe_duyet)
-            db.session.commit()
-
-    # Build stats
-    all_kq = phe_duyet.chi_tiet_duyet
+    # Build stats over ACTIVE items only
+    all_kq = [k for k in phe_duyet.chi_tiet_duyet if not k.chi_tiet.bi_loai]
     total = len(all_kq)
     approved_count = sum(1 for k in all_kq if k.ket_qua == KetQuaDuyet.DONG_Y.value)
     rejected_count = sum(1 for k in all_kq if k.ket_qua == KetQuaDuyet.TU_CHOI.value)
@@ -914,6 +932,113 @@ def toggle_item(pd_id, ct_id):
             'rejected': rejected_count,
         }
     })
+
+
+def _reviewable_fields_for_role(role, ct):
+    """Return the set of ma_truong this department may flag for editing on the
+    given chi_tiet (cá nhân or tập thể)."""
+    if ct.quan_nhan_id is None:
+        # Tập thể: any criterion present in tap_the_data is reviewable
+        return set((ct.tap_the_dict or {}).keys())
+    # Cá nhân
+    if role in _VIEW_ALL_CRITERIA_ROLES:
+        fields = set(_all_criteria_columns())
+    else:
+        fields = set(get_phong_table_columns().get(role, []))
+        if not fields:
+            fields = set(_all_criteria_columns())
+    return fields
+
+
+@approval_bp.route('/request-edit/<int:pd_id>/<int:ct_id>', methods=['POST'])
+@login_required
+@department_required
+def request_edit(pd_id, ct_id):
+    """Approver flags one or more criteria of a single cá nhân/tập thể and asks the
+    unit to fix them. Only the flagged criteria become editable by the unit; all other
+    data stays locked. The flagging department's result for this item is reset to
+    CHO_DUYET so it must re-review after the unit resubmits."""
+    phong_name = ROLE_TO_PHONG.get(current_user.role, '')
+    phe_duyet = PheDuyet.query.filter_by(
+        id=pd_id, phong_duyet=phong_name
+    ).first_or_404()
+
+    ct = DeXuatChiTiet.query.get_or_404(ct_id)
+    if ct.de_xuat_id != phe_duyet.de_xuat_id or ct.bi_loai:
+        return jsonify({'success': False, 'message': 'Cá nhân/tập thể không hợp lệ.'}), 400
+
+    if not _is_in_dept_scope(current_user.role, ct.doi_tuong):
+        return jsonify({'success': False, 'message': 'Cá nhân này không thuộc phạm vi duyệt của bạn.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    fields = data.get('fields') or []
+    ly_do = (data.get('ly_do') or '').strip()
+    if not isinstance(fields, list) or not fields:
+        return jsonify({'success': False, 'message': 'Vui lòng chọn ít nhất một tiêu chí cần chỉnh sửa.'}), 400
+
+    allowed = _reviewable_fields_for_role(current_user.role, ct)
+    fields = [f for f in fields if f in allowed]
+    if not fields:
+        return jsonify({'success': False, 'message': 'Các tiêu chí được chọn không thuộc phạm vi duyệt của bạn.'}), 400
+
+    # Reuse an existing open request for the same item from the same department.
+    yc = YeuCauChinhSua.query.filter_by(
+        chi_tiet_id=ct_id,
+        phong_yeu_cau=phong_name,
+        trang_thai=TrangThaiYeuCauSua.CHO_SUA.value,
+    ).first()
+    if yc:
+        merged = list(dict.fromkeys((yc.cac_truong or []) + fields))
+        yc.cac_truong = merged
+        yc.ly_do = ly_do or yc.ly_do
+        yc.nguoi_yeu_cau_id = current_user.id
+    else:
+        yc = YeuCauChinhSua(
+            de_xuat_id=phe_duyet.de_xuat_id,
+            chi_tiet_id=ct_id,
+            phong_yeu_cau=phong_name,
+            nguoi_yeu_cau_id=current_user.id,
+            ly_do=ly_do,
+            trang_thai=TrangThaiYeuCauSua.CHO_SUA.value,
+        )
+        yc.cac_truong = fields
+        db.session.add(yc)
+
+    # Reset this department's result for the item so it must re-review after edit.
+    kq = KetQuaDuyetChiTiet.query.filter_by(
+        phe_duyet_id=phe_duyet.id, chi_tiet_id=ct_id
+    ).first()
+    if kq:
+        kq.ket_qua = KetQuaDuyet.CHO_DUYET.value
+        kq.ly_do = None
+    # Keep this department open (not finalized) while the edit is pending.
+    if phe_duyet.ket_qua == KetQuaDuyet.DONG_Y.value:
+        phe_duyet.ket_qua = KetQuaDuyet.CHO_DUYET.value
+        phe_duyet.ngay_duyet = None
+
+    # Notify the unit account.
+    de_xuat = phe_duyet.de_xuat
+    unit_user = User.query.filter_by(
+        don_vi_id=de_xuat.don_vi_id, role=Role.UNIT_USER
+    ).first()
+    if unit_user:
+        name = (ct.quan_nhan.ho_ten if ct.quan_nhan else
+                (ct.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi))
+        labels = get_field_labels()
+        field_names = ', '.join(labels.get(f, f) for f in fields)
+        db.session.add(ThongBao(
+            user_id=unit_user.id,
+            de_xuat_id=de_xuat.id,
+            chi_tiet_id=ct_id,
+            loai='yeu_cau_sua',
+            tieu_de=f'{phong_name} yêu cầu chỉnh sửa: {name}',
+            noi_dung=(f'Tiêu chí cần chỉnh sửa: {field_names}. '
+                      f'Lý do: {ly_do or "Không rõ"}. '
+                      f'Đề xuất năm học {de_xuat.nam_hoc} của {de_xuat.don_vi.ten_don_vi}.'),
+        ))
+
+    db.session.commit()
+    return jsonify({'success': True, 'message': f'Đã gửi yêu cầu chỉnh sửa cho đơn vị ({len(fields)} tiêu chí).'})
 
 
 @approval_bp.route('/revoke-item/<int:pd_id>/<int:ct_id>', methods=['POST'])
@@ -999,59 +1124,29 @@ def batch_approve():
 
     db.session.commit()
 
-    # Check if all items decided -> auto-finalize
+    de_xuat = phe_duyet.de_xuat
+
+    # Auto-finalize once none of the ACTIVE (non-removed) items remain pending.
+    active_ct_ids = {ct.id for ct in de_xuat.chi_tiets if not ct.bi_loai}
     pending_count = KetQuaDuyetChiTiet.query.filter_by(
         phe_duyet_id=phe_duyet.id,
         ket_qua=KetQuaDuyet.CHO_DUYET.value
+    ).join(DeXuatChiTiet, KetQuaDuyetChiTiet.chi_tiet_id == DeXuatChiTiet.id).filter(
+        DeXuatChiTiet.bi_loai == False
     ).count()
 
     auto_finalized = False
-    if pending_count == 0:
-        has_rejection = KetQuaDuyetChiTiet.query.filter_by(
-            phe_duyet_id=phe_duyet.id,
-            ket_qua=KetQuaDuyet.TU_CHOI.value
-        ).count() > 0
-
-        if has_rejection:
-            phe_duyet.ket_qua = KetQuaDuyet.TU_CHOI.value
-            phe_duyet.ly_do = 'Có cá nhân không đạt yêu cầu'
-        else:
+    if pending_count == 0 and active_ct_ids:
+        if phe_duyet.ket_qua != KetQuaDuyet.DONG_Y.value:
             phe_duyet.ket_qua = KetQuaDuyet.DONG_Y.value
-
-        phe_duyet.nguoi_duyet_id = current_user.id
-        phe_duyet.ngay_duyet = datetime.utcnow()
-
-        de_xuat = phe_duyet.de_xuat
-        if has_rejection:
-            de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
-        else:
-            all_dept = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id).filter(
-                PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
-            ).all()
-            if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept):
-                de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
-                existing_admin = PheDuyet.query.filter_by(
-                    de_xuat_id=de_xuat.id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
-                ).first()
-                if not existing_admin:
-                    admin_pd = PheDuyet(
-                        de_xuat_id=de_xuat.id,
-                        phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
-                        ket_qua=KetQuaDuyet.CHO_DUYET.value,
-                    )
-                    db.session.add(admin_pd)
-            else:
-                de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
-
+            phe_duyet.nguoi_duyet_id = current_user.id
+            phe_duyet.ngay_duyet = datetime.utcnow()
+        _recompute_de_xuat_status(de_xuat)
         db.session.commit()
         auto_finalized = True
 
-        if has_rejection:
-            _notify_rejections(phe_duyet)
-            db.session.commit()
-
-    # Build stats
-    all_kq = phe_duyet.chi_tiet_duyet
+    # Build stats over ACTIVE items only
+    all_kq = [k for k in phe_duyet.chi_tiet_duyet if not k.chi_tiet.bi_loai]
     total = len(all_kq)
     approved_count = sum(1 for k in all_kq if k.ket_qua == KetQuaDuyet.DONG_Y.value)
     rejected_count = sum(1 for k in all_kq if k.ket_qua == KetQuaDuyet.TU_CHOI.value)

@@ -141,12 +141,15 @@
                 <tbody>
                     {% for item in chi_tiets_data %}
                     {% set ct = item.ct %}
-                    <tr>
+                    <tr{% if item.is_removed %} class="table-secondary text-muted"{% endif %}>
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">
                             {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}
                             {% if ct.quan_nhan and ct.quan_nhan.cap_bac %}
                             <br><small class="text-muted">{{ ct.quan_nhan.cap_bac }}</small>
+                            {% endif %}
+                            {% if item.is_removed %}
+                            <br><span class="badge bg-danger" style="font-size:0.68rem;" title="Lý do: {{ item.ly_do_loai }}"><i class="bi bi-person-dash me-1"></i>Đã loại{% if item.phong_loai %} ({{ item.phong_loai }}){% endif %}</span>
                             {% endif %}
                         </td>
                         <td>
@@ -181,7 +184,9 @@
                         </td>
                         {% endfor %}
                         <td class="text-center">
-                            {% if item.is_rewarded %}
+                            {% if item.is_removed %}
+                            <span class="badge bg-danger" style="font-size:0.7rem;" title="Lý do: {{ item.ly_do_loai }}">Đã loại</span>
+                            {% elif item.is_rewarded %}
                             <span class="badge bg-primary" title="Đã khen thưởng"><i class="bi bi-trophy-fill"></i></span>
                             {% else %}
                             {% set approved_count = item.dept_results.values()|select('equalto', 'Đồng ý')|list|length %}
