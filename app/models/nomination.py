@@ -111,9 +111,19 @@ class TrangThaiDeXuat(enum.Enum):
     NHAP = 'Nháp'
     CHO_DUYET = 'Chờ duyệt'
     DANG_DUYET = 'Đang duyệt'
-    HOI_DONG = 'Xét duyệt của cơ quan thường trực'
+    HOI_DONG = 'Hội đồng'
     PHE_DUYET_CUOI = 'Phê duyệt cuối'
     TU_CHOI = 'Từ chối'
+
+
+class TrangThaiChiTiet(enum.Enum):
+    """Per-individual/unit item approval stage."""
+    NHAP          = 'nhap'           # de_xuat still draft
+    DANG_DUYET    = 'dang_duyet'     # in departmental review (Bảng 1 – pending)
+    DA_DUYET      = 'da_duyet'       # all depts approved → Bảng 1 admin view (HOI_DONG)
+    HOI_DONG      = 'hoi_dong'       # admin_approved=True → Bảng 2 (hội đồng voting)
+    PHE_DUYET_CUOI= 'phe_duyet_cuoi' # KhenThuong created → Bảng 3 (reward list)
+    TU_CHOI       = 'tu_choi'        # bi_loai=True (rejected / removed)
 
 
 class DeXuat(db.Model):
@@ -243,6 +253,10 @@ class DeXuatChiTiet(db.Model):
     ly_do_loai = Column(Text, nullable=True)
     phong_loai = Column(String(100), nullable=True)
     ngay_loai = Column(DateTime, nullable=True)
+
+    # Per-item approval stage (tracked separately from parent de_xuat.trang_thai)
+    trang_thai = Column(String(30), nullable=False, default=TrangThaiChiTiet.NHAP.value,
+                        server_default=TrangThaiChiTiet.NHAP.value)
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

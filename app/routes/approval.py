@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import User, Role
 from app.models.unit import DonVi
-from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, TieuChi
+from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, TrangThaiChiTiet, TieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.notification import ThongBao
 from app.models.edit_request import YeuCauChinhSua, TrangThaiYeuCauSua
@@ -468,6 +468,36 @@ def _recompute_de_xuat_status(de_xuat):
     else:
         if de_xuat.trang_thai == TrangThaiDeXuat.TU_CHOI.value:
             de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
+
+    # Update per-item trang_thai to match parent de_xuat stage
+    _recompute_chi_tiet_status(de_xuat)
+
+
+def _recompute_chi_tiet_status(de_xuat):
+    """Sync each active DeXuatChiTiet.trang_thai with the parent đề xuất stage.
+
+    Mapping:
+      de_xuat NHAP/CHO_DUYET/DANG_DUYET → chi_tiet DANG_DUYET  (submitted, under review)
+      de_xuat HOI_DONG                   → chi_tiet DA_DUYET    (all depts approved, Bảng 1)
+      de_xuat PHE_DUYET_CUOI             → chi_tiet HOI_DONG    (admin_approved, Bảng 2/3)
+      bi_loai = True                     → chi_tiet TU_CHOI
+    Each individual item's admin_approved flag further promotes it to PHE_DUYET_CUOI.
+    """
+    dx_tt = de_xuat.trang_thai
+    for ct in de_xuat.chi_tiets:
+        if ct.bi_loai:
+            ct.trang_thai = TrangThaiChiTiet.TU_CHOI.value
+            continue
+        if dx_tt in (TrangThaiDeXuat.NHAP.value, TrangThaiDeXuat.CHO_DUYET.value,
+                     TrangThaiDeXuat.DANG_DUYET.value, TrangThaiDeXuat.TU_CHOI.value):
+            ct.trang_thai = TrangThaiChiTiet.DANG_DUYET.value
+        elif dx_tt == TrangThaiDeXuat.HOI_DONG.value:
+            if ct.admin_approved:
+                ct.trang_thai = TrangThaiChiTiet.HOI_DONG.value
+            else:
+                ct.trang_thai = TrangThaiChiTiet.DA_DUYET.value
+        elif dx_tt == TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+            ct.trang_thai = TrangThaiChiTiet.HOI_DONG.value
 
 
 @approval_bp.route('/pending')
@@ -1016,8 +1046,19 @@ def request_edit(pd_id, ct_id):
         phe_duyet.ket_qua = KetQuaDuyet.CHO_DUYET.value
         phe_duyet.ngay_duyet = None
 
-    # Notify the unit account.
+    # If de_xuat had already advanced to HOI_DONG, revert it back to DANG_DUYET
+    # so it clearly shows as "in departmental review" again, and the admin/hội đồng
+    # PheDuyet (which was created prematurely) is removed.
     de_xuat = phe_duyet.de_xuat
+    if de_xuat.trang_thai == TrangThaiDeXuat.HOI_DONG.value:
+        de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
+        admin_pd = PheDuyet.query.filter_by(
+            de_xuat_id=de_xuat.id,
+            phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
+            ket_qua=KetQuaDuyet.CHO_DUYET.value,
+        ).first()
+        if admin_pd:
+            db.session.delete(admin_pd)
     unit_user = User.query.filter_by(
         don_vi_id=de_xuat.don_vi_id, role=Role.UNIT_USER
     ).first()
@@ -1180,7 +1221,7 @@ def history():
         PheDuyet, KetQuaDuyetChiTiet.phe_duyet_id == PheDuyet.id
     ).filter(
         PheDuyet.phong_duyet == phong_name,
-        PheDuyet.ket_qua != KetQuaDuyet.CHO_DUYET.value,
+        KetQuaDuyetChiTiet.ket_qua != KetQuaDuyet.CHO_DUYET.value,
     )
 
     # Apply filters
@@ -1206,9 +1247,11 @@ def history():
     # Get filter options
     unit_names_q = db.session.query(DonVi.ten_don_vi).join(
         DeXuat, DeXuat.don_vi_id == DonVi.id
-    ).join(PheDuyet, PheDuyet.de_xuat_id == DeXuat.id).filter(
+    ).join(PheDuyet, PheDuyet.de_xuat_id == DeXuat.id).join(
+        KetQuaDuyetChiTiet, KetQuaDuyetChiTiet.phe_duyet_id == PheDuyet.id
+    ).filter(
         PheDuyet.phong_duyet == phong_name,
-        PheDuyet.ket_qua != KetQuaDuyet.CHO_DUYET.value,
+        KetQuaDuyetChiTiet.ket_qua != KetQuaDuyet.CHO_DUYET.value,
     ).distinct().order_by(DonVi.ten_don_vi).all()
     unit_names = [u[0] for u in unit_names_q]
 
@@ -1217,7 +1260,7 @@ def history():
         PheDuyet, KetQuaDuyetChiTiet.phe_duyet_id == PheDuyet.id
     ).filter(
         PheDuyet.phong_duyet == phong_name,
-        PheDuyet.ket_qua != KetQuaDuyet.CHO_DUYET.value,
+        KetQuaDuyetChiTiet.ket_qua != KetQuaDuyet.CHO_DUYET.value,
     )
     stats = {
         'total': base_q.count(),
