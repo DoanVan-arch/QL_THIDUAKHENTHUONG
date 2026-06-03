@@ -14,7 +14,15 @@ from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload
 from datetime import datetime
 from sqlalchemy.exc import ProgrammingError, OperationalError
-
+from docx import Document
+from docx.shared import Pt, Cm, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+from io import BytesIO
+from flask import send_file
+from datetime import date
 import hashlib, binascii, os
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
@@ -1193,15 +1201,7 @@ def revoke_nomination(id):
 @login_required
 @unit_user_required
 def export_nomination_word(id):
-    from docx import Document
-    from docx.shared import Pt, Cm, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    from io import BytesIO
-    from flask import send_file
-    from datetime import date
+    
 
     de_xuat = DeXuat.query.get_or_404(id)
     if de_xuat.don_vi_id != current_user.don_vi_id:
@@ -1277,7 +1277,7 @@ def export_nomination_word(id):
     def build_tom_tat(ct):
         """Tóm tắt thành tích từ các trường."""
         parts = []
-        qn_obj = ct.quan_nhan
+        qn = ct.quan_nhan
         if ct.muc_do_hoan_thanh:
             parts.append(ct.muc_do_hoan_thanh)
         if ct.ket_qua_ren_luyen:
