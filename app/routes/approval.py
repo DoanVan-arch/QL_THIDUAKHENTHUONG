@@ -437,12 +437,13 @@ def _recompute_de_xuat_status(de_xuat):
     for pd in dept_pds:
         if pd.ket_qua == KetQuaDuyet.DONG_Y.value:
             continue
+        # KetQuaDuyetChiTiet records are created lazily (when a dept first visits review_nomination).
+        # If there are no records at all, this dept has never started reviewing → do NOT auto-promote.
+        all_records = [kq for kq in pd.chi_tiet_duyet if kq.chi_tiet_id in active_ct_ids]
+        if not all_records:
+            continue  # dept hasn't reviewed yet; skip
         # Pending = active items in this dept still waiting for a decision
-        pending = [
-            kq for kq in pd.chi_tiet_duyet
-            if kq.chi_tiet_id in active_ct_ids
-            and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
-        ]
+        pending = [kq for kq in all_records if kq.ket_qua == KetQuaDuyet.CHO_DUYET.value]
         if not pending:
             pd.ket_qua = KetQuaDuyet.DONG_Y.value
             if pd.ngay_duyet is None:
