@@ -1347,194 +1347,216 @@ function updateSubmitButtonState() {
             </div>
 
             <!-- Tiêu chí — hiển thị theo đối tượng/danh hiệu -->
-            <div class="row g-3" id="edit-criteria-row">
+            <div id="edit-criteria-row">
 
               {# ── Nhóm 1: Chung ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#1a3a5c;font-size:0.85rem;"><i class="bi bi-clipboard-check me-1"></i>Tiêu chí chung</div></div>
-
-              <div class="col-md-6 edit-field-wrap" data-field="muc_do_hoan_thanh">
-                <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
-                <select name="muc_do_hoan_thanh" class="form-select">
-                  <option value="">-- Chọn --</option>
-                  {% for m in muc_do_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
-                </select>
-              </div>
-              <div class="col-md-6 edit-field-wrap" data-field="phieu_tin_nhiem">
-                <label class="form-label">Số phiếu tín nhiệm</label>
-                <input type="text" name="phieu_tin_nhiem" class="form-control" placeholder="VD: Tín nhiệm cao">
+              <div class="form-section" id="edit-section-chung">
+                <div class="form-section-title" style="color:#1a3a5c;"><i class="bi bi-clipboard-check me-1"></i>Tiêu chí chung</div>
+                <div class="row g-3">
+                  <div class="col-md-6 edit-field-wrap" data-field="muc_do_hoan_thanh">
+                    <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
+                    <select name="muc_do_hoan_thanh" class="form-select">
+                      <option value="">-- Chọn --</option>
+                      {% for m in muc_do_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-6 edit-field-wrap" data-field="phieu_tin_nhiem">
+                    <label class="form-label">Số phiếu tín nhiệm</label>
+                    <input type="text" name="phieu_tin_nhiem" class="form-control" placeholder="VD: Tín nhiệm cao">
+                  </div>
+                </div>
               </div>
 
               {# ── Nhóm 2: Kiểm tra quân sự ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#6f42c1;font-size:0.85rem;"><i class="bi bi-shield me-1"></i>Kết quả kiểm tra quân sự - thể chất</div></div>
-
-              <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_dieu_lenh">
-                <label class="form-label">Điểm điều lệnh</label>
-                <input type="text" name="diem_kiem_tra_dieu_lenh" class="form-control" placeholder="VD: 8.5">
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_dieu_lenh">
-                <label class="form-label">Xếp loại điều lệnh</label>
-                {{ tc_input('kiem_tra_dieu_lenh', 'VD: Giỏi') }}
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="diem_ban_sung">
-                <label class="form-label">Điểm bắn súng</label>
-                <input type="text" name="diem_ban_sung" class="form-control" placeholder="VD: 8.0">
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="ban_sung">
-                <label class="form-label">Xếp loại bắn súng</label>
-                {{ tc_input('ban_sung', 'VD: Khá') }}
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="diem_the_luc">
-                <label class="form-label">Điểm thể lực</label>
-                <input type="text" name="diem_the_luc" class="form-control" placeholder="VD: 8.2">
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="the_luc">
-                <label class="form-label">Xếp loại thể lực</label>
-                {{ tc_input('the_luc', 'VD: Giỏi') }}
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_chinh_tri">
-                <label class="form-label">Điểm chính trị</label>
-                <input type="text" name="diem_kiem_tra_chinh_tri" class="form-control" placeholder="VD: 8.8">
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_chinh_tri">
-                <label class="form-label">Xếp loại chính trị</label>
-                {{ tc_input('kiem_tra_chinh_tri', 'VD: Giỏi') }}
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_tin_hoc">
-                <label class="form-label">Điểm kỹ năng số</label>
-                <input type="text" name="diem_kiem_tra_tin_hoc" class="form-control" placeholder="VD: 8.1">
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_tin_hoc">
-                <label class="form-label">Xếp loại kỹ năng số</label>
-                {{ tc_input('kiem_tra_tin_hoc', 'VD: Khá') }}
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="diem_dia_ly_quan_su">
-                <label class="form-label">Điểm địa hình quân sự</label>
-                <input type="text" name="diem_dia_ly_quan_su" class="form-control" placeholder="VD: 7.9">
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="dia_ly_quan_su">
-                <label class="form-label">Xếp loại địa hình quân sự</label>
-                {{ tc_input('dia_ly_quan_su', 'VD: Khá') }}
+              <div class="form-section" id="edit-section-quansu">
+                <div class="form-section-title" style="color:#6f42c1;"><i class="bi bi-shield me-1"></i>Kết quả kiểm tra quân sự - thể chất</div>
+                <div class="row g-3">
+                  <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_dieu_lenh">
+                    <label class="form-label">Điểm điều lệnh</label>
+                    <input type="text" name="diem_kiem_tra_dieu_lenh" class="form-control" placeholder="VD: 8.5">
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_dieu_lenh">
+                    <label class="form-label">Xếp loại điều lệnh</label>
+                    {{ tc_input('kiem_tra_dieu_lenh', 'VD: Giỏi') }}
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="diem_ban_sung">
+                    <label class="form-label">Điểm bắn súng</label>
+                    <input type="text" name="diem_ban_sung" class="form-control" placeholder="VD: 8.0">
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="ban_sung">
+                    <label class="form-label">Xếp loại bắn súng</label>
+                    {{ tc_input('ban_sung', 'VD: Khá') }}
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="diem_the_luc">
+                    <label class="form-label">Điểm thể lực</label>
+                    <input type="text" name="diem_the_luc" class="form-control" placeholder="VD: 8.2">
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="the_luc">
+                    <label class="form-label">Xếp loại thể lực</label>
+                    {{ tc_input('the_luc', 'VD: Giỏi') }}
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_chinh_tri">
+                    <label class="form-label">Điểm chính trị</label>
+                    <input type="text" name="diem_kiem_tra_chinh_tri" class="form-control" placeholder="VD: 8.8">
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_chinh_tri">
+                    <label class="form-label">Xếp loại chính trị</label>
+                    {{ tc_input('kiem_tra_chinh_tri', 'VD: Giỏi') }}
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_tin_hoc">
+                    <label class="form-label">Điểm kỹ năng số</label>
+                    <input type="text" name="diem_kiem_tra_tin_hoc" class="form-control" placeholder="VD: 8.1">
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_tin_hoc">
+                    <label class="form-label">Xếp loại kỹ năng số</label>
+                    {{ tc_input('kiem_tra_tin_hoc', 'VD: Khá') }}
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="diem_dia_ly_quan_su">
+                    <label class="form-label">Điểm địa hình quân sự</label>
+                    <input type="text" name="diem_dia_ly_quan_su" class="form-control" placeholder="VD: 7.9">
+                  </div>
+                  <div class="col-md-3 edit-field-wrap" data-field="dia_ly_quan_su">
+                    <label class="form-label">Xếp loại địa hình quân sự</label>
+                    {{ tc_input('dia_ly_quan_su', 'VD: Khá') }}
+                  </div>
+                </div>
               </div>
 
               {# ── Nhóm 3: Đảng / Đoàn thể ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#dc3545;font-size:0.85rem;"><i class="bi bi-award me-1"></i>Xếp loại Đảng viên / Đoàn thể</div></div>
-
-              <div class="col-md-4 edit-field-wrap" data-field="xep_loai_dang_vien">
-                <label class="form-label">Xếp loại đảng viên hằng năm</label>
-                {{ tc_input('xep_loai_dang_vien') }}
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_doan_the">
-                <label class="form-label">Kết quả hoàn thành nhiệm vụ đoàn viên</label>
-                {{ tc_input('ket_qua_doan_the', 'Ví dụ: Hoàn thành tốt...') }}
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="xep_loai_doan_vien">
-                <label class="form-label">Xếp loại đoàn viên</label>
-                {{ tc_input('xep_loai_doan_vien') }}
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_qc">
-                <label class="form-label">KT phong trào Quần chúng</label>
-                <input type="text" name="hinh_thuc_khen_thuong_qc" class="form-control" placeholder="VD: Giấy khen, Bằng khen...">
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_phu_nu">
-                <label class="form-label">Xếp loại Phụ nữ hằng năm</label>
-                {{ tc_input('ket_qua_phu_nu', 'VD: Phụ nữ hai giỏi...') }}
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_pn">
-                <label class="form-label">KT hội Phụ nữ</label>
-                <input type="text" name="hinh_thuc_khen_thuong_pn" class="form-control" placeholder="VD: Giấy khen, Bằng khen...">
+              <div class="form-section" id="edit-section-dang-doan">
+                <div class="form-section-title" style="color:#dc3545;"><i class="bi bi-award me-1"></i>Xếp loại Đảng viên / Đoàn thể</div>
+                <div class="row g-3">
+                  <div class="col-md-4 edit-field-wrap" data-field="xep_loai_dang_vien">
+                    <label class="form-label">Xếp loại đảng viên hằng năm</label>
+                    {{ tc_input('xep_loai_dang_vien') }}
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="ket_qua_doan_the">
+                    <label class="form-label">Kết quả hoàn thành nhiệm vụ đoàn viên</label>
+                    {{ tc_input('ket_qua_doan_the', 'Ví dụ: Hoàn thành tốt...') }}
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="xep_loai_doan_vien">
+                    <label class="form-label">Xếp loại đoàn viên</label>
+                    {{ tc_input('xep_loai_doan_vien') }}
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_qc">
+                    <label class="form-label">KT phong trào Quần chúng</label>
+                    <input type="text" name="hinh_thuc_khen_thuong_qc" class="form-control" placeholder="VD: Giấy khen, Bằng khen...">
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="ket_qua_phu_nu">
+                    <label class="form-label">Xếp loại Phụ nữ hằng năm</label>
+                    {{ tc_input('ket_qua_phu_nu', 'VD: Phụ nữ hai giỏi...') }}
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_pn">
+                    <label class="form-label">KT hội Phụ nữ</label>
+                    <input type="text" name="hinh_thuc_khen_thuong_pn" class="form-control" placeholder="VD: Giấy khen, Bằng khen...">
+                  </div>
+                </div>
               </div>
 
               {# ── Nhóm 4: Giảng viên ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#0d6efd;font-size:0.85rem;"><i class="bi bi-mortarboard me-1"></i>Tiêu chí dành cho Giảng viên</div></div>
-
-              <div class="col-md-6 edit-field-wrap" data-field="danh_hieu_gv_gioi">
-                <label class="form-label">Danh hiệu Giảng viên giỏi</label>
-                {{ tc_input('danh_hieu_gv_gioi') }}
-              </div>
-              <div class="col-md-6 edit-field-wrap" data-field="dinh_muc_giang_day">
-                <label class="form-label">Định mức giảng dạy</label>
-                {{ tc_input('dinh_muc_giang_day') }}
-              </div>
-              <div class="col-md-6 edit-field-wrap" data-field="thoi_gian_lao_dong_kh">
-                <label class="form-label">Thời gian lao động khoa học sau quy đổi</label>
-                {{ tc_input('thoi_gian_lao_dong_kh') }}
-              </div>
-              <div class="col-md-6 edit-field-wrap" data-field="ket_qua_kiem_tra_giang">
-                <label class="form-label">Kết quả kiểm tra giảng năm học</label>
-                {{ tc_input('ket_qua_kiem_tra_giang') }}
+              <div class="form-section" id="edit-section-giangvien">
+                <div class="form-section-title" style="color:#0d6efd;"><i class="bi bi-mortarboard me-1"></i>Tiêu chí dành cho Giảng viên</div>
+                <div class="row g-3">
+                  <div class="col-md-6 edit-field-wrap" data-field="danh_hieu_gv_gioi">
+                    <label class="form-label">Danh hiệu Giảng viên giỏi</label>
+                    {{ tc_input('danh_hieu_gv_gioi') }}
+                  </div>
+                  <div class="col-md-6 edit-field-wrap" data-field="dinh_muc_giang_day">
+                    <label class="form-label">Định mức giảng dạy</label>
+                    {{ tc_input('dinh_muc_giang_day') }}
+                  </div>
+                  <div class="col-md-6 edit-field-wrap" data-field="thoi_gian_lao_dong_kh">
+                    <label class="form-label">Thời gian lao động khoa học sau quy đổi</label>
+                    {{ tc_input('thoi_gian_lao_dong_kh') }}
+                  </div>
+                  <div class="col-md-6 edit-field-wrap" data-field="ket_qua_kiem_tra_giang">
+                    <label class="form-label">Kết quả kiểm tra giảng năm học</label>
+                    {{ tc_input('ket_qua_kiem_tra_giang') }}
+                  </div>
+                </div>
               </div>
 
               {# ── Nhóm 5: Tiến sĩ/PGS ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#6f42c1;font-size:0.85rem;"><i class="bi bi-graph-up me-1"></i>Tiến độ chức danh PGS (Dành cho Tiến sĩ)</div></div>
-
-              <div class="col-md-12 edit-field-wrap" data-field="tien_do_pgs">
-                <label class="form-label">Thực hiện tiến độ chức danh PGS</label>
-                {{ tc_input('tien_do_pgs') }}
+              <div class="form-section" id="edit-section-pgs">
+                <div class="form-section-title" style="color:#6f42c1;"><i class="bi bi-graph-up me-1"></i>Tiến độ chức danh PGS (Dành cho Tiến sĩ)</div>
+                <div class="row g-3">
+                  <div class="col-md-12 edit-field-wrap" data-field="tien_do_pgs">
+                    <label class="form-label">Thực hiện tiến độ chức danh PGS</label>
+                    {{ tc_input('tien_do_pgs') }}
+                  </div>
+                </div>
               </div>
 
               {# ── Nhóm 6: Học viên ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#198754;font-size:0.85rem;"><i class="bi bi-book me-1"></i>Tiêu chí dành cho Học viên</div></div>
-
-              <div class="col-md-4 edit-field-wrap" data-field="danh_hieu_hv_gioi">
-                <label class="form-label">Danh hiệu học viên giỏi</label>
-                <select name="danh_hieu_hv_gioi" class="form-select">
-                  <option value="">-- Chọn --</option>
-                  <option value="true">Có</option>
-                  <option value="false">Không</option>
-                </select>
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="diem_tong_ket">
-                <label class="form-label">Điểm tổng kết</label>
-                <input type="text" name="diem_tong_ket" class="form-control">
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_thuc_hanh">
-                <label class="form-label">Kết quả kiểm tra đánh giá năng lực thực hành</label>
-                {{ tc_input('ket_qua_thuc_hanh') }}
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="ket_qua_ren_luyen">
-                <label class="form-label">Kết quả rèn luyện</label>
-                {{ tc_input('ket_qua_ren_luyen') }}
+              <div class="form-section" id="edit-section-hocvien">
+                <div class="form-section-title" style="color:#198754;"><i class="bi bi-book me-1"></i>Tiêu chí dành cho Học viên</div>
+                <div class="row g-3">
+                  <div class="col-md-4 edit-field-wrap" data-field="danh_hieu_hv_gioi">
+                    <label class="form-label">Danh hiệu học viên giỏi</label>
+                    <select name="danh_hieu_hv_gioi" class="form-select">
+                      <option value="">-- Chọn --</option>
+                      <option value="true">Có</option>
+                      <option value="false">Không</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="diem_tong_ket">
+                    <label class="form-label">Điểm tổng kết</label>
+                    <input type="text" name="diem_tong_ket" class="form-control">
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="ket_qua_thuc_hanh">
+                    <label class="form-label">Kết quả kiểm tra đánh giá năng lực thực hành</label>
+                    {{ tc_input('ket_qua_thuc_hanh') }}
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="ket_qua_ren_luyen">
+                    <label class="form-label">Kết quả rèn luyện</label>
+                    {{ tc_input('ket_qua_ren_luyen') }}
+                  </div>
+                </div>
               </div>
 
               {# ── Nhóm 7: Tốt nghiệp ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#198754;font-size:0.85rem;"><i class="bi bi-journal-check me-1"></i>Kết quả tốt nghiệp</div></div>
-
-              <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_tot_nghiep">
-                <label class="form-label">Hình thức thi tốt nghiệp</label>
-                <select name="hinh_thuc_tot_nghiep" class="form-select">
-                  <option value="">-- Chọn --</option>
-                  {% for tc in tieu_chi_list %}{% if tc.ma_truong == 'hinh_thuc_tot_nghiep' %}{% for opt in tc.gia_tri_chon %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}{% endif %}{% endfor %}
-                </select>
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ctd">
-                <label class="form-label">Điểm CTĐ (TN)</label>
-                <input type="number" name="diem_tn_ctd" class="form-control" step="0.01">
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ct">
-                <label class="form-label">Điểm CT (TN)</label>
-                <input type="number" name="diem_tn_ct" class="form-control" step="0.01">
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ta">
-                <label class="form-label">Điểm TA (TN)</label>
-                <input type="number" name="diem_tn_ta" class="form-control" step="0.01">
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_mon4">
-                <label class="form-label">Điểm môn thứ 4 (TN)</label>
-                <input type="number" name="diem_tn_mon4" class="form-control" step="0.01">
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_chuyennganh">
-                <label class="form-label">Điểm chuyên ngành (TN)</label>
-                <input type="number" name="diem_tn_chuyennganh" class="form-control" step="0.01">
-              </div>
-              <div class="col-md-4 edit-field-wrap" data-field="diem_tn_baove">
-                <label class="form-label">Điểm bảo vệ KL (TN)</label>
-                <input type="number" name="diem_tn_baove" class="form-control" step="0.01">
+              <div class="form-section" id="edit-section-totnghiep">
+                <div class="form-section-title" style="color:#198754;"><i class="bi bi-journal-check me-1"></i>Kết quả tốt nghiệp</div>
+                <div class="row g-3">
+                  <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_tot_nghiep">
+                    <label class="form-label">Hình thức thi tốt nghiệp</label>
+                    <select name="hinh_thuc_tot_nghiep" class="form-select">
+                      <option value="">-- Chọn --</option>
+                      {% for tc in tieu_chi_list %}{% if tc.ma_truong == 'hinh_thuc_tot_nghiep' %}{% for opt in tc.gia_tri_chon %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}{% endif %}{% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ctd">
+                    <label class="form-label">Điểm CTĐ (TN)</label>
+                    <input type="number" name="diem_tn_ctd" class="form-control" step="0.01">
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ct">
+                    <label class="form-label">Điểm CT (TN)</label>
+                    <input type="number" name="diem_tn_ct" class="form-control" step="0.01">
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ta">
+                    <label class="form-label">Điểm TA (TN)</label>
+                    <input type="number" name="diem_tn_ta" class="form-control" step="0.01">
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="diem_tn_mon4">
+                    <label class="form-label">Điểm môn thứ 4 (TN)</label>
+                    <input type="number" name="diem_tn_mon4" class="form-control" step="0.01">
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="diem_tn_chuyennganh">
+                    <label class="form-label">Điểm chuyên ngành (TN)</label>
+                    <input type="number" name="diem_tn_chuyennganh" class="form-control" step="0.01">
+                  </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="diem_tn_baove">
+                    <label class="form-label">Điểm bảo vệ KL (TN)</label>
+                    <input type="number" name="diem_tn_baove" class="form-control" step="0.01">
+                  </div>
+                </div>
               </div>
 
               {# ── Nhóm 8: NCKH ── #}
-              <div class="col-12"><div class="form-section-title mt-1" style="color:#dc3545;font-size:0.85rem;"><i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học</div></div>
-
-              <div class="col-md-12 edit-field-wrap" data-field="nckh_noi_dung">
+              <div class="form-section" id="edit-section-nckh">
+                <div class="form-section-title" style="color:#dc3545;"><i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học</div>
+                <div class="row g-3">
+                  <div class="col-md-12 edit-field-wrap" data-field="nckh_noi_dung">
                 <label class="form-label">Nội dung kết quả NCKH</label>
                 <div class="border rounded p-2" style="max-height:220px;overflow:auto;" id="editNckhCheckboxes">
                   {%- set nckh_opts = [
@@ -1558,24 +1580,32 @@ function updateSubmitButtonState() {
                 <input type="hidden" name="nckh_noi_dung_text" id="edit_nckh_noi_dung_text">
               </div>
               <div class="col-md-3 edit-field-wrap" data-field="diem_nckh">
-                <label class="form-label">Điểm NCKH</label>
-                <input type="number" name="diem_nckh" class="form-control" step="0.01">
-              </div>
+                    <label class="form-label">Điểm NCKH</label>
+                    <input type="number" name="diem_nckh" class="form-control" step="0.01">
+                  </div>
+                </div>
+              </div>{# /edit-section-nckh #}
 
               {# ── Nhóm 9: Chủ trì / Thành tích khác ── #}
-              <div class="col-md-6 edit-field-wrap" data-field="chu_tri_don_vi_danh_hieu">
-                <label class="form-label">Chủ trì đơn vị đạt danh hiệu thi đua</label>
-                {{ tc_input('chu_tri_don_vi_danh_hieu', 'Nếu là cấp trưởng/bí thư') }}
-              </div>
-              <div class="col-md-12 edit-field-wrap" data-field="thanh_tich_ca_nhan_khac">
-                <label class="form-label">Thành tích cá nhân khác</label>
-                <textarea name="thanh_tich_ca_nhan_khac" class="form-control" rows="2" placeholder="Nhập các thành tích khác ngoài tiêu chí trên (nếu có)..."></textarea>
-              </div>
-              <div class="col-md-12">
-                <label class="form-label">Ghi chú</label>
-                <textarea name="ghi_chu_item" class="form-control" rows="2"></textarea>
-              </div>
-            </div>
+              <div class="form-section" id="edit-section-thanhtich">
+                <div class="form-section-title" style="color:#6c757d;"><i class="bi bi-trophy me-1"></i>Thành tích khác</div>
+                <div class="row g-3">
+                  <div class="col-md-6 edit-field-wrap" data-field="chu_tri_don_vi_danh_hieu">
+                    <label class="form-label">Chủ trì đơn vị đạt danh hiệu thi đua</label>
+                    {{ tc_input('chu_tri_don_vi_danh_hieu', 'Nếu là cấp trưởng/bí thư') }}
+                  </div>
+                  <div class="col-md-12 edit-field-wrap" data-field="thanh_tich_ca_nhan_khac">
+                    <label class="form-label">Thành tích cá nhân khác</label>
+                    <textarea name="thanh_tich_ca_nhan_khac" class="form-control" rows="2" placeholder="Nhập các thành tích khác ngoài tiêu chí trên (nếu có)..."></textarea>
+                  </div>
+                  <div class="col-md-12">
+                    <label class="form-label">Ghi chú</label>
+                    <textarea name="ghi_chu_item" class="form-control" rows="2"></textarea>
+                  </div>
+                </div>
+              </div>{# /edit-section-thanhtich #}
+
+            </div>{# /edit-criteria-row #}
           </div>
         </div>
         <div class="modal-footer py-2">
@@ -1686,24 +1716,17 @@ function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
         dangVienWrap.style.display = (inCriteria || !selectedDanhHieu) ? '' : 'none';
     }
 
-    // Hide section-title col-12 divs when all following fields in their group are hidden
+    // Hide form-section cards when all their edit-field-wraps are hidden
     var criteriaRow = document.getElementById('edit-criteria-row');
     if (criteriaRow) {
-        var children = Array.from(criteriaRow.children);
-        children.forEach(function(child, idx) {
-            // Section title: col-12 containing .form-section-title
-            if (child.classList.contains('col-12') && child.querySelector('.form-section-title')) {
-                // Check if any subsequent field-wrap (before next section title) is visible
-                var hasVisible = false;
-                for (var i = idx + 1; i < children.length; i++) {
-                    var sib = children[i];
-                    if (sib.classList.contains('col-12') && sib.querySelector('.form-section-title')) break;
-                    if (sib.classList.contains('edit-field-wrap') && sib.style.display !== 'none') {
-                        hasVisible = true; break;
-                    }
-                }
-                child.style.display = hasVisible ? '' : 'none';
-            }
+        criteriaRow.querySelectorAll('.form-section').forEach(function(sec) {
+            // Skip personnel-managed sections (handled separately by Bug3 fix)
+            if (sec.id === 'edit-section-dang-doan') return;
+            var hasVisible = sec.querySelectorAll('.edit-field-wrap').length > 0 &&
+                Array.from(sec.querySelectorAll('.edit-field-wrap')).some(function(w) {
+                    return w.style.display !== 'none';
+                });
+            sec.classList.toggle('hidden', !hasVisible);
         });
     }
 }
@@ -1714,7 +1737,8 @@ function openEditItemModal(ctId) {
     var content = document.getElementById('editItemContent');
     loading.style.display = 'block';
     content.style.display = 'none';
-    // Ẩn hết tiêu chí lúc đầu
+    // Hide all criteria sections and field-wraps initially
+    document.querySelectorAll('#edit-criteria-row .form-section').forEach(function(s){ s.classList.add('hidden'); });
     document.querySelectorAll('#edit-criteria-row .edit-field-wrap').forEach(function(w){ w.style.display='none'; });
     document.getElementById('editItemForm').action = '/nomination/item/' + ctId + '/update';
     modal.show();
@@ -1775,6 +1799,29 @@ function openEditItemModal(ctId) {
 
             // Áp dụng visibility theo đối tượng + danh hiệu
             applyModalFieldVisibility(d.loai_danh_hieu || '', d.doi_tuong || '');
+
+            // Bug 3 fix: show/hide personnel-based sections using fetched flags
+            // (applyModalFieldVisibility skips these as they're normally managed by onPersonnelSelect)
+            if (!isTapThe) {
+                var secPN = document.getElementById('section-phu-nu');
+                var secDoan = document.getElementById('section-doan-the');
+                var secDangDoan = document.getElementById('edit-section-dang-doan');
+                var dangVienWrapModal = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="xep_loai_dang_vien"]');
+                if (secPN) secPN.classList.toggle('hidden', !d.la_hoi_vien_phu_nu);
+                if (secDoan) secDoan.classList.toggle('hidden', !d.la_doan_vien);
+                // Show the combined card if any personnel flag is set
+                if (secDangDoan) secDangDoan.classList.toggle('hidden', !(d.la_dang_vien || d.la_doan_vien || d.la_hoi_vien_phu_nu));
+                if (dangVienWrapModal) dangVienWrapModal.style.display = d.la_dang_vien ? '' : 'none';
+                // Show/hide sub-fields within the card
+                var kqDoanWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="ket_qua_doan_the"]');
+                var xlDoanWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="xep_loai_doan_vien"]');
+                var kqPNWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="ket_qua_phu_nu"]');
+                var htPNWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="hinh_thuc_khen_thuong_pn"]');
+                if (kqDoanWrap) kqDoanWrap.style.display = d.la_doan_vien ? '' : 'none';
+                if (xlDoanWrap) xlDoanWrap.style.display = d.la_doan_vien ? '' : 'none';
+                if (kqPNWrap) kqPNWrap.style.display = d.la_hoi_vien_phu_nu ? '' : 'none';
+                if (htPNWrap) htPNWrap.style.display = d.la_hoi_vien_phu_nu ? '' : 'none';
+            }
 
             // Wire hinh_thuc_tot_nghiep change in modal
             var htSelect = document.getElementById('editItemForm').querySelector('[name="hinh_thuc_tot_nghiep"]');

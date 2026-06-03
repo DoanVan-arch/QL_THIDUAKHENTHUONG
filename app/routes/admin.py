@@ -829,6 +829,13 @@ def final_approve_individual(ct_id):
             admin_pd.ngay_duyet = now
             admin_pd.ghi_chu = ghi_chu
 
+    # Sync per-item trang_thai
+    try:
+        from app.routes.approval import _recompute_chi_tiet_status
+        _recompute_chi_tiet_status(de_xuat)
+    except Exception:
+        pass
+
     db.session.commit()
     ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
     flash(f'Đã đồng ý cho "{ho_ten}". Khi toàn bộ đề xuất được duyệt sẽ chuyển sang Hội đồng biểu quyết.', 'success')
@@ -883,6 +890,14 @@ def final_approve_from_tracking(id):
         admin_pd.ghi_chu = ghi_chu
 
     de_xuat.trang_thai = TrangThaiDeXuat.PHE_DUYET_CUOI.value
+
+    # Sync per-item trang_thai
+    try:
+        from app.routes.approval import _recompute_chi_tiet_status
+        _recompute_chi_tiet_status(de_xuat)
+    except Exception:
+        pass
+
     db.session.commit()
     flash('Đã phê duyệt đề xuất. Chuyển sang Hội đồng biểu quyết (Bảng 2).', 'success')
     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc, _anchor='bang2'))

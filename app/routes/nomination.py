@@ -772,6 +772,12 @@ def get_nomination_item_data(ct_id):
         'thanh_tich_ca_nhan_khac': chi_tiet.thanh_tich_ca_nhan_khac or '',
         'ghi_chu': chi_tiet.ghi_chu or '',
         'tap_the_data': tap_the_data,
+        # Personnel flags (for Bug 3: show/hide sections in edit modal)
+        'la_hoi_vien_phu_nu': bool(chi_tiet.quan_nhan.la_hoi_vien_phu_nu) if chi_tiet.quan_nhan else False,
+        'la_dang_vien': bool(chi_tiet.quan_nhan.la_dang_vien) if chi_tiet.quan_nhan else False,
+        'la_doan_vien': bool(chi_tiet.quan_nhan.la_doan_vien) if chi_tiet.quan_nhan else False,
+        'la_chi_huy': bool(chi_tiet.quan_nhan.la_chi_huy) if chi_tiet.quan_nhan else False,
+        'la_bi_thu': bool(chi_tiet.quan_nhan.la_bi_thu) if chi_tiet.quan_nhan else False,
     }
     return jsonify(data)
 
@@ -927,6 +933,15 @@ def submit_nomination(id):
 
     de_xuat.trang_thai = TrangThaiDeXuat.CHO_DUYET.value
     de_xuat.ngay_gui = datetime.utcnow()
+    db.session.flush()
+
+    # Sync per-item trang_thai → DANG_DUYET
+    try:
+        from app.routes.approval import _recompute_chi_tiet_status
+        _recompute_chi_tiet_status(de_xuat)
+    except Exception:
+        pass
+
     db.session.commit()
 
     # Auto-finalize scope-limited depts (BAN_QUANLUC, BAN_CANBO) immediately
@@ -1160,6 +1175,11 @@ def revoke_nomination(id):
     # Reset nomination status
     de_xuat.trang_thai = TrangThaiDeXuat.NHAP.value
     de_xuat.ngay_gui = None
+
+    # Reset per-item trang_thai → NHAP
+    from app.models.nomination import TrangThaiChiTiet
+    for ct in de_xuat.chi_tiets:
+        ct.trang_thai = TrangThaiChiTiet.NHAP.value
 
     db.session.commit()
     flash('Đã thu hồi đề xuất. Đề xuất đã chuyển về trạng thái Nháp.', 'success')
