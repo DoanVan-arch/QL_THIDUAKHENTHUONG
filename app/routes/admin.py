@@ -4758,56 +4758,62 @@ def clear_data():
 @admin_required
 def activity_log():
     from app.models.activity_log import ActivityLog, ACTION_LABELS
+    from sqlalchemy.exc import ProgrammingError
 
-    page       = request.args.get('page', 1, type=int)
-    per_page   = 50
-    action_f   = request.args.get('action', '').strip()
-    user_f     = request.args.get('user', '').strip()
-    role_f     = request.args.get('role', '').strip()
-    date_from  = request.args.get('date_from', '').strip()
-    date_to    = request.args.get('date_to', '').strip()
+    try:
+        page       = request.args.get('page', 1, type=int)
+        per_page   = 50
+        action_f   = request.args.get('action', '').strip()
+        user_f     = request.args.get('user', '').strip()
+        role_f     = request.args.get('role', '').strip()
+        date_from  = request.args.get('date_from', '').strip()
+        date_to    = request.args.get('date_to', '').strip()
 
-    q = ActivityLog.query
+        q = ActivityLog.query
 
-    if action_f:
-        q = q.filter(ActivityLog.action == action_f)
-    if user_f:
-        q = q.filter(
-            db.or_(
-                ActivityLog.username.ilike(f'%{user_f}%'),
-                ActivityLog.ho_ten.ilike(f'%{user_f}%'),
+        if action_f:
+            q = q.filter(ActivityLog.action == action_f)
+        if user_f:
+            q = q.filter(
+                db.or_(
+                    ActivityLog.username.ilike(f'%{user_f}%'),
+                    ActivityLog.ho_ten.ilike(f'%{user_f}%'),
+                )
             )
+        if role_f:
+            q = q.filter(ActivityLog.role == role_f)
+        if date_from:
+            try:
+                from datetime import datetime as _dt
+                q = q.filter(ActivityLog.created_at >= _dt.strptime(date_from, '%Y-%m-%d'))
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                from datetime import datetime as _dt
+                q = q.filter(ActivityLog.created_at < _dt.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59))
+            except ValueError:
+                pass
+
+        logs = q.order_by(ActivityLog.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+        # Distinct roles & actions for filter dropdowns
+        all_roles   = [r[0] for r in db.session.query(ActivityLog.role).distinct().order_by(ActivityLog.role).all() if r[0]]
+        all_actions = [a[0] for a in db.session.query(ActivityLog.action).distinct().order_by(ActivityLog.action).all() if a[0]]
+
+        return render_template(
+            'admin/activity_log.html',
+            logs=logs,
+            action_labels=ACTION_LABELS,
+            all_roles=all_roles,
+            all_actions=all_actions,
+            filter_action=action_f,
+            filter_user=user_f,
+            filter_role=role_f,
+            filter_date_from=date_from,
+            filter_date_to=date_to,
         )
-    if role_f:
-        q = q.filter(ActivityLog.role == role_f)
-    if date_from:
-        try:
-            from datetime import datetime as _dt
-            q = q.filter(ActivityLog.created_at >= _dt.strptime(date_from, '%Y-%m-%d'))
-        except ValueError:
-            pass
-    if date_to:
-        try:
-            from datetime import datetime as _dt
-            q = q.filter(ActivityLog.created_at < _dt.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59))
-        except ValueError:
-            pass
-
-    logs = q.order_by(ActivityLog.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
-
-    # Distinct roles & actions for filter dropdowns
-    all_roles   = [r[0] for r in db.session.query(ActivityLog.role).distinct().order_by(ActivityLog.role).all() if r[0]]
-    all_actions = [a[0] for a in db.session.query(ActivityLog.action).distinct().order_by(ActivityLog.action).all() if a[0]]
-
-    return render_template(
-        'admin/activity_log.html',
-        logs=logs,
-        action_labels=ACTION_LABELS,
-        all_roles=all_roles,
-        all_actions=all_actions,
-        filter_action=action_f,
-        filter_user=user_f,
-        filter_role=role_f,
-        filter_date_from=date_from,
-        filter_date_to=date_to,
-    )
+    except ProgrammingError:
+        # Table doesn't exist yet — migration not applied
+        flash('Bảng nhật ký hoạt động chưa được tạo. Vui lòng chạy: flask db upgrade', 'warning')
+        return redirect(url_for('admin.approval_tracking'))
