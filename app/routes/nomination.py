@@ -12,6 +12,7 @@ from app.models.notification import ThongBao
 from app.models.catalog import DoiTuongOption
 from app.utils.decorators import unit_user_required
 from app.utils.file_upload import save_upload
+from app.utils.activity_logger import log_action
 from datetime import datetime
 from sqlalchemy.exc import ProgrammingError, OperationalError
 from docx import Document
@@ -962,6 +963,9 @@ def submit_nomination(id):
     except Exception:
         pass
 
+    db.session.commit()
+    log_action('submit_nomination', resource_type='de_xuat', resource_id=de_xuat.id,
+               detail=f'Năm học {de_xuat.nam_hoc}, {len(de_xuat.chi_tiets)} cá nhân/tập thể')
     db.session.commit()
 
     # Auto-finalize scope-limited depts (BAN_QUANLUC, BAN_CANBO) immediately

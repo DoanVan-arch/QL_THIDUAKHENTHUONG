@@ -19,6 +19,7 @@ from app.models.catalog import ChucVuOption, CapBacOption, DoiTuongOption
 from app.models.notification import ThongBao
 from app.utils.decorators import admin_required, admin_or_reward_viewer_required
 from app.utils.file_upload import save_upload, delete_upload
+from app.utils.activity_logger import log_action
 from datetime import datetime
 from html import escape
 from sqlalchemy import case
@@ -839,6 +840,9 @@ def final_approve_individual(ct_id):
 
     db.session.commit()
     ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
+    log_action('admin_pre_approve', resource_type='chi_tiet', resource_id=ct.id,
+               detail=f'{ho_ten} — đề xuất #{de_xuat.id} năm học {de_xuat.nam_hoc}')
+    db.session.commit()
     flash(f'Đã đồng ý cho "{ho_ten}". Khi toàn bộ đề xuất được duyệt sẽ chuyển sang Hội đồng biểu quyết.', 'success')
     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc, _anchor='bang2'))
 
@@ -1002,7 +1006,9 @@ def confirm_khen_thuong_ct(ct_id):
     )
     db.session.add(kt)
     db.session.commit()
-
+    log_action('admin_final_approve', resource_type='chi_tiet', resource_id=ct.id,
+               detail=f'{name} — {ct.loai_danh_hieu}, năm học {de_xuat.nam_hoc}')
+    db.session.commit()
     flash(f'Đã xác nhận khen thưởng cho {name}.', 'success')
     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
@@ -1104,6 +1110,9 @@ def hoi_dong_vote_ct(ct_id):
 
     db.session.commit()
     name = ct.quan_nhan.ho_ten if ct.quan_nhan else ct.de_xuat.don_vi.ten_don_vi
+    log_action('hoi_dong_vote', resource_type='chi_tiet', resource_id=ct_id,
+               detail=f'{name} — kết quả: {ket_qua}, vai trò: {vai_tro}')
+    db.session.commit()
     flash(f'Đã ghi nhận biểu quyết "{ket_qua}" cho {name}.', 'success')
     nam_hoc = ct.de_xuat.nam_hoc if ct.de_xuat else ''
     return redirect(url_for('admin.reward_list', nam_hoc=nam_hoc))
@@ -1133,6 +1142,9 @@ def reject_from_tracking(id):
         admin_pd.ly_do = ly_do
 
     de_xuat.trang_thai = TrangThaiDeXuat.TU_CHOI.value
+    db.session.commit()
+    log_action('admin_reject', resource_type='de_xuat', resource_id=id,
+               detail=f'Từ chối đề xuất #{id} năm học {de_xuat.nam_hoc} — {ly_do}')
     db.session.commit()
 
     # Notify unit account
@@ -1226,6 +1238,9 @@ def reject_individual_from_tracking(ct_id):
         db.session.commit()
 
     ho_ten = ct.quan_nhan.ho_ten if ct.quan_nhan else de_xuat.don_vi.ten_don_vi
+    log_action('admin_reject_individual', resource_type='chi_tiet', resource_id=ct.id,
+               detail=f'{ho_ten} — lý do: {ly_do}')
+    db.session.commit()
     flash(f'Đã loại "{ho_ten}" khỏi đề xuất và gửi thông báo về đơn vị.', 'warning')
     return redirect(url_for('admin.approval_tracking'))
 
@@ -1314,6 +1329,8 @@ def batch_final_approve():
 
         approved_count += 1
 
+    db.session.commit()
+    log_action('batch_final_approve', detail=f'Phê duyệt cuối {approved_count} đề xuất (ids={ids})')
     db.session.commit()
     return jsonify({
         'success': True,
@@ -1715,7 +1732,14 @@ def reward_list():
 
 
 def _get_pending_final_individuals(nam_hoc=None):
-    """Bảng 1: Individuals at HOI_DONG status, all dept approved, not yet admin_approved."""
+    """Bảng 1: All individuals in HOI_DONG nominations that are not yet admin_approved.
+
+    A nomination reaching HOI_DONG status has already passed the full departmental
+    review cycle.  Re-checking per-dept PheDuyet votes here is unnecessary and
+    causes items to vanish when a dept account has no vote record yet.  We simply
+    surface every non-rejected, non-admin-approved chi_tiet from every HOI_DONG
+    nomination so the admin can act on them.
+    """
     pending = []
     q = DeXuat.query.filter_by(trang_thai=TrangThaiDeXuat.HOI_DONG.value)
     if nam_hoc:
@@ -1724,34 +1748,9 @@ def _get_pending_final_individuals(nam_hoc=None):
 
     for dx in nominations_waiting:
         for ct in dx.chi_tiets:
-            if ct.admin_approved:
+            if ct.admin_approved or ct.bi_loai:
                 continue
-            all_dept_ok = True
-            for dept_name in DEPT_NAMES:
-                pd = PheDuyet.query.filter_by(de_xuat_id=dx.id, phong_duyet=dept_name).first()
-                is_auto = _is_auto_scope_approved(dept_name, ct.doi_tuong)
-                if not pd:
-                    if is_auto:
-                        continue
-                    all_dept_ok = False
-                    break
-
-                if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
-                    all_dept_ok = False
-                    break
-
-                kq = KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=pd.id, chi_tiet_id=ct.id).first()
-                if not kq:
-                    if is_auto:
-                        continue
-                    all_dept_ok = False
-                    break
-
-                if kq.ket_qua != KetQuaDuyet.DONG_Y.value:
-                    all_dept_ok = False
-                    break
-            if all_dept_ok:
-                pending.append({'dx': dx, 'ct': ct})
+            pending.append({'dx': dx, 'ct': ct})
     return pending
 
 
@@ -4748,3 +4747,67 @@ def clear_data():
         flash(f'Lỗi khi xóa dữ liệu: {str(e)}', 'danger')
 
     return redirect(url_for('admin.approval_tracking'))
+
+
+# ---------------------------------------------------------------------------
+# Activity Log viewer
+# ---------------------------------------------------------------------------
+
+@admin_bp.route('/logs')
+@login_required
+@admin_required
+def activity_log():
+    from app.models.activity_log import ActivityLog, ACTION_LABELS
+
+    page       = request.args.get('page', 1, type=int)
+    per_page   = 50
+    action_f   = request.args.get('action', '').strip()
+    user_f     = request.args.get('user', '').strip()
+    role_f     = request.args.get('role', '').strip()
+    date_from  = request.args.get('date_from', '').strip()
+    date_to    = request.args.get('date_to', '').strip()
+
+    q = ActivityLog.query
+
+    if action_f:
+        q = q.filter(ActivityLog.action == action_f)
+    if user_f:
+        q = q.filter(
+            db.or_(
+                ActivityLog.username.ilike(f'%{user_f}%'),
+                ActivityLog.ho_ten.ilike(f'%{user_f}%'),
+            )
+        )
+    if role_f:
+        q = q.filter(ActivityLog.role == role_f)
+    if date_from:
+        try:
+            from datetime import datetime as _dt
+            q = q.filter(ActivityLog.created_at >= _dt.strptime(date_from, '%Y-%m-%d'))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            from datetime import datetime as _dt
+            q = q.filter(ActivityLog.created_at < _dt.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59))
+        except ValueError:
+            pass
+
+    logs = q.order_by(ActivityLog.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+    # Distinct roles & actions for filter dropdowns
+    all_roles   = [r[0] for r in db.session.query(ActivityLog.role).distinct().order_by(ActivityLog.role).all() if r[0]]
+    all_actions = [a[0] for a in db.session.query(ActivityLog.action).distinct().order_by(ActivityLog.action).all() if a[0]]
+
+    return render_template(
+        'admin/activity_log.html',
+        logs=logs,
+        action_labels=ACTION_LABELS,
+        all_roles=all_roles,
+        all_actions=all_actions,
+        filter_action=action_f,
+        filter_user=user_f,
+        filter_role=role_f,
+        filter_date_from=date_from,
+        filter_date_to=date_to,
+    )

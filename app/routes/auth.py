@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models.user import User
 from app.extensions import db
+from app.utils.activity_logger import log_action
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -27,10 +28,14 @@ def login():
 
             login_user(user, remember=request.form.get('remember'))
             session['_session_token'] = token
+            log_action('login', user=user, detail=f'IP: {request.remote_addr}')
+            db.session.commit()
             next_page = request.args.get('next')
             flash(f'Chào mừng {user.ho_ten}!', 'success')
             return redirect(next_page or url_for('dashboard.index'))
 
+        log_action('login_failed', detail=f'username={username}, IP={request.remote_addr}')
+        db.session.commit()
         flash('Tên đăng nhập hoặc mật khẩu không đúng.', 'danger')
 
     return render_template('auth/login.html')
@@ -40,6 +45,7 @@ def login():
 @login_required
 def logout():
     if current_user.is_authenticated:
+        log_action('logout')
         current_user.session_token = None
         db.session.commit()
     logout_user()
