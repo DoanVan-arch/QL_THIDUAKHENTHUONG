@@ -371,6 +371,10 @@
                         <label class="form-label">Điểm tổng kết</label>
                         <input type="text" class="form-control" name="diem_tong_ket">
                     </div>
+                    <div class="col-md-4" id="group-xep-loai-tong-ket">
+                        <label class="form-label">Xếp loại tổng kết</label>
+                        {{ tc_input('xep_loai_tong_ket') }}
+                    </div>
                     <div class="col-md-4" id="group-thuc-hanh">
                         <label class="form-label">Kết quả kiểm tra đánh giá năng lực thực hành</label>
                         {{ tc_input('ket_qua_thuc_hanh') }}
@@ -742,7 +746,7 @@ var SCORE_PAIR = {
     'diem_ban_sung':           'ban_sung',
     'diem_the_luc':            'the_luc',
     'diem_kiem_tra_chinh_tri': 'kiem_tra_chinh_tri',
-    'diem_tong_ket':           null,
+    'diem_tong_ket':           'xep_loai_tong_ket',
     'diem_nckh':               null,
 };
 
@@ -762,6 +766,7 @@ var OPTIONAL_CRITERIA_FIELDS = {
     muc_do_hoan_thanh: true,
     phieu_tin_nhiem: true,
     xep_loai_dang_vien: true,
+    xep_loai_tong_ket: true,
     ket_qua_doan_the: true,
     xep_loai_doan_vien: true,
     hinh_thuc_khen_thuong_qc: true,
@@ -1503,6 +1508,10 @@ function updateSubmitButtonState() {
                     <label class="form-label">Điểm tổng kết</label>
                     <input type="text" name="diem_tong_ket" class="form-control">
                   </div>
+                  <div class="col-md-4 edit-field-wrap" data-field="xep_loai_tong_ket">
+                    <label class="form-label">Xếp loại tổng kết</label>
+                    {{ tc_input('xep_loai_tong_ket') }}
+                  </div>
                   <div class="col-md-4 edit-field-wrap" data-field="ket_qua_thuc_hanh">
                     <label class="form-label">Kết quả kiểm tra đánh giá năng lực thực hành</label>
                     {{ tc_input('ket_qua_thuc_hanh') }}
@@ -1771,7 +1780,7 @@ function openEditItemModal(ctId) {
                 'xep_loai_doan_vien','hinh_thuc_khen_thuong_qc','ket_qua_phu_nu','hinh_thuc_khen_thuong_pn',
                 'chu_tri_don_vi_danh_hieu','danh_hieu_gv_gioi','tien_do_pgs','dinh_muc_giang_day',
                 'thoi_gian_lao_dong_kh','ket_qua_kiem_tra_giang','danh_hieu_hv_gioi','diem_tong_ket',
-                'ket_qua_thuc_hanh','hinh_thuc_tot_nghiep','diem_tn_ctd','diem_tn_ct','diem_tn_ta',
+                'xep_loai_tong_ket','ket_qua_thuc_hanh','hinh_thuc_tot_nghiep','diem_tn_ctd','diem_tn_ct','diem_tn_ta',
                 'diem_tn_mon4','diem_tn_chuyennganh','diem_tn_baove','diem_nckh','thanh_tich_ca_nhan_khac'
             ];
             simpleFields.forEach(function(f) {

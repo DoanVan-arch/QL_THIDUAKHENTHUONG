@@ -231,7 +231,8 @@ def approval_tracking():
     nam_hoc_filter = request.args.get('nam_hoc', '')
 
     query = DeXuat.query.filter(
-        DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value
+        DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value,
+        DeXuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value,
     )
 
     if nam_hoc_filter:
@@ -1309,6 +1310,7 @@ def batch_final_approve():
                         ghi_chu=ghi_chu,
                     )
                     db.session.add(khen_thuong)
+                ct.admin_approved = True
 
         approved_count += 1
 
