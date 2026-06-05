@@ -4,7 +4,7 @@ from app.extensions import db
 from app.models.user import User
 from app.models.personnel import QuanNhan, DoiTuong, MucDoHoanThanh
 from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi
-from app.models.evaluation import NhomTieuChi
+from app.models.evaluation import NhomTieuChi, DanhGiaHangNam
 from app.models.evaluation import DiemQuyDinhDanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
@@ -333,6 +333,17 @@ def edit_nomination(id):
         }
         for tc in tieu_chi_db
     }
+    # Inject hardcoded fallback combobox choices for fields not yet in TieuChi DB
+    if 'xep_loai_dang_vien' not in tieu_chi_input_map or not tieu_chi_input_map['xep_loai_dang_vien'].get('gia_tri_chon'):
+        tieu_chi_input_map['xep_loai_dang_vien'] = {
+            'loai_input': 'combobox',
+            'gia_tri_chon': DanhGiaHangNam.XEP_LOAI_DANG_VIEN_CHOICES,
+        }
+    if 'xep_loai_tong_ket' not in tieu_chi_input_map or not tieu_chi_input_map['xep_loai_tong_ket'].get('gia_tri_chon'):
+        tieu_chi_input_map['xep_loai_tong_ket'] = {
+            'loai_input': 'combobox',
+            'gia_tri_chon': ['Xuất sắc', 'Giỏi', 'Khá', 'Trung bình khá', 'Trung bình', 'Yếu'],
+        }
 
     diem_field_labels = {
         'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
@@ -361,6 +372,7 @@ def edit_nomination(id):
         'diem_kiem_tra_chinh_tri': 'chung',
         'kiem_tra_chinh_tri':      'chung',
         'diem_tong_ket':           'hoc_vien',
+        'xep_loai_tong_ket':       'hoc_vien',
         'diem_nckh':               'nckh',
     }
 

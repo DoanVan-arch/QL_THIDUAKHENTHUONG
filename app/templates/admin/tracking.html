@@ -6,7 +6,7 @@
 
 {% set status_class = {
     'Chờ duyệt': 'badge-pending', 'Đang duyệt': 'badge-reviewing',
-    'Xét duyệt của cơ quan thường trực': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
+    'Hội đồng': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
     'Từ chối': 'badge-rejected'
 } %}
 
@@ -246,7 +246,7 @@
                                 <i class="bi bi-shield-check"></i>
                             </button>
                             {% endif %}
-                            {% if dx.trang_thai in ['Xét duyệt của cơ quan thường trực','Đang duyệt','Phê duyệt cuối'] %}
+                            {% if dx.trang_thai in ['Hội đồng','Đang duyệt','Phê duyệt cuối'] %}
                             <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
                                     onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
                                 <i class="bi bi-x-circle"></i>
@@ -372,7 +372,7 @@
                                 <i class="bi bi-shield-check"></i>
                             </button>
                             {% endif %}
-                            {% if dx_tt.trang_thai in ['Xét duyệt của cơ quan thường trực','Đang duyệt','Phê duyệt cuối'] %}
+                            {% if dx_tt.trang_thai in ['Hội đồng','Đang duyệt','Phê duyệt cuối'] %}
                             <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
                                     onclick="openRejectIndividualModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
                                 <i class="bi bi-x-circle"></i>
@@ -499,7 +499,7 @@
 </div>
 
 <script type="application/json" id="nominationData">
-{% if unit_groups %}[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Xét duyệt của cơ quan thường trực' %}{"id":{{ nom_data.dx.id }},"unit":"{{ ug.unit_name }}","name":"{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
+{% if unit_groups %}[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Hội đồng' %}{"id":{{ nom_data.dx.id }},"unit":"{{ ug.unit_name }}","name":"{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
 {% else %}[]{% endif %}
 </script>
 
