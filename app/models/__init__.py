@@ -11,3 +11,4 @@ from app.models.evaluation import NhomTieuChi, DanhGiaHangNam, DiemQuyDinhDanhHi
 from app.models.hoi_dong import HoiDongBieuQuyet
 from app.models.transfer import ChuyenDonVi, TrangThaiChuyen
 from app.models.edit_request import YeuCauChinhSua, TrangThaiYeuCauSua
+from app.models.activity_log import ActivityLog

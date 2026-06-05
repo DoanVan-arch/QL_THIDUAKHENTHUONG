@@ -148,11 +148,6 @@ class User(db.Model, UserMixin):
             Role.BAN_TOCHUC,
             Role.BAN_KEHOACH_TONGHOP,
             Role.UY_BAN_KIEMTRA,
-            Role.BAN_CNTT,
-            Role.BAN_TAC_HUAN,
-            Role.BAN_QUANLUC,
-            Role.PHONG_DAOTAO,
-            Role.PHONG_KHOAHOC,
         )
 
     @property
@@ -166,11 +161,6 @@ class User(db.Model, UserMixin):
             Role.BAN_TOCHUC: 'ban_toChuc',
             Role.BAN_KEHOACH_TONGHOP: 'ban_keHoachTongHop',
             Role.UY_BAN_KIEMTRA: 'uy_banKiemTra',
-            Role.BAN_CNTT: 'ban_congNgheThongTin',
-            Role.BAN_TAC_HUAN: 'ban_tacHuan',
-            Role.BAN_QUANLUC: 'ban_quanLuc',
-            Role.PHONG_DAOTAO: 'phong_daoTao',
-            Role.PHONG_KHOAHOC: 'phong_khoaHoc',
         }
         return _map.get(self.role)
 

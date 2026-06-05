@@ -8,6 +8,7 @@ from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetCh
 from app.models.notification import ThongBao
 from app.models.edit_request import YeuCauChinhSua, TrangThaiYeuCauSua
 from app.utils.decorators import department_required
+from app.utils.activity_logger import log_action
 from datetime import datetime
 from io import BytesIO
 
@@ -794,6 +795,9 @@ def approve_item(id, ct_id):
     db.session.commit()
 
     name = ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị'
+    log_action('dept_approve_item', resource_type='chi_tiet', resource_id=ct_id,
+               detail=f'{name} — {phong_name} nhất trí')
+    db.session.commit()
     flash(f'Đã nhất trí: {name}', 'success')
     return redirect(url_for('approval.review_nomination', id=id))
 
@@ -835,6 +839,9 @@ def reject_item(id, ct_id):
 
     ct = DeXuatChiTiet.query.get(ct_id)
     name = ct.quan_nhan.ho_ten if ct and ct.quan_nhan else 'Tập thể'
+    log_action('dept_reject_item', resource_type='chi_tiet', resource_id=ct_id,
+               detail=f'{name} — {phong_name} không nhất trí: {ly_do}')
+    db.session.commit()
     flash(f'Đã loại khỏi đề xuất: {name}. Các cá nhân/tập thể còn lại vẫn tiếp tục được xét duyệt. Đã gửi thông báo cho đơn vị.', 'warning')
     return redirect(url_for('approval.review_nomination', id=id))
 
@@ -878,6 +885,9 @@ def submit_review(id):
 
     _recompute_de_xuat_status(de_xuat)
 
+    db.session.commit()
+    log_action('dept_submit_review', resource_type='de_xuat', resource_id=id,
+               detail=f'{phong_name} hoàn tất duyệt đề xuất #{id}')
     db.session.commit()
     flash(f'{phong_name} đã hoàn tất duyệt đề xuất.', 'success')
     return redirect(url_for('approval.pending_list'))
