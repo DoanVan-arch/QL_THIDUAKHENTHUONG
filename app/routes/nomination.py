@@ -28,9 +28,10 @@ import hashlib, binascii, os
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
     'Phòng Khoa học', 'Phòng Đào tạo',
-    'Thủ trưởng Phòng Chính trị', 'Thủ trưởng Phòng TM-HC',
+    'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
-    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ủy ban Kiểm tra', 'Ban Quân lực'
+    'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Bảo vệ an ninh',
+    'Ủy ban Kiểm tra', 'Ban Quân lực'
 ]
 
 nomination_bp = Blueprint('nomination', __name__)

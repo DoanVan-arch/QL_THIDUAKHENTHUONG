@@ -274,6 +274,24 @@
                 {% if ct.xep_loai_dang_vien %}
                 <div class="col-md-3"><small class="text-muted">Xếp loại ĐV:</small> {{ ct.xep_loai_dang_vien }}</div>
                 {% endif %}
+                {% if ct.xep_loai_doan_vien %}
+                <div class="col-md-3"><small class="text-muted">Xếp loại ĐTV:</small> {{ ct.xep_loai_doan_vien }}</div>
+                {% endif %}
+                {% if ct.ket_qua_doan_the %}
+                <div class="col-md-6"><small class="text-muted">Đoàn thể:</small> {{ ct.ket_qua_doan_the }}</div>
+                {% endif %}
+                {% if ct.hinh_thuc_khen_thuong_qc %}
+                <div class="col-md-6"><small class="text-muted">KT quần chúng:</small> {{ ct.hinh_thuc_khen_thuong_qc }}</div>
+                {% endif %}
+                {% if ct.ket_qua_phu_nu %}
+                <div class="col-md-6"><small class="text-muted">Kết quả phụ nữ:</small> {{ ct.ket_qua_phu_nu }}</div>
+                {% endif %}
+                {% if ct.hinh_thuc_khen_thuong_pn %}
+                <div class="col-md-6"><small class="text-muted">KT phụ nữ:</small> {{ ct.hinh_thuc_khen_thuong_pn }}</div>
+                {% endif %}
+                {% if ct.chu_tri_don_vi_danh_hieu %}
+                <div class="col-md-6"><small class="text-muted">Chủ trì đơn vị:</small> {{ ct.chu_tri_don_vi_danh_hieu }}</div>
+                {% endif %}
                 {% if ct.danh_hieu_gv_gioi %}
                 <div class="col-md-3"><small class="text-muted">GV giỏi:</small> {{ ct.danh_hieu_gv_gioi }}</div>
                 {% endif %}
@@ -297,14 +315,31 @@
                 {% if ct.diem_tong_ket %}
                 <div class="col-md-3"><small class="text-muted">Điểm TK:</small> {{ ct.diem_tong_ket }}</div>
                 {% endif %}
+                {% if ct.xep_loai_tong_ket %}
+                <div class="col-md-3"><small class="text-muted">XL tổng kết:</small> {{ ct.xep_loai_tong_ket }}</div>
+                {% endif %}
                 {% if ct.ket_qua_thuc_hanh %}
                 <div class="col-md-3"><small class="text-muted">Thực hành:</small> {{ ct.ket_qua_thuc_hanh }}</div>
                 {% endif %}
-                {% if ct.ket_qua_doan_the %}
-                <div class="col-md-6"><small class="text-muted">Đoàn thể:</small> {{ ct.ket_qua_doan_the }}</div>
+                {% if ct.ket_qua_ren_luyen %}
+                <div class="col-md-3"><small class="text-muted">Rèn luyện:</small> {{ ct.ket_qua_ren_luyen }}</div>
                 {% endif %}
-                {% if ct.chu_tri_don_vi_danh_hieu %}
-                <div class="col-md-6"><small class="text-muted">Chủ trì đơn vị:</small> {{ ct.chu_tri_don_vi_danh_hieu }}</div>
+                {% if ct.hinh_thuc_tot_nghiep %}
+                <div class="col-md-4"><small class="text-muted">Hình thức TN:</small> {{ ct.hinh_thuc_tot_nghiep }}</div>
+                {% endif %}
+                {% if ct.diem_tot_nghiep %}
+                <div class="col-md-3"><small class="text-muted">Điểm TN:</small> {{ ct.diem_tot_nghiep }}</div>
+                {% endif %}
+                {% if ct.diem_tn_ctd or ct.diem_tn_ct %}
+                <div class="col-12" style="font-size:0.82rem;">
+                    <small class="text-muted">Điểm thi:</small>
+                    {% if ct.diem_tn_ctd %} CTĐ {{ ct.diem_tn_ctd }}{% endif %}
+                    {% if ct.diem_tn_ct %} CT {{ ct.diem_tn_ct }}{% endif %}
+                    {% if ct.diem_tn_ta %} TA {{ ct.diem_tn_ta }}{% endif %}
+                    {% if ct.diem_tn_mon4 %} M4 {{ ct.diem_tn_mon4 }}{% endif %}
+                    {% if ct.diem_tn_chuyennganh %} Chuyên ngành {{ ct.diem_tn_chuyennganh }}{% endif %}
+                    {% if ct.diem_tn_baove %} Bảo vệ {{ ct.diem_tn_baove }}{% endif %}
+                </div>
                 {% endif %}
             </div>
 
@@ -332,30 +367,42 @@
             </div>
             {% endif %}
 
-            {% if ct.nckh_noi_dung %}
-            <div class="mt-2" style="font-size:0.85rem;">
-                <small class="text-muted fw-semibold">NCKH:</small> {{ ct.nckh_noi_dung }}
-            </div>
-            {% endif %}
-
-            {% if ct.diem_nckh is not none %}
-            <div class="mt-2" style="font-size:0.85rem;">
-                <small class="text-muted fw-semibold">Điểm khoa học:</small> {{ ct.diem_nckh }}
+            {% if ct.nckh_noi_dung or ct.mo_ta_khoa_hoc or ct.diem_nckh is not none %}
+            <div class="mt-2" style="font-size:0.85rem; border-top:1px dashed #dee2e6; padding-top:6px;">
+                <small class="text-muted fw-semibold">Nghiên cứu khoa học:</small>
+                {% if ct.nckh_noi_dung %}
+                <div class="mt-1">{{ ct.nckh_noi_dung }}</div>
+                {% endif %}
+                {% if ct.mo_ta_khoa_hoc %}
+                <div class="mt-1"><small class="text-muted">Mô tả:</small> {{ ct.mo_ta_khoa_hoc }}</div>
+                {% endif %}
+                {% if ct.diem_nckh is not none %}
+                <div class="mt-1"><small class="text-muted">Điểm khoa học:</small> {{ ct.diem_nckh }}</div>
+                {% endif %}
             </div>
             {% endif %}
 
             {% if ct.minh_chungs %}
-            <div class="mt-2">
+            <div class="mt-2" style="font-size:0.85rem; border-top:1px dashed #dee2e6; padding-top:6px;">
                 <small class="text-muted fw-semibold">Minh chứng:</small>
-                <div class="d-flex flex-wrap gap-2 mt-1">
+                <div class="d-flex flex-wrap gap-2 mt-1 align-items-start">
                     {% for mc in ct.minh_chungs %}
                     {% set ext = mc.duong_dan.rsplit('.', 1)[-1].lower() if '.' in mc.duong_dan else '' %}
                     {% if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp') %}
-                    <a href="{{ url_for('uploaded_file', filename=mc.duong_dan) }}" target="_blank" rel="noopener">
-                        <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}"
-                             class="evidence-thumb" alt="{{ mc.ten_file_goc }}"
-                             onclick="event.preventDefault(); showImageModal(this.src)">
-                    </a>
+                    {% set img_url = url_for('uploaded_file', filename=mc.duong_dan) %}
+                    <div class="text-center" style="max-width:120px;">
+                        <a href="{{ img_url }}" target="_blank" rel="noopener"
+                           onclick="event.preventDefault(); event.stopPropagation(); showImageModal('{{ img_url }}');"
+                           title="{{ mc.ten_file_goc or mc.loai_minh_chung }}"
+                           style="cursor:pointer;">
+                            <img src="{{ img_url }}"
+                                 class="evidence-thumb" alt="{{ mc.ten_file_goc }}"
+                                 style="max-width:100px; max-height:80px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;">
+                        </a>
+                        {% if mc.loai_minh_chung %}
+                        <div style="font-size:0.7rem; color:#6c757d; word-break:break-word; margin-top:2px;">{{ tieu_chi_map.get(mc.loai_minh_chung).ten if tieu_chi_map.get(mc.loai_minh_chung) else mc.loai_minh_chung }}</div>
+                        {% endif %}
+                    </div>
                     {% else %}
                     <a href="{{ url_for('uploaded_file', filename=mc.duong_dan) }}" target="_blank" rel="noopener"
                        class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;"
