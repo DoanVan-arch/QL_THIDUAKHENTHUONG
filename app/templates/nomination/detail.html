@@ -144,9 +144,14 @@
                     <tr{% if item.is_removed %} class="table-secondary text-muted"{% endif %}>
                         <td>{{ loop.index }}</td>
                         <td class="fw-semibold">
-                            {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}
-                            {% if ct.quan_nhan and ct.quan_nhan.cap_bac %}
+                            {% if ct.quan_nhan %}
+                            {{ ct.quan_nhan.ho_ten }}
+                            {% if ct.quan_nhan.cap_bac %}
                             <br><small class="text-muted">{{ ct.quan_nhan.cap_bac }}</small>
+                            {% endif %}
+                            {% else %}
+                            {{ ct.ten_don_vi_de_xuat or 'Đơn vị' }}
+                            <br><small class="text-muted">Tập thể</small>
                             {% endif %}
                             {% if item.is_removed %}
                             <br><span class="badge bg-danger" style="font-size:0.68rem;" title="Lý do: {{ item.ly_do_loai }}"><i class="bi bi-person-dash me-1"></i>Đã loại{% if item.phong_loai %} ({{ item.phong_loai }}){% endif %}</span>
@@ -221,9 +226,14 @@
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
                     <h6 class="fw-bold mb-1">
-                        {{ loop.index }}. {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}
-                        {% if ct.quan_nhan and ct.quan_nhan.cap_bac %}
+                        {% if ct.quan_nhan %}
+                        {{ loop.index }}. {{ ct.quan_nhan.ho_ten }}
+                        {% if ct.quan_nhan.cap_bac %}
                         <small class="text-muted">- {{ ct.quan_nhan.cap_bac }}</small>
+                        {% endif %}
+                        {% else %}
+                        {{ loop.index }}. {{ ct.ten_don_vi_de_xuat or 'Đơn vị' }}
+                        <small class="text-muted">- Tập thể</small>
                         {% endif %}
                     </h6>
                     {% if ct.quan_nhan and ct.quan_nhan.chuc_vu %}
@@ -297,6 +307,24 @@
                 <div class="col-md-6"><small class="text-muted">Chủ trì đơn vị:</small> {{ ct.chu_tri_don_vi_danh_hieu }}</div>
                 {% endif %}
             </div>
+
+            {% if item.tap_the_data %}
+            <div class="mt-2" style="font-size:0.85rem;">
+                <small class="text-muted fw-semibold">Tiêu chí tập thể:</small>
+                <div class="row g-2 mt-1">
+                    {% for field_name, field_value in item.tap_the_data.items() %}
+                    {% if field_value %}
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            {{ tieu_chi_map.get(field_name).ten if tieu_chi_map.get(field_name) else field_name }}:
+                        </small>
+                        {{ field_value }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             {% if ct.thanh_tich_ca_nhan_khac %}
             <div class="mt-2" style="font-size:0.85rem;">

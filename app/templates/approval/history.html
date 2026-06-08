@@ -69,12 +69,13 @@
     <div class="card-body-custom p-0">
         {% set cn_items = individual_results.items | selectattr('chi_tiet.quan_nhan_id') | list %}
         {% if cn_items %}
-        <div class="table-responsive">
+        <div class="tbl-outer">
+            <div class="tbl-scroll">
             <table class="table table-custom mb-0 align-middle" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th style="width:35px;">STT</th>
-                        <th style="min-width:130px;">Họ tên</th>
+                        <th class="sticky-stt" style="width:35px;">STT</th>
+                        <th class="sticky-name" style="min-width:130px;">Họ tên</th>
                         <th>Đơn vị</th>
                         <th>Danh hiệu</th>
                         {% for field in table_columns %}
@@ -93,8 +94,8 @@
                     {% set pd = kq_item.phe_duyet %}
                     {% set dx = pd.de_xuat %}
                     <tr class="{% if kq_item.ket_qua == 'Đồng ý' %}table-success{% elif kq_item.ket_qua == 'Từ chối' %}table-danger{% endif %}">
-                        <td>{{ loop.index }}</td>
-                        <td class="fw-semibold">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}</td>
+                        <td class="sticky-stt">{{ loop.index }}</td>
+                        <td class="fw-semibold sticky-name">{{ ct.quan_nhan.ho_ten if ct.quan_nhan else dx.don_vi.ten_don_vi }}</td>
                         <td><small>{{ dx.don_vi.ten_don_vi }}</small></td>
                         <td>
                             {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTD</span>
@@ -135,6 +136,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         {% else %}
         <div class="empty-state py-3"><p class="text-muted mb-0">Không có cá nhân nào</p></div>
@@ -149,12 +151,13 @@
     <div class="card-body-custom p-0">
         {% set tt_items = individual_results.items | rejectattr('chi_tiet.quan_nhan_id') | list %}
         {% if tt_items %}
-        <div class="table-responsive">
+        <div class="tbl-outer">
+            <div class="tbl-scroll">
             <table class="table table-custom mb-0 align-middle" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th style="width:35px;">STT</th>
-                        <th style="min-width:160px;">Tên tập thể</th>
+                        <th class="sticky-stt" style="width:35px;">STT</th>
+                        <th class="sticky-name" style="min-width:160px;">Tên tập thể</th>
                         <th>Đơn vị</th>
                         <th>Danh hiệu</th>
                         {% for f in tt_history_fields %}
@@ -174,8 +177,8 @@
                     {% set dx = pd.de_xuat %}
                     {% set ttd = ct.tap_the_dict or {} %}
                     <tr class="{% if kq_item.ket_qua == 'Đồng ý' %}table-success{% elif kq_item.ket_qua == 'Từ chối' %}table-danger{% endif %}">
-                        <td>{{ loop.index }}</td>
-                        <td class="fw-semibold"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or dx.don_vi.ten_don_vi }}</td>
+                        <td class="sticky-stt">{{ loop.index }}</td>
+                        <td class="fw-semibold sticky-name"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or dx.don_vi.ten_don_vi }}</td>
                         <td><small>{{ dx.don_vi.ten_don_vi }}</small></td>
                         <td>
                             {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
@@ -214,6 +217,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         {% else %}
         <div class="empty-state py-3"><p class="text-muted mb-0">Không có tập thể nào</p></div>
@@ -267,6 +271,79 @@
         font-size: 0.82rem;
     }
     .stat-mini i { font-size: 1rem; }
+
+    /* Sticky table headers */
+    .tbl-outer {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tbl-scroll {
+        display: block;
+    }
+    .tbl-scroll table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        table-layout: auto !important;
+        width: max-content !important;
+    }
+    .tbl-scroll th,
+    .tbl-scroll td {
+        border-bottom: 1px solid #dee2e6;
+        border-right: 1px solid #dee2e6;
+        padding: 4px 8px !important;
+        vertical-align: middle;
+        box-sizing: border-box;
+    }
+    .tbl-scroll th:first-child,
+    .tbl-scroll td:first-child { border-left: 1px solid #dee2e6; }
+    .tbl-scroll thead th { border-top: 1px solid #dee2e6; }
+
+    /* Sticky columns */
+    .tbl-scroll .sticky-stt {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 2;
+        width: 35px; min-width: 35px; max-width: 35px;
+        background: #fff;
+        border-right: 2px solid #b0bec5 !important;
+    }
+    .tbl-scroll thead .sticky-stt {
+        z-index: 4 !important;
+        background: var(--navy-primary, #1a3a5c) !important;
+        color: #fff !important;
+        text-align: center;
+    }
+    .tbl-scroll .sticky-name {
+        position: sticky !important;
+        left: 35px !important;
+        z-index: 2;
+        min-width: 160px;
+        background: #fff;
+        box-shadow: 3px 0 6px rgba(0,0,0,.12);
+    }
+    .tbl-scroll thead .sticky-name {
+        z-index: 4 !important;
+        background: var(--navy-primary, #1a3a5c) !important;
+        color: #fff !important;
+        text-align: left;
+    }
+
+    /* Row state backgrounds for sticky cols */
+    .tbl-scroll tr.table-success .sticky-stt,
+    .tbl-scroll tr.table-success .sticky-name {
+        background: #d1e7dd !important;
+    }
+    .tbl-scroll tr.table-danger .sticky-stt,
+    .tbl-scroll tr.table-danger .sticky-name {
+        background: #f8d7da !important;
+    }
+    .tbl-scroll tbody tr:hover .sticky-stt,
+    .tbl-scroll tbody tr:hover .sticky-name {
+        background: #f0f4f8 !important;
+    }
+
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {

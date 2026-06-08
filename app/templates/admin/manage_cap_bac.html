@@ -27,7 +27,15 @@
                     {% for item in items %}
                     <tr>
                         <td class="fw-semibold">{{ item.ten }}</td>
-                        <td>{{ item.thu_tu }}</td>
+                        <td>
+                            <span class="editable-thu-tu" 
+                                  contenteditable="true" 
+                                  data-id="{{ item.id }}"
+                                  data-type="cap_bac"
+                                  style="display:inline-block;min-width:40px;padding:2px 6px;border:1px solid transparent;border-radius:3px;cursor:text;"
+                                  onblur="saveThuTu(this)"
+                                  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">{{ item.thu_tu }}</span>
+                        </td>
                         <td>
                             {% if item.is_active %}
                             <span class="badge bg-success">Đang dùng</span>
@@ -111,4 +119,60 @@
         </div>
     </div>
 </div>
+
+<script>
+function saveThuTu(el) {
+    const id = el.dataset.id;
+    const type = el.dataset.type;
+    const thuTu = el.textContent.trim();
+    
+    if (!/^\d+$/.test(thuTu)) {
+        alert('Thứ tự phải là số nguyên');
+        location.reload();
+        return;
+    }
+    
+    const endpoints = {
+        'unit': '{{ url_for("admin.update_unit_thu_tu", id=0) }}'.replace('/0/', '/' + id + '/'),
+        'chuc_vu': '{{ url_for("admin.update_chuc_vu_thu_tu", id=0) }}'.replace('/0/', '/' + id + '/'),
+        'doi_tuong': '{{ url_for("admin.update_doi_tuong_thu_tu", id=0) }}'.replace('/0/', '/' + id + '/'),
+        'cap_bac': '{{ url_for("admin.update_cap_bac_thu_tu", id=0) }}'.replace('/0/', '/' + id + '/')
+    };
+    
+    fetch(endpoints[type], {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ thu_tu: parseInt(thuTu) })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            el.style.borderColor = '#28a745';
+            setTimeout(() => { el.style.borderColor = 'transparent'; }, 800);
+        } else {
+            alert('Lỗi: ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(err => {
+        alert('Lỗi kết nối');
+        location.reload();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.editable-thu-tu').forEach(el => {
+        el.addEventListener('focus', function() {
+            this.style.borderColor = '#0d6efd';
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        el.addEventListener('blur', function() {
+            this.style.backgroundColor = 'transparent';
+        });
+    });
+});
+</script>
 {% endblock %}
