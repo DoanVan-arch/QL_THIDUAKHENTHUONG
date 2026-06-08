@@ -85,7 +85,7 @@
                         <th>Lý do</th>
                         <th>Ngày duyệt</th>
                         <th>TT Đề xuất</th>
-                        <th class="text-center" style="width:80px;">Thao tác</th>
+                        <th class="text-center sticky-action" style="width:80px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -121,7 +121,7 @@
                             {% elif dx_status == 'Từ chối' %}<span class="badge bg-danger" style="font-size:0.72rem;">Từ chối</span>
                             {% else %}<span class="badge bg-secondary" style="font-size:0.72rem;">{{ dx_status }}</span>{% endif %}
                         </td>
-                        <td class="text-center">
+                        <td class="text-center sticky-action">
                             <div class="d-flex gap-1 justify-content-center">
                                 <a href="{{ url_for('approval.history_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                 {% if dx.trang_thai != 'Phê duyệt cuối' and pd.ket_qua != 'Chờ duyệt' %}
@@ -167,7 +167,7 @@
                         <th>Lý do</th>
                         <th>Ngày duyệt</th>
                         <th>TT Đề xuất</th>
-                        <th class="text-center" style="width:80px;">Thao tác</th>
+                        <th class="text-center sticky-action" style="width:80px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -202,7 +202,7 @@
                             {% elif dx_status == 'Từ chối' %}<span class="badge bg-danger" style="font-size:0.72rem;">Từ chối</span>
                             {% else %}<span class="badge bg-secondary" style="font-size:0.72rem;">{{ dx_status }}</span>{% endif %}
                         </td>
-                        <td class="text-center">
+                        <td class="text-center sticky-action">
                             <div class="d-flex gap-1 justify-content-center">
                                 <a href="{{ url_for('approval.history_detail', ct_id=ct.id) }}" class="btn btn-sm btn-outline-navy py-0 px-2" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                 {% if dx.trang_thai != 'Phê duyệt cuối' and pd.ket_qua != 'Chờ duyệt' %}
@@ -330,17 +330,34 @@
         text-align: left;
     }
 
+    /* Sticky right: Thao tác */
+    .tbl-scroll .sticky-action {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 2;
+        background: #fff;
+        box-shadow: -3px 0 6px rgba(0,0,0,.10);
+    }
+    .tbl-scroll thead .sticky-action {
+        z-index: 4 !important;
+        background: var(--navy-primary, #1a3a5c) !important;
+        color: #fff !important;
+    }
+
     /* Row state backgrounds for sticky cols */
     .tbl-scroll tr.table-success .sticky-stt,
-    .tbl-scroll tr.table-success .sticky-name {
+    .tbl-scroll tr.table-success .sticky-name,
+    .tbl-scroll tr.table-success .sticky-action {
         background: #d1e7dd !important;
     }
     .tbl-scroll tr.table-danger .sticky-stt,
-    .tbl-scroll tr.table-danger .sticky-name {
+    .tbl-scroll tr.table-danger .sticky-name,
+    .tbl-scroll tr.table-danger .sticky-action {
         background: #f8d7da !important;
     }
     .tbl-scroll tbody tr:hover .sticky-stt,
-    .tbl-scroll tbody tr:hover .sticky-name {
+    .tbl-scroll tbody tr:hover .sticky-name,
+    .tbl-scroll tbody tr:hover .sticky-action {
         background: #f0f4f8 !important;
     }
 
