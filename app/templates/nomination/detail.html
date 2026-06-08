@@ -308,11 +308,11 @@
                 {% endif %}
             </div>
 
-            {% if item.tap_the_data %}
+            {% if ct.tap_the_dict %}
             <div class="mt-2" style="font-size:0.85rem;">
                 <small class="text-muted fw-semibold">Tiêu chí tập thể:</small>
                 <div class="row g-2 mt-1">
-                    {% for field_name, field_value in item.tap_the_data.items() %}
+                    {% for field_name, field_value in ct.tap_the_dict.items() %}
                     {% if field_value %}
                     <div class="col-md-6">
                         <small class="text-muted">
