@@ -1,0 +1,6 @@
+[deploy]
+startCommand = "python run.py"
+
+[[volumes]]
+mountPath = "/app/uploads"
+name = "uploads"

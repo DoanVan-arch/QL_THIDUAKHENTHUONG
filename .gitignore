@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# Environment variables
+.env.local
+
+# Uploaded user files (stored on persistent volume, not in git)
+uploads/evidence/
+uploads/certificates/
+
+# Keep uploads folder structure
+!uploads/.gitkeep
+
+# Pytest
+.pytest_cache/
+*.pytest_cache
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
