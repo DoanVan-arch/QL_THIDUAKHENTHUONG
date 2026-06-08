@@ -446,22 +446,25 @@ def approval_tracking():
 
     danh_hieu_list = [e.value for e in LoaiDanhHieu]
 
-    # Compute dynamic tap_the criteria columns from tap_the_dict keys across all items
-    from app.models.nomination import TieuChi as _TieuChi
-    tt_keys_seen = set()
+    # Compute dynamic tap_the criteria columns from ALL collective DanhHieu definitions
+    from app.models.nomination import TieuChi as _TieuChi, DanhHieu as _DanhHieu
+    tt_all_keys = set()
+    for dh in _DanhHieu.query.filter_by(pham_vi='Đơn vị', is_active=True).all():
+        for ma_truong in (dh.tieu_chi or []):
+            tt_all_keys.add(ma_truong)
+    # Also pick up keys from actual items (legacy / custom data)
     for ug in unit_groups:
         for nom_data in ug['nominations']:
             for ct_entry in nom_data['tap_the_chi_tiets']:
                 td = ct_entry['ct'].tap_the_dict or {}
-                tt_keys_seen.update(td.keys())
-    if tt_keys_seen:
+                tt_all_keys.update(td.keys())
+    if tt_all_keys:
         tt_tieu_chi_rows = _TieuChi.query.filter(
-            _TieuChi.ma_truong.in_(list(tt_keys_seen)), _TieuChi.is_active == True
+            _TieuChi.ma_truong.in_(list(tt_all_keys)), _TieuChi.is_active == True
         ).order_by(_TieuChi.thu_tu, _TieuChi.ten).all()
         tt_criteria_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
         tt_field_labels = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
-        # add any keys not in DB (fallback: use key as label)
-        for k in tt_keys_seen:
+        for k in tt_all_keys:
             if k not in tt_field_labels:
                 tt_criteria_fields.append(k)
                 tt_field_labels[k] = k
