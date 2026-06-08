@@ -659,20 +659,26 @@ def pending_list():
         if name not in unit_names:
             unit_names.append(name)
 
-    # Compute dynamic tap_the criteria columns
-    tt_keys_seen = set()
+    # Compute dynamic tap_the criteria columns from ALL collective DanhHieu definitions
+    # so columns are always complete regardless of which items are on screen.
+    from app.models.nomination import DanhHieu as _DanhHieu
+    tt_all_keys = set()
+    for dh in _DanhHieu.query.filter_by(pham_vi='Đơn vị', is_active=True).all():
+        for ma_truong in (dh.tieu_chi or []):
+            tt_all_keys.add(ma_truong)
+    # Also pick up any keys actually stored in current items (legacy / custom data)
     for pd in pending_reviews:
         for ct in pd.de_xuat.chi_tiets:
             if ct.quan_nhan_id is None:
                 td = ct.tap_the_dict or {}
-                tt_keys_seen.update(td.keys())
-    if tt_keys_seen:
+                tt_all_keys.update(td.keys())
+    if tt_all_keys:
         tt_tieu_chi_rows = TieuChi.query.filter(
-            TieuChi.ma_truong.in_(list(tt_keys_seen)), TieuChi.is_active == True
+            TieuChi.ma_truong.in_(list(tt_all_keys)), TieuChi.is_active == True
         ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
         tt_criteria_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
         tt_field_labels_map = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
-        for k in tt_keys_seen:
+        for k in tt_all_keys:
             if k not in tt_field_labels_map:
                 tt_criteria_fields.append(k)
                 tt_field_labels_map[k] = k
@@ -1285,20 +1291,31 @@ def history():
     if current_user.role in _VIEW_ALL_CRITERIA_ROLES or not table_columns:
         table_columns = _all_criteria_columns()
 
-    # Build tt_criteria_fields from results for tập thể history table
-    tt_keys_seen = set()
+    # Build tt_criteria_fields from ALL active collective DanhHieu definitions,
+    # not from the current page items (which is paginated and would miss criteria
+    # from items on other pages or in items not yet loaded).
+    from app.models.nomination import DanhHieu
+    tt_all_keys = set()
+    collective_danh_hieus = DanhHieu.query.filter_by(pham_vi='Đơn vị', is_active=True).all()
+    for dh in collective_danh_hieus:
+        for ma_truong in (dh.tieu_chi or []):
+            tt_all_keys.add(ma_truong)
+
+    # Also collect any keys actually present in current-page items that may not
+    # be in DanhHieu definitions (legacy data).
     for kq_item in individual_results.items:
         ct = kq_item.chi_tiet
         if ct and ct.quan_nhan_id is None:
             td = ct.tap_the_dict or {}
-            tt_keys_seen.update(td.keys())
-    if tt_keys_seen:
+            tt_all_keys.update(td.keys())
+
+    if tt_all_keys:
         tt_tieu_chi_rows = TieuChi.query.filter(
-            TieuChi.ma_truong.in_(list(tt_keys_seen)), TieuChi.is_active == True
+            TieuChi.ma_truong.in_(list(tt_all_keys)), TieuChi.is_active == True
         ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
         tt_history_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
         tt_field_labels_h = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
-        for k in tt_keys_seen:
+        for k in tt_all_keys:
             if k not in tt_field_labels_h:
                 tt_history_fields.append(k)
                 tt_field_labels_h[k] = k
