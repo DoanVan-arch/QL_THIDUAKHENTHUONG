@@ -251,6 +251,14 @@ def detail_nomination(id):
             else:
                 ct_dept_results[dept_name] = None
 
+        # Parse tap_the_data for collective nominations
+        tap_the_parsed = {}
+        if ct.tap_the_data:
+            try:
+                tap_the_parsed = _json.loads(ct.tap_the_data)
+            except Exception:
+                tap_the_parsed = {}
+
         chi_tiets_data.append({
             'ct': ct,
             'dept_results': ct_dept_results,
@@ -258,12 +266,14 @@ def detail_nomination(id):
             'is_removed': ct.bi_loai,
             'ly_do_loai': ct.ly_do_loai,
             'phong_loai': ct.phong_loai,
+            'tap_the_data': tap_the_parsed,
         })
 
     return render_template('nomination/detail.html',
                            de_xuat=de_xuat,
                            chi_tiets_data=chi_tiets_data,
-                           dept_names=DEPT_NAMES)
+                           dept_names=DEPT_NAMES,
+                           tieu_chi_map={tc.ma_truong: tc for tc in TieuChi.query.filter_by(is_active=True).all()})
 
 
 @nomination_bp.route('/<int:id>/edit', methods=['GET', 'POST'])

@@ -357,7 +357,8 @@ def approval_tracking():
                     elif is_auto or is_ttr_gate_ok:
                         ct_dept_results[dept_name] = {
                             'ket_qua': KetQuaDuyet.DONG_Y.value,
-                            'auto': True,
+                            # Mark as auto only if truly auto-scoped, NOT for TTR gate logic
+                            'auto': is_auto and not is_ttr_gate_ok,
                         }
                     else:
                         ct_dept_results[dept_name] = None
@@ -365,7 +366,8 @@ def approval_tracking():
                     if is_auto or is_ttr_gate_ok:
                         ct_dept_results[dept_name] = {
                             'ket_qua': KetQuaDuyet.DONG_Y.value,
-                            'auto': True,
+                            # Mark as auto only if truly auto-scoped, NOT for TTR gate logic
+                            'auto': is_auto and not is_ttr_gate_ok,
                         }
                     else:
                         ct_dept_results[dept_name] = None
@@ -3360,6 +3362,22 @@ def toggle_unit(id):
     return redirect(url_for('admin.manage_units'))
 
 
+@admin_bp.route('/units/<int:id>/update-thu-tu', methods=['POST'])
+@login_required
+@admin_required
+def update_unit_thu_tu(id):
+    """AJAX endpoint to update thu_tu inline."""
+    unit = DonVi.query.get_or_404(id)
+    try:
+        thu_tu = request.json.get('thu_tu', 0)
+        unit.thu_tu = int(thu_tu)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Đã cập nhật thứ tự'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
 @admin_bp.route('/report')
 @login_required
 @admin_required
@@ -3854,6 +3872,22 @@ def delete_doi_tuong(id):
     return redirect(url_for('admin.manage_doi_tuong'))
 
 
+@admin_bp.route('/doi-tuong/<int:id>/update-thu-tu', methods=['POST'])
+@login_required
+@admin_required
+def update_doi_tuong_thu_tu(id):
+    """AJAX endpoint to update thu_tu inline."""
+    item = DoiTuongOption.query.get_or_404(id)
+    try:
+        thu_tu = request.json.get('thu_tu', 0)
+        item.thu_tu = int(thu_tu)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Đã cập nhật thứ tự'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
 @admin_bp.route('/diem-quy-dinh')
 @login_required
 @admin_required
@@ -4029,6 +4063,22 @@ def delete_cap_bac(id):
     return redirect(url_for('admin.manage_cap_bac'))
 
 
+@admin_bp.route('/cap-bac/<int:id>/update-thu-tu', methods=['POST'])
+@login_required
+@admin_required
+def update_cap_bac_thu_tu(id):
+    """AJAX endpoint to update thu_tu inline."""
+    item = CapBacOption.query.get_or_404(id)
+    try:
+        thu_tu = request.json.get('thu_tu', 0)
+        item.thu_tu = int(thu_tu)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Đã cập nhật thứ tự'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
 @admin_bp.route('/chuc-vu')
 @login_required
 @admin_required
@@ -4096,6 +4146,22 @@ def delete_chuc_vu(id):
     db.session.commit()
     flash('Đã xóa chức vụ.', 'success')
     return redirect(url_for('admin.manage_chuc_vu'))
+
+
+@admin_bp.route('/chuc-vu/<int:id>/update-thu-tu', methods=['POST'])
+@login_required
+@admin_required
+def update_chuc_vu_thu_tu(id):
+    """AJAX endpoint to update thu_tu inline."""
+    item = ChucVuOption.query.get_or_404(id)
+    try:
+        thu_tu = request.json.get('thu_tu', 0)
+        item.thu_tu = int(thu_tu)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Đã cập nhật thứ tự'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 
 # ------------------------------------------------------------------

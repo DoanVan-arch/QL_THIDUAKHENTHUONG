@@ -39,3 +39,4 @@ def downgrade():
     op.drop_index('ix_activity_log_action', 'activity_log')
     op.drop_index('ix_activity_log_user_id', 'activity_log')
     op.drop_table('activity_log')
+

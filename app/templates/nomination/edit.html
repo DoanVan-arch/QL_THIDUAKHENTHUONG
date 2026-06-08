@@ -709,7 +709,7 @@ function renderDynamicEvidenceInputs(selectedDanhHieu, selectedDoiTuong, current
     }
 
     activeFields.forEach(function(ef) {
-        var inputName = 'minh_chung_' + ef.ma_truong;
+        var inputName =  ef.ma_truong;
         if (ef.ma_truong === 'thanh_tich_ca_nhan_khac') {
             inputName = 'minh_chung_thanh_tich_khac';
         } else if (ef.ma_truong === 'nckh_noi_dung') {

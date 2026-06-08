@@ -396,12 +396,14 @@ def _parse_ngay_nhap_ngu(value):
         except Exception:
             pass
     text = str(value).strip()
-    # Already in correct format MM/YYYY
+    # Already in correct format MM/YYYY or mm/yyyy
     import re
-    if re.match(r'^\d{2}/\d{4}$', text):
-        return text
-    # datetime string like "2015-01-01 00:00:00" or "2015-01-01"
-    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+    if re.match(r'^\d{1,2}/\d{4}$', text):
+        # Normalize to 2-digit month
+        parts = text.split('/')
+        return f'{int(parts[0]):02d}/{parts[1]}'
+    # Try parsing various date formats
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d/%m/%Y'):
         try:
             return datetime.strptime(text, fmt).strftime('%m/%Y')
         except ValueError:
