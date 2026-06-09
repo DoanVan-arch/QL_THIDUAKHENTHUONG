@@ -905,18 +905,18 @@ def submit_nomination(id):
         return redirect(url_for('nomination.edit_nomination', id=id))
 
     # Validate: commander/secretary must have DON_VI_QUYET_THANG
-    has_unit_award = any(
-        ct.loai_danh_hieu == 'Đơn vị quyết thắng'
-        for ct in de_xuat.chi_tiets
-    )
-    for ct in de_xuat.chi_tiets:
-        if ct.quan_nhan and (ct.quan_nhan.la_chi_huy or ct.quan_nhan.la_bi_thu):
-            if not has_unit_award:
-                flash(
-                    'Có Cấp trưởng/bí thư trong danh sách đề xuất - cần phải có đề xuất "Đơn vị quyết thắng" đi kèm.',
-                    'danger'
-                )
-                return redirect(url_for('nomination.edit_nomination', id=id))
+    # has_unit_award = any(
+    #     ct.loai_danh_hieu == 'Đơn vị quyết thắng'
+    #     for ct in de_xuat.chi_tiets
+    # )
+    # for ct in de_xuat.chi_tiets:
+    #     if ct.quan_nhan and (ct.quan_nhan.la_chi_huy or ct.quan_nhan.la_bi_thu):
+    #         if not has_unit_award:
+    #             flash(
+    #                 'Có Cấp trưởng/bí thư trong danh sách đề xuất - cần phải có đề xuất "Đơn vị quyết thắng" đi kèm.',
+    #                 'danger'
+    #             )
+    #             return redirect(url_for('nomination.edit_nomination', id=id))
 
     # Create pending approval records
     ca_nhan_items = [ct for ct in de_xuat.chi_tiets if ct.doi_tuong]  # tập thể có doi_tuong = None
