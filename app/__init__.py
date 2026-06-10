@@ -1,6 +1,6 @@
 from flask import Flask, send_from_directory, session, redirect, url_for, flash
 from flask_login import login_required, current_user, logout_user
-from config import Config
+from config2 import Config
 from app.extensions import db, login_manager, csrf, migrate
 import os
 
