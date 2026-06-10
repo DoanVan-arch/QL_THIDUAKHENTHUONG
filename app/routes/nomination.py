@@ -71,7 +71,12 @@ def _evidence_input_names_for_field(field_key):
 
 
 def _get_tieu_chi_tap_the_by_danh_hieu(danh_hieu_db):
-    """Return a dict: {ten_danh_hieu: [TieuChi dicts grouped by nhom]} for tap_the danh hieus."""
+    """Return a dict: {ten_danh_hieu: {nhom: [tc_dicts]}} for tap_the danh hieus.
+
+    Field names stored in DanhHieu.tieu_chi that have no corresponding active
+    TieuChi record are included as fallback entries (using the field name as the
+    label) so the nomination form can still render inputs for them.
+    """
     result = {}
     for dh in danh_hieu_db:
         if (dh.pham_vi or 'Cá nhân') != 'Đơn vị' or not dh.tieu_chi:
@@ -80,16 +85,34 @@ def _get_tieu_chi_tap_the_by_danh_hieu(danh_hieu_db):
             TieuChi.ma_truong.in_(dh.tieu_chi),
             TieuChi.is_active == True
         ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
+
+        found_ma = {tc.ma_truong for tc in tcs}
         by_nhom = {}
         for tc in tcs:
-            by_nhom.setdefault(tc.nhom, []).append({
+            nhom = (tc.nhom or '').strip() or 'khac'
+            by_nhom.setdefault(nhom, []).append({
                 'ma_truong': tc.ma_truong,
                 'ten': tc.ten,
                 'loai_input': tc.loai_input or 'textbox',
                 'gia_tri_chon': tc.gia_tri_chon or [],
                 'huong_dan': tc.huong_dan or '',
             })
-        result[dh.ten_danh_hieu] = by_nhom
+
+        # Orphan fields: in dh.tieu_chi but no active TieuChi record found.
+        # Add them as plain text inputs so the nomination form can still capture
+        # their values (label = field name until admin adds a proper TieuChi entry).
+        for ma in dh.tieu_chi:
+            if ma not in found_ma:
+                by_nhom.setdefault('khac', []).append({
+                    'ma_truong': ma,
+                    'ten': ma,
+                    'loai_input': 'textbox',
+                    'gia_tri_chon': [],
+                    'huong_dan': '',
+                })
+
+        if by_nhom:
+            result[dh.ten_danh_hieu] = by_nhom
     return result
 
 
