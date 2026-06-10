@@ -161,8 +161,14 @@
                         </td>
                         <td>
                             <div class="d-flex gap-1">
-                            <button type="button" class="btn btn-sm btn-outline-primary"
-                                    onclick="openEditCertModal({{ cc.id }}, {{ cc.loai|tojson }}, {{ cc.ten_chung_chi|tojson }}, {{ (cc.so_hieu or '')|tojson }}, {{ (cc.ngay_cap.strftime('%Y-%m-%d') if cc.ngay_cap else '')|tojson }}, {{ (cc.co_quan_cap or '')|tojson }}, {{ (cc.ghi_chu or '')|tojson }})"
+                            <button type="button" class="btn btn-sm btn-outline-primary edit-cert-btn"
+                                    data-id="{{ cc.id }}"
+                                    data-loai="{{ cc.loai|e }}"
+                                    data-ten="{{ cc.ten_chung_chi|e }}"
+                                    data-so-hieu="{{ (cc.so_hieu or '')|e }}"
+                                    data-ngay-cap="{{ cc.ngay_cap.strftime('%Y-%m-%d') if cc.ngay_cap else '' }}"
+                                    data-co-quan="{{ (cc.co_quan_cap or '')|e }}"
+                                    data-ghi-chu="{{ (cc.ghi_chu or '')|e }}"
                                     title="Sửa">
                                 <i class="bi bi-pencil"></i>
                             </button>
@@ -309,16 +315,18 @@
 </div>
 
 <script>
-function openEditCertModal(ccId, loai, ten, soHieu, ngayCap, coQuan, ghiChu) {
-    document.getElementById('editCertLoai').value = loai || '';
-    document.getElementById('editCertTen').value = ten || '';
-    document.getElementById('editCertSoHieu').value = soHieu || '';
-    document.getElementById('editCertNgayCap').value = ngayCap || '';
-    document.getElementById('editCertCoQuan').value = coQuan || '';
-    document.getElementById('editCertGhiChu').value = ghiChu || '';
-    document.getElementById('editCertForm').action = '/personnel/certificate/' + ccId + '/edit';
-    var modal = new bootstrap.Modal(document.getElementById('editCertModal'));
-    modal.show();
-}
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.edit-cert-btn');
+    if (!btn) return;
+    var ds = btn.dataset;
+    document.getElementById('editCertLoai').value    = ds.loai    || '';
+    document.getElementById('editCertTen').value     = ds.ten     || '';
+    document.getElementById('editCertSoHieu').value  = ds.soHieu  || '';
+    document.getElementById('editCertNgayCap').value = ds.ngayCap || '';
+    document.getElementById('editCertCoQuan').value  = ds.coQuan  || '';
+    document.getElementById('editCertGhiChu').value  = ds.ghiChu  || '';
+    document.getElementById('editCertForm').action   = '/personnel/certificate/' + ds.id + '/edit';
+    new bootstrap.Modal(document.getElementById('editCertModal')).show();
+});
 </script>
 {% endblock %}
