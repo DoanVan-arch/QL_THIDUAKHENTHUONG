@@ -5,7 +5,7 @@ Uses an in-memory SQLite DB so tests never touch the real MySQL instance.
 import pytest
 from app import create_app
 from app.extensions import db as _db
-from config import Config
+from config2 import Config
 
 
 class TestConfig(Config):
