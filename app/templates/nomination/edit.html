@@ -403,6 +403,27 @@
                 'thanh_tich_ca_nhan_khac','minh_chung_thanh_tich_khac',
                 'ly_do_chua_dat_diem','ghi_chu_item','mo_ta_khoa_hoc','hinh_thuc_khen_thuong_qc',
                 'ket_qua_phu_nu','hinh_thuc_khen_thuong_pn',
+                'ten_don_vi_de_xuat',
+                'cb_xeploai_canthu_pct_hoanttot','cb_xeploai_canthu_pct_xuatsac',
+                'tc_xeploai_dangvien_pct_hoanttot','tc_xeploai_dangvien_pct_xuatsac',
+                'tc_xeploai_tcdcs',
+                'th_diem_tdtx_quy1','th_diem_tdtx_quy2','th_diem_tdtx_quy3','th_diem_tdtx_quy4',
+                'th_kq_ktra_ct_pct_dyc','th_kq_ktra_ct_xeploai',
+                'ctqc_xeploai_doanvien','ctqc_xeploai_tcd','ctqc_xeploai_hoivien_phunu',
+                'ctqc_xeploai_hoi_phunu_coso',
+                'cntt_chuyen_doi_so','cntt_an_toan_thong_tin',
+                'tachuan_an_toan_tuyet_doi','tachuan_vmtd_mau_muc','tachuan_dinh_luong',
+                'tachuan_dinh_hinh','tachuan_ban_sung_pct','tachuan_the_luc_pct',
+                'dt_dinh_muc_ldsp_pct_vuot','dt_cl_bai_giang_pct_dyc','dt_cl_bai_giang_pct_kdat',
+                'dt_kq_ktra_giang','dt_gv_gioi_pct','dt_kq_hoc_tap_pct_khagioi',
+                'dt_kq_hoc_tap_pct_gioi','dt_luan_van_sdh','dt_tieng_anh_sdh_pct',
+                'dt_ren_luyen_hv_xeploai',
+                'kh_dinh_muc_ldkh_pct_vuot','kh_vuot_chi_tieu_nckh','kh_kq_nghiem_thu',
+                'kh_giao_trinh_so_luong','kh_nckh_ca_nhan_so_luong','kh_bai_bao_so_luong',
+                'kh_sang_kien_hieu_qua',
+                'hckt_bao_dam_tieu_chuan','hckt_tgsx_tieu_doan','hckt_phong_chong_dich',
+                'hckt_quan_so_khoe_pct','hckt_csvc_xeploai','hckt_an_toan_gt',
+                'kt_kq_ktra_giang_pct_khatot','kt_kq_ktra_giang_pct_tot',
             ] -%}
             {%- set extra_tc = tieu_chi_list | rejectattr('ma_truong', 'in', hardcoded_fields) | list -%}
             {%- if extra_tc %}
@@ -1239,20 +1260,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // Preserve pre-selected value (edit mode)
     var preselected = qnEl.value;
 
-    var ts = new TomSelect(qnEl, {
-        placeholder: 'Tìm theo họ tên, cấp bậc, chức vụ...',
-        searchField: ['text'],
-        maxOptions: 300,
-        onChange: function(value) {
-            // onPersonnelSelect handles doi_tuong auto-fill, Đoàn/PN toggle, criteria visibility
-            if (typeof onPersonnelSelect === 'function') {
-                onPersonnelSelect(qnEl);
-            }
+    // Helper: find the correct option element whether TomSelect is active or not
+    function getSelectedOption(selectEl) {
+        // Try by value first (more reliable with TomSelect)
+        var v = selectEl.value;
+        if (v) {
+            var opt = selectEl.querySelector('option[value="' + v + '"]');
+            if (opt) return opt;
         }
-    });
+        return selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+    }
 
-    // Restore selection in edit mode
-    if (preselected) ts.setValue(preselected, true);
+    // Wrapper: read the option from the select element (value already set by TomSelect)
+    function firePersonnelSelect(selectEl) {
+        // Sync selected attribute on option elements so getSelectedOption works
+        var v = selectEl.value;
+        for (var i = 0; i < selectEl.options.length; i++) {
+            selectEl.options[i].selected = (selectEl.options[i].value === v);
+        }
+        if (typeof onPersonnelSelect === 'function') onPersonnelSelect(selectEl);
+    }
+
+    try {
+        if (typeof TomSelect === 'undefined') throw new Error('TomSelect not loaded');
+        var ts = new TomSelect(qnEl, {
+            placeholder: 'Tìm theo họ tên, cấp bậc, chức vụ...',
+            searchField: ['text'],
+            maxOptions: 300,
+            onChange: function(value) {
+                firePersonnelSelect(qnEl);
+            }
+        });
+
+        // Restore selection in edit mode
+        if (preselected) ts.setValue(preselected, true);
+    } catch(e) {
+        // TomSelect unavailable (CDN blocked/offline) – fall back to native select
+        qnEl.addEventListener('change', function() {
+            firePersonnelSelect(this);
+        });
+        // Apply initial state for edit mode
+        if (preselected) {
+            firePersonnelSelect(qnEl);
+        }
+    }
 })();
 
 function updateSubmitButtonState() {

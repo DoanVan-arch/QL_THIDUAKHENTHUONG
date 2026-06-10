@@ -11,6 +11,10 @@
         <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
             <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
         </button>
+        <a href="{{ url_for('personnel.download_personnel_excel', search=search, cap_bac=cap_bac_filter, chuc_vu=chuc_vu_filter, doi_tuong=doi_tuong_filter, don_vi_truc_thuoc=don_vi_truc_thuoc_filter) }}"
+           class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel
+        </a>
         <a href="{{ url_for('personnel.download_personnel_template') }}" class="btn btn-outline-secondary">
             <i class="bi bi-download me-1"></i> Tải mẫu Excel
         </a>

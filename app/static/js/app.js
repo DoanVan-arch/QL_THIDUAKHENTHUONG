@@ -144,11 +144,15 @@ function toggleFieldGroup(groupId, show) {
 
 // Personnel selection in nomination form - fetch details via data attributes
 function onPersonnelSelect(selectEl) {
-    const option = selectEl.options[selectEl.selectedIndex];
+    // Use value-based lookup first — more reliable when TomSelect manages the select
+    // because selectedIndex may lag behind when onChange fires.
+    var v = selectEl.value;
+    var option = v ? selectEl.querySelector('option[value="' + v + '"]') : null;
+    if (!option) option = selectEl.options[selectEl.selectedIndex];
     if (!option || !option.value) return;
 
-    const doiTuong = option.dataset.doituong || '';
-    const hocVi = option.dataset.hocvi || '';
+    const doiTuong = option.dataset.doituong || option.getAttribute('data-doituong') || '';
+    const hocVi = option.dataset.hocvi || option.getAttribute('data-hocvi') || '';
 
     // Auto-select doi_tuong in the dropdown
     const dtSelect = document.getElementById('doi_tuong_select');

@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, jsonify, abort, current_app
+import os
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import Role
@@ -335,6 +336,70 @@ def add_certificate(id):
     return redirect(url_for('personnel.detail_personnel', id=qn.id))
 
 
+@personnel_bp.route('/certificate/<int:id>/edit', methods=['POST'])
+@login_required
+@unit_user_required
+def edit_certificate(id):
+    cc = ChungChi.query.get_or_404(id)
+    qn = cc.quan_nhan
+    if qn.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền truy cập.', 'danger')
+        return redirect(url_for('personnel.list_personnel'))
+
+    ten = request.form.get('ten_chung_chi', '').strip()
+    if not ten:
+        flash('Tên không được để trống.', 'danger')
+        return redirect(url_for('personnel.detail_personnel', id=qn.id))
+
+    cc.loai = request.form.get('loai', cc.loai)
+    cc.ten_chung_chi = ten
+    cc.so_hieu = request.form.get('so_hieu', '').strip() or None
+    cc.co_quan_cap = request.form.get('co_quan_cap', '').strip() or None
+    cc.ghi_chu = request.form.get('ghi_chu', '').strip() or None
+
+    nc_str = request.form.get('ngay_cap', '').strip()
+    if nc_str:
+        try:
+            cc.ngay_cap = datetime.strptime(nc_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    else:
+        cc.ngay_cap = None
+
+    file = request.files.get('anh_minh_chung')
+    if file and file.filename:
+        if cc.duong_dan_anh:
+            delete_upload(cc.duong_dan_anh)
+        cc.duong_dan_anh = save_upload(file, 'certificates')
+
+    db.session.commit()
+    flash(f'Đã cập nhật: {ten}', 'success')
+    return redirect(url_for('personnel.detail_personnel', id=qn.id))
+
+
+@personnel_bp.route('/certificate/<int:id>/download')
+@login_required
+def download_certificate_evidence(id):
+    cc = ChungChi.query.get_or_404(id)
+    qn = cc.quan_nhan
+    from app.models.user import Role as _Role
+    if current_user.role != _Role.ADMIN and qn.don_vi_id != current_user.don_vi_id:
+        abort(403)
+    if not cc.duong_dan_anh:
+        flash('Không có file minh chứng.', 'warning')
+        return redirect(url_for('personnel.detail_personnel', id=qn.id))
+
+    full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], cc.duong_dan_anh)
+    if not os.path.exists(full_path):
+        flash('File không tồn tại trên hệ thống.', 'danger')
+        return redirect(url_for('personnel.detail_personnel', id=qn.id))
+
+    ext = cc.duong_dan_anh.rsplit('.', 1)[-1] if '.' in cc.duong_dan_anh else 'bin'
+    safe_name = ''.join(c if c.isalnum() or c in '._-' else '_' for c in
+                        f"MinhChung_{cc.ten_chung_chi}_{qn.ho_ten}.{ext}")
+    return send_file(full_path, as_attachment=True, download_name=safe_name)
+
+
 @personnel_bp.route('/certificate/<int:id>/delete', methods=['POST'])
 @login_required
 @unit_user_required
@@ -505,6 +570,132 @@ def download_personnel_template():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
         download_name='mau_quan_nhan.xlsx',
+    )
+
+
+@personnel_bp.route('/download-excel')
+@login_required
+@unit_user_required
+def download_personnel_excel():
+    if not current_user.don_vi:
+        flash('Tài khoản chưa được gán đơn vị.', 'warning')
+        return redirect(url_for('personnel.list_personnel'))
+
+    # Apply the same filters as list_personnel so the export matches what the user sees
+    search = request.args.get('search', '').strip()
+    cap_bac_filter = request.args.get('cap_bac', '').strip()
+    chuc_vu_filter = request.args.get('chuc_vu', '').strip()
+    doi_tuong_filter = request.args.get('doi_tuong', '').strip()
+    don_vi_truc_thuoc_filter = request.args.get('don_vi_truc_thuoc', '').strip()
+
+    query = QuanNhan.query.filter_by(don_vi_id=current_user.don_vi_id, is_active=True)
+    try:
+        query = query.filter(QuanNhan.is_deleted == False)
+    except Exception:
+        pass
+
+    if search:
+        query = query.filter(QuanNhan.ho_ten.ilike(f'%{search}%'))
+    if cap_bac_filter:
+        query = query.filter(QuanNhan.cap_bac == cap_bac_filter)
+    if chuc_vu_filter:
+        query = query.filter(QuanNhan.chuc_vu == chuc_vu_filter)
+    if doi_tuong_filter:
+        query = query.filter(QuanNhan.doi_tuong == doi_tuong_filter)
+    if don_vi_truc_thuoc_filter:
+        query = query.filter(QuanNhan.don_vi_truc_thuoc == don_vi_truc_thuoc_filter)
+
+    chuc_vu_alias2 = aliased(ChucVuOption)
+    query = query.outerjoin(
+        chuc_vu_alias2,
+        collate(chuc_vu_alias2.ten, 'utf8mb4_unicode_ci') == collate(QuanNhan.chuc_vu, 'utf8mb4_unicode_ci')
+    ).order_by(
+        case((chuc_vu_alias2.thu_tu.is_(None), 1), else_=0),
+        chuc_vu_alias2.thu_tu.asc(),
+        QuanNhan.chuc_vu.asc(),
+        QuanNhan.ho_ten.asc()
+    )
+
+    personnel_list = query.all()
+
+    from openpyxl import Workbook as _WB
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO as _BytesIO
+
+    wb = _WB()
+    ws = wb.active
+    ws.title = 'Danh sách quân nhân'
+
+    # Header style
+    hdr_font = Font(bold=True, color='FFFFFF', size=11)
+    hdr_fill = PatternFill('solid', fgColor='1A3A5C')
+    hdr_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    thin = Side(border_style='thin', color='000000')
+    cell_border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    headers = [
+        'STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đối tượng', 'Đơn vị trực thuộc',
+        'Căn cước công dân', 'Ngày sinh', 'Ngày nhập ngũ', 'Học hàm', 'Học vị',
+        'Học vấn', 'Ngoại ngữ', 'Cấp trưởng', 'Bí thư', 'Đảng viên', 'Đoàn viên',
+        'Hội viên phụ nữ', 'Lớp'
+    ]
+
+    ws.row_dimensions[1].height = 30
+    for col_idx, hdr in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx, value=hdr)
+        cell.font = hdr_font
+        cell.fill = hdr_fill
+        cell.alignment = hdr_align
+        cell.border = cell_border
+
+    # Data rows
+    for row_idx, p in enumerate(personnel_list, 2):
+        row_data = [
+            row_idx - 1,
+            p.ho_ten,
+            p.cap_bac or '',
+            p.chuc_vu or '',
+            p.doi_tuong or '',
+            p.don_vi_truc_thuoc or '',
+            p.can_cuoc_cong_dan or '',
+            p.ngay_sinh.strftime('%d/%m/%Y') if p.ngay_sinh else '',
+            str(p.ngay_nhap_ngu) if p.ngay_nhap_ngu else '',
+            p.hoc_ham if p.hoc_ham not in (None, 'Không') else '',
+            p.hoc_vi if p.hoc_vi not in (None, 'Không') else '',
+            p.trinh_do_hoc_van or '',
+            p.ngoai_ngu or '',
+            'X' if p.la_chi_huy else '',
+            'X' if p.la_bi_thu else '',
+            'X' if p.la_dang_vien else '',
+            'X' if p.la_doan_vien else '',
+            'X' if p.la_hoi_vien_phu_nu else '',
+            p.lop or '',
+        ]
+        for col_idx, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.border = cell_border
+            cell.alignment = Alignment(vertical='center')
+
+    # Auto-fit column widths
+    col_widths = [5, 25, 15, 20, 18, 20, 16, 12, 12, 12, 12, 15, 12,
+                  10, 8, 10, 10, 16, 10]
+    for i, w in enumerate(col_widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
+
+    ws.freeze_panes = 'B2'
+
+    output = _BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    don_vi_name = ''.join(c if c.isalnum() else '_' for c in
+                          (current_user.don_vi.ten_don_vi if current_user.don_vi else 'DonVi'))
+    filename = f'DanhSachQuanNhan_{don_vi_name}.xlsx'
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename,
     )
 
 

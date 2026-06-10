@@ -18,6 +18,12 @@ class CapBac(enum.Enum):
     TRUNG_TA = 'Trung tá'
     THUONG_TA = 'Thượng tá'
     DAI_TA = 'Đại tá'
+    CHỦAN_UY = 'Chuẩn úy'
+    DAI_TUONG = 'Đại tướng'
+    THIEU_TUONG = 'Thiếu tướng'
+    TRUNG_TUONG = 'Trung tướng'
+    THUONG_TUONG = 'Thượng tướng'
+    DAI_TUONG = 'Đại tướng'
 
 
 class HocHam(enum.Enum):
@@ -43,7 +49,10 @@ class DoiTuong(enum.Enum):
     SV_NAM2 = 'Học viên năm thứ II'
     SV_NAM3 = 'Học viên năm thứ III'
     SV_NAM4 = 'Học viên năm thứ IV'
+    SV_NAM5 = 'Học viên năm thứ V'
+  
     SAU_DAI_HOC = 'Học viên sau đại học'
+    HTDH = 'Học viên hoàn thiện đại học'
     VB2 = 'Học viên VB2'
     HVTS = 'Học viên TS'
     HVQT = 'Học viên quốc tế'
@@ -59,7 +68,7 @@ class MucDoHoanThanh(enum.Enum):
 DOI_TUONG_IS_STUDENT = {
     DoiTuong.SV_NAM1, DoiTuong.SV_NAM2, DoiTuong.SV_NAM3,
     DoiTuong.SV_NAM4, DoiTuong.SAU_DAI_HOC, DoiTuong.VB2,
-    DoiTuong.HVTS, DoiTuong.HVQT,
+    DoiTuong.HVTS, DoiTuong.HVQT,DoiTuong.HTDH,DoiTuong.SV_NAM5
 }
 
 DOI_TUONG_IS_LECTURER = {DoiTuong.GV}

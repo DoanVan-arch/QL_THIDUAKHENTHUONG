@@ -160,6 +160,18 @@
                             {% endif %}
                         </td>
                         <td>
+                            <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    onclick="openEditCertModal({{ cc.id }}, {{ cc.loai|tojson }}, {{ cc.ten_chung_chi|tojson }}, {{ (cc.so_hieu or '')|tojson }}, {{ (cc.ngay_cap.strftime('%Y-%m-%d') if cc.ngay_cap else '')|tojson }}, {{ (cc.co_quan_cap or '')|tojson }}, {{ (cc.ghi_chu or '')|tojson }})"
+                                    title="Sửa">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            {% if cc.duong_dan_anh %}
+                            <a href="{{ url_for('personnel.download_certificate_evidence', id=cc.id) }}"
+                               class="btn btn-sm btn-outline-secondary" title="Tải xuống minh chứng">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            {% endif %}
                             <form id="delCert{{ cc.id }}" method="POST"
                                   action="{{ url_for('personnel.delete_certificate', id=cc.id) }}" style="display:inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -168,6 +180,7 @@
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -232,10 +245,80 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Lưu</button>
+                     <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Lưu</button>
+                 </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Certificate Modal -->
+<div class="modal fade" id="editCertModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-header-navy">
+                <h6 class="modal-title"><i class="bi bi-pencil me-2"></i>Sửa khen thưởng</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editCertForm" method="POST" action="" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Loại <span class="text-danger">*</span></label>
+                        <select class="form-select" name="loai" id="editCertLoai" required>
+                            {% for lcc in loai_chung_chi_list %}
+                            <option value="{{ lcc }}">{{ lcc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ten_chung_chi" id="editCertTen" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Số quyết định</label>
+                            <input type="text" class="form-control" name="so_hieu" id="editCertSoHieu">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày cấp</label>
+                            <input type="date" class="form-control" name="ngay_cap" id="editCertNgayCap">
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Cấp quyết định</label>
+                        <input type="text" class="form-control" name="co_quan_cap" id="editCertCoQuan">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ảnh minh chứng mới</label>
+                        <input type="file" class="form-control" name="anh_minh_chung" accept="image/*,.pdf">
+                        <small class="text-muted">Để trống nếu không đổi ảnh. Chấp nhận: JPG, PNG, GIF, PDF (tối đa 16MB)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <textarea class="form-control" name="ghi_chu" id="editCertGhiChu" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i> Lưu thay đổi</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+function openEditCertModal(ccId, loai, ten, soHieu, ngayCap, coQuan, ghiChu) {
+    document.getElementById('editCertLoai').value = loai || '';
+    document.getElementById('editCertTen').value = ten || '';
+    document.getElementById('editCertSoHieu').value = soHieu || '';
+    document.getElementById('editCertNgayCap').value = ngayCap || '';
+    document.getElementById('editCertCoQuan').value = coQuan || '';
+    document.getElementById('editCertGhiChu').value = ghiChu || '';
+    document.getElementById('editCertForm').action = '/personnel/certificate/' + ccId + '/edit';
+    var modal = new bootstrap.Modal(document.getElementById('editCertModal'));
+    modal.show();
+}
+</script>
 {% endblock %}
