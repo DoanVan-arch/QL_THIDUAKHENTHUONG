@@ -59,40 +59,23 @@
                         <i class="bi bi-x-lg me-1"></i>Bỏ chọn tất cả
                     </button>
                     <span class="ms-2 text-muted small align-self-center">
-                        Đã chọn: <strong id="tc-selected-count">0</strong> / {{ tieu_chi_db|length }}
+                        Đã chọn: <strong id="tc-selected-count">0</strong> / {{ tieu_chi_db|length + orphan_fields|length }}
                     </span>
                 </div>
 
-                {% if tieu_chi_db %}
-                {# Group by nhom #}
-                {% set ns = namespace(groups={}) %}
-                {% for tc in tieu_chi_db %}
-                    {% set nhom_key = tc.nhom or 'khac' %}
-                    {# accumulate into groups dict is not possible in Jinja2; use nhom ordering instead #}
-                {% endfor %}
-
-                {# Collect unique nhom in order #}
-                {% set ns2 = namespace(seen=[], ordered=[]) %}
-                {% for tc in tieu_chi_db %}
-                    {% set nhom_key = tc.nhom or 'khac' %}
-                    {% if nhom_key not in ns2.seen %}
-                        {% set ns2.seen = ns2.seen + [nhom_key] %}
-                        {% set ns2.ordered = ns2.ordered + [nhom_key] %}
-                    {% endif %}
-                {% endfor %}
-
+                {% if tieu_chi_by_nhom %}
+                {# ── Accordion built from pre-grouped Python dict — avoids Jinja2 selectattr None bug ── #}
                 <div class="accordion" id="tcAccordion">
-                {% for nhom_key in ns2.ordered %}
-                    {% set nhom_name = nhom_labels.get(nhom_key, nhom_key) %}
-                    {% set nhom_tcs = tieu_chi_db | selectattr('nhom', 'equalto', nhom_key) | list %}
+                {% for nhom_key, nhom_data in tieu_chi_by_nhom.items() %}
+                    {% set nhom_tcs  = nhom_data['items'] %}
                     {% set nhom_checked = nhom_tcs | selectattr('ma_truong', 'in', dh.tieu_chi) | list %}
                     {% set acc_id = 'acc_' ~ nhom_key %}
                     <div class="accordion-item border mb-2 rounded">
                         <h2 class="accordion-header" id="h_{{ acc_id }}">
-                            <button class="accordion-button {% if loop.index > 1 %}collapsed{% endif %} py-2 px-3"
+                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} py-2 px-3"
                                     type="button" data-bs-toggle="collapse"
                                     data-bs-target="#{{ acc_id }}" aria-expanded="{{ 'true' if loop.first else 'false' }}">
-                                <span class="fw-semibold">{{ nhom_name }}</span>
+                                <span class="fw-semibold">{{ nhom_data['label'] }}</span>
                                 <span class="badge bg-secondary ms-2" style="font-size:0.7rem;">{{ nhom_tcs|length }} tiêu chí</span>
                                 {% if nhom_checked %}
                                 <span class="badge bg-success ms-1" style="font-size:0.7rem;">{{ nhom_checked|length }} đã chọn</span>
@@ -137,8 +120,30 @@
                 {% endfor %}
                 </div>
 
+                {# ── Orphan fields: stored in dh.tieu_chi but TieuChi record is missing/inactive ── #}
+                {% if orphan_fields %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <strong><i class="bi bi-exclamation-triangle me-1"></i>Tiêu chí đã lưu nhưng không có trong danh sách tiêu chí hiện tại</strong>
+                    <div class="row g-2 mt-1">
+                    {% for ma in orphan_fields %}
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input class="form-check-input tc-checkbox" type="checkbox"
+                                   name="tieu_chi" value="{{ ma }}"
+                                   id="tc_{{ ma }}" data-nhom="orphan" checked>
+                            <label class="form-check-label small text-muted" for="tc_{{ ma }}">
+                                {{ ma }} <em>(không tìm thấy)</em>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+                    <small class="text-muted d-block mt-1">Các tiêu chí này đã được lưu trước đó. Giữ tích để bảo lưu, hoặc bỏ tích để xóa.</small>
+                </div>
+                {% endif %}
+
                 {% else %}
-                {# Fallback flat list #}
+                {# Fallback flat list (no active TieuChi records) #}
                 <div class="row g-2">
                     {% for key, label in tieu_chi_options %}
                     <div class="col-md-4">

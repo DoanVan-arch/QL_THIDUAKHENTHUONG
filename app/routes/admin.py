@@ -4370,11 +4370,35 @@ def edit_danh_hieu(id):
         flash(f'Đã cập nhật danh hiệu: {ten}', 'success')
         return redirect(url_for('admin.manage_danh_hieu'))
 
+    # ── Build pre-grouped criteria dict in Python (avoids Jinja2 selectattr bugs
+    #    with None / '' nhom values) ──────────────────────────────────────────
+    from collections import OrderedDict as _OD
+    nhom_labels = _get_nhom_tieu_chi_choices()
+    all_tcs = TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu, TieuChi.ten).all()
+
+    tieu_chi_by_nhom = _OD()
+    tc_ma_set = set()
+    for tc in all_tcs:
+        nhom = (tc.nhom or '').strip() or 'khac'
+        if nhom not in tieu_chi_by_nhom:
+            tieu_chi_by_nhom[nhom] = {
+                'label': nhom_labels.get(nhom, nhom),
+                'items': [],
+            }
+        tieu_chi_by_nhom[nhom]['items'].append(tc)
+        tc_ma_set.add(tc.ma_truong)
+
+    # Orphan fields: saved in dh.tieu_chi but no longer in any active TieuChi record.
+    # Still show them pre-checked so the admin doesn't accidentally delete them.
+    orphan_fields = [ma for ma in (dh.tieu_chi or []) if ma not in tc_ma_set]
+
     return render_template('admin/edit_danh_hieu.html',
                            dh=dh,
-                           tieu_chi_options=[(tc.ma_truong, tc.ten) for tc in TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all()] or TIEU_CHI_OPTIONS,
-                           tieu_chi_db=TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu).all(),
-                           nhom_labels=_get_nhom_tieu_chi_choices())
+                           tieu_chi_by_nhom=tieu_chi_by_nhom,
+                           orphan_fields=orphan_fields,
+                           nhom_labels=nhom_labels,
+                           tieu_chi_db=all_tcs,
+                           tieu_chi_options=[(tc.ma_truong, tc.ten) for tc in all_tcs] or TIEU_CHI_OPTIONS)
 
 
 # ------------------------------------------------------------------
