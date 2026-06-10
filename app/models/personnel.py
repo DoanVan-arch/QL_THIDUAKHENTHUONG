@@ -23,7 +23,7 @@ class CapBac(enum.Enum):
     THIEU_TUONG = 'Thiếu tướng'
     TRUNG_TUONG = 'Trung tướng'
     THUONG_TUONG = 'Thượng tướng'
-    DAI_TUONG = 'Đại tướng'
+    
 
 
 class HocHam(enum.Enum):
