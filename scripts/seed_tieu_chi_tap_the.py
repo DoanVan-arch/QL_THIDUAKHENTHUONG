@@ -177,22 +177,14 @@ TIEU_CHI_TAP_THE = [
         'huong_dan': 'Đơn vị có đảm bảo an toàn tuyệt đối không?',
         'thu_tu': 60,
     },
-    {
-        'ma_truong': 'th_diem_tdtx_quy1',
-        'ten': 'Ban Tác huấn: Điểm TĐTX BQ Quý I',
-        'nhom': 'ban_tachuan',
-        'loai_input': 'combobox',
-        'gia_tri_chon': ['Có', 'Không'],
-        'huong_dan': 'Điểm tổng điểm tư tưởng xét bình quân Quý I. ĐK QT: ≥8.2, TT: ≥8.0',
-        'thu_tu': 60,
-    },
+   
     {
         'ma_truong': 'tachuan_vmtd_mau_muc',
         'ten': 'Ban Tác huấn: VMTD Mẫu mực',
         'nhom': 'ban_tachuan',
         'loai_input': 'textbox',
         'huong_dan': 'Đánh giá Văn minh tác đồng mẫu mực.',
-        'thu_tu': 30,
+        'thu_tu': 61,
     },
     {
         'ma_truong': 'tachuan_dinh_luong',

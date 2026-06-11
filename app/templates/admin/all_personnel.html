@@ -59,7 +59,8 @@
             <div class="col-md-1">
                 <label class="form-label mb-1 small">Sắp xếp</label>
                 <select class="form-select" name="sort_by">
-                    <option value="don_vi" {% if sort_by == 'don_vi' %}selected{% endif %}>Đơn vị/Chức vụ</option>
+                    <option value="chuc_vu" {% if sort_by == 'chuc_vu' %}selected{% endif %}>Chức vụ</option>
+                    <option value="don_vi" {% if sort_by == 'don_vi' %}selected{% endif %}>Đơn vị</option>
                     <option value="ho_ten" {% if sort_by == 'ho_ten' %}selected{% endif %}>Họ tên</option>
                     <option value="cap_bac" {% if sort_by == 'cap_bac' %}selected{% endif %}>Cấp bậc</option>
                     <option value="doi_tuong" {% if sort_by == 'doi_tuong' %}selected{% endif %}>Đối tượng</option>

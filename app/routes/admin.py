@@ -3580,7 +3580,7 @@ def all_personnel():
     doi_tuong = request.args.get('doi_tuong', '').strip()
     cap_bac = request.args.get('cap_bac', '').strip()
     chuc_vu = request.args.get('chuc_vu', '').strip()
-    sort_by = request.args.get('sort_by', 'don_vi').strip()
+    sort_by = request.args.get('sort_by', 'chuc_vu').strip()  # Changed default from 'don_vi' to 'chuc_vu'
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 30, type=int)
     if per_page not in (20, 30, 50, 100):
@@ -3617,7 +3617,14 @@ def all_personnel():
         query = query.order_by(QuanNhan.cap_bac.asc(), QuanNhan.ho_ten.asc())
     elif sort_by == 'doi_tuong':
         query = query.order_by(QuanNhan.doi_tuong.asc(), QuanNhan.ho_ten.asc())
-    else:  # don_vi (default)
+    elif sort_by == 'chuc_vu':  # New sort option
+        query = query.order_by(
+            _case((_chuc_vu_alias.thu_tu.is_(None), 1), else_=0),
+            _chuc_vu_alias.thu_tu.asc(),
+            QuanNhan.chuc_vu.asc(),
+            QuanNhan.ho_ten.asc()
+        )
+    else:  # don_vi
         query = query.order_by(
             DonVi.thu_tu,
             DonVi.ten_don_vi,
