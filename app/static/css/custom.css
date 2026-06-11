@@ -290,6 +290,9 @@ body {
     border: none;
     padding: 0.75rem 1rem;
     white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .table-custom tbody td {
