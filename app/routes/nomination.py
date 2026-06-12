@@ -18,6 +18,7 @@ from app.utils.activity_logger import log_action
 from datetime import datetime
 from sqlalchemy.exc import ProgrammingError, OperationalError
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
