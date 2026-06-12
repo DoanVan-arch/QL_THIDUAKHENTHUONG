@@ -201,6 +201,25 @@ ALL_FIELDS = [
     'thanh_tich_ca_nhan_khac',
 ]
 
+# Score fields that can have minimum score requirements
+DIEM_FIELDS = [
+    'diem_kiem_tra_tin_hoc',
+    'diem_kiem_tra_dieu_lenh',
+    'diem_dia_ly_quan_su',
+    'diem_ban_sung',
+    'diem_the_luc',
+    'diem_kiem_tra_chinh_tri',
+    'diem_tong_ket',
+    'diem_nckh',
+    'diem_tot_nghiep',
+    'diem_tn_ctd',
+    'diem_tn_ct',
+    'diem_tn_ta',
+    'diem_tn_mon4',
+    'diem_tn_chuyennganh',
+    'diem_tn_baove',
+]
+
 DIEM_FIELD_LABELS = {
     'diem_kiem_tra_tin_hoc': 'Điểm kỹ năng số',
     'diem_kiem_tra_dieu_lenh': 'Điểm điều lệnh',
@@ -210,6 +229,13 @@ DIEM_FIELD_LABELS = {
     'diem_kiem_tra_chinh_tri': 'Điểm chính trị',
     'diem_tong_ket': 'Điểm tổng kết',
     'diem_nckh': 'Điểm NCKH',
+    'diem_tot_nghiep': 'Điểm tốt nghiệp',
+    'diem_tn_ctd': 'Điểm CTĐ',
+    'diem_tn_ct': 'Điểm CT',
+    'diem_tn_ta': 'Điểm Tiếng Anh',
+    'diem_tn_mon4': 'Điểm môn 4',
+    'diem_tn_chuyennganh': 'Điểm chuyên ngành',
+    'diem_tn_baove': 'Điểm bảo vệ',
 }
 
 
