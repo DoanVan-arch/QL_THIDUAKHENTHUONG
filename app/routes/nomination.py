@@ -1428,7 +1428,7 @@ def export_nomination_word(id):
     left_cell = tbl_header.rows[0].cells[0]
     right_cell = tbl_header.rows[0].cells[1]
     left_width = Cm(8)
-    right_width = Cm(10.5)
+    right_width = Cm(11)
     left_cell.width = left_width
     right_cell.width = right_width
 
@@ -1584,47 +1584,43 @@ def export_nomination_word(id):
 
 def protect_document_formatting_only(doc, password: str):
     """
-    Khóa tài liệu: chỉ cho phép chỉnh định dạng (lề, bảng...),
-    không cho sửa nội dung. Mật khẩu được hash theo chuẩn OOXML.
+    Khóa tài liệu: chỉ đọc nội dung (readOnly).
+    Mật khẩu được hash theo chuẩn Office 2010+ (Agile Encryption).
     """
-    # Tạo salt ngẫu nhiên (16 bytes)
+    # 1. Tạo salt ngẫu nhiên (16 bytes)
     salt = os.urandom(16)
     salt_b64 = binascii.b2a_base64(salt).strip().decode()
 
-    # Hash mật khẩu theo chuẩn OOXML (SHA-1)
-    key = hashlib.sha1(salt + password.encode('utf-16-le')).digest()
+    # 2. Hash lần đầu: SHA-512(salt + password)
+    # Lưu ý: password bắt buộc encode sang chuẩn UTF-16 Little Endian
+    key = hashlib.sha512(salt + password.encode('utf-16le')).digest()
     
-    # SỬA LỖI TẠI ĐÂY: Thêm iterator 4-byte vào mỗi vòng lặp
+    # 3. Lặp 100.000 vòng để chống brute-force
     spin_count = 100000
     for i in range(spin_count):
         iterator = i.to_bytes(4, byteorder='little')
-        key = hashlib.sha1(iterator + key).digest()
+        # SỬA LỖI: Cần cộng iterator ở PHÍA SAU hash của vòng lặp liền trước
+        key = hashlib.sha512(key + iterator).digest()
         
     hash_b64 = binascii.b2a_base64(key).strip().decode()
 
-    # Lấy hoặc tạo thẻ <w:settings>
+    # 4. Lấy cấu hình settings của docx
     settings = doc.settings.element
 
     # Xóa thẻ documentProtection cũ nếu có
     for old in settings.findall(qn('w:documentProtection')):
         settings.remove(old)
 
-    # Tạo thẻ <w:documentProtection>
+    # 5. Tạo thẻ <w:documentProtection> theo chuẩn Office đời mới
     doc_prot = OxmlElement('w:documentProtection')
-    doc_prot.set(qn('w:edit'),              'readOnly')       # Khóa nội dung (chỉ đọc)
-    doc_prot.set(qn('w:enforcement'),       '1')              # Bật bảo vệ
-    doc_prot.set(qn('w:cryptProviderType'), 'rsaFull')
-    doc_prot.set(qn('w:cryptAlgorithmClass'), 'hash')
-    doc_prot.set(qn('w:cryptAlgorithmType'), 'typeAny')
-    doc_prot.set(qn('w:cryptAlgorithmSid'), '4')              # 4 = SHA-1
-    doc_prot.set(qn('w:cryptSpinCount'),    str(spin_count))
-    doc_prot.set(qn('w:hash'),              hash_b64)
-    doc_prot.set(qn('w:salt'),              salt_b64)
-
-    # LƯU Ý ĐỊNH DẠNG:
-    # Nếu muốn "CHO PHÉP sửa định dạng", bạn phải set 'w:formatting' là '0' hoặc KHÔNG gán thuộc tính này.
-    # Trong code cũ bạn set '1' (nghĩa là Word sẽ khóa luôn cả định dạng, không cho chỉnh sửa).
-    # doc_prot.set(qn('w:formatting'), '1') # Tắt dòng này đi hoặc set = '0'
+    doc_prot.set(qn('w:edit'),          'readOnly')
+    doc_prot.set(qn('w:enforcement'),   '1')
+    
+    # BỎ CÁC THẺ CŨ (cryptProviderType, v.v.). SỬ DỤNG CHUẨN AGILE MỚI:
+    doc_prot.set(qn('w:algorithmName'), 'SHA-512')
+    doc_prot.set(qn('w:spinCount'),     str(spin_count))
+    doc_prot.set(qn('w:hashValue'),     hash_b64)     # Đã đổi từ w:hash thành w:hashValue
+    doc_prot.set(qn('w:saltValue'),     salt_b64)     # Đã đổi từ w:salt thành w:saltValue
 
     # Chèn vào đầu <w:settings>
     settings.insert(0, doc_prot)
