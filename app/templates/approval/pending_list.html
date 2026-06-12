@@ -772,7 +772,7 @@ document.addEventListener('DOMContentLoaded', function () {
     [unitFilter, danhHieuFilter, scopeFilter].forEach(el => el && el.addEventListener('change', applyFilters));
     searchInput && searchInput.addEventListener('input', applyFilters);
 
-    const BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Công chức quốc phòng'];
+    const BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp'];
 
     function applyFilters() {
         const selUnit = unitFilter ? unitFilter.value : '';

@@ -97,7 +97,7 @@ with app.app_context():
             ('ban_khth', 'Ban Kế hoạch tổng hợp', Role.BAN_KEHOACH_TONGHOP, None),
             ('uyban_kiemtra', 'Ủy ban Kiểm tra', Role.UY_BAN_KIEMTRA, None),
             ('ban_quanluc', 'Ban Quân lực', Role.BAN_QUANLUC, None),
-            ('phong_hckt','Phòng Hậu cần - Kỹ thuật', Role.PHONG_HCKT, None),
+            ('phong_hauckythuat','Phòng Hậu cần - Kỹ thuật', Role.PHONG_HAUCANKYTHUAT, None),
         ]
 
         for username, ho_ten, role, don_vi_id in users_data:

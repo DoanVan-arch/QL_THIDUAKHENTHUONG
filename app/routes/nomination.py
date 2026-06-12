@@ -961,7 +961,7 @@ def submit_nomination(id):
                   PhongDuyet.BAN_BAOVE_ANNINH,
                   PhongDuyet.BAN_CNTT, PhongDuyet.BAN_TAC_HUAN,
                   PhongDuyet.BAN_KHAOTHI, PhongDuyet.UY_BAN_KIEMTRA,
-                  PhongDuyet.BAN_QUANLUC]:
+                  PhongDuyet.BAN_QUANLUC,PhongDuyet.PHONG_HAUCANKYTHUAT]:
         existing = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id, phong_duyet=phong.value).first()
         if not existing:
             initial_ket_qua = KetQuaDuyet.CHO_DUYET.value

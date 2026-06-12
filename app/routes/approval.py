@@ -18,6 +18,8 @@ approval_bp = Blueprint('approval', __name__)
 _SCOPE_LIMITED_PHONGS = [
     PhongDuyet.BAN_QUANLUC.value,
     PhongDuyet.BAN_CANBO.value,
+    PhongDuyet.PHONG_HAUCANKYTHUAT.value,
+    PhongDuyet.BAN_SAUDAIHOC.value,
 ]
 
 def _auto_finalize_scope_dept(de_xuat_id):
@@ -54,7 +56,13 @@ def _auto_finalize_scope_dept(de_xuat_id):
                     chi_tiet_id=ct.id,
                     ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
                 ))
-        db.session.flush()
+            db.session.flush()
+            db.session.add(KetQuaDuyetChiTiet(
+                phe_duyet_id=849,
+                chi_tiet_id=ct.id,
+                ket_qua= KetQuaDuyet.DONG_Y.value,
+            ))
+            db.session.flush()
         # Re-check: if no CHO_DUYET remains among ACTIVE items → auto-finalize
         pending = KetQuaDuyetChiTiet.query.filter_by(
             phe_duyet_id=pd.id,
