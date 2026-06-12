@@ -33,7 +33,7 @@ DEPT_NAMES = [
     'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
     'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Bảo vệ an ninh',
-    'Ủy ban Kiểm tra', 'Ban Quân lực'
+    'Ủy ban Kiểm tra', 'Ban Quân lực', 'Phòng Hậu cần - Kỹ thuật', 'Ban Sau đại học',
 ]
 
 # Display order for approval columns in tracking screens
@@ -51,6 +51,8 @@ TRACKING_DEPT_COLUMNS = [
     {'key': 'Phòng Khoa học', 'label': 'Phòng Khoa học quân sự'},
     {'key': 'Ban Khảo thí', 'label': 'Ban Khảo thí'},
     {'key': 'Ủy ban Kiểm tra', 'label': 'Ủy ban Kiểm tra'},
+    {'key': 'Phòng Hậu cần - Kỹ thuật', 'label': 'Phòng Hậu cần - Kỹ thuật'},
+    {'key': 'Ban Sau đại học', 'label': 'Ban Sau đại học'},
 ]
 
 # Display order for approval columns in tracking screens
@@ -68,6 +70,8 @@ TRACKING_DEPT_COLUMNS = [
     {'key': 'Phòng Khoa học', 'label': 'Phòng Khoa học quân sự'},
     {'key': 'Ban Khảo thí', 'label': 'Ban Khảo thí'},
     {'key': 'Ủy ban Kiểm tra', 'label': 'Ủy ban Kiểm tra'},
+    {'key': 'Phòng Hậu cần - Kỹ thuật', 'label': 'Phòng Hậu cần - Kỹ thuật'},
+    {'key': 'Ban Sau đại học', 'label': 'Ban Sau đại học'},
 ]
 
 
@@ -4548,6 +4552,8 @@ PHONG_DUYET_OPTIONS = [
     ('Ban Bảo vệ an ninh', 'Ban Bảo vệ an ninh'),
     ('Ủy ban Kiểm tra', 'Ủy ban Kiểm tra'),
     ('Ban Quân lực', 'Ban Quân lực'),
+    ('Phòng Hậu cần - Kỹ thuật', 'Phòng Hậu cần - Kỹ thuật'),
+    ('Ban Sau đại học', 'Ban Sau đại học'),
 ]
 
 
