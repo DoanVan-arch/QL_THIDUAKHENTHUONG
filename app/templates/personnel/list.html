@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <table class="table table-custom mb-0">
                 <thead>
                     <tr>
-                        <th style="width:36px;">
+                        <th class="sticky-col-first" style="width:36px;">
                             <input type="checkbox" id="selectAll" class="form-check-input" title="Chọn tất cả">
                         </th>
                         <th>STT</th>
@@ -143,13 +143,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         <th>Chức vụ</th>
                         <th>Đối tượng</th>
                         <th>Học vị</th>
-                        <th>Thao tác</th>
+                        <th class="sticky-col-last">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for qn in personnel.items %}
                     <tr>
-                        <td>
+                        <td class="sticky-col-first">
                             <input type="checkbox" class="form-check-input qn-checkbox" value="{{ qn.id }}" data-name="{{ qn.ho_ten }}">
                         </td>
                         <td>{{ (personnel.page - 1) * personnel.per_page + loop.index }}</td>
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>{{ qn.chuc_vu or '-' }}</td>
                         <td>{{ qn.doi_tuong or '-' }}{% if qn.is_student and qn.lop %} <span class="text-muted small">({{ qn.lop }})</span>{% endif %}</td>
                         <td>{{ qn.hoc_vi if qn.hoc_vi != 'Không' else '-' }}</td>
-                        <td>
+                        <td class="sticky-col-last">
                             <a href="{{ url_for('personnel.detail_personnel', id=qn.id) }}" class="btn btn-sm btn-outline-navy" title="Chi tiết">
                                 <i class="bi bi-eye"></i>
                             </a>

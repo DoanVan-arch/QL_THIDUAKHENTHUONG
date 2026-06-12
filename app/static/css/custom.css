@@ -306,6 +306,71 @@ body {
     background-color: #F8F9FB;
 }
 
+/* ── Sticky columns for horizontal scroll ─────────────────────── */
+.table-custom th.sticky-col-first,
+.table-custom td.sticky-col-first {
+    position: sticky;
+    left: 0;
+    background: inherit;
+    z-index: 5;
+}
+
+.table-custom thead th.sticky-col-first {
+    z-index: 15;  /* Higher than regular sticky header */
+}
+
+.table-custom th.sticky-col-last,
+.table-custom td.sticky-col-last {
+    position: sticky;
+    right: 0;
+    background: inherit;
+    z-index: 5;
+}
+
+.table-custom thead th.sticky-col-last {
+    z-index: 15;
+}
+
+/* Add subtle shadow to indicate stickiness */
+.table-custom th.sticky-col-first::after,
+.table-custom td.sticky-col-first::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -10px;
+    bottom: 0;
+    width: 10px;
+    background: linear-gradient(to right, rgba(0,0,0,0.05), transparent);
+    pointer-events: none;
+}
+
+.table-custom th.sticky-col-last::before,
+.table-custom td.sticky-col-last::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -10px;
+    bottom: 0;
+    width: 10px;
+    background: linear-gradient(to left, rgba(0,0,0,0.05), transparent);
+    pointer-events: none;
+}
+
+/* ── Table responsive with max height for scrollable container ── */
+.table-responsive {
+    max-height: calc(100vh - 280px);  /* Adjust based on page header/footer */
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Ensure sticky works in scrollable container */
+.table-responsive .table-custom thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--navy-primary);  /* Must have solid background */
+}
+
 /* ---- Badges / Status ---- */
 .badge-status {
     font-size: 0.75rem;
