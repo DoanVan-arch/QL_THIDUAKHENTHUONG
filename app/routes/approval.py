@@ -228,6 +228,8 @@ _FALLBACK_PHONG_FIELDS = {
     Role.PHONG_CHINHTRI: ['kiem_tra_chinh_tri', 'ket_qua_doan_the', 'xep_loai_dang_vien'],
     Role.BAN_CANBO: ['muc_do_hoan_thanh'],
     Role.BAN_QUANLUC: ['muc_do_hoan_thanh'],
+    Role.PHONG_HAUCANKYTHUAT: ['muc_do_hoan_thanh'],
+    Role.BAN_SAUDAIHOC: ['muc_do_hoan_thanh'],
 }
 
 _FALLBACK_FIELD_LABELS = {
@@ -340,13 +342,13 @@ PHONG_FIELD_CONDITIONS = {
         'muc_do_hoan_thanh': ['Giảng viên', 'Cán bộ'],
     },
     Role.BAN_QUANLUC: {
-        'muc_do_hoan_thanh': ['Công nhân viên', 'Quân nhân chuyên nghiệp'],
+        'muc_do_hoan_thanh': ['Công nhân viên', 'Quân nhân chuyên nghiệp','Hạ sĩ quan chiến sĩ'],
     },
 }
 
 # doi_tuong scope: which doi_tuong values each department approves
 # Departments not listed approve ALL doi_tuong values
-BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp']
+BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp','Hạ sĩ quan chiến sĩ']
 
 DEPT_DOI_TUONG_SCOPE = {
     Role.BAN_QUANLUC: BAN_QUANLUC_DOI_TUONG,
