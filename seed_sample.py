@@ -55,7 +55,7 @@ DEPT_FLOW = [
     PhongDuyet.THU_TRUONG_PHONG_TMHC,
 ]
 
-BAN_QUANLUC_SCOPE = {DoiTuong.CNV.value, DoiTuong.QNCN.value}
+BAN_QUANLUC_SCOPE = {DoiTuong.CNV.value, DoiTuong.QNCN.value,DoiTuong.HSQCS.value}
 
 
 def random_name():
@@ -96,6 +96,8 @@ def ensure_department_users():
         'ban_khaothi':       (Role.BAN_KHAOTHI,             'Ban Khao thi'),
         'uyban_kiemtra':     (Role.UY_BAN_KIEMTRA,          'Uy ban Kiem tra'),
         'ban_quanluc':       (Role.BAN_QUANLUC,             'Ban Quan luc'),
+        'phong_hauckythuat': (Role.PHONG_HAUCANKYTHUAT,   'Phong Hau can - Ky thuat'),
+        'ban_saudaidaihoc':  (Role.BAN_SAUDAIHOC,          'Ban Sau dai hoc'),
     }
     for username, (role, full_name) in required.items():
         if User.query.filter_by(username=username).first():
@@ -309,7 +311,8 @@ def seed_nominations(units, personnel):
         PhongDuyet.BAN_KHAOTHI.value:               User.query.filter_by(role=Role.BAN_KHAOTHI).first(),
         PhongDuyet.UY_BAN_KIEMTRA.value:            User.query.filter_by(role=Role.UY_BAN_KIEMTRA).first(),
         PhongDuyet.BAN_QUANLUC.value:               User.query.filter_by(role=Role.BAN_QUANLUC).first(),
-        PhongDuyet.THU_TRUONG_PHONG_CHINHTRI.value: User.query.filter_by(role=Role.THU_TRUONG_PHONG_CHINHTRI).first(),
+        PhongDuyet.PHONG_HAUCANKYTHUAT.value:       User.query.filter_by(role=Role.PHONG_HAUCANKYTHUAT).first(),
+        PhongDuyet.BAN_SAUDAIHOC.value:             User.query.filter_by(role=Role.BAN_SAUDAIHOC).first(),
         PhongDuyet.THU_TRUONG_PHONG_TMHC.value:     User.query.filter_by(role=Role.THU_TRUONG_PHONG_TMHC).first(),
     }
     admin = User.query.filter_by(role=Role.ADMIN).first()

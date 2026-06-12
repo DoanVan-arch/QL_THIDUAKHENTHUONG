@@ -135,7 +135,7 @@ def _is_individual_dept_approved(de_xuat_id, ct, dept_name):
     return kq.ket_qua == KetQuaDuyet.DONG_Y.value
 
 # Đối tượng thuộc diện Ban Quân lực quản lý
-BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp']
+BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp','Hạ sĩ quan chiến sĩ']
 
 # All criteria field labels (for detailed view)
 ALL_FIELD_LABELS = {
@@ -2043,7 +2043,7 @@ def export_tracking_excel():
     ws.freeze_panes = 'A4'
 
     ws.protection.sheet = True
-    ws.protection.password = 'hktd@2025'
+    ws.protection.password = 'bth123'
 
     output = BytesIO()
     wb.save(output)
@@ -2258,7 +2258,7 @@ def export_hoi_dong_excel():
     ws.freeze_panes = 'A4'
 
     ws.protection.sheet = True
-    ws.protection.password = 'hktd@2025'
+    ws.protection.password = 'bth123'
 
     output = BytesIO()
     wb.save(output)
@@ -2319,7 +2319,7 @@ def export_pending_final_excel():
     ws.sheet_properties.pageSetUpPr.fitToPage = True
 
     ws.protection.sheet = True
-    ws.protection.password = 'hktd@2025'
+    ws.protection.password = 'bth123'
 
     out = BytesIO()
     wb.save(out)
@@ -2470,7 +2470,7 @@ def export_bang2_excel():
     ws.freeze_panes = 'A4'
 
     ws.protection.sheet = True
-    ws.protection.password = 'hktd@2025'
+    ws.protection.password = 'bth123'
 
     output = BytesIO()
     wb.save(output)
@@ -2935,7 +2935,7 @@ def export_reward_list():
     ws.freeze_panes = 'A6'
 
     ws.protection.sheet = True
-    ws.protection.password = 'hktd@2025'
+    ws.protection.password = 'bth123'
 
     # Write to BytesIO
     output = BytesIO()
@@ -3137,7 +3137,7 @@ def export_b3_excel():
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.freeze_panes = 'A6'
     ws.protection.sheet = True
-    ws.protection.password = 'hktd@2025'
+    ws.protection.password = 'bth123'
 
     output = BytesIO()
     wb.save(output)
