@@ -35,7 +35,7 @@ DEPT_NAMES = [
     'Thủ trưởng Phòng TM-HC',
     'Ban Cán bộ', 'Ban Tổ chức', 'Ban Tuyên huấn', 'Ban Công tác quần chúng',
     'Ban Công nghệ thông tin', 'Ban Tác huấn', 'Ban Khảo thí', 'Ban Bảo vệ an ninh',
-    'Ủy ban Kiểm tra', 'Ban Quân lực'
+    'Ủy ban Kiểm tra', 'Ban Quân lực', 'Phòng Hậu cần - Kỹ thuật', 'Ban Sau đại học',
 ]
 
 nomination_bp = Blueprint('nomination', __name__)
@@ -1428,7 +1428,7 @@ def export_nomination_word(id):
     left_cell = tbl_header.rows[0].cells[0]
     right_cell = tbl_header.rows[0].cells[1]
     left_width = Cm(8)
-    right_width = Cm(11)
+    right_width = Cm(12)
     left_cell.width = left_width
     right_cell.width = right_width
 
