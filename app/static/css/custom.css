@@ -357,18 +357,31 @@ body {
 }
 
 /* ── Table responsive with max height for scrollable container ── */
-.table-responsive {
+.table-responsive,
+.tbl-scroll {
     max-height: calc(100vh - 280px);  /* Adjust based on page header/footer */
     overflow-y: auto;
     overflow-x: auto;
 }
 
 /* Ensure sticky works in scrollable container */
-.table-responsive .table-custom thead th {
+.table-responsive .table-custom thead th,
+.tbl-scroll .table-custom thead th {
     position: sticky;
     top: 0;
     z-index: 10;
     background: var(--navy-primary);  /* Must have solid background */
+}
+
+/* For sticky columns in scrollable tables, ensure proper background */
+.tbl-scroll .table-custom tbody td.sticky-col-first,
+.tbl-scroll .table-custom thead th.sticky-col-first {
+    background: inherit;
+}
+
+.tbl-scroll .table-custom tbody td.sticky-col-last,
+.tbl-scroll .table-custom thead th.sticky-col-last {
+    background: inherit;
 }
 
 /* ---- Badges / Status ---- */

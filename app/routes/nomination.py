@@ -863,7 +863,9 @@ def update_nomination_item(ct_id):
             _tc_list = _TC.query.filter(_TC.ma_truong.in_(dh_obj.tieu_chi), _TC.is_active == True).all()
             tap_the_data_dict = {}
             for tc in _tc_list:
-                val = request.form.get(tc.ma_truong, '').strip()
+                # Form field name is 'tap_the_<ma_truong>' in edit modal
+                field_name = f'tap_the_{tc.ma_truong}'
+                val = request.form.get(field_name, '').strip()
                 if val:
                     tap_the_data_dict[tc.ma_truong] = val
             chi_tiet.tap_the_data = _json.dumps(tap_the_data_dict, ensure_ascii=False) if tap_the_data_dict else None

@@ -1071,6 +1071,25 @@ function applyCriteriaVisibilityByGroup() {
     })();
 }
 
+// Aliases for inline onchange handlers
+var onDanhHieuChange = function() {
+    togglePhamViBlocks();
+    // Also trigger field visibility update
+    var dhSelect = document.getElementById('loai_danh_hieu_select');
+    var dtSelect = document.getElementById('doi_tuong_select');
+    if (dhSelect && dtSelect) {
+        applyFieldVisibility(dhSelect.value || '', dtSelect.value || '');
+    }
+};
+
+var onDoiTuongSelectChange = function() {
+    var dhSelect = document.getElementById('loai_danh_hieu_select');
+    var dtSelect = document.getElementById('doi_tuong_select');
+    if (dhSelect && dtSelect) {
+        applyFieldVisibility(dhSelect.value || '', dtSelect.value || '');
+    }
+};
+
 // Auto-inject tooltip icons next to form labels for criteria fields
 // Toggle between cá nhân blocks and tập thể block based on selected danh hiệu pham_vi
 function togglePhamViBlocks() {
@@ -1859,6 +1878,16 @@ function openEditItemModal(ctId) {
             });
             var gcEl = form.querySelector('[name="ghi_chu_item"]');
             if (gcEl) gcEl.value = d.ghi_chu || '';
+
+            // Populate tap_the_data fields (collective nomination criteria)
+            if (isTapThe && d.tap_the_data) {
+                Object.keys(d.tap_the_data).forEach(function(key) {
+                    var el = form.querySelector('[name="tap_the_' + key + '"]');
+                    if (el && d.tap_the_data[key] !== undefined && d.tap_the_data[key] !== null) {
+                        el.value = d.tap_the_data[key];
+                    }
+                });
+            }
 
             // Áp dụng visibility theo đối tượng + danh hiệu
             applyModalFieldVisibility(d.loai_danh_hieu || '', d.doi_tuong || '');
