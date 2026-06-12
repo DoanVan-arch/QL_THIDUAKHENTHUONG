@@ -1327,9 +1327,10 @@ function updateSubmitButtonState() {
 // ── Điểm tốt nghiệp: show/hide ô điểm theo hình thức thi ──────────────────
 (function() {
     var HTTN_MAP = {
-        'Thi 4 môn (CTĐ , CT , TA , môn thứ 4)':                      ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4'],
-        'Thi 4 môn (chuyên ngành, bảo vệ KL , TA ,môn thứ 4)':        ['diem_tn_chuyennganh','diem_tn_baove','diem_tn_ta','diem_tn_mon4'],
-        'Thi 2 môn (CTĐ , CT)':                                         ['diem_tn_ctd','diem_tn_ct'],
+        'Thi 4 môn (CTĐ-CTCT, Chiến thuật , Tiếng Anh , môn thứ 4)': ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4'],
+        'Thi 4 môn (Chuyên ngành, Bảo vệ khoá luận , Tiếng Anh ,môn thứ 4)': ['diem_tn_chuyennganh','diem_tn_baove','diem_tn_ta','diem_tn_mon4'],
+        'Thi 2 môn (CTĐ-CTCT, Chiến thuật)': ['diem_tn_ctd','diem_tn_ct'],
+    
     };
     var ALL_DIEM_TN = ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4','diem_tn_chuyennganh','diem_tn_baove'];
 
@@ -1681,11 +1682,13 @@ function updateSubmitButtonState() {
 // ===== Modal Sửa: điền dữ liệu + ẩn/hiện tiêu chí theo đối tượng/danh hiệu =====
 
 // Graduation score fields map (same as main form's HTTN_MAP)
-var MODAL_HTTN_MAP = {
-    'Thi 4 môn (CTĐ , CT , TA , môn thứ 4)':                ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4'],
-    'Thi 4 môn (chuyên ngành, bảo vệ KL , TA ,môn thứ 4)':  ['diem_tn_chuyennganh','diem_tn_baove','diem_tn_ta','diem_tn_mon4'],
-    'Thi 2 môn (CTĐ , CT)':                                   ['diem_tn_ctd','diem_tn_ct'],
-};
+
+  var MODAL_HTTN_MAP = {
+        'Thi 4 môn (CTĐ-CTCT, Chiến thuật , Tiếng Anh , môn thứ 4)': ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4'],
+        'Thi 4 môn (Chuyên ngành, Bảo vệ khoá luận , Tiếng Anh ,môn thứ 4)': ['diem_tn_chuyennganh','diem_tn_baove','diem_tn_ta','diem_tn_mon4'],
+        'Thi 2 môn (CTĐ-CTCT, Chiến thuật)': ['diem_tn_ctd','diem_tn_ct'],
+    
+    };
 var MODAL_ALL_DIEM_TN = ['diem_tn_ctd','diem_tn_ct','diem_tn_ta','diem_tn_mon4','diem_tn_chuyennganh','diem_tn_baove'];
 
 // Fields that are graduation sub-fields — controlled by hinh_thuc_tot_nghiep value
