@@ -1,3 +1,5 @@
+from pydoc import doc
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
@@ -24,6 +26,7 @@ from docx.oxml import OxmlElement
 from io import BytesIO
 from flask import send_file
 from datetime import date
+
 import hashlib, binascii, os
 # The six reviewing departments (excluding admin)
 DEPT_NAMES = [
@@ -1337,7 +1340,7 @@ def export_nomination_word(id):
         if ct.diem_tong_ket:
             parts.append(f'ĐTK: {ct.diem_tong_ket}')
         if ct.nckh_noi_dung:
-            parts.append(f'NCKH: {ct.nckh_noi_dung}')
+            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
         if ct.thanh_tich_ca_nhan_khac:
             parts.append(ct.thanh_tich_ca_nhan_khac)
         if ct.ket_qua_doan_the:
@@ -1410,6 +1413,7 @@ def export_nomination_word(id):
     # --- Header 2 cột: đơn vị bên trái, quốc hiệu bên phải ---
     tbl_header = doc.add_table(rows=1, cols=2)
     tbl_header.alignment = WD_TABLE_ALIGNMENT.CENTER
+
     # Remove borders
     for cell in tbl_header.rows[0].cells:
         for edge in ('top','left','bottom','right'):
@@ -1422,21 +1426,21 @@ def export_nomination_word(id):
 
     left_cell = tbl_header.rows[0].cells[0]
     right_cell = tbl_header.rows[0].cells[1]
-    left_width = Cm(6.5)
+    left_width = Cm(8)
     right_width = Cm(10.5)
     left_cell.width = left_width
     right_cell.width = right_width
+
     # Left: TRƯỜNG SĨ QUAN CHÍNH TRỊ / ĐƠN VỊ
     p_l1 = left_cell.paragraphs[0]
     p_l1.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = p_l1.add_run('TRƯỜNG SĨ QUAN CHÍNH TRỊ')
     set_font(r, bold=False, size=13)
+
     p_l2 = left_cell.add_paragraph()
     p_l2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r2 = p_l2.add_run(don_vi_ten.upper())
     set_font(r2, bold=True, size=13)
-    # Gạch dưới đơn vị
-    p_l2.paragraph_format.space_after = Pt(0)
     r2.underline = True
 
     # Right: CỘNG HÒA...
@@ -1444,16 +1448,28 @@ def export_nomination_word(id):
     p_r1.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_r1 = p_r1.add_run('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM')
     set_font(r_r1, bold=True, size=13)
+
     p_r2 = right_cell.add_paragraph()
     p_r2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_r2 = p_r2.add_run('Độc lập - Tự do - Hạnh phúc')
     set_font(r_r2, bold=True, size=13)
     r_r2.underline = True
+
     p_r3 = right_cell.add_paragraph()
     p_r3.alignment = WD_ALIGN_PARAGRAPH.CENTER
     today = date.today()
     r_r3 = p_r3.add_run(f'Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}')
     set_font(r_r3, size=11, italic=True)
+
+    # ---------------------------------------------------------
+    # THÊM MỚI: Thiết lập dãn dòng Single cho toàn bộ bảng Header
+    # ---------------------------------------------------------
+    for row in tbl_header.rows:
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                p.paragraph_format.space_before = Pt(0)
+                p.paragraph_format.space_after = Pt(0)
+                p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
 
     doc.add_paragraph()  # spacer
 
@@ -1574,10 +1590,15 @@ def protect_document_formatting_only(doc, password: str):
     salt = os.urandom(16)
     salt_b64 = binascii.b2a_base64(salt).strip().decode()
 
-    # Hash mật khẩu theo chuẩn OOXML (SHA-1, 100000 vòng)
+    # Hash mật khẩu theo chuẩn OOXML (SHA-1)
     key = hashlib.sha1(salt + password.encode('utf-16-le')).digest()
-    for _ in range(99999):
-        key = hashlib.sha1(key).digest()
+    
+    # SỬA LỖI TẠI ĐÂY: Thêm iterator 4-byte vào mỗi vòng lặp
+    spin_count = 100000
+    for i in range(spin_count):
+        iterator = i.to_bytes(4, byteorder='little')
+        key = hashlib.sha1(iterator + key).digest()
+        
     hash_b64 = binascii.b2a_base64(key).strip().decode()
 
     # Lấy hoặc tạo thẻ <w:settings>
@@ -1589,16 +1610,20 @@ def protect_document_formatting_only(doc, password: str):
 
     # Tạo thẻ <w:documentProtection>
     doc_prot = OxmlElement('w:documentProtection')
-    doc_prot.set(qn('w:edit'),              'readOnly')       # chỉ đọc nội dung
-    doc_prot.set(qn('w:formatting'),        '1')              # CHO PHÉP sửa định dạng
-    doc_prot.set(qn('w:enforcement'),       '1')              # bật bảo vệ
+    doc_prot.set(qn('w:edit'),              'readOnly')       # Khóa nội dung (chỉ đọc)
+    doc_prot.set(qn('w:enforcement'),       '1')              # Bật bảo vệ
     doc_prot.set(qn('w:cryptProviderType'), 'rsaFull')
     doc_prot.set(qn('w:cryptAlgorithmClass'), 'hash')
     doc_prot.set(qn('w:cryptAlgorithmType'), 'typeAny')
-    doc_prot.set(qn('w:cryptAlgorithmSid'), '4')              # SHA-1
-    doc_prot.set(qn('w:cryptSpinCount'),    '100000')
+    doc_prot.set(qn('w:cryptAlgorithmSid'), '4')              # 4 = SHA-1
+    doc_prot.set(qn('w:cryptSpinCount'),    str(spin_count))
     doc_prot.set(qn('w:hash'),              hash_b64)
     doc_prot.set(qn('w:salt'),              salt_b64)
+
+    # LƯU Ý ĐỊNH DẠNG:
+    # Nếu muốn "CHO PHÉP sửa định dạng", bạn phải set 'w:formatting' là '0' hoặc KHÔNG gán thuộc tính này.
+    # Trong code cũ bạn set '1' (nghĩa là Word sẽ khóa luôn cả định dạng, không cho chỉnh sửa).
+    # doc_prot.set(qn('w:formatting'), '1') # Tắt dòng này đi hoặc set = '0'
 
     # Chèn vào đầu <w:settings>
     settings.insert(0, doc_prot)
