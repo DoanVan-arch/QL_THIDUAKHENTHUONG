@@ -694,16 +694,8 @@ def api_chi_tiet_detail(ct_id):
 
     criteria = []
     if qn is None:
-        # Tập thể: get criteria from tap_the_dict + common fields
-        tap_the_dict = ct.tap_the_dict or {}
-        for k, v in tap_the_dict.items():
-            if v is not None and v != '':
-                criteria.append({'label': k, 'value': str(v), 'score': None})
-        for field, label, score_field in [
-            ('muc_do_hoan_thanh', 'Mức độ hoàn thành NV', None),
-            ('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV danh hiệu', None),
-            ('thanh_tich_ca_nhan_khac', 'Thành tích khác', None),
-            ('ghi_chu', 'Ghi chú', None),
+        # 1. Định nghĩa danh sách các trường của tập thể
+        tap_the_fields_list = [
             ('kiem_tra_giang', 'Tỷ lệ chất lượng, kết quả kiểm tra bài giảng đạt yêu cầu (%)', None),
             ('cb_xeploai_canthu_pct_hoanttot', 'Tỷ lệ HTTNV cán bộ (%)', None),
             ('cb_xeploai_canthu_pct_xuatsac', 'Tỷ lệ HTT+XS cán bộ (%)', None),
@@ -753,16 +745,30 @@ def api_chi_tiet_detail(ct_id):
             ('hckt_an_toan_gt', 'An toàn giao thông', None),
             ('kt_kq_ktra_giang_pct_khatot', 'Tỷ lệ kết quả kiểm tra giảng của Thủ trưởng Nhà trường, cơ quan chức năng đạt khá, tốt', None),
             ('kt_kq_ktra_giang_pct_tot', 'Tỷ lệ kết quả kiểm tra giảng của Thủ trưởng Nhà trường, cơ quan chức năng đạt tốt', None),
-
-            # --- Các trường mẫu cũ của bạn ---
             ('muc_do_hoan_thanh', 'Mức độ hoàn thành NV', None),
             ('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV danh hiệu', None),
             ('thanh_tich_ca_nhan_khac', 'Thành tích khác', None),
             ('ghi_chu', 'Ghi chú', None),
-        ]:
-            val = getattr(ct, field, None)
-            if val:
-                criteria.append({'label': label, 'value': str(val), 'score': None})
+        ]
+
+        # 2. Tạo Dictionary dùng để tra cứu nhanh (Map từ field -> label)
+        label_mapping = {f[0]: f[1] for f in tap_the_fields_list}
+
+        # 3. Quét dữ liệu trong chuỗi JSON (tap_the_dict) và dịch key sang label
+        tap_the_dict = ct.tap_the_dict or {}
+        for k, v in tap_the_dict.items():
+            if v is not None and v != '':
+                # Lấy tên tiếng Việt từ label_mapping, nếu không có thì hiển thị lại key gốc
+                mapped_label = label_mapping.get(k, k) 
+                criteria.append({'label': mapped_label, 'value': str(v), 'score': None})
+
+        # 4. Quét thêm các cột lưu trực tiếp trên bảng (tránh lấy trùng với các key đã có ở JSON)
+        existing_json_keys = set(tap_the_dict.keys())
+        for field, label, score_field in tap_the_fields_list:
+            if field not in existing_json_keys:
+                val = getattr(ct, field, None)
+                if val:
+                    criteria.append({'label': label, 'value': str(val), 'score': None})
     else:
         for field, label, score_field in criteria_fields:
             val = getattr(ct, field, None)
