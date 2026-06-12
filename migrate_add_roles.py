@@ -27,6 +27,7 @@ MODIFY COLUMN role ENUM(
     'PHONG_DAOTAO',
     'BAN_CANBO',
     'BAN_QUANLUC',
+    'PHONG_HCKT',
     'ADMIN'
 ) NOT NULL
 """
