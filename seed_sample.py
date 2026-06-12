@@ -51,7 +51,9 @@ DEPT_FLOW = [
     PhongDuyet.BAN_KHAOTHI,
     PhongDuyet.UY_BAN_KIEMTRA,
     PhongDuyet.BAN_QUANLUC,
-    PhongDuyet.THU_TRUONG_PHONG_CHINHTRI,
+    PhongDuyet.PHONG_HAUCANKYTHUAT,
+    PhongDuyet.BAN_SAUDAIHOC,
+   # PhongDuyet.THU_TRUONG_PHONG_CHINHTRI,
     PhongDuyet.THU_TRUONG_PHONG_TMHC,
 ]
 
@@ -96,7 +98,7 @@ def ensure_department_users():
         'ban_khaothi':       (Role.BAN_KHAOTHI,             'Ban Khao thi'),
         'uyban_kiemtra':     (Role.UY_BAN_KIEMTRA,          'Uy ban Kiem tra'),
         'ban_quanluc':       (Role.BAN_QUANLUC,             'Ban Quan luc'),
-        'phong_hauckythuat': (Role.PHONG_HAUCANKYTHUAT,   'Phong Hau can - Ky thuat'),
+        'phong_haucankythuat': (Role.PHONG_HAUCANKYTHUAT,   'Phong Hau can - Ky thuat'),
         'ban_saudaidaihoc':  (Role.BAN_SAUDAIHOC,          'Ban Sau dai hoc'),
     }
     for username, (role, full_name) in required.items():
