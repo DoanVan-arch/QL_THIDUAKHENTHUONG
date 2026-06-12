@@ -132,6 +132,8 @@ class User(db.Model, UserMixin):
             Role.BAN_KEHOACH_TONGHOP,
             Role.UY_BAN_KIEMTRA,
             Role.BAN_QUANLUC,
+            Role.PHONG_HAUCANKYTHUAT,
+            Role.BAN_SAUDAIHOC,
         )
 
     @property
