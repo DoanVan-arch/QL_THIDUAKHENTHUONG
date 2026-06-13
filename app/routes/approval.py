@@ -51,18 +51,29 @@ def _auto_finalize_scope_dept(de_xuat_id):
                 continue
             if ct.id not in existing:
                 in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
-                db.session.add(KetQuaDuyetChiTiet(
-                    phe_duyet_id=pd.id,
-                    chi_tiet_id=ct.id,
-                    ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
-                ))
+                
+                if phong_val != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_val != PhongDuyet.BAN_SAUDAIHOC.value:
+                    # For Ban Quan luc, only certain doi_tuong are in scope
+                   
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                        ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
+                    )
+                else:
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                        ket_qua=KetQuaDuyet.DONG_Y.value,
+                    )
+
+                # Thêm nhiều bản ghi cùng lúc
+                db.session.add_all([ket_qua_1])
+
+                # Chỉ flush 1 lần duy nhất sau khi đã add xong
+                
             db.session.flush()
-            db.session.add(KetQuaDuyetChiTiet(
-                phe_duyet_id=849,
-                chi_tiet_id=ct.id,
-                ket_qua= KetQuaDuyet.DONG_Y.value,
-            ))
-            db.session.flush()
+           
         # Re-check: if no CHO_DUYET remains among ACTIVE items → auto-finalize
         pending = KetQuaDuyetChiTiet.query.filter_by(
             phe_duyet_id=pd.id,
