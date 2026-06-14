@@ -1,3 +1,5 @@
+from turtle import pd
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
 from app.extensions import db
@@ -61,11 +63,18 @@ def _auto_finalize_scope_dept(de_xuat_id):
                         ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
                     )
                 else:
-                    ket_qua_1 = KetQuaDuyetChiTiet(
-                        phe_duyet_id=pd.id,
-                        chi_tiet_id=ct.id,
-                        ket_qua=KetQuaDuyet.DONG_Y.value,
-                    )
+                    if ct.doi_tuong in ['Học viên sau đại học']:
+                        ket_qua_1 = KetQuaDuyetChiTiet(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                            ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                        )
+                    else:
+                        ket_qua_1 = KetQuaDuyetChiTiet(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                            ket_qua=KetQuaDuyet.DONG_Y.value,
+                        )
 
                 # Thêm nhiều bản ghi cùng lúc
                 db.session.add_all([ket_qua_1])
@@ -564,12 +573,23 @@ def pending_list():
                 continue
             if ct.id not in existing_ct_ids:
                 in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
-                kq = KetQuaDuyetChiTiet(
-                    phe_duyet_id=pd.id,
-                    chi_tiet_id=ct.id,
-                    ket_qua=KetQuaDuyet.DONG_Y.value if not in_scope else KetQuaDuyet.CHO_DUYET.value,
-                )
-                db.session.add(kq)
+                if phong_name != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_name != PhongDuyet.BAN_SAUDAIHOC.value:
+                    # For Ban Quan luc, only certain doi_tuong are in scope
+                   
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                        ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
+                    )
+                else:
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                        ket_qua=KetQuaDuyet.DONG_Y.value,
+                    )
+
+                # Thêm nhiều bản ghi cùng lúc
+                db.session.add_all([ket_qua_1])
     db.session.commit()
 
     # Auto-finalize departments where ALL items are out-of-scope (all auto-approved)
@@ -750,14 +770,38 @@ def review_nomination(id):
     for ct in de_xuat.chi_tiets:
         if ct.bi_loai:
             continue
-        if ct.id not in existing_ct_ids:
-            in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
-            kq = KetQuaDuyetChiTiet(
-                phe_duyet_id=phe_duyet.id,
-                chi_tiet_id=ct.id,
-                ket_qua=KetQuaDuyet.DONG_Y.value if not in_scope else KetQuaDuyet.CHO_DUYET.value,
-            )
-            db.session.add(kq)
+        if ct.doi_tuong is None:
+            if phong_name == PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_name == PhongDuyet.BAN_SAUDAIHOC.value:
+
+                ket_qua_1 = KetQuaDuyetChiTiet(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                            ket_qua=KetQuaDuyet.DONG_Y.value,
+                        )
+        else:
+            if ct.id not in existing_ct_ids:
+                in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
+                if phong_name != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_name != PhongDuyet.BAN_SAUDAIHOC.value:
+
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                            ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
+                        )
+            else:
+                if ct.doi_tuong in ['Học viên sau đại học']:
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                        ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                    )
+                else:
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                        ket_qua=KetQuaDuyet.DONG_Y.value,
+                    )
+        db.session.add(ket_qua_1)                                                                           
     db.session.commit()
 
     # Reload
