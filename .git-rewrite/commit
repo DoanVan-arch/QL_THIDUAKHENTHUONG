@@ -1,0 +1,6 @@
+tree b1a95953fbc34c552a44a0230a210c4a7a9ab877
+parent 7f0e481081aa6ba9dc74bb47dcbef74f69c6b987
+author DoanVan-arch <skypro311294@gmail.com> 1779347448 +0700
+committer DoanVan-arch <skypro311294@gmail.com> 1779347448 +0700
+
+Task 4+5: flat tracking tables; auto-reject nomination on any dept rejection + notify unit
