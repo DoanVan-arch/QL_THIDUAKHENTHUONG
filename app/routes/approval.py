@@ -11,7 +11,7 @@ from app.utils.decorators import department_required
 from app.utils.activity_logger import log_action
 from datetime import datetime
 from io import BytesIO
-
+#thaydoi import theo nhu cau
 approval_bp = Blueprint('approval', __name__)
 
 # Scope-limited depts that need auto-finalize when all their items are out-of-scope
