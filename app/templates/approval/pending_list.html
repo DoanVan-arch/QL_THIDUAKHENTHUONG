@@ -1346,10 +1346,17 @@ function openDetailModal(ctId) {
             // Dept approvals
             const deptActed = (d.dept_results || []).filter(r => r.ket_qua && r.ket_qua !== 'auto');
             const deptPending = (d.dept_results || []).filter(r => !r.ket_qua);
-            if (deptActed.length) {
+           if (deptActed.length) {
                 html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:.8rem;">';
                 deptActed.forEach(r => {
-                    const badge = r.ket_qua === 'Đồng ý' ? '<span class="badge bg-success">Đồng ý</span>' : '<span class="badge bg-danger">Từ chối</span>';
+                    const badgeMap = {
+                    'Đồng ý': '<span class="badge bg-success">Đồng ý</span>',
+                    'Chờ duyệt': '<span class="badge bg-warning text-dark">Chờ duyệt</span>',
+                    'Từ chối': '<span class="badge bg-danger">Từ chối</span>'
+                };
+
+                // Nếu r.ket_qua không khớp với cái nào ở trên, mặc định sẽ lấy 'Từ chối' (hoặc bạn có thể đổi tùy ý)
+                const badge = badgeMap[r.ket_qua] || '<span class="badge bg-danger">Từ chối</span>';
                     html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:.75rem;">${r.ngay_duyet?'<i class="bi bi-clock me-1"></i>'+r.ngay_duyet:''}</td><td class="text-muted" style="font-size:.75rem;">${r.ghi_chu||''}</td></tr>`;
                 });
                 html += '</table>';
