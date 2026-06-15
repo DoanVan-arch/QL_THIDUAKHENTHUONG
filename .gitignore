@@ -36,3 +36,9 @@ uploads/certificates/
 # OS
 .DS_Store
 Thumbs.db
+
+# Archive files
+*.zip
+*.rar
+*.tar.gz
+*.7z
