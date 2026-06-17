@@ -1628,79 +1628,73 @@ def add_logo_watermark(doc):
         
         # Thêm hình ảnh watermark
         run = para.add_run()
-        picture = run.add_picture(logo_path, width=Cm(8))
+        picture = run.add_picture(logo_path, width=Cm(6))
         
         # Thiết lập hình ảnh phía sau text (watermark effect)
-        # Access the inline shape
-        from docx.oxml.shared import CT_Picture
-        inline = run._element
-        docPr = inline[0]
+        # Access the inline shape XML
+        inline = run._element.xpath('.//wp:inline')[0]
         
-        # Tạo anchor từ inline để set behind text
-        # Chuyển từ inline sang anchor (floating)
+        # Get parent drawing element
         drawing = inline.getparent()
+        
+        # Create anchor element (floating image)
         anchor = OxmlElement('wp:anchor')
         
-        # Copy attributes
-        anchor.set('distT', '0')
-        anchor.set('distB', '0')
-        anchor.set('distL', '0')
-        anchor.set('distR', '0')
-        anchor.set('simplePos', '0')
-        anchor.set('relativeHeight', '1')
-        anchor.set('behindDoc', '1')  # Behind text
-        anchor.set('locked', '0')
-        anchor.set('layoutInCell', '1')
-        anchor.set('allowOverlap', '1')
+        # Set anchor attributes for watermark behavior
+        anchor.set(qn('distT'), '0')
+        anchor.set(qn('distB'), '0')
+        anchor.set(qn('distL'), '0')
+        anchor.set(qn('distR'), '0')
+        anchor.set(qn('simplePos'), '0')
+        anchor.set(qn('relativeHeight'), '1')
+        anchor.set(qn('behindDoc'), '1')  # Behind text - watermark effect
+        anchor.set(qn('locked'), '0')
+        anchor.set(qn('layoutInCell'), '1')
+        anchor.set(qn('allowOverlap'), '1')
         
-        # SimplePos
+        # Simple position (required)
         simplePos = OxmlElement('wp:simplePos')
-        simplePos.set('x', '0')
-        simplePos.set('y', '0')
+        simplePos.set(qn('x'), '0')
+        simplePos.set(qn('y'), '0')
         anchor.append(simplePos)
         
-        # Position horizontal - center
+        # Horizontal position - center of page
         positionH = OxmlElement('wp:positionH')
-        positionH.set('relativeFrom', 'page')
+        positionH.set(qn('relativeFrom'), 'page')
         posH_align = OxmlElement('wp:align')
         posH_align.text = 'center'
         positionH.append(posH_align)
         anchor.append(positionH)
         
-        # Position vertical - center
+        # Vertical position - center of page
         positionV = OxmlElement('wp:positionV')
-        positionV.set('relativeFrom', 'page')
+        positionV.set(qn('relativeFrom'), 'page')
         posV_align = OxmlElement('wp:align')
         posV_align.text = 'center'
         positionV.append(posV_align)
         anchor.append(positionV)
         
-        # Extent (size)
+        # Size extent
         extent = OxmlElement('wp:extent')
-        extent.set('cx', str(int(Cm(8).emu)))
-        extent.set('cy', str(int(Cm(8).emu)))
+        extent.set(qn('cx'), str(int(Cm(6).emu)))
+        extent.set(qn('cy'), str(int(Cm(6).emu)))
         anchor.append(extent)
         
-        # effectExtent
+        # Effect extent
         effectExtent = OxmlElement('wp:effectExtent')
-        effectExtent.set('l', '0')
-        effectExtent.set('t', '0')
-        effectExtent.set('r', '0')
-        effectExtent.set('b', '0')
+        effectExtent.set(qn('l'), '0')
+        effectExtent.set(qn('t'), '0')
+        effectExtent.set(qn('r'), '0')
+        effectExtent.set(qn('b'), '0')
         anchor.append(effectExtent)
         
-        # Wrap none
+        # Wrap none (no text wrapping)
         wrapNone = OxmlElement('wp:wrapNone')
         anchor.append(wrapNone)
         
         # Copy docPr and graphic from inline
-        anchor.append(docPr)
-        
-        # graphic
         for child in inline:
-            if child.tag.endswith('}graphic'):
-                anchor.append(child)
-                break
+            anchor.append(child)
         
         # Replace inline with anchor
         drawing.replace(inline, anchor)
