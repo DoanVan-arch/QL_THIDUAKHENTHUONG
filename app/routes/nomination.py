@@ -1653,10 +1653,13 @@ def add_logo_footer(doc):
     import os
     from flask import current_app
     
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
     
     if not os.path.exists(logo_path):
-        return
+        # Fallback to main logo if watermark doesn't exist
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        if not os.path.exists(logo_path):
+            return
     
     try:
         for section in doc.sections:
@@ -1666,15 +1669,15 @@ def add_logo_footer(doc):
             para = footer.add_paragraph()
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             
-            # Thêm logo nhỏ (2cm)
+            # Thêm logo nhỏ (1.2cm)
             run = para.add_run()
-            run.add_picture(logo_path, width=Cm(2))
+            run.add_picture(logo_path, width=Cm(1.2))
             
             # Thêm text bên dưới logo
             para2 = footer.add_paragraph()
             para2.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run2 = para2.add_run('Trường Sĩ quan Chính trị')
-            run2.font.size = Pt(8)
+            run2.font.size = Pt(7)
             run2.font.name = 'Times New Roman'
             run2.font.italic = True
             run2.font.color.rgb = RGBColor(128, 128, 128)
@@ -1688,10 +1691,13 @@ def add_corner_logo(doc):
     import os
     from flask import current_app
     
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
     
     if not os.path.exists(logo_path):
-        return
+        # Fallback to main logo if watermark doesn't exist
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        if not os.path.exists(logo_path):
+            return
     
     try:
         for section in doc.sections:
@@ -1705,9 +1711,9 @@ def add_corner_logo(doc):
             para.paragraph_format.space_before = Pt(0)
             para.paragraph_format.space_after = Pt(0)
             
-            # Thêm logo nhỏ căn phải
+            # Thêm logo nhỏ căn phải (1.5cm)
             run = para.add_run()
-            run.add_picture(logo_path, width=Cm(2))
+            run.add_picture(logo_path, width=Cm(1.5))
             
     except Exception as e:
         print(f"Warning: Could not add corner logo: {e}")
