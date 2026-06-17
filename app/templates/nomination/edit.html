@@ -1360,11 +1360,11 @@ function updateSubmitButtonState() {
         var show = HTTN_MAP[chosen] || [];
 
         // ẩn/hiện field diem_tot_nghiep gốc
-        var diemGocWrap = (function(){
-            var el = document.querySelector('[name="diem_tot_nghiep"]');
-            return el ? el.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null;
-        })();
-        if (diemGocWrap) diemGocWrap.classList.toggle('hidden', chosen !== '');
+        // var diemGocWrap = (function(){
+        //     var el = document.querySelector('[name="diem_tot_nghiep"]');
+        //     return el ? el.closest('.col-md-4,.col-md-6,.col-md-8,.col-md-12') : null;
+        // })();
+        // if (diemGocWrap){ diemGocWrap.classList.toggle('hidden', chosen !== '');diemGocWrap.classList.add('hidden');}
 
         ALL_DIEM_TN.forEach(function(f) {
             var el = document.querySelector('[name="' + f + '"]');
