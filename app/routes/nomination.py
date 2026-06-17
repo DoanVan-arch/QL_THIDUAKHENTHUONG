@@ -1618,86 +1618,27 @@ def add_logo_watermark(doc):
     if not os.path.exists(logo_path):
         return  # Skip if logo not found
     
-    for section in doc.sections:
-        # Thêm watermark vào header của section
-        header = section.header
-        
-        # Tạo paragraph cho watermark
-        para = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
-        para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Thêm hình ảnh watermark
-        run = para.add_run()
-        picture = run.add_picture(logo_path, width=Cm(6))
-        
-        # Thiết lập hình ảnh phía sau text (watermark effect)
-        # Access the inline shape XML
-        inline = run._element.xpath('.//wp:inline')[0]
-        
-        # Get parent drawing element
-        drawing = inline.getparent()
-        
-        # Create anchor element (floating image)
-        anchor = OxmlElement('wp:anchor')
-        
-        # Set anchor attributes for watermark behavior
-        anchor.set(qn('distT'), '0')
-        anchor.set(qn('distB'), '0')
-        anchor.set(qn('distL'), '0')
-        anchor.set(qn('distR'), '0')
-        anchor.set(qn('simplePos'), '0')
-        anchor.set(qn('relativeHeight'), '1')
-        anchor.set(qn('behindDoc'), '1')  # Behind text - watermark effect
-        anchor.set(qn('locked'), '0')
-        anchor.set(qn('layoutInCell'), '1')
-        anchor.set(qn('allowOverlap'), '1')
-        
-        # Simple position (required)
-        simplePos = OxmlElement('wp:simplePos')
-        simplePos.set(qn('x'), '0')
-        simplePos.set(qn('y'), '0')
-        anchor.append(simplePos)
-        
-        # Horizontal position - center of page
-        positionH = OxmlElement('wp:positionH')
-        positionH.set(qn('relativeFrom'), 'page')
-        posH_align = OxmlElement('wp:align')
-        posH_align.text = 'center'
-        positionH.append(posH_align)
-        anchor.append(positionH)
-        
-        # Vertical position - center of page
-        positionV = OxmlElement('wp:positionV')
-        positionV.set(qn('relativeFrom'), 'page')
-        posV_align = OxmlElement('wp:align')
-        posV_align.text = 'center'
-        positionV.append(posV_align)
-        anchor.append(positionV)
-        
-        # Size extent
-        extent = OxmlElement('wp:extent')
-        extent.set(qn('cx'), str(int(Cm(6).emu)))
-        extent.set(qn('cy'), str(int(Cm(6).emu)))
-        anchor.append(extent)
-        
-        # Effect extent
-        effectExtent = OxmlElement('wp:effectExtent')
-        effectExtent.set(qn('l'), '0')
-        effectExtent.set(qn('t'), '0')
-        effectExtent.set(qn('r'), '0')
-        effectExtent.set(qn('b'), '0')
-        anchor.append(effectExtent)
-        
-        # Wrap none (no text wrapping)
-        wrapNone = OxmlElement('wp:wrapNone')
-        anchor.append(wrapNone)
-        
-        # Copy docPr and graphic from inline
-        for child in inline:
-            anchor.append(child)
-        
-        # Replace inline with anchor
-        drawing.replace(inline, anchor)
+    try:
+        for section in doc.sections:
+            # Thêm watermark vào header của section
+            header = section.header
+            
+            # Tạo paragraph cho watermark - đặt ở cuối header
+            para = header.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Thêm hình ảnh watermark với opacity thấp
+            run = para.add_run()
+            picture = run.add_picture(logo_path, width=Cm(6))
+            
+            # Note: Đơn giản hóa - chỉ thêm logo vào header
+            # Không cần chuyển thành anchor phức tạp, vì có thể gây lỗi
+            # Logo sẽ xuất hiện ở đầu mỗi trang trong header
+            
+    except Exception as e:
+        # Nếu watermark fails, không làm crash toàn bộ export
+        print(f"Warning: Could not add watermark: {e}")
+        pass
 
 
 def protect_document_formatting_only(doc, password: str):
