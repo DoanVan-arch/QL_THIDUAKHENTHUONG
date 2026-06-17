@@ -1595,10 +1595,10 @@ def export_nomination_word(id):
    # add_text_watermark(doc, "TRƯỜNG SĨ QUAN CHÍNH TRỊ")
     
     # Phương án 2: Logo nhỏ ở footer cuối trang + text
-    add_logo_footer(doc)
+    #add_logo_footer(doc)
     
     # Phương án 3: Logo nhỏ ở góc phải header (có thể conflict với header hiện tại)
-    #add_corner_logo(doc)
+    add_corner_logo(doc)
 
     # --- Stream to response ---
     buf = BytesIO()
@@ -1684,7 +1684,7 @@ def add_corner_logo(doc):
     import os
     from flask import current_app
     
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
     
     if not os.path.exists(logo_path):
         return
@@ -1696,7 +1696,7 @@ def add_corner_logo(doc):
             # Tạo table 1 row, 2 cols để đặt logo ở bên phải
             if not header.tables:
                 # Tạo table mới
-                tbl = header.add_table(rows=1, cols=2, width=Cm(18))
+                tbl = header.add_table(rows=1, cols=2, width=Cm(18),height=Cm(2))
                 
                 # Remove borders
                 from docx.oxml import OxmlElement
@@ -1722,7 +1722,7 @@ def add_corner_logo(doc):
                 para = right_cell.paragraphs[0]
                 para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
                 run = para.add_run()
-                run.add_picture(logo_path, width=Cm(2.5))
+                run.add_picture(logo_path, width=Cm(2.5), height=Cm(1)  )
             else:
                 # Nếu đã có table trong header, thêm vào existing table
                 # (Trường hợp này có thể conflict với header hiện tại)
