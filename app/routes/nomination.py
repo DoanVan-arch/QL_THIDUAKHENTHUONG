@@ -1684,11 +1684,11 @@ def add_logo_footer(doc):
 
 
 def add_corner_logo(doc):
-    """Thêm logo nhỏ ở góc phải header."""
+    """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
     import os
     from flask import current_app
     
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'app/static/img/watermark.png')
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
     
     if not os.path.exists(logo_path):
         return
@@ -1697,41 +1697,18 @@ def add_corner_logo(doc):
         for section in doc.sections:
             header = section.header
             
-            # Tạo table 1 row, 2 cols để đặt logo ở bên phải
-            if not header.tables:
-                # Tạo table mới
-                tbl = header.add_table(rows=1, cols=2, width=Cm(18))
-                
-                # Remove borders
-                from docx.oxml import OxmlElement
-                from docx.oxml.ns import qn
-                
-                for cell in tbl.rows[0].cells:
-                    tc = cell._tc
-                    tcPr = tc.get_or_add_tcPr()
-                    tcBorders = OxmlElement('w:tcBorders')
-                    for edge in ('top', 'left', 'bottom', 'right'):
-                        border = OxmlElement(f'w:{edge}')
-                        border.set(qn('w:val'), 'none')
-                        tcBorders.append(border)
-                    tcPr.append(tcBorders)
-                
-                # Left cell - empty or can add text
-                left_cell = tbl.rows[0].cells[0]
-                left_cell.width = Cm(15)
-                
-                # Right cell - logo
-                right_cell = tbl.rows[0].cells[1]
-                right_cell.width = Cm(3)
-                para = right_cell.paragraphs[0]
-                para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                run = para.add_run()
-                run.add_picture(logo_path, width=Cm(2.5), height=Cm(1)  )
-            else:
-                # Nếu đã có table trong header, thêm vào existing table
-                # (Trường hợp này có thể conflict với header hiện tại)
-                pass
-                
+            # Thêm paragraph mới vào cuối header (sau table header hiện tại)
+            para = header.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            
+            # Set paragraph spacing để logo sát lề trên
+            para.paragraph_format.space_before = Pt(0)
+            para.paragraph_format.space_after = Pt(0)
+            
+            # Thêm logo nhỏ căn phải
+            run = para.add_run()
+            run.add_picture(logo_path, width=Cm(2))
+            
     except Exception as e:
         print(f"Warning: Could not add corner logo: {e}")
 
