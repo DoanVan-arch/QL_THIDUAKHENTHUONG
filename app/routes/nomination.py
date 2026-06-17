@@ -1684,7 +1684,7 @@ def add_corner_logo(doc):
     import os
     from flask import current_app
     
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'app/static/img/watermark.png')
     
     if not os.path.exists(logo_path):
         return
@@ -1696,7 +1696,7 @@ def add_corner_logo(doc):
             # Tạo table 1 row, 2 cols để đặt logo ở bên phải
             if not header.tables:
                 # Tạo table mới
-                tbl = header.add_table(rows=1, cols=2, width=Cm(18),height=Cm(2))
+                tbl = header.add_table(rows=1, cols=2, width=Cm(18))
                 
                 # Remove borders
                 from docx.oxml import OxmlElement
