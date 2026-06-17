@@ -1588,8 +1588,8 @@ def export_nomination_word(id):
     # --- Khóa tài liệu: chỉ cho sửa định dạng, không cho sửa nội dung ---
     protect_document_formatting_only(doc, 'bth123')
     
-    # --- Thêm watermark logo ---
-    add_logo_watermark(doc)
+    # --- Tạm tắt watermark vì đang che header ---
+    # add_logo_watermark(doc)
 
     # --- Stream to response ---
     buf = BytesIO()
