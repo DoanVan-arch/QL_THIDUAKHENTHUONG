@@ -1474,13 +1474,17 @@ def export_nomination_word(id):
 
     p_r2 = right_cell.add_paragraph()
     p_r2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
     r_r2 = p_r2.add_run('Độc lập - Tự do - Hạnh phúc')
     set_font(r_r2, bold=True, size=13)
     r_r2.underline = True
-
+    p_r4 = right_cell.add_paragraph()
+    r_r4 = p_r4.add_run('')
+    set_font(r_r4, size=11, italic=True)
     p_r3 = right_cell.add_paragraph()
     p_r3.alignment = WD_ALIGN_PARAGRAPH.CENTER
     today = date.today()
+   # r_r3 = p_r3.add_run('')
     r_r3 = p_r3.add_run(f'Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}')
     set_font(r_r3, size=11, italic=True)
 
