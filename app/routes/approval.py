@@ -559,7 +559,7 @@ def pending_list():
     # Sort by unit hierarchy (Phòng > Khoa > Đơn vị)
     from app.models.unit import DonVi
     q = q.join(DonVi, _DeXuat.don_vi_id == DonVi.id)
-    pending_reviews = q.order_by(DonVi.thu_tu.asc(), _DeXuat.created_at.desc()).all()
+    pending_reviews = q.order_by(DonVi.thu_tu.asc(), _DeXuat.ngay_gui.desc()).all()
     # Filter out orphaned PheDuyet (de_xuat đã bị xóa khỏi DB) and đề xuất
     # whose cá nhân/tập thể have all been removed (bi_loai).
     pending_reviews = [
