@@ -1341,8 +1341,8 @@ def export_nomination_word(id):
             parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
         if ct.diem_tong_ket:
             parts.append(f'ĐTK: {ct.diem_tong_ket}')
-        if ct.nckh_noi_dung:
-            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc or ct.nckh_noi_dung}')
+        if ct.mo_ta_khoa_hoc:
+            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
         if ct.thanh_tich_ca_nhan_khac:
             parts.append(ct.thanh_tich_ca_nhan_khac)
         if ct.ket_qua_doan_the:
