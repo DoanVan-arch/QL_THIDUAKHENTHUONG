@@ -131,6 +131,7 @@
                     <th class="col-donvi">Đơn vị</th>
                     <th class="col-capbac">Cấp bậc / Chức vụ</th>
                     <th class="col-doituong">Đối tượng</th>
+                    <th class="col-lop">Lớp</th>
                     <th class="col-danhhieu">Danh hiệu</th>
                     {% if view_mode == 'detail' %}
                     <th class="col-namhoc detail-only-col">Năm học</th>
@@ -187,6 +188,7 @@
                         {% else %}<small class="text-muted">-</small>{% endif %}
                     </td>
                     <td class="col-doituong" title="{{ ct.doi_tuong or '-' }}"><small>{{ ct.doi_tuong or '-' }}</small></td>
+                    <td class="col-lop" title="{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}"><small>{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}</small></td>
                     <td class="col-danhhieu" title="{{ ct.loai_danh_hieu or '-' }}">
                         {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
                         {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>

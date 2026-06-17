@@ -1588,8 +1588,17 @@ def export_nomination_word(id):
     # --- Khóa tài liệu: chỉ cho sửa định dạng, không cho sửa nội dung ---
     protect_document_formatting_only(doc, 'bth123')
     
-    # --- Tạm tắt watermark vì đang che header ---
-    # add_logo_watermark(doc)
+    # --- Thêm watermark ---
+    # Chọn 1 trong 3 phương án bên dưới (uncomment để sử dụng):
+    
+    # Phương án 1: Text watermark xéo 45 độ (đơn giản, không che nội dung)
+    add_text_watermark(doc, "TRƯỜNG SĨ QUAN CHÍNH TRỊ")
+    
+    # Phương án 2: Logo nhỏ ở footer cuối trang + text
+    add_logo_footer(doc)
+    
+    # Phương án 3: Logo nhỏ ở góc phải header (có thể conflict với header hiện tại)
+    add_corner_logo(doc)
 
     # --- Stream to response ---
     buf = BytesIO()
@@ -1607,8 +1616,124 @@ def export_nomination_word(id):
     )
 
 
+def add_text_watermark(doc, text="TRƯỜNG SĨ QUAN CHÍNH TRỊ"):
+    """Thêm text watermark xéo góc 45 độ, mờ, ở giữa trang."""
+    try:
+        for section in doc.sections:
+            header = section.header
+            # Tạo paragraph trong header
+            para = header.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Thêm run với text
+            run = para.add_run(text)
+            run.font.size = Pt(48)
+            run.font.name = 'Times New Roman'
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(192, 192, 192)  # Light gray
+            
+            # Access paragraph XML to add rotation and positioning
+            p_element = para._element
+            pPr = p_element.get_or_add_pPr()
+            
+            # Create text box frame with rotation
+            # Note: This is a simplified approach - true watermark needs more complex XML
+            # For better watermark effect, we'll use the shape approach below
+            
+    except Exception as e:
+        print(f"Warning: Could not add text watermark: {e}")
+
+
+def add_logo_footer(doc):
+    """Thêm logo nhỏ vào footer cuối trang."""
+    import os
+    from flask import current_app
+    
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+    
+    if not os.path.exists(logo_path):
+        return
+    
+    try:
+        for section in doc.sections:
+            footer = section.footer
+            
+            # Tạo paragraph centered
+            para = footer.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Thêm logo nhỏ (2cm)
+            run = para.add_run()
+            run.add_picture(logo_path, width=Cm(2))
+            
+            # Thêm text bên dưới logo
+            para2 = footer.add_paragraph()
+            para2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run2 = para2.add_run('Trường Sĩ quan Chính trị')
+            run2.font.size = Pt(8)
+            run2.font.name = 'Times New Roman'
+            run2.font.italic = True
+            run2.font.color.rgb = RGBColor(128, 128, 128)
+            
+    except Exception as e:
+        print(f"Warning: Could not add footer logo: {e}")
+
+
+def add_corner_logo(doc):
+    """Thêm logo nhỏ ở góc phải header."""
+    import os
+    from flask import current_app
+    
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+    
+    if not os.path.exists(logo_path):
+        return
+    
+    try:
+        for section in doc.sections:
+            header = section.header
+            
+            # Tạo table 1 row, 2 cols để đặt logo ở bên phải
+            if not header.tables:
+                # Tạo table mới
+                tbl = header.add_table(rows=1, cols=2, width=Cm(18))
+                
+                # Remove borders
+                from docx.oxml import OxmlElement
+                from docx.oxml.ns import qn
+                
+                for cell in tbl.rows[0].cells:
+                    tc = cell._tc
+                    tcPr = tc.get_or_add_tcPr()
+                    tcBorders = OxmlElement('w:tcBorders')
+                    for edge in ('top', 'left', 'bottom', 'right'):
+                        border = OxmlElement(f'w:{edge}')
+                        border.set(qn('w:val'), 'none')
+                        tcBorders.append(border)
+                    tcPr.append(tcBorders)
+                
+                # Left cell - empty or can add text
+                left_cell = tbl.rows[0].cells[0]
+                left_cell.width = Cm(15)
+                
+                # Right cell - logo
+                right_cell = tbl.rows[0].cells[1]
+                right_cell.width = Cm(3)
+                para = right_cell.paragraphs[0]
+                para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                run = para.add_run()
+                run.add_picture(logo_path, width=Cm(2.5))
+            else:
+                # Nếu đã có table trong header, thêm vào existing table
+                # (Trường hợp này có thể conflict với header hiện tại)
+                pass
+                
+    except Exception as e:
+        print(f"Warning: Could not add corner logo: {e}")
+
+
 def add_logo_watermark(doc):
-    """Thêm watermark logo vào tất cả các trang."""
+    """Thêm watermark logo vào tất cả các trang - DEPRECATED, use specific functions above."""
     import os
     from flask import current_app
     

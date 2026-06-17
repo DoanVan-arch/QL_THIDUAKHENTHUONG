@@ -288,12 +288,12 @@ def approval_tracking():
         DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value
     ).distinct().order_by(DeXuat.nam_hoc.desc()).all()]
 
-    # Get unit names for filter dropdown
+    # Get unit names for filter dropdown - sorted by hierarchy
     unit_names_query = db.session.query(DonVi.ten_don_vi).join(
         DeXuat, DeXuat.don_vi_id == DonVi.id
     ).filter(
         DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value
-    ).distinct().order_by(DonVi.ten_don_vi).all()
+    ).distinct().order_by(DonVi.thu_tu.asc(), DonVi.ten_don_vi.asc()).all()
     unit_names = [u[0] for u in unit_names_query]
 
     # Summary stats (always from full dataset, not filtered)
