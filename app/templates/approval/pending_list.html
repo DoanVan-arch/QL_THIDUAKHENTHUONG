@@ -209,8 +209,9 @@
                 {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
                 {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
                 {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
+                {% set has_edit_request = ct.id in edit_requests_by_ct %}
                 <tr id="row-{{ pd.id }}-{{ ct.id }}"
-                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
+                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% elif has_edit_request %}table-warning-custom{% endif %} ct-row"
                     data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
                     data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
                     data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
@@ -219,7 +220,12 @@
                     <td class="sticky-stt">{{ loop.index }}</td>
                     <td class="fw-semibold sticky-name">
                         <div class="name-btn-group">
-                            <div class="name-text"><span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span></div>
+                            <div class="name-text">
+                                <span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span>
+                                {% if has_edit_request %}
+                                <span class="badge bg-warning text-dark ms-1" title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}"><i class="bi bi-pencil-square"></i></span>
+                                {% endif %}
+                            </div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
@@ -348,8 +354,9 @@
                 {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
                 {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
                 {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
+                {% set has_edit_request = ct.id in edit_requests_by_ct %}
                 <tr id="row-{{ pd.id }}-{{ ct.id }}"
-                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% endif %} ct-row"
+                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% elif has_edit_request %}table-warning-custom{% endif %} ct-row"
                     data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
                     data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
                     data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
@@ -358,7 +365,12 @@
                     <td class="sticky-stt">{{ loop.index }}</td>
                     <td class="fw-semibold sticky-name">
                         <div class="name-btn-group">
-                            <div class="name-text"><i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}</div>
+                            <div class="name-text">
+                                <i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}
+                                {% if has_edit_request %}
+                                <span class="badge bg-warning text-dark ms-1" title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}"><i class="bi bi-pencil-square"></i></span>
+                                {% endif %}
+                            </div>
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>

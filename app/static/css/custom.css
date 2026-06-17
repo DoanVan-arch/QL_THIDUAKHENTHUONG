@@ -791,3 +791,13 @@ body {
 .sidebar-sublink.active {
     opacity: 1;
 }
+
+/* ---- Edit Request Highlight ---- */
+.table-warning-custom {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107 !important;
+}
+
+.table-warning-custom:hover {
+    background-color: #ffe69c !important;
+}

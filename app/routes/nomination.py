@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import User
-from app.models.personnel import QuanNhan, DoiTuong, MucDoHoanThanh
+from app.models.personnel import QuanNhan, DoiTuong
 from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi
 from app.models.evaluation import NhomTieuChi, DanhGiaHangNam
 from app.models.evaluation import DiemQuyDinhDanhHieu
@@ -353,7 +353,7 @@ def edit_nomination(id):
     # Build a mapping of danh_hieu -> pham_vi ('Cá nhân' or 'Đơn vị') for JS
     danh_hieu_pham_vi = {dh.ten_danh_hieu: (dh.pham_vi or 'Cá nhân') for dh in danh_hieu_db}
     doi_tuong_list = _get_doi_tuong_list()
-    muc_do_list = [e.value for e in MucDoHoanThanh]
+   # muc_do_list = [e.value for e in MucDoHoanThanh]
 
     # Build tooltips from TieuChi DB: {ma_truong: huong_dan}
     tieu_chi_db = TieuChi.query.filter_by(is_active=True).order_by(TieuChi.thu_tu, TieuChi.ten).all()
@@ -378,6 +378,7 @@ def edit_nomination(id):
             'loai_input': 'combobox',
             'gia_tri_chon': DanhGiaHangNam.XEP_LOAI_DANG_VIEN_CHOICES,
         }
+   
     if 'xep_loai_tong_ket' not in tieu_chi_input_map or not tieu_chi_input_map['xep_loai_tong_ket'].get('gia_tri_chon'):
         tieu_chi_input_map['xep_loai_tong_ket'] = {
             'loai_input': 'combobox',
@@ -460,7 +461,7 @@ def edit_nomination(id):
                            danh_hieu_tieu_chi=danh_hieu_tieu_chi,
                            danh_hieu_pham_vi=danh_hieu_pham_vi,
                            doi_tuong_list=doi_tuong_list,
-                           muc_do_list=muc_do_list,
+                       #    muc_do_list=muc_do_list,
                            tieu_chi_tooltips=tieu_chi_tooltips,
                            tieu_chi_list=tieu_chi_list,
                            tieu_chi_input_map=tieu_chi_input_map,

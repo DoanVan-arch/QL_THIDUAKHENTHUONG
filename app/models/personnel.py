@@ -49,7 +49,7 @@ class DoiTuong(enum.Enum):
     SV_NAM2 = 'Học viên năm thứ II'
     SV_NAM3 = 'Học viên năm thứ III'
     SV_NAM4 = 'Học viên năm thứ IV'
-    SV_NAM5 = 'Học viên năm thứ V'
+    SV_NAM5 = 'Học viên năm cuối'
   
     SAU_DAI_HOC = 'Học viên sau đại học'
     HTDH = 'Học viên hoàn thiện đại học'
@@ -58,11 +58,7 @@ class DoiTuong(enum.Enum):
     HVQT = 'Học viên quốc tế'
 
 
-class MucDoHoanThanh(enum.Enum):
-    HTXSNV = 'Hoàn thành xuất sắc nhiệm vụ'
-    HTTNV = 'Hoàn thành tốt nhiệm vụ'
-    HTNV = 'Hoàn thành nhiệm vụ'
-    KHTNV = 'Không hoàn thành nhiệm vụ'
+
 
 
 DOI_TUONG_IS_STUDENT = {

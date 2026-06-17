@@ -16,7 +16,7 @@ from app import create_app
 from app.extensions import db
 from app.models.user import User, Role
 from app.models.unit import DonVi
-from app.models.personnel import QuanNhan, DoiTuong, MucDoHoanThanh
+from app.models.personnel import QuanNhan, DoiTuong
 from app.models.certificate import ChungChi
 from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, DanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
@@ -241,11 +241,7 @@ def make_chi_tiet(de_xuat_id, qn, nam_hoc, loai_danh_hieu, admin_approved=False)
         loai_danh_hieu=loai_danh_hieu,
         doi_tuong=qn.doi_tuong,
         nam_hoc=nam_hoc,
-        muc_do_hoan_thanh=random.choice([
-            MucDoHoanThanh.HTXSNV.value,
-            MucDoHoanThanh.HTTNV.value,
-            MucDoHoanThanh.HTNV.value,
-        ]),
+        muc_do_hoan_thanh=random.choice(['Hoan thanh xuat sac', 'Hoan thanh tot', 'Hoan thanh', 'Khong hoan thanh']),
         phieu_tin_nhiem=f"{random.randint(70, 100)}%",
         xep_loai_dang_vien=random.choice([
             'Hoan thanh xuat sac nhiem vu',

@@ -725,6 +725,26 @@ def pending_list():
         tt_criteria_fields = []
         tt_field_labels_map = {}
 
+    # Get all active edit requests for this phong
+    edit_requests_by_ct = {}
+    if pending_reviews:
+        all_ct_ids = []
+        for pd in pending_reviews:
+            if pd.de_xuat:
+                for ct in pd.de_xuat.chi_tiets:
+                    if not ct.bi_loai:
+                        all_ct_ids.append(ct.id)
+        
+        if all_ct_ids:
+            active_edit_requests = YeuCauChinhSua.query.filter(
+                YeuCauChinhSua.chi_tiet_id.in_(all_ct_ids),
+                YeuCauChinhSua.trang_thai == TrangThaiYeuCauSua.CHO_SUA.value,
+                YeuCauChinhSua.phong_yeu_cau == phong_name
+            ).all()
+            
+            for req in active_edit_requests:
+                edit_requests_by_ct[req.chi_tiet_id] = req
+
     return render_template('approval/pending_list.html',
                            pending_reviews=pending_reviews,
                            all_item_results=all_item_results,
@@ -742,7 +762,8 @@ def pending_list():
                            nam_hoc_filter=nam_hoc_filter,
                            nam_hoc_list=nam_hoc_list,
                            tt_criteria_fields=tt_criteria_fields,
-                           tt_field_labels=tt_field_labels_map)
+                           tt_field_labels=tt_field_labels_map,
+                           edit_requests_by_ct=edit_requests_by_ct)
 
 
 @approval_bp.route('/review/<int:id>', methods=['GET'])

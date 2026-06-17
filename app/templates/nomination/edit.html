@@ -239,12 +239,14 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
-                        <select class="form-select" name="muc_do_hoan_thanh">
+                        {{ tc_input('muc_do_hoan_thanh', 'VD: Giỏi') }}
+                        <!-- <select class="form-select" name="muc_do_hoan_thanh">
                             <option value="">-- Chọn --</option>
+                            
                             {% for mdht in muc_do_list %}
                             <option value="{{ mdht }}">{{ mdht }}</option>
                             {% endfor %}
-                        </select>
+                        </select> -->
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Số phiếu tín nhiệm</label>
@@ -1073,21 +1075,24 @@ function applyCriteriaVisibilityByGroup() {
 
 // Aliases for inline onchange handlers
 var onDanhHieuChange = function() {
-    togglePhamViBlocks();
-    // Also trigger field visibility update
-    var dhSelect = document.getElementById('loai_danh_hieu_select');
-    var dtSelect = document.getElementById('doi_tuong_select');
-    if (dhSelect && dtSelect) {
-        applyFieldVisibility(dhSelect.value || '', dtSelect.value || '');
-    }
+    applyCriteriaVisibilityByGroup();
 };
 
 var onDoiTuongSelectChange = function() {
-    var dhSelect = document.getElementById('loai_danh_hieu_select');
-    var dtSelect = document.getElementById('doi_tuong_select');
-    if (dhSelect && dtSelect) {
-        applyFieldVisibility(dhSelect.value || '', dtSelect.value || '');
-    }
+    applyCriteriaVisibilityByGroup();
+    // Also trigger graduation criteria visibility after general criteria visibility
+    setTimeout(function() {
+        var htSelect = document.querySelector('[name="hinh_thuc_tot_nghiep"]');
+        if (htSelect) {
+            var evt = new Event('change', { bubbles: true });
+            htSelect.dispatchEvent(evt);
+        }
+    }, 100);
+};
+
+// Wrapper function for applyFieldVisibility (for backwards compatibility)
+var applyFieldVisibility = function(selectedDanhHieu, selectedDoiTuong) {
+    applyCriteriaVisibilityByGroup();
 };
 
 // Auto-inject tooltip icons next to form labels for criteria fields

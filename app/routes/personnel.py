@@ -1229,26 +1229,34 @@ def confirm_transfer(transfer_id):
 @unit_user_required
 def reject_transfer(transfer_id):
     """Target unit rejects the transfer request."""
-    chuyen = ChuyenDonVi.query.get_or_404(transfer_id)
+    try:
+        chuyen = ChuyenDonVi.query.get_or_404(transfer_id)
 
-    if chuyen.don_vi_dich_id != current_user.don_vi_id:
-        flash('Bạn không có quyền xử lý yêu cầu này.', 'danger')
+        if chuyen.don_vi_dich_id != current_user.don_vi_id:
+            flash('Bạn không có quyền xử lý yêu cầu này.', 'danger')
+            return redirect(url_for('personnel.incoming_transfers'))
+
+        if chuyen.trang_thai != TrangThaiChuyen.PENDING:
+            flash('Yêu cầu này đã được xử lý rồi.', 'warning')
+            return redirect(url_for('personnel.incoming_transfers'))
+
+        ghi_chu = request.form.get('ghi_chu', '').strip()
+        if not ghi_chu:
+            flash('Vui lòng nhập lý do từ chối.', 'warning')
+            return redirect(url_for('personnel.incoming_transfers'))
+
+        chuyen.trang_thai = TrangThaiChuyen.REJECTED
+        chuyen.nguoi_xac_nhan_id = current_user.id
+        chuyen.ngay_xu_ly = datetime.utcnow()
+        chuyen.ghi_chu = ghi_chu
+
+        db.session.commit()
+        flash(f'Đã từ chối yêu cầu chuyển {chuyen.quan_nhan.ho_ten}.', 'info')
         return redirect(url_for('personnel.incoming_transfers'))
-
-    if chuyen.trang_thai != TrangThaiChuyen.PENDING:
-        flash('Yêu cầu này đã được xử lý rồi.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Lỗi khi từ chối yêu cầu: {str(e)}', 'danger')
         return redirect(url_for('personnel.incoming_transfers'))
-
-    ghi_chu = request.form.get('ghi_chu', '').strip()
-
-    chuyen.trang_thai = TrangThaiChuyen.REJECTED
-    chuyen.nguoi_xac_nhan_id = current_user.id
-    chuyen.ngay_xu_ly = datetime.utcnow()
-    chuyen.ghi_chu = ghi_chu
-
-    db.session.commit()
-    flash(f'Đã từ chối yêu cầu chuyển {chuyen.quan_nhan.ho_ten}.', 'info')
-    return redirect(url_for('personnel.incoming_transfers'))
 
 
 @personnel_bp.route('/transfers/<int:transfer_id>/cancel', methods=['POST'])

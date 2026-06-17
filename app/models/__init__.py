@@ -1,6 +1,6 @@
 from app.models.user import User, Role
 from app.models.unit import DonVi, LoaiDonVi
-from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong, MucDoHoanThanh
+from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
 from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, TrangThaiChiTiet, DanhHieu, TieuChi
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
