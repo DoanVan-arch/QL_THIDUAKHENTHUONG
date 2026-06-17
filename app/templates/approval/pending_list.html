@@ -165,11 +165,12 @@
             <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
                 <thead>
                     <tr>
-                        <th class="sticky-stt">STT</th>
+                    <th class="sticky-stt">STT</th>
                     <th class="sticky-name">Họ tên</th>
                     <th class="col-don-vi">Đơn vị</th>
                     <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
                     <th class="col-doi-tuong">Đối tượng</th>
+                    <th class="col-lop">Lớp</th>
                     <th class="col-danh-hieu">Danh hiệu</th>
                     {% if display_fields %}
                     {% for field in display_fields %}
@@ -234,6 +235,7 @@
                         <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
                     </td>
                     <td class="col-doi-tuong"><small title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
+                    <td class="col-lop"><small title="{{ ct.quan_nhan.lop or '-' }}">{{ ct.quan_nhan.lop or '-' }}</small></td>
                     <td class="col-danh-hieu">
                         {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
                         {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>

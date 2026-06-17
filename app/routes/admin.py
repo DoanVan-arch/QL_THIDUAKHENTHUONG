@@ -274,8 +274,12 @@ def approval_tracking():
 
     if unit_filter:
         query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
+    else:
+        # Join DonVi even if not filtering, for sorting
+        query = query.join(DonVi, DeXuat.don_vi_id == DonVi.id)
 
-    nominations = query.order_by(DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()).all()
+    # Sort by unit hierarchy (Phòng > Khoa > Đơn vị), then by date
+    nominations = query.order_by(DonVi.thu_tu.asc(), DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()).all()
 
     status_list = [e.value for e in TrangThaiDeXuat if e != TrangThaiDeXuat.NHAP]
 
@@ -1923,7 +1927,12 @@ def export_tracking_excel():
         query = query.filter(DeXuat.trang_thai == status_filter)
     if unit_filter:
         query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
-    nominations = query.order_by(DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()).all()
+    else:
+        # Join DonVi even if not filtering, for sorting
+        query = query.join(DonVi, DeXuat.don_vi_id == DonVi.id)
+    
+    # Sort by unit hierarchy (Phòng > Khoa > Đơn vị), then by date
+    nominations = query.order_by(DonVi.thu_tu.asc(), DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()).all()
 
     approved_ct_ids = set(row[0] for row in db.session.query(KhenThuong.chi_tiet_id).all())
 

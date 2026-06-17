@@ -1332,7 +1332,7 @@ def export_nomination_word(id):
         cell_para(cell, text, bold=bold, size=size, align=align)
 
     def build_tom_tat(ct):
-        """Tóm tắt thành tích từ các trường."""
+        """Tóm tắt thành tích từ các trường - trả về list để hiển thị mỗi tiêu chí 1 dòng."""
         parts = []
         qn = ct.quan_nhan
         if ct.muc_do_hoan_thanh:
@@ -1342,14 +1342,14 @@ def export_nomination_word(id):
         if ct.diem_tong_ket:
             parts.append(f'ĐTK: {ct.diem_tong_ket}')
         if ct.nckh_noi_dung:
-            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
+            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc or ct.nckh_noi_dung}')
         if ct.thanh_tich_ca_nhan_khac:
             parts.append(ct.thanh_tich_ca_nhan_khac)
         if ct.ket_qua_doan_the:
             parts.append(f'Đoàn thể: {ct.ket_qua_doan_the}')
         if ct.xep_loai_dang_vien:
             parts.append(f'ĐV: {ct.xep_loai_dang_vien}')
-        return '; '.join(parts) if parts else ''
+        return parts  # Return list instead of string
 
     def get_don_vi_truc_thuoc(ct):
         """Lấy đơn vị trực thuộc (Đại đội / Tiểu đoàn)."""
@@ -1396,7 +1396,28 @@ def export_nomination_word(id):
             add_cell(row.cells[2], qn_obj.cap_bac if qn_obj else '')
             add_cell(row.cells[3], qn_obj.chuc_vu if qn_obj and qn_obj.chuc_vu else '')
             add_cell(row.cells[4], get_don_vi_truc_thuoc(ct))
-            add_cell(row.cells[5], build_tom_tat(ct))
+            
+            # Build tom tat - mỗi tiêu chí 1 dòng
+            tom_tat_list = build_tom_tat(ct)
+            cell = row.cells[5]
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = cell.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.space_before = Pt(1)
+            p.paragraph_format.space_after = Pt(1)
+            if tom_tat_list:
+                for i, item in enumerate(tom_tat_list):
+                    if i > 0:
+                        p = cell.add_paragraph()
+                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p.paragraph_format.space_before = Pt(1)
+                        p.paragraph_format.space_after = Pt(1)
+                    run = p.add_run(f'- {item}')
+                    set_font(run, size=10)
+            else:
+                run = p.add_run('-')
+                set_font(run, size=10)
+            
             add_cell(row.cells[6], ct.ghi_chu or '')
             stt += 1
 
@@ -1566,6 +1587,9 @@ def export_nomination_word(id):
 
     # --- Khóa tài liệu: chỉ cho sửa định dạng, không cho sửa nội dung ---
     protect_document_formatting_only(doc, 'bth123')
+    
+    # --- Thêm watermark logo ---
+    add_logo_watermark(doc)
 
     # --- Stream to response ---
     buf = BytesIO()
@@ -1581,6 +1605,105 @@ def export_nomination_word(id):
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+
+
+def add_logo_watermark(doc):
+    """Thêm watermark logo vào tất cả các trang."""
+    import os
+    from flask import current_app
+    
+    # Đường dẫn logo
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+    
+    if not os.path.exists(logo_path):
+        return  # Skip if logo not found
+    
+    for section in doc.sections:
+        # Thêm watermark vào header của section
+        header = section.header
+        
+        # Tạo paragraph cho watermark
+        para = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+        para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Thêm hình ảnh watermark
+        run = para.add_run()
+        picture = run.add_picture(logo_path, width=Cm(8))
+        
+        # Thiết lập hình ảnh phía sau text (watermark effect)
+        # Access the inline shape
+        from docx.oxml.shared import CT_Picture
+        inline = run._element
+        docPr = inline[0]
+        
+        # Tạo anchor từ inline để set behind text
+        # Chuyển từ inline sang anchor (floating)
+        drawing = inline.getparent()
+        anchor = OxmlElement('wp:anchor')
+        
+        # Copy attributes
+        anchor.set('distT', '0')
+        anchor.set('distB', '0')
+        anchor.set('distL', '0')
+        anchor.set('distR', '0')
+        anchor.set('simplePos', '0')
+        anchor.set('relativeHeight', '1')
+        anchor.set('behindDoc', '1')  # Behind text
+        anchor.set('locked', '0')
+        anchor.set('layoutInCell', '1')
+        anchor.set('allowOverlap', '1')
+        
+        # SimplePos
+        simplePos = OxmlElement('wp:simplePos')
+        simplePos.set('x', '0')
+        simplePos.set('y', '0')
+        anchor.append(simplePos)
+        
+        # Position horizontal - center
+        positionH = OxmlElement('wp:positionH')
+        positionH.set('relativeFrom', 'page')
+        posH_align = OxmlElement('wp:align')
+        posH_align.text = 'center'
+        positionH.append(posH_align)
+        anchor.append(positionH)
+        
+        # Position vertical - center
+        positionV = OxmlElement('wp:positionV')
+        positionV.set('relativeFrom', 'page')
+        posV_align = OxmlElement('wp:align')
+        posV_align.text = 'center'
+        positionV.append(posV_align)
+        anchor.append(positionV)
+        
+        # Extent (size)
+        extent = OxmlElement('wp:extent')
+        extent.set('cx', str(int(Cm(8).emu)))
+        extent.set('cy', str(int(Cm(8).emu)))
+        anchor.append(extent)
+        
+        # effectExtent
+        effectExtent = OxmlElement('wp:effectExtent')
+        effectExtent.set('l', '0')
+        effectExtent.set('t', '0')
+        effectExtent.set('r', '0')
+        effectExtent.set('b', '0')
+        anchor.append(effectExtent)
+        
+        # Wrap none
+        wrapNone = OxmlElement('wp:wrapNone')
+        anchor.append(wrapNone)
+        
+        # Copy docPr and graphic from inline
+        anchor.append(docPr)
+        
+        # graphic
+        for child in inline:
+            if child.tag.endswith('}graphic'):
+                anchor.append(child)
+                break
+        
+        # Replace inline with anchor
+        drawing.replace(inline, anchor)
 
 
 def protect_document_formatting_only(doc, password: str):

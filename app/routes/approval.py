@@ -553,7 +553,13 @@ def pending_list():
         q = q.join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id).filter(
             _DeXuat.nam_hoc == nam_hoc_filter
         )
-    pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
+    else:
+        q = q.join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id)
+    
+    # Sort by unit hierarchy (Phòng > Khoa > Đơn vị)
+    from app.models.unit import DonVi
+    q = q.join(DonVi, _DeXuat.don_vi_id == DonVi.id)
+    pending_reviews = q.order_by(DonVi.thu_tu.asc(), _DeXuat.created_at.desc()).all()
     # Filter out orphaned PheDuyet (de_xuat đã bị xóa khỏi DB) and đề xuất
     # whose cá nhân/tập thể have all been removed (bi_loai).
     pending_reviews = [
