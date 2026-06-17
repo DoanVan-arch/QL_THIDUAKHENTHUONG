@@ -1592,13 +1592,13 @@ def export_nomination_word(id):
     # Chọn 1 trong 3 phương án bên dưới (uncomment để sử dụng):
     
     # Phương án 1: Text watermark xéo 45 độ (đơn giản, không che nội dung)
-    add_text_watermark(doc, "TRƯỜNG SĨ QUAN CHÍNH TRỊ")
+   # add_text_watermark(doc, "TRƯỜNG SĨ QUAN CHÍNH TRỊ")
     
     # Phương án 2: Logo nhỏ ở footer cuối trang + text
     add_logo_footer(doc)
     
     # Phương án 3: Logo nhỏ ở góc phải header (có thể conflict với header hiện tại)
-    add_corner_logo(doc)
+    #add_corner_logo(doc)
 
     # --- Stream to response ---
     buf = BytesIO()
