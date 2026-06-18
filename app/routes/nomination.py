@@ -1489,10 +1489,10 @@ def export_nomination_word(id):
         tbl = doc.add_table(rows=1, cols=7)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
-        tbl.autofit = False 
-        
-        # Đã chia lại tỷ lệ sao cho tổng đúng = 16.0 cm (Khu vực gõ chữ của giấy A4)
-        # STT hiện tại là 0.8 cm (rất nhỏ, vừa đủ 2 chữ số)
+        tbl.autofit = False
+        tbl.allow_autofit = False
+
+        # Tổng độ rộng = 16.0 cm
         widths = [0.8, 3.2, 1.5, 2.0, 2.0, 5.0, 1.5]
         for i, w in enumerate(widths):
             for row in tbl.rows:
@@ -1558,10 +1558,11 @@ def export_nomination_word(id):
         tbl = doc.add_table(rows=1, cols=3)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
-        tbl.autofit = False 
-        
-        # Đã chia lại tỷ lệ sao cho tổng đúng = 16.0 cm
-        widths = [0.8, 5.2, 10.0]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
+        tbl.autofit = False
+        tbl.allow_autofit = False 
+
+        # Tổng độ rộng = 16.0 cm
+        widths = [0.8, 4.2, 11.0]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
         for i, w in enumerate(widths):
             for row in tbl.rows:
                 row.cells[i].width = Cm(w)
