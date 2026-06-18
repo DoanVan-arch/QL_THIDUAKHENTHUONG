@@ -1076,8 +1076,7 @@ function applyCriteriaVisibilityByGroup() {
 // Aliases for inline onchange handlers
 var onDanhHieuChange = function() {
     var qnSel = document.getElementById('quan_nhan_select');
-    qnSel.value = '';
-    qnSel.textContent = ''; // reset personnel selection when danh_hieu changes to avoid mismatched criteria visibility
+   // reset personnel selection when danh_hieu changes to avoid mismatched criteria visibility
     applyCriteriaVisibilityByGroup();
 };
 
