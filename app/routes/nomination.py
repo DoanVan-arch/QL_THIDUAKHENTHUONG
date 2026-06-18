@@ -1491,7 +1491,7 @@ def export_nomination_word(id):
         tbl.style = 'Table Grid'
         tbl.autofit = False
         # Column widths (cm)
-        widths = [0.3, 3.7, 2.0, 2.5, 2.5, 5.5, 1.5]
+        widths = [0.7, 3.3, 2.0, 2.5, 2.5, 5.5, 1.5]
         for i, w in enumerate(widths):
             for row in tbl.rows:
                 row.cells[i].width = Cm(w)
@@ -1558,7 +1558,7 @@ def export_nomination_word(id):
         tbl.style = 'Table Grid'
         tbl.autofit = False
         # Column widths (cm)
-        widths = [0.3, 7.0, 10.7]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
+        widths = [0.7, 7.0, 10.0]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
         for i, w in enumerate(widths):
             for row in tbl.rows:
                 row.cells[i].width = Cm(w)
