@@ -1632,10 +1632,19 @@ def export_nomination_word(id):
 
     # Page margins
     for section in doc.sections:
+        
         section.top_margin = Cm(2)
         section.bottom_margin = Cm(2)
         section.left_margin = Cm(3.5)
         section.right_margin = Cm(1.5)
+        
+        # --- THÊM MỚI: Đánh số trang căn giữa ở Footer ---
+        footer = section.footer
+        # Lấy paragraph đầu tiên của footer hoặc tạo mới nếu chưa có
+        p_footer = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
+        p_footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_footer = p_footer.add_run()
+        add_page_number(run_footer)
 
     # --- Header 2 cột: đơn vị bên trái, quốc hiệu bên phải ---
     tbl_header = doc.add_table(rows=1, cols=2)
@@ -1764,12 +1773,15 @@ def export_nomination_word(id):
     left_sign.add_paragraph()
 
     # Ký đơn vị bên phải
+    # Ký đơn vị bên phải
     p_sr = right_sign.paragraphs[0]
-    p_sr.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para_font(p_sr, 'THỦ TRƯỞNG ĐƠN VỊ', bold=True, size=11)
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
+    para_font(p_sr, 'THỦ TRƯỞNG ĐƠN VỊ', bold=True, size=11, align=WD_ALIGN_PARAGRAPH.CENTER)
+    
     p_sr2 = right_sign.add_paragraph()
-    p_sr2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True)
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
+    para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True, align=WD_ALIGN_PARAGRAPH.CENTER)
+    
 
     # --- Khóa tài liệu: chỉ cho sửa định dạng, không cho sửa nội dung ---
     protect_document_formatting_only(doc, 'bth123')
@@ -1801,7 +1813,25 @@ def export_nomination_word(id):
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
 
+def add_page_number(run):
+        """Thêm mã trường đếm số trang tự động (PAGE) vào run"""
+        fldChar1 = OxmlElement('w:fldChar')
+        fldChar1.set(qn('w:fldCharType'), 'begin')
 
+        instrText = OxmlElement('w:instrText')
+        instrText.set(qn('xml:space'), 'preserve')
+        instrText.text = "PAGE"
+
+        fldChar2 = OxmlElement('w:fldChar')
+        fldChar2.set(qn('w:fldCharType'), 'separate')
+
+        fldChar3 = OxmlElement('w:fldChar')
+        fldChar3.set(qn('w:fldCharType'), 'end')
+
+        run._r.append(fldChar1)
+        run._r.append(instrText)
+        run._r.append(fldChar2)
+        run._r.append(fldChar3)
 def add_text_watermark(doc, text="TRƯỜNG SĨ QUAN CHÍNH TRỊ"):
     """Thêm text watermark xéo góc 45 độ, mờ, ở giữa trang."""
     try:
