@@ -1489,11 +1489,11 @@ def export_nomination_word(id):
         tbl = doc.add_table(rows=1, cols=7)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
-        tbl.autofit = False
-        tbl.allow_autofit = False
+        
 
         # Tổng độ rộng = 16.0 cm
         widths = [0.8, 3.2, 1.5, 2.0, 2.0, 5.0, 1.5]
+        set_fixed_table_widths(tbl, widths)
         for i, w in enumerate(widths):
             for row in tbl.rows:
                 row.cells[i].width = Cm(w)
@@ -1558,11 +1558,11 @@ def export_nomination_word(id):
         tbl = doc.add_table(rows=1, cols=3)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
-        tbl.autofit = False
-        tbl.allow_autofit = False 
-
+       
+       
         # Tổng độ rộng = 16.0 cm
         widths = [0.8, 4.2, 11.0]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
+        set_fixed_table_widths(tbl, widths)
         for i, w in enumerate(widths):
             for row in tbl.rows:
                 row.cells[i].width = Cm(w)
@@ -1825,7 +1825,41 @@ def export_nomination_word(id):
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+def set_fixed_table_widths(tbl, widths_cm):
+        """Can thiệp sâu vào XML để khóa chết chiều rộng bảng, Word không thể tự đổi"""
+        # 1. Ép kiểu bảng thành Fixed Layout (Không tự co giãn)
+        tbl.autofit = False
+        tblPr = tbl._tbl.tblPr
+        tblLayout = tblPr.find(qn('w:tblLayout'))
+        if tblLayout is None:
+            tblLayout = OxmlElement('w:tblLayout')
+            tblPr.append(tblLayout)
+        tblLayout.set(qn('w:type'), 'fixed')
 
+        # 2. Xóa lưới cột cũ và xây lại khung lưới mới theo đúng kích thước cm
+        tblGrid = tbl._tbl.find(qn('w:tblGrid'))
+        if tblGrid is not None:
+            tbl._tbl.remove(tblGrid)
+        tblGrid = OxmlElement('w:tblGrid')
+        tbl._tbl.insert(1, tblGrid)  # Chèn khung lưới vào đúng vị trí chuẩn XML
+
+        for w in widths_cm:
+            gridCol = OxmlElement('w:gridCol')
+            # Chuyển đổi Cm sang đơn vị Twips của Word (1 twip = 635 EMUs)
+            gridCol.set(qn('w:w'), str(int(Cm(w) / 635)))
+            tblGrid.append(gridCol)
+
+        # 3. Khóa cứng chiều rộng ở cấp độ từng Ô (Cell)
+        for i, w in enumerate(widths_cm):
+            twips_val = str(int(Cm(w) / 635))
+            for row in tbl.rows:
+                tcPr = row.cells[i]._tc.get_or_add_tcPr()
+                tcW = tcPr.find(qn('w:tcW'))
+                if tcW is None:
+                    tcW = OxmlElement('w:tcW')
+                    tcPr.append(tcW)
+                tcW.set(qn('w:w'), twips_val)
+                tcW.set(qn('w:type'), 'dxa')
 def add_page_number(run):
         """Thêm mã trường đếm số trang tự động (PAGE) vào run"""
         fldChar1 = OxmlElement('w:fldChar')
