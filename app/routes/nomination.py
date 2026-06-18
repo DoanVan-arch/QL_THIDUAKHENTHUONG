@@ -201,9 +201,17 @@ def delete_nomination(id):
         flash('Chỉ được xóa đề xuất ở trạng thái Nháp hoặc Từ chối.', 'warning')
         return redirect(url_for('nomination.list_nominations'))
 
+    # Xóa các bản ghi liên quan trước
     chi_tiet_ids = [ct.id for ct in de_xuat.chi_tiets]
     if chi_tiet_ids:
+        # Xóa ThongBao liên quan đến chi_tiet
         ThongBao.query.filter(ThongBao.chi_tiet_id.in_(chi_tiet_ids)).delete(synchronize_session=False)
+        
+        # Xóa YeuCauChinhSua liên quan đến chi_tiet
+        from app.models.edit_request import YeuCauChinhSua
+        YeuCauChinhSua.query.filter(YeuCauChinhSua.chi_tiet_id.in_(chi_tiet_ids)).delete(synchronize_session=False)
+    
+    # Xóa ThongBao liên quan trực tiếp đến de_xuat
     ThongBao.query.filter_by(de_xuat_id=de_xuat.id).delete(synchronize_session=False)
 
     db.session.delete(de_xuat)
@@ -1259,6 +1267,8 @@ def revoke_nomination(id):
 @unit_user_required
 def export_nomination_word(id):
     
+    # Expire session cache to get fresh data from DB
+    db.session.expire_all()
 
     de_xuat = DeXuat.query.get_or_404(id)
     if de_xuat.don_vi_id != current_user.don_vi_id:
@@ -1423,6 +1433,100 @@ def export_nomination_word(id):
 
         return stt
 
+    def add_unit_table(doc, chi_tiets, section_label):
+        """Thêm bảng danh sách tập thể (Đơn vị quyết thắng / Đơn vị tiên tiến)."""
+        # Section header
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after = Pt(2)
+        para_font(p, section_label, bold=True, size=11)
+
+        if not chi_tiets:
+            p2 = doc.add_paragraph()
+            p2.paragraph_format.left_indent = Cm(1)
+            para_font(p2, '(Không có)', size=10, italic=True)
+            return
+
+        # Table: STT | Tên đơn vị | Ghi chú (DS tiêu chí)
+        tbl = doc.add_table(rows=1, cols=3)
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style = 'Table Grid'
+
+        # Column widths (cm)
+        widths = [1.0, 7.0, 10.0]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
+        for i, w in enumerate(widths):
+            for row in tbl.rows:
+                row.cells[i].width = Cm(w)
+
+        # Header row
+        headers_txt = ['STT', 'Tên đơn vị', 'Ghi chú']
+        hrow = tbl.rows[0]
+        for i, h in enumerate(headers_txt):
+            add_cell(hrow.cells[i], h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
+
+        # Data rows
+        for idx, ct in enumerate(chi_tiets, 1):
+            row = tbl.add_row()
+            
+            # STT
+            add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
+            
+            # Tên đơn vị
+            ten_dv = ct.ten_don_vi_de_xuat or '-'
+            add_cell(row.cells[1], ten_dv)
+            
+            # Ghi chú - DS tiêu chí (mỗi tiêu chí 1 dòng)
+            cell = row.cells[2]
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = cell.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.space_before = Pt(1)
+            p.paragraph_format.space_after = Pt(1)
+            
+            # Build criteria list from tap_the_dict
+            criteria_list = []
+            td = ct.tap_the_dict or {}
+            
+            # DEBUG: Print tap_the_data raw and parsed
+            print(f"DEBUG Unit {ct.ten_don_vi_de_xuat}: tap_the_data={ct.tap_the_data}, tap_the_dict={td}")
+            
+            # Get criteria labels from database
+            if td:
+                # Get TieuChi records to map ma_truong -> ten
+                from app.models.nomination import TieuChi as _TieuChi
+                ma_truong_list = list(td.keys())
+                tieu_chi_map = {}
+                if ma_truong_list:
+                    tc_rows = _TieuChi.query.filter(_TieuChi.ma_truong.in_(ma_truong_list)).all()
+                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
+                
+                for key, val in td.items():
+                    if val and str(val).strip() and str(val).strip() not in ('0', 'None', ''):
+                        # Use friendly name if available, otherwise use ma_truong
+                        label = tieu_chi_map.get(key, key)
+                        criteria_list.append(f'{label}: {val}')
+            
+            # Also add other text fields if available
+            if ct.muc_do_hoan_thanh:
+                criteria_list.insert(0, f'Mức độ hoàn thành: {ct.muc_do_hoan_thanh}')
+            if ct.ghi_chu and ct.ghi_chu.strip():
+                criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
+            
+            print(f"DEBUG criteria_list: {criteria_list}")
+            
+            if criteria_list:
+                for i, item in enumerate(criteria_list):
+                    if i > 0:
+                        p = cell.add_paragraph()
+                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p.paragraph_format.space_before = Pt(1)
+                        p.paragraph_format.space_after = Pt(1)
+                    run = p.add_run(f'- {item}')
+                    set_font(run, size=10)
+            else:
+                run = p.add_run('-')
+                set_font(run, size=10)
+
     # ---- Build document ----
     doc = Document()
 
@@ -1509,32 +1613,10 @@ def export_nomination_word(id):
     doc.add_paragraph()  # spacer
 
     # --- I. Đơn vị quyết thắng ---
-    p_i = doc.add_paragraph()
-    para_font(p_i, 'I. Danh hiệu Đơn vị quyết thắng', bold=True, size=11)
-    if ds_quyet_thang:
-        for ct in ds_quyet_thang:
-            p = doc.add_paragraph()
-            p.paragraph_format.left_indent = Cm(1)
-            ten = ct.ten_don_vi_de_xuat or ''
-            para_font(p, f'- {ten}', size=11)
-    else:
-        p = doc.add_paragraph()
-        p.paragraph_format.left_indent = Cm(1)
-        para_font(p, 'không', size=11, italic=True)
+    add_unit_table(doc, ds_quyet_thang, 'I. Danh hiệu Đơn vị quyết thắng')
 
     # --- II. Đơn vị tiên tiến ---
-    p_ii = doc.add_paragraph()
-    para_font(p_ii, 'II. Danh hiệu Đơn vị tiên tiến', bold=True, size=11)
-    if ds_tien_tien_dv:
-        for ct in ds_tien_tien_dv:
-            p = doc.add_paragraph()
-            p.paragraph_format.left_indent = Cm(1)
-            ten = ct.ten_don_vi_de_xuat or ''
-            para_font(p, f'- {ten}', size=11)
-    else:
-        p = doc.add_paragraph()
-        p.paragraph_format.left_indent = Cm(1)
-        para_font(p, 'không', size=11, italic=True)
+    add_unit_table(doc, ds_tien_tien_dv, 'II. Danh hiệu Đơn vị tiên tiến')
 
     # --- III. Chiến sĩ thi đua cơ sở ---
     stt = add_personnel_table(doc, ds_chien_si_tdcs, 'III. Danh hiệu Chiến sĩ thi đua cơ sở')
@@ -1649,7 +1731,7 @@ def add_text_watermark(doc, text="TRƯỜNG SĨ QUAN CHÍNH TRỊ"):
 
 
 def add_logo_footer(doc):
-    """Thêm logo nhỏ vào footer cuối trang."""
+    """Thêm logo nhỏ và số trang vào footer cuối trang."""
     import os
     from flask import current_app
     
@@ -1665,7 +1747,36 @@ def add_logo_footer(doc):
         for section in doc.sections:
             footer = section.footer
             
-            # Tạo paragraph centered
+            # Thêm số trang ở giữa
+            para_page = footer.add_paragraph()
+            para_page.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            para_page.paragraph_format.space_before = Pt(2)
+            para_page.paragraph_format.space_after = Pt(2)
+            
+            # Add page number field
+            run_page = para_page.add_run()
+            run_page.font.size = Pt(10)
+            run_page.font.name = 'Times New Roman'
+            
+            # Insert page number field code
+            from docx.oxml import OxmlElement
+            from docx.oxml.ns import qn
+            
+            fldChar1 = OxmlElement('w:fldChar')
+            fldChar1.set(qn('w:fldCharType'), 'begin')
+            
+            instrText = OxmlElement('w:instrText')
+            instrText.set(qn('xml:space'), 'preserve')
+            instrText.text = 'PAGE'
+            
+            fldChar2 = OxmlElement('w:fldChar')
+            fldChar2.set(qn('w:fldCharType'), 'end')
+            
+            run_page._element.append(fldChar1)
+            run_page._element.append(instrText)
+            run_page._element.append(fldChar2)
+            
+            # Thêm logo nhỏ bên dưới số trang
             para = footer.add_paragraph()
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             

@@ -1629,7 +1629,8 @@ def don_vi_stats():
                 dv_qn_map[dv_id][qn_id].add(loai_dh)
 
         for dv in don_vi_list:
-            total_qn = dv.quan_nhans.count()
+            # Đếm quân nhân đang hoạt động (is_active=True, chưa bị xóa)
+            total_qn = QuanNhan.query.filter_by(don_vi_id=dv.id, is_active=True).count()
             qn_map = dv_qn_map.get(dv.id, {})
 
             # Count CSTD (Chiến sĩ thi đua) and CSTT (Chiến sĩ tiên tiến)
