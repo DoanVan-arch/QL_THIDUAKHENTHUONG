@@ -1489,7 +1489,7 @@ def export_nomination_word(id):
         tbl = doc.add_table(rows=1, cols=7)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
-
+        tbl.autofit = False
         # Column widths (cm)
         widths = [0.3, 3.7, 2.0, 2.5, 2.5, 5.5, 1.5]
         for i, w in enumerate(widths):
@@ -1556,7 +1556,7 @@ def export_nomination_word(id):
         tbl = doc.add_table(rows=1, cols=3)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
-
+        tbl.autofit = False
         # Column widths (cm)
         widths = [0.3, 7.0, 10.7]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
         for i, w in enumerate(widths):
