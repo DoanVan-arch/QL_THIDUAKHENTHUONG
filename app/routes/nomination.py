@@ -1345,20 +1345,125 @@ def export_nomination_word(id):
         """Tóm tắt thành tích từ các trường - trả về list để hiển thị mỗi tiêu chí 1 dòng."""
         parts = []
         qn = ct.quan_nhan
+        
+        # Mức độ hoàn thành
         if ct.muc_do_hoan_thanh:
             parts.append(ct.muc_do_hoan_thanh)
+        
+        # Rèn luyện
         if ct.ket_qua_ren_luyen:
             parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+        
+        # Điểm tổng kết
         if ct.diem_tong_ket:
-            parts.append(f'ĐTK: {ct.diem_tong_ket}')
-        if ct.mo_ta_khoa_hoc:
-            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
-        if ct.thanh_tich_ca_nhan_khac:
-            parts.append(ct.thanh_tich_ca_nhan_khac)
+            parts.append(f'Điểm TK: {ct.diem_tong_ket}')
+        
+        # Xếp loại tổng kết (nếu có)
+        if hasattr(ct, 'xep_loai_tong_ket') and ct.xep_loai_tong_ket:
+            parts.append(f'Xếp loại TK: {ct.xep_loai_tong_ket}')
+        
+        # Tốt nghiệp
+        if ct.hinh_thuc_tot_nghiep:
+            tn_parts = [f'TN: {ct.hinh_thuc_tot_nghiep}']
+            if ct.diem_tn_ctd:
+                tn_parts.append(f'CTĐ-CT: {ct.diem_tn_ctd}')
+            if ct.diem_tn_ct:
+                tn_parts.append(f'CT: {ct.diem_tn_ct}')
+            if ct.diem_tn_ta:
+                tn_parts.append(f'TA: {ct.diem_tn_ta}')
+            if ct.diem_tn_mon4:
+                tn_parts.append(f'Môn 4: {ct.diem_tn_mon4}')
+            if ct.diem_tn_chuyennganh:
+                tn_parts.append(f'Chuyên ngành: {ct.diem_tn_chuyennganh}')
+            if ct.diem_tn_baove:
+                tn_parts.append(f'Bảo vệ: {ct.diem_tn_baove}')
+            parts.append(', '.join(tn_parts))
+        
+        # Kiểm tra các môn
+        if ct.kiem_tra_tin_hoc and ct.diem_kiem_tra_tin_hoc:
+            parts.append(f'Tin học: {ct.kiem_tra_tin_hoc} ({ct.diem_kiem_tra_tin_hoc})')
+        elif ct.diem_kiem_tra_tin_hoc:
+            parts.append(f'Điểm tin học: {ct.diem_kiem_tra_tin_hoc}')
+        
+        if ct.kiem_tra_dieu_lenh and ct.diem_kiem_tra_dieu_lenh:
+            parts.append(f'Điều lệnh: {ct.kiem_tra_dieu_lenh} ({ct.diem_kiem_tra_dieu_lenh})')
+        elif ct.diem_kiem_tra_dieu_lenh:
+            parts.append(f'Điểm điều lệnh: {ct.diem_kiem_tra_dieu_lenh}')
+        
+        if ct.dia_ly_quan_su and ct.diem_dia_ly_quan_su:
+            parts.append(f'Địa lý QS: {ct.dia_ly_quan_su} ({ct.diem_dia_ly_quan_su})')
+        elif ct.diem_dia_ly_quan_su:
+            parts.append(f'Điểm địa lý QS: {ct.diem_dia_ly_quan_su}')
+        
+        if ct.ban_sung and ct.diem_ban_sung:
+            parts.append(f'Bắn súng: {ct.ban_sung} ({ct.diem_ban_sung})')
+        elif ct.diem_ban_sung:
+            parts.append(f'Điểm bắn súng: {ct.diem_ban_sung}')
+        
+        if ct.the_luc and ct.diem_the_luc:
+            parts.append(f'Thể lực: {ct.the_luc} ({ct.diem_the_luc})')
+        elif ct.diem_the_luc:
+            parts.append(f'Điểm thể lực: {ct.diem_the_luc}')
+        
+        if ct.kiem_tra_chinh_tri and ct.diem_kiem_tra_chinh_tri:
+            parts.append(f'Chính trị: {ct.kiem_tra_chinh_tri} ({ct.diem_kiem_tra_chinh_tri})')
+        elif ct.diem_kiem_tra_chinh_tri:
+            parts.append(f'Điểm chính trị: {ct.diem_kiem_tra_chinh_tri}')
+        
+        # Đảng viên
+        if ct.xep_loai_dang_vien:
+            parts.append(f'Đảng viên: {ct.xep_loai_dang_vien}')
+        if ct.phieu_tin_nhiem:
+            parts.append(f'Phiếu tín nhiệm: {ct.phieu_tin_nhiem}')
+        
+        # Đoàn viên
+        if ct.xep_loai_doan_vien:
+            parts.append(f'Đoàn viên: {ct.xep_loai_doan_vien}')
         if ct.ket_qua_doan_the:
             parts.append(f'Đoàn thể: {ct.ket_qua_doan_the}')
-        if ct.xep_loai_dang_vien:
-            parts.append(f'ĐV: {ct.xep_loai_dang_vien}')
+        
+        # Phụ nữ
+        if ct.ket_qua_phu_nu:
+            parts.append(f'Hội Phụ nữ: {ct.ket_qua_phu_nu}')
+        
+        # Giảng viên
+        if ct.danh_hieu_gv_gioi:
+            parts.append(f'GV giỏi: {ct.danh_hieu_gv_gioi}')
+        if ct.tien_do_pgs:
+            parts.append(f'Tiến độ PGS: {ct.tien_do_pgs}')
+        if ct.dinh_muc_giang_day:
+            parts.append(f'Định mức giảng dạy: {ct.dinh_muc_giang_day}')
+        if ct.ket_qua_kiem_tra_giang:
+            parts.append(f'KT giảng: {ct.ket_qua_kiem_tra_giang}')
+        
+        # Học viên
+        if ct.danh_hieu_hv_gioi:
+            parts.append(f'HV giỏi: {ct.danh_hieu_hv_gioi}')
+        if ct.ket_qua_thuc_hanh:
+            parts.append(f'Thực hành: {ct.ket_qua_thuc_hanh}')
+        
+        # NCKH
+        if ct.nckh_noi_dung:
+            parts.append(f'NCKH: {ct.nckh_noi_dung}')
+        elif ct.mo_ta_khoa_hoc:
+            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
+        if ct.diem_nckh:
+            parts.append(f'Điểm NCKH: {ct.diem_nckh}')
+        
+        # Khen thưởng
+        if ct.hinh_thuc_khen_thuong_qc:
+            parts.append(f'Khen thưởng: {ct.hinh_thuc_khen_thuong_qc}')
+        if ct.hinh_thuc_khen_thuong_pn:
+            parts.append(f'KT Phụ nữ: {ct.hinh_thuc_khen_thuong_pn}')
+        
+        # Chủ trì đơn vị
+        if ct.chu_tri_don_vi_danh_hieu:
+            parts.append(f'Chủ trì: {ct.chu_tri_don_vi_danh_hieu}')
+        
+        # Thành tích khác
+        if ct.thanh_tich_ca_nhan_khac:
+            parts.append(ct.thanh_tich_ca_nhan_khac)
+        
         return parts  # Return list instead of string
 
     def get_don_vi_truc_thuoc(ct):
@@ -1487,9 +1592,6 @@ def export_nomination_word(id):
             criteria_list = []
             td = ct.tap_the_dict or {}
             
-            # DEBUG: Print tap_the_data raw and parsed
-            print(f"DEBUG Unit {ct.ten_don_vi_de_xuat}: tap_the_data={ct.tap_the_data}, tap_the_dict={td}")
-            
             # Get criteria labels from database
             if td:
                 # Get TieuChi records to map ma_truong -> ten
@@ -1511,8 +1613,6 @@ def export_nomination_word(id):
                 criteria_list.insert(0, f'Mức độ hoàn thành: {ct.muc_do_hoan_thanh}')
             if ct.ghi_chu and ct.ghi_chu.strip():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
-            
-            print(f"DEBUG criteria_list: {criteria_list}")
             
             if criteria_list:
                 for i, item in enumerate(criteria_list):
