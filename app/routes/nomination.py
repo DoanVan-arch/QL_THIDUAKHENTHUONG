@@ -1491,7 +1491,7 @@ def export_nomination_word(id):
         tbl.style = 'Table Grid'
 
         # Column widths (cm)
-        widths = [0.8, 3.2, 2.0, 2.5, 2.5, 5.5, 1.5]
+        widths = [0.5, 3.2, 2.0, 2.5, 2.5, 5.5, 1.5]
         for i, w in enumerate(widths):
             for row in tbl.rows:
                 row.cells[i].width = Cm(w)
@@ -1558,7 +1558,7 @@ def export_nomination_word(id):
         tbl.style = 'Table Grid'
 
         # Column widths (cm)
-        widths = [1.0, 7.0, 10.0]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
+        widths = [0.5, 7.0, 10.0]  # STT | Tên đơn vị | Ghi chú (tiêu chí)
         for i, w in enumerate(widths):
             for row in tbl.rows:
                 row.cells[i].width = Cm(w)
@@ -1633,16 +1633,25 @@ def export_nomination_word(id):
     # Page margins
     for section in doc.sections:
         
+        
         section.top_margin = Cm(2)
         section.bottom_margin = Cm(2)
         section.left_margin = Cm(3.5)
         section.right_margin = Cm(1.5)
         
-        # --- THÊM MỚI: Đánh số trang căn giữa ở Footer ---
-        tbl_header = section.header
-        # Lấy paragraph đầu tiên của footer hoặc tạo mới nếu chưa có
-        p_header = tbl_header.paragraphs[0] if tbl_header.paragraphs else tbl_header.add_paragraph()
+        # --- BẬT TÍNH NĂNG: Bỏ qua trang đầu tiên ---
+        section.different_first_page_header_footer = True
+        
+        # --- Đánh số trang căn giữa ở Header (Sẽ tự động chạy từ trang 2) ---
+        header = section.header
+        
+        # Lấy paragraph đầu tiên của header hoặc tạo mới nếu chưa có
+        p_header = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
         p_header.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Nếu tái sử dụng template, nên xóa nội dung cũ (nếu có) trước khi chèn
+        p_header.clear() 
+        
         run_header = p_header.add_run()
         add_page_number(run_header)
 
