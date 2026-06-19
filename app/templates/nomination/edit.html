@@ -1425,8 +1425,15 @@ function updateSubmitButtonState() {
                 <strong><i class="bi bi-building me-1"></i>Tập thể:</strong>
                 <span class="badge bg-navy ms-2" id="edit-danh-hieu-tt-display"></span>
               </div>
+              
               <label class="form-label fw-semibold">Tên đơn vị đề xuất <span class="text-danger">*</span></label>
               <input type="text" name="ten_don_vi_de_xuat" id="edit-ten_don_vi_de_xuat" class="form-control">
+            <div class="form-section" id="edit-section-tap-the-criteria" style="display:none;">
+                <div class="form-section-title" style="color:#0d6efd;">
+                    <i class="bi bi-diagram-3 me-1"></i>Tiêu chí đánh giá tập thể
+                </div>
+                <div id="edit-tap-the-criteria-container"></div>
+                </div>
             </div>
 
             <!-- Tiêu chí — hiển thị theo đối tượng/danh hiệu -->
@@ -1819,21 +1826,18 @@ function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
         });
     }
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// Hàm chính: mở modal sửa, tái hiện đúng UI/logic của form Add New Item
+// ─────────────────────────────────────────────────────────────────────────────
 function openEditItemModal(ctId) {
-    var modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+    var modalEl = document.getElementById('editItemModal');
+    var modal   = new bootstrap.Modal(modalEl);
     var loading = document.getElementById('editItemLoading');
     var content = document.getElementById('editItemContent');
+
+    // Reset UI
     loading.style.display = 'block';
     content.style.display = 'none';
-
-    // Reset: ẩn tất cả criteria sections và field-wraps
-    document.querySelectorAll('#edit-criteria-row .form-section').forEach(function(s) {
-        s.classList.add('hidden');
-    });
-    document.querySelectorAll('#edit-criteria-row .edit-field-wrap').forEach(function(w) {
-        w.style.display = 'none';
-    });
-
     document.getElementById('editItemForm').action = '/nomination/item/' + ctId + '/update';
     modal.show();
 
@@ -1843,122 +1847,342 @@ function openEditItemModal(ctId) {
             loading.style.display = 'none';
             content.style.display = 'block';
 
-            var form = document.getElementById('editItemForm');
-            var isTapThe = !d.quan_nhan_id;
+            var form      = document.getElementById('editItemForm');
+            var danhHieu  = d.loai_danh_hieu || '';
+            var phamVi    = (DANH_HIEU_PHAM_VI && DANH_HIEU_PHAM_VI[danhHieu]) || 'Cá nhân';
+            var isTapThe  = (phamVi === 'Đơn vị');
+            var doiTuong  = isTapThe ? '' : (d.doi_tuong || '');
 
-            // ── 0. Header: hiển thị tên cá nhân / tập thể ─────────────────
-            document.getElementById('edit-wrap-tap-the').style.display = isTapThe ? '' : 'none';
-            document.getElementById('edit-wrap-ca-nhan').style.display = isTapThe ? 'none' : '';
+            // ── BƯỚC 1: Header info ─────────────────────────────────────────
+            _modalSetHeader(d, isTapThe, danhHieu);
 
+            // ── BƯỚC 2: Toggle block cá nhân / tập thể (giống togglePhamViBlocks) ──
+            _modalTogglePhamViBlocks(isTapThe);
+
+            // ── BƯỚC 3: Render tiêu chí tập thể động (giống renderTapTheCriteria) ──
+            _modalRenderTapTheCriteria(danhHieu, isTapThe);
+
+            // ── BƯỚC 4: Ẩn/hiện các section cá nhân (giống applyCriteriaVisibilityByGroup) ──
+            _modalApplySectionVisibility(danhHieu, doiTuong, isTapThe);
+
+            // ── BƯỚC 5: Điền data vào toàn bộ fields (động, không hardcode) ──
+            _modalFillAllFields(form, d, isTapThe);
+
+            // ── BƯỚC 6: NCKH checkboxes ────────────────────────────────────
+            _modalFillNckh(form, d.nckh_noi_dung || '');
+
+            // ── BƯỚC 7: Cờ nhân sự (chỉ cá nhân) ─────────────────────────
             if (!isTapThe) {
-                document.getElementById('edit-hoten-display').textContent =
-                    d.ho_ten || ('ID: ' + d.quan_nhan_id);
-                document.getElementById('edit-doi-tuong-display').textContent =
-                    d.doi_tuong ? ('(' + d.doi_tuong + ')') : '';
-            }
-            document.getElementById('edit-danh-hieu-display').textContent = d.loai_danh_hieu || '';
-            var ttDisp = document.getElementById('edit-danh-hieu-tt-display');
-            if (ttDisp) ttDisp.textContent = d.loai_danh_hieu || '';
-
-            // ── 1. Render tiêu chí tập thể động (nếu là tập thể) ──────────
-            // Gọi hàm renderTapTheCriteria đã có sẵn trên trang
-            // nhưng render vào container của MODAL, không phải form Add
-            var editTapTheContainer = document.getElementById('edit-tap-the-criteria-container');
-            var editTapTheSection   = document.getElementById('edit-section-tap-the-criteria');
-
-            if (isTapThe && editTapTheContainer && editTapTheSection) {
-                var byNhom = (TIEU_CHI_TAP_THE && TIEU_CHI_TAP_THE[d.loai_danh_hieu]) || null;
-                if (byNhom) {
-                    var html = '';
-                    Object.keys(byNhom).forEach(function(nhom) {
-                        var tcs = byNhom[nhom];
-                        html += '<div class="mb-3">'
-                             +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
-                             +  ' style="font-size:0.85rem;">' + (nhom || '') + '</div>'
-                             +  '<div class="row g-2">';
-                        tcs.forEach(function(tc) {
-                            html += '<div class="col-md-4 edit-field-wrap" data-field="' + tc.ma_truong + '">';
-                            html += '<label class="form-label" style="font-size:0.82rem;">' + tc.ten;
-                            if (tc.huong_dan) {
-                                html += ' <i class="bi bi-info-circle text-muted" title="'
-                                     + tc.huong_dan.replace(/"/g, '&quot;') + '"></i>';
-                            }
-                            html += '</label>';
-                            if (tc.loai_input === 'combobox' && tc.gia_tri_chon && tc.gia_tri_chon.length) {
-                                html += '<select class="form-select form-select-sm" name="' + tc.ma_truong + '">'
-                                     +  '<option value="">-- Chọn --</option>';
-                                tc.gia_tri_chon.forEach(function(opt) {
-                                    html += '<option value="' + opt + '">' + opt + '</option>';
-                                });
-                                html += '</select>';
-                            } else {
-                                html += '<input type="text" class="form-control form-control-sm"'
-                                     +  ' name="' + tc.ma_truong + '">';
-                            }
-                            html += '</div>';
-                        });
-                        html += '</div></div>';
-                    });
-                    editTapTheContainer.innerHTML = html;
-                    editTapTheSection.style.display = '';
-                } else {
-                    editTapTheContainer.innerHTML = '';
-                    editTapTheSection.style.display = 'none';
-                }
-            } else if (editTapTheSection) {
-                editTapTheSection.style.display = 'none';
-                if (editTapTheContainer) editTapTheContainer.innerHTML = '';
+                _modalApplyPersonnelFlags(d);
             }
 
-            // ── 2. Điền dữ liệu ĐỘNG vào tất cả [name] trong form ─────────
-            // Thay vì hardcode simpleFields, quét toàn bộ input/select/textarea
-            // trong form (bao gồm cả fields tập thể vừa render ở bước 1)
-            fillFormFromData(form, d);
-
-            // ── 3. NCKH checkboxes ─────────────────────────────────────────
-            var nckhVal = d.nckh_noi_dung || '';
-            // Đồng nhất separator với form Add ('; ') — hỗ trợ cả '\n' (dữ liệu cũ)
-            var nckhParts = nckhVal
-                .split(/;\s*|\n/)
-                .map(function(s) { return s.trim(); })
-                .filter(Boolean);
-
-            form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
-                cb.checked = nckhParts.indexOf(cb.value.trim()) !== -1;
-            });
-
-            // Sync hidden field ngay khi load
-            syncNckhHiddenField(form);
-
-            // Gắn listener cho các lần thay đổi sau
-            form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
-                // Tránh duplicate listener
-                cb.removeEventListener('change', syncNckhHiddenField);
-                cb.addEventListener('change', function() { syncNckhHiddenField(form); });
-            });
-
-            // ── 4. Áp dụng visibility theo danh hiệu + đối tượng ──────────
-            applyModalFieldVisibility(d.loai_danh_hieu || '', d.doi_tuong || '');
-
-            // ── 5. Ẩn/hiện theo cờ nhân sự (chỉ áp dụng cho cá nhân) ──────
-            if (!isTapThe) {
-                applyPersonnelFlagsToModal(d);
-            }
-
-            // ── 6. Wire + apply hinh_thuc_tot_nghiep ──────────────────────
+            // ── BƯỚC 8: Tốt nghiệp ─────────────────────────────────────────
             var htSelect = form.querySelector('[name="hinh_thuc_tot_nghiep"]');
             if (htSelect) {
-                htSelect.onchange = function() { applyModalDiemTotNghiep(); };
+                htSelect.onchange = applyModalDiemTotNghiep;
                 applyModalDiemTotNghiep();
             }
         })
         .catch(function(err) {
             loading.innerHTML = '<div class="alert alert-danger">'
-                + '<i class="bi bi-exclamation-triangle me-2"></i>Không tải được dữ liệu.</div>';
+                + '<i class="bi bi-exclamation-triangle me-2"></i>Không tải được dữ liệu. '
+                + err + '</div>';
             console.error(err);
         });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 1: Set header display
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalSetHeader(d, isTapThe, danhHieu) {
+    var wrapCaNhan = document.getElementById('edit-wrap-ca-nhan');
+    var wrapTapThe = document.getElementById('edit-wrap-tap-the');
+
+    if (wrapCaNhan) wrapCaNhan.style.display = isTapThe ? 'none' : '';
+    if (wrapTapThe) wrapTapThe.style.display = isTapThe ? '' : 'none';
+
+    var dispDH   = document.getElementById('edit-danh-hieu-display');
+    var dispTT   = document.getElementById('edit-danh-hieu-tt-display');
+    var dispHT   = document.getElementById('edit-hoten-display');
+    var dispDT   = document.getElementById('edit-doi-tuong-display');
+
+    if (dispDH) dispDH.textContent = danhHieu;
+    if (dispTT) dispTT.textContent = danhHieu;
+
+    if (!isTapThe) {
+        if (dispHT) dispHT.textContent = d.ho_ten || ('ID: ' + d.quan_nhan_id);
+        if (dispDT) dispDT.textContent = d.doi_tuong ? ('(' + d.doi_tuong + ')') : '';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 2: Toggle block cá nhân / tập thể trong modal
+// Tương đương togglePhamViBlocks() của form Add
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalTogglePhamViBlocks(isTapThe) {
+    // block-ca-nhan: chứa quan_nhan_select + doi_tuong_select
+    var blockCaNhan = document.getElementById('edit-block-ca-nhan');
+    // block-tap-the: chứa input ten_don_vi_de_xuat
+    var blockTapThe = document.getElementById('edit-block-tap-the');
+
+    // Các section chỉ dành cho cá nhân — ẩn hết khi là tập thể
+    var caNhanOnlySections = [
+        'edit-section-chung',
+        'edit-section-quansu',
+        'edit-section-dang-doan',
+        'edit-section-giangvien',
+        'edit-section-pgs',
+        'edit-section-hocvien',
+        'edit-section-totnghiep',
+        'edit-section-nckh',
+        'edit-section-thanhtich'
+    ];
+
+    if (blockCaNhan) blockCaNhan.style.display = isTapThe ? 'none' : '';
+    if (blockTapThe) blockTapThe.style.display = isTapThe ? '' : 'none';
+
+    caNhanOnlySections.forEach(function(id) {
+        var sec = document.getElementById(id);
+        if (sec) {
+            if (isTapThe) {
+                sec.classList.add('hidden');
+            }
+            // Khi cá nhân: để applySectionVisibility quyết định
+        }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 3: Render tiêu chí tập thể động vào modal
+// Tương đương renderTapTheCriteria() của form Add
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalRenderTapTheCriteria(danhHieu, isTapThe) {
+    var section   = document.getElementById('edit-section-tap-the-criteria');
+    var container = document.getElementById('edit-tap-the-criteria-container');
+    if (!section || !container) return;
+
+    if (!isTapThe || !danhHieu || !TIEU_CHI_TAP_THE || !TIEU_CHI_TAP_THE[danhHieu]) {
+        section.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    var byNhom = TIEU_CHI_TAP_THE[danhHieu];
+    var html = '';
+
+    Object.keys(byNhom).forEach(function(nhom) {
+        var tcs = byNhom[nhom];
+        if (!tcs || !tcs.length) return;
+
+        html += '<div class="mb-3">'
+             +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
+             +  ' style="font-size:0.85rem;">' + (nhom || '') + '</div>'
+             +  '<div class="row g-2">';
+
+        tcs.forEach(function(tc) {
+            html += '<div class="col-md-4 edit-field-wrap" data-field="' + tc.ma_truong + '">';
+            html += '<label class="form-label" style="font-size:0.82rem;">' + tc.ten;
+            if (tc.huong_dan) {
+                html += ' <i class="bi bi-info-circle text-muted ms-1" title="'
+                     + tc.huong_dan.replace(/"/g, '&quot;') + '"></i>';
+            }
+            html += '</label>';
+
+            if (tc.loai_input === 'combobox' && tc.gia_tri_chon && tc.gia_tri_chon.length) {
+                html += '<select class="form-select form-select-sm" name="' + tc.ma_truong + '">'
+                     +  '<option value="">-- Chọn --</option>';
+                tc.gia_tri_chon.forEach(function(opt) {
+                    html += '<option value="' + opt + '">' + opt + '</option>';
+                });
+                html += '</select>';
+            } else {
+                html += '<input type="text" class="form-control form-control-sm"'
+                     +  ' name="' + tc.ma_truong + '">';
+            }
+            html += '</div>'; // col
+        });
+
+        html += '</div></div>'; // row + mb-3
+    });
+
+    container.innerHTML = html;
+    section.style.display = '';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 4: Ẩn/hiện các section cá nhân theo danh hiệu + đối tượng
+// Tương đương applyCriteriaVisibilityByGroup() của form Add
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalApplySectionVisibility(danhHieu, doiTuong, isTapThe) {
+    // Tập thể: tất cả section cá nhân đã ẩn ở bước 2 → không cần xử lý thêm
+    if (isTapThe) return;
+
+    var currentCriteria = (danhHieu && DANH_HIEU_TIEU_CHI && DANH_HIEU_TIEU_CHI[danhHieu])
+        ? DANH_HIEU_TIEU_CHI[danhHieu] : [];
+
+    var effDoiTuong = doiTuong || '';
+
+    // Duyệt từng edit-field-wrap, áp dụng fieldVisibility()
+    document.querySelectorAll('#edit-criteria-row .edit-field-wrap[data-field]').forEach(function(wrap) {
+        var fieldName = wrap.getAttribute('data-field');
+
+        // diem_tn_* do applyModalDiemTotNghiep quản lý
+        if (MODAL_DIEM_TN_SET && MODAL_DIEM_TN_SET[fieldName]) return;
+
+        var vis;
+        try {
+            vis = fieldVisibility(fieldName, danhHieu, effDoiTuong, currentCriteria);
+        } catch(e) {
+            vis = 'no_opinion';
+        }
+
+        if (vis === 'hide') {
+            wrap.style.display = 'none';
+        } else if (vis === 'show') {
+            wrap.style.display = '';
+        } else {
+            // no_opinion: hiện nếu có đối tượng
+            wrap.style.display = effDoiTuong ? '' : 'none';
+        }
+    });
+
+    // Ẩn/hiện từng section dựa trên số field visible bên trong
+    var caNhanSections = [
+        'edit-section-chung', 'edit-section-quansu', 'edit-section-dang-doan',
+        'edit-section-giangvien', 'edit-section-pgs', 'edit-section-hocvien',
+        'edit-section-totnghiep', 'edit-section-nckh', 'edit-section-thanhtich'
+    ];
+
+    caNhanSections.forEach(function(id) {
+        var sec = document.getElementById(id);
+        if (!sec) return;
+        // edit-section-dang-doan: do _modalApplyPersonnelFlags quản lý
+        if (id === 'edit-section-dang-doan') return;
+
+        var visibleCount = Array.from(
+            sec.querySelectorAll('.edit-field-wrap')
+        ).filter(function(w) { return w.style.display !== 'none'; }).length;
+
+        sec.classList.toggle('hidden', visibleCount === 0);
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 5: Điền data vào toàn bộ fields — hoàn toàn động, không hardcode
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalFillAllFields(form, d, isTapThe) {
+    var SKIP = {
+        'csrf_token'        : true,
+        'nckh_noi_dung'     : true,  // checkbox group — xử lý riêng ở bước 6
+        'nckh_noi_dung_text': true,  // hidden — sync từ checkbox
+    };
+
+    var seen = {};
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
+        var name = el.getAttribute('name');
+        if (!name || SKIP[name] || seen[name]) return;
+        seen[name] = true;
+
+        var value = _resolveFieldValue(name, d, isTapThe);
+        if (value !== undefined && value !== null) {
+            el.value = String(value);
+        }
+    });
+}
+
+// Giải quyết giá trị cho 1 field từ data server
+// Ưu tiên: d[name] → d.tap_the_data[name] → d[name.replace('tap_the_','')] 
+function _resolveFieldValue(name, d, isTapThe) {
+    // Ưu tiên 1: key trực tiếp trong d
+    if (d[name] !== undefined && d[name] !== null) return d[name];
+
+    // Ưu tiên 2: trong d.tap_the_data (tập thể)
+    if (isTapThe && d.tap_the_data) {
+        if (d.tap_the_data[name] !== undefined && d.tap_the_data[name] !== null) {
+            return d.tap_the_data[name];
+        }
+        // Ưu tiên 3: bỏ prefix 'tap_the_' nếu field name có prefix đó
+        if (name.indexOf('tap_the_') === 0) {
+            var stripped = name.slice(8); // bỏ 'tap_the_'
+            if (d.tap_the_data[stripped] !== undefined) return d.tap_the_data[stripped];
+        }
+    }
+
+    return undefined;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 6: NCKH checkboxes
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalFillNckh(form, nckhRaw) {
+    // Hỗ trợ cả '; ' (mới) và '\n' (cũ)
+    var parts = nckhRaw
+        .split(/;\s*|\n/)
+        .map(function(s) { return s.trim(); })
+        .filter(Boolean);
+
+    form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
+        cb.checked = parts.indexOf(cb.value.trim()) !== -1;
+    });
+
+    // Sync ngay
+    _syncNckhHidden(form);
+
+    // Gắn listener (tránh duplicate bằng cách clone + replace)
+    form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
+        var fresh = cb.cloneNode(true);
+        cb.parentNode.replaceChild(fresh, cb);
+        fresh.addEventListener('change', function() { _syncNckhHidden(form); });
+    });
+    // Re-check sau khi clone (cloneNode giữ checked state)
+    form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
+        cb.checked = parts.indexOf(cb.value.trim()) !== -1;
+    });
+}
+
+function _syncNckhHidden(form) {
+    var checked = Array.from(form.querySelectorAll('.edit-nckh-cb:checked'))
+        .map(function(c) { return c.value; });
+    var hid = form.querySelector('[name="nckh_noi_dung_text"]');
+    if (hid) hid.value = checked.join('; ');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 7: Ẩn/hiện fields theo cờ nhân sự
+// Tương đương logic onPersonnelSelect + DOMContentLoaded của form Add
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalApplyPersonnelFlags(d) {
+    function getWrap(field) {
+        return document.querySelector(
+            '#edit-criteria-row .edit-field-wrap[data-field="' + field + '"]'
+        );
+    }
+
+    // Section Đảng/Đoàn/Phụ nữ tổng
+    var secDangDoan = document.getElementById('edit-section-dang-doan');
+    if (secDangDoan) {
+        var show = !!(d.la_dang_vien || d.la_doan_vien || d.la_hoi_vien_phu_nu);
+        secDangDoan.classList.toggle('hidden', !show);
+    }
+
+    // Đảng viên
+    var wDV = getWrap('xep_loai_dang_vien');
+    if (wDV) wDV.style.display = d.la_dang_vien ? '' : 'none';
+
+    // Đoàn viên
+    ['ket_qua_doan_the', 'xep_loai_doan_vien', 'hinh_thuc_khen_thuong_qc'].forEach(function(f) {
+        var w = getWrap(f); if (w) w.style.display = d.la_doan_vien ? '' : 'none';
+    });
+
+    // Phụ nữ
+    ['ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn'].forEach(function(f) {
+        var w = getWrap(f); if (w) w.style.display = d.la_hoi_vien_phu_nu ? '' : 'none';
+    });
+
+    // Chủ trì đơn vị — chỉ hiện nếu là chỉ huy hoặc bí thư
+    var wCT = getWrap('chu_tri_don_vi_danh_hieu');
+    if (wCT) wCT.style.display = (d.la_chi_huy || d.la_bi_thu) ? '' : 'none';
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // fillFormFromData: điền toàn bộ input/select/textarea trong form từ object data
 // Ưu tiên: d[name] → d.tap_the_data[name] (cho tập thể)
