@@ -1405,43 +1405,67 @@ function updateSubmitButtonState() {
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content" style="max-height:92vh;">
       <div class="modal-header py-2">
-        <h5 class="modal-title" id="editItemModalLabel"><i class="bi bi-pencil-square me-2"></i>Sửa thông tin đề xuất</h5>
+        <h5 class="modal-title" id="editItemModalLabel">
+          <i class="bi bi-pencil-square me-2"></i>Sửa thông tin đề xuất
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
+
       <form id="editItemForm" method="POST" action="">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
         <div class="modal-body" style="overflow-y:auto; max-height:72vh;">
-          <div id="editItemLoading" class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Đang tải...</p></div>
+
+          <!-- Loading spinner -->
+          <div id="editItemLoading" class="text-center py-4">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Đang tải...</p>
+          </div>
+
           <div id="editItemContent" style="display:none">
-            <!-- Tên cá nhân / tập thể (hiển thị, không sửa) -->
+
+            <!-- ── Header: Cá nhân ── -->
             <div id="edit-wrap-ca-nhan" class="mb-3 p-3 bg-light rounded" style="display:none">
               <strong><i class="bi bi-person me-1"></i>Cá nhân:</strong>
               <span id="edit-hoten-display" class="fw-semibold"></span>
               <span class="ms-3 badge bg-navy" id="edit-danh-hieu-display"></span>
               <span class="ms-2 text-muted small" id="edit-doi-tuong-display"></span>
             </div>
+
+            <!-- ── Header: Tập thể + input tên đơn vị ── -->
             <div id="edit-wrap-tap-the" class="mb-3" style="display:none">
               <div class="p-3 bg-light rounded mb-2">
                 <strong><i class="bi bi-building me-1"></i>Tập thể:</strong>
                 <span class="badge bg-navy ms-2" id="edit-danh-hieu-tt-display"></span>
               </div>
-              
-              <label class="form-label fw-semibold">Tên đơn vị đề xuất <span class="text-danger">*</span></label>
-              <input type="text" name="ten_don_vi_de_xuat" id="edit-ten_don_vi_de_xuat" class="form-control">
-            <div class="form-section" id="edit-section-tap-the-criteria" style="display:none;">
-                <div class="form-section-title" style="color:#0d6efd;">
-                    <i class="bi bi-diagram-3 me-1"></i>Tiêu chí đánh giá tập thể
-                </div>
-                <div id="edit-tap-the-criteria-container"></div>
-                </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">
+                  Tên đơn vị đề xuất <span class="text-danger">*</span>
+                </label>
+                <input type="text" name="ten_don_vi_de_xuat"
+                       id="edit-ten_don_vi_de_xuat" class="form-control"
+                       placeholder="VD: Đại đội 1, Phòng Đào tạo...">
+              </div>
             </div>
 
-            <!-- Tiêu chí — hiển thị theo đối tượng/danh hiệu -->
+            <!-- ══════════════════════════════════════════════════════════════
+                 edit-criteria-row: chứa TẤT CẢ tiêu chí (cả tập thể lẫn cá nhân)
+                 ══════════════════════════════════════════════════════════════ -->
             <div id="edit-criteria-row">
 
-              {# ── Nhóm 1: Chung ── #}
+              <!-- ── Tiêu chí tập thể động (render bởi JS) ── -->
+              <div class="form-section" id="edit-section-tap-the-criteria" style="display:none;">
+                <div class="form-section-title" style="color:#0d6efd;">
+                  <i class="bi bi-diagram-3 me-1"></i>Tiêu chí đánh giá tập thể
+                </div>
+                <div id="edit-tap-the-criteria-container"></div>
+              </div>
+
+              <!-- ── Nhóm 1: Chung ── -->
               <div class="form-section" id="edit-section-chung">
-                <div class="form-section-title" style="color:#1a3a5c;"><i class="bi bi-clipboard-check me-1"></i>Tiêu chí chung</div>
+                <div class="form-section-title" style="color:#1a3a5c;">
+                  <i class="bi bi-clipboard-check me-1"></i>Tiêu chí chung
+                </div>
                 <div class="row g-3">
                   <div class="col-md-6 edit-field-wrap" data-field="muc_do_hoan_thanh">
                     <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
@@ -1452,14 +1476,17 @@ function updateSubmitButtonState() {
                   </div>
                   <div class="col-md-6 edit-field-wrap" data-field="phieu_tin_nhiem">
                     <label class="form-label">Số phiếu tín nhiệm</label>
-                    <input type="text" name="phieu_tin_nhiem" class="form-control" placeholder="VD: Tín nhiệm cao">
+                    <input type="text" name="phieu_tin_nhiem" class="form-control"
+                           placeholder="VD: Tín nhiệm cao">
                   </div>
                 </div>
               </div>
 
-              {# ── Nhóm 2: Kiểm tra quân sự ── #}
+              <!-- ── Nhóm 2: Quân sự - Thể chất ── -->
               <div class="form-section" id="edit-section-quansu">
-                <div class="form-section-title" style="color:#6f42c1;"><i class="bi bi-shield me-1"></i>Kết quả kiểm tra quân sự - thể chất</div>
+                <div class="form-section-title" style="color:#6f42c1;">
+                  <i class="bi bi-shield me-1"></i>Kết quả kiểm tra quân sự - thể chất
+                </div>
                 <div class="row g-3">
                   <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_dieu_lenh">
                     <label class="form-label">Điểm điều lệnh</label>
@@ -1477,10 +1504,6 @@ function updateSubmitButtonState() {
                     <label class="form-label">Xếp loại bắn súng</label>
                     {{ tc_input('ban_sung', 'VD: Khá') }}
                   </div>
-                  <!-- <div class="col-md-3 edit-field-wrap" data-field="diem_the_luc">
-                    <label class="form-label">Điểm thể lực</label>
-                    <input type="text" name="diem_the_luc" class="form-control" placeholder="VD: 8.2">
-                  </div> -->
                   <div class="col-md-3 edit-field-wrap" data-field="the_luc">
                     <label class="form-label">Xếp loại thể lực</label>
                     {{ tc_input('the_luc', 'VD: Giỏi') }}
@@ -1493,10 +1516,6 @@ function updateSubmitButtonState() {
                     <label class="form-label">Xếp loại chính trị</label>
                     {{ tc_input('kiem_tra_chinh_tri', 'VD: Giỏi') }}
                   </div>
-                  <!-- <div class="col-md-3 edit-field-wrap" data-field="diem_kiem_tra_tin_hoc">
-                    <label class="form-label">Điểm kỹ năng số</label>
-                    <input type="text" name="diem_kiem_tra_tin_hoc" class="form-control" placeholder="VD: 8.1">
-                  </div> -->
                   <div class="col-md-3 edit-field-wrap" data-field="kiem_tra_tin_hoc">
                     <label class="form-label">Xếp loại kỹ năng số</label>
                     {{ tc_input('kiem_tra_tin_hoc', 'VD: Khá') }}
@@ -1512,9 +1531,11 @@ function updateSubmitButtonState() {
                 </div>
               </div>
 
-              {# ── Nhóm 3: Đảng / Đoàn thể ── #}
+              <!-- ── Nhóm 3: Đảng / Đoàn thể ── -->
               <div class="form-section" id="edit-section-dang-doan">
-                <div class="form-section-title" style="color:#dc3545;"><i class="bi bi-award me-1"></i>Xếp loại Đảng viên / Đoàn thể</div>
+                <div class="form-section-title" style="color:#dc3545;">
+                  <i class="bi bi-award me-1"></i>Xếp loại Đảng viên / Đoàn thể
+                </div>
                 <div class="row g-3">
                   <div class="col-md-4 edit-field-wrap" data-field="xep_loai_dang_vien">
                     <label class="form-label">Xếp loại đảng viên hằng năm</label>
@@ -1530,7 +1551,8 @@ function updateSubmitButtonState() {
                   </div>
                   <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_qc">
                     <label class="form-label">KT phong trào Quần chúng</label>
-                    <input type="text" name="hinh_thuc_khen_thuong_qc" class="form-control" placeholder="VD: Giấy khen, Bằng khen...">
+                    <input type="text" name="hinh_thuc_khen_thuong_qc" class="form-control"
+                           placeholder="VD: Giấy khen, Bằng khen...">
                   </div>
                   <div class="col-md-4 edit-field-wrap" data-field="ket_qua_phu_nu">
                     <label class="form-label">Xếp loại Phụ nữ hằng năm</label>
@@ -1538,14 +1560,17 @@ function updateSubmitButtonState() {
                   </div>
                   <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_khen_thuong_pn">
                     <label class="form-label">KT hội Phụ nữ</label>
-                    <input type="text" name="hinh_thuc_khen_thuong_pn" class="form-control" placeholder="VD: Giấy khen, Bằng khen...">
+                    <input type="text" name="hinh_thuc_khen_thuong_pn" class="form-control"
+                           placeholder="VD: Giấy khen, Bằng khen...">
                   </div>
                 </div>
               </div>
 
-              {# ── Nhóm 4: Giảng viên ── #}
+              <!-- ── Nhóm 4: Giảng viên ── -->
               <div class="form-section" id="edit-section-giangvien">
-                <div class="form-section-title" style="color:#0d6efd;"><i class="bi bi-mortarboard me-1"></i>Tiêu chí dành cho Giảng viên</div>
+                <div class="form-section-title" style="color:#0d6efd;">
+                  <i class="bi bi-mortarboard me-1"></i>Tiêu chí dành cho Giảng viên
+                </div>
                 <div class="row g-3">
                   <div class="col-md-6 edit-field-wrap" data-field="danh_hieu_gv_gioi">
                     <label class="form-label">Danh hiệu Giảng viên giỏi</label>
@@ -1566,9 +1591,11 @@ function updateSubmitButtonState() {
                 </div>
               </div>
 
-              {# ── Nhóm 5: Tiến sĩ/PGS ── #}
+              <!-- ── Nhóm 5: Tiến sĩ / PGS ── -->
               <div class="form-section" id="edit-section-pgs">
-                <div class="form-section-title" style="color:#6f42c1;"><i class="bi bi-graph-up me-1"></i>Tiến độ chức danh PGS (Dành cho Tiến sĩ)</div>
+                <div class="form-section-title" style="color:#6f42c1;">
+                  <i class="bi bi-graph-up me-1"></i>Tiến độ chức danh PGS (Dành cho Tiến sĩ)
+                </div>
                 <div class="row g-3">
                   <div class="col-md-12 edit-field-wrap" data-field="tien_do_pgs">
                     <label class="form-label">Thực hiện tiến độ chức danh PGS</label>
@@ -1577,9 +1604,11 @@ function updateSubmitButtonState() {
                 </div>
               </div>
 
-              {# ── Nhóm 6: Học viên ── #}
+              <!-- ── Nhóm 6: Học viên ── -->
               <div class="form-section" id="edit-section-hocvien">
-                <div class="form-section-title" style="color:#198754;"><i class="bi bi-book me-1"></i>Tiêu chí dành cho Học viên</div>
+                <div class="form-section-title" style="color:#198754;">
+                  <i class="bi bi-book me-1"></i>Tiêu chí dành cho Học viên
+                </div>
                 <div class="row g-3">
                   <div class="col-md-4 edit-field-wrap" data-field="danh_hieu_hv_gioi">
                     <label class="form-label">Danh hiệu học viên giỏi</label>
@@ -1608,15 +1637,23 @@ function updateSubmitButtonState() {
                 </div>
               </div>
 
-              {# ── Nhóm 7: Tốt nghiệp ── #}
+              <!-- ── Nhóm 7: Tốt nghiệp ── -->
               <div class="form-section" id="edit-section-totnghiep">
-                <div class="form-section-title" style="color:#198754;"><i class="bi bi-journal-check me-1"></i>Kết quả tốt nghiệp</div>
+                <div class="form-section-title" style="color:#198754;">
+                  <i class="bi bi-journal-check me-1"></i>Kết quả tốt nghiệp
+                </div>
                 <div class="row g-3">
                   <div class="col-md-4 edit-field-wrap" data-field="hinh_thuc_tot_nghiep">
                     <label class="form-label">Hình thức thi tốt nghiệp</label>
                     <select name="hinh_thuc_tot_nghiep" class="form-select">
                       <option value="">-- Chọn --</option>
-                      {% for tc in tieu_chi_list %}{% if tc.ma_truong == 'hinh_thuc_tot_nghiep' %}{% for opt in tc.gia_tri_chon %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}{% endif %}{% endfor %}
+                      {% for tc in tieu_chi_list %}
+                        {% if tc.ma_truong == 'hinh_thuc_tot_nghiep' %}
+                          {% for opt in tc.gia_tri_chon %}
+                            <option value="{{ opt }}">{{ opt }}</option>
+                          {% endfor %}
+                        {% endif %}
+                      {% endfor %}
                     </select>
                   </div>
                   <div class="col-md-4 edit-field-wrap" data-field="diem_tn_ctd">
@@ -1646,65 +1683,79 @@ function updateSubmitButtonState() {
                 </div>
               </div>
 
-              {# ── Nhóm 8: NCKH ── #}
+              <!-- ── Nhóm 8: NCKH ── -->
               <div class="form-section" id="edit-section-nckh">
-                <div class="form-section-title" style="color:#dc3545;"><i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học</div>
+                <div class="form-section-title" style="color:#dc3545;">
+                  <i class="bi bi-journal-text me-1"></i>Kết quả nghiên cứu khoa học
+                </div>
                 <div class="row g-3">
                   <div class="col-md-12 edit-field-wrap" data-field="nckh_noi_dung">
-                <label class="form-label">Nội dung kết quả NCKH</label>
-                <div class="border rounded p-2" style="max-height:220px;overflow:auto;" id="editNckhCheckboxes">
-                  {%- set nckh_opts = [
-                    "Tham gia nghiên cứu đề tài, sáng kiến khoa học các cấp đúng tiến độ, nghiệm thu đạt khá trở lên hoặc hướng dẫn học viên nghiên cứu đề tài, sáng kiến khoa học đạt giải Ba cấp hệ, tiểu đoàn trở lên.",
-                    "Tham gia biên soạn giáo trình, tài liệu dạy học đúng tiến độ, đảm bảo chất lượng, được nghiệm thu.",
-                    "Có sáng kiến được ứng dụng hiệu quả trong giảng dạy và các mặt công tác, được hội đồng khoa học cấp đầu mối trực thuộc Nhà trường nghiệm thu đạt khá trở lên.",
-                    "Chỉ đạo, hướng dẫn, tổ chức thực hiện hoặc phát hiện, mạnh dạn đề xuất giải pháp công tác mang tính đột phá, đem lại hiệu quả cao trong thực tế; hoặc có tham mưu, đề xuất đổi mới công tác, lĩnh vực chuyên môn được các cấp ghi nhận, tập thể đơn vị thừa nhận.",
-                    "Học viên Sau đại học tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên.",
-                    "Học viên Văn bằng 2 tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên.",
-                    "Học viên năm thứ I tối thiểu phải có 01 bài đăng Website hoặc 01 bài đăng Bản tin thi đua của Nhà trường.",
-                    "Học viên năm thứ II tối thiểu phải nghiên cứu chuyên đề khoa học đạt giải Nhì cấp hệ, tiểu đoàn trở lên.",
-                    "Học viên năm thứ III trở lên tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên."
-                  ] -%}
-                  {% for opt in nckh_opts %}
-                  <div class="form-check mb-1">
-                    <input class="form-check-input edit-nckh-cb" type="checkbox" name="nckh_noi_dung" value="{{ opt }}" id="edit_nckh_{{ loop.index }}">
-                    <label class="form-check-label" for="edit_nckh_{{ loop.index }}" style="font-size:0.82rem;">{{ opt }}</label>
+                    <label class="form-label">Nội dung kết quả NCKH</label>
+                    <div class="border rounded p-2" style="max-height:220px;overflow:auto;"
+                         id="editNckhCheckboxes">
+                      {%- set nckh_opts = [
+                        "Tham gia nghiên cứu đề tài, sáng kiến khoa học các cấp đúng tiến độ, nghiệm thu đạt khá trở lên hoặc hướng dẫn học viên nghiên cứu đề tài, sáng kiến khoa học đạt giải Ba cấp hệ, tiểu đoàn trở lên.",
+                        "Tham gia biên soạn giáo trình, tài liệu dạy học đúng tiến độ, đảm bảo chất lượng, được nghiệm thu.",
+                        "Có sáng kiến được ứng dụng hiệu quả trong giảng dạy và các mặt công tác, được hội đồng khoa học cấp đầu mối trực thuộc Nhà trường nghiệm thu đạt khá trở lên.",
+                        "Chỉ đạo, hướng dẫn, tổ chức thực hiện hoặc phát hiện, mạnh dạn đề xuất giải pháp công tác mang tính đột phá, đem lại hiệu quả cao trong thực tế; hoặc có tham mưu, đề xuất đổi mới công tác, lĩnh vực chuyên môn được các cấp ghi nhận, tập thể đơn vị thừa nhận.",
+                        "Học viên Sau đại học tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Ba cấp Trường trở lên.",
+                        "Học viên Văn bằng 2 tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên.",
+                        "Học viên năm thứ I tối thiểu phải có 01 bài đăng Website hoặc 01 bài đăng Bản tin thi đua của Nhà trường.",
+                        "Học viên năm thứ II tối thiểu phải nghiên cứu chuyên đề khoa học đạt giải Nhì cấp hệ, tiểu đoàn trở lên.",
+                        "Học viên năm thứ III trở lên tối thiểu phải nghiên cứu đề tài khoa học, sáng kiến đạt giải Nhì cấp hệ, tiểu đoàn trở lên hoặc nghiên cứu chuyên đề đạt giải Ba cấp Trường trở lên."
+                      ] -%}
+                      {% for opt in nckh_opts %}
+                      <div class="form-check mb-1">
+                        <input class="form-check-input edit-nckh-cb" type="checkbox"
+                               name="nckh_noi_dung" value="{{ opt }}"
+                               id="edit_nckh_{{ loop.index }}">
+                        <label class="form-check-label" for="edit_nckh_{{ loop.index }}"
+                               style="font-size:0.82rem;">{{ opt }}</label>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    <input type="hidden" name="nckh_noi_dung_text" id="edit_nckh_noi_dung_text">
                   </div>
-                  {% endfor %}
-                </div>
-                <input type="hidden" name="nckh_noi_dung_text" id="edit_nckh_noi_dung_text">
-              </div>
-              <div class="col-md-3 edit-field-wrap" data-field="diem_nckh">
+
+                  <div class="col-md-6 edit-field-wrap" data-field="mo_ta_khoa_hoc">
+                    <label class="form-label">Mô tả chi tiết thành tích khoa học</label>
+                    <input type="text" name="mo_ta_khoa_hoc" class="form-control"
+                           placeholder="Nhập mô tả chi tiết về thành tích nghiên cứu khoa học...">
+                  </div>
+
+                  <div class="col-md-3 edit-field-wrap" data-field="diem_nckh">
                     <label class="form-label">Điểm NCKH</label>
                     <input type="number" name="diem_nckh" class="form-control" step="0.01">
                   </div>
                 </div>
-              </div>{# /edit-section-nckh #}
+              </div>
 
-              {# ── Nhóm 9: Chủ trì / Thành tích khác ── #}
+              <!-- ── Nhóm 9: Thành tích khác / Ghi chú ── -->
               <div class="form-section" id="edit-section-thanhtich">
-                <div class="form-section-title" style="color:#6c757d;"><i class="bi bi-trophy me-1"></i>Thành tích khác</div>
+                <div class="form-section-title" style="color:#6c757d;">
+                  <i class="bi bi-trophy me-1"></i>Thành tích khác
+                </div>
                 <div class="row g-3">
                   <div class="col-md-6 edit-field-wrap" data-field="chu_tri_don_vi_danh_hieu">
                     <label class="form-label">Chủ trì đơn vị đạt danh hiệu thi đua</label>
                     {{ tc_input('chu_tri_don_vi_danh_hieu', 'Nếu là cấp trưởng/bí thư') }}
                   </div>
-                  <!-- <div class="col-md-12 edit-field-wrap" data-field="thanh_tich_ca_nhan_khac">
-                    <label class="form-label">Thành tích cá nhân khác</label>
-                    <textarea name="thanh_tich_ca_nhan_khac" class="form-control" rows="2" placeholder="Nhập các thành tích khác ngoài tiêu chí trên (nếu có)..."></textarea>
-                  </div> -->
-                  <div class="col-md-12">
+                  <div class="col-md-12 edit-field-wrap" data-field="ghi_chu_item">
                     <label class="form-label">Ghi chú</label>
                     <textarea name="ghi_chu_item" class="form-control" rows="2"></textarea>
                   </div>
                 </div>
-              </div>{# /edit-section-thanhtich #}
+              </div>
 
             </div>{# /edit-criteria-row #}
-          </div>
-        </div>
+          </div>{# /editItemContent #}
+        </div>{# /modal-body #}
+
         <div class="modal-footer py-2">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Lưu thay đổi</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i>Lưu thay đổi
+          </button>
         </div>
       </form>
     </div>
