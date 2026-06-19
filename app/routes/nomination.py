@@ -551,11 +551,11 @@ def add_nomination_item(id):
 
     # Validate score/rating paired fields: must fill both sides together
     pair_rules = [
-        ('diem_kiem_tra_tin_hoc', 'kiem_tra_tin_hoc', 'kỹ năng số'),
+      
         ('diem_kiem_tra_dieu_lenh', 'kiem_tra_dieu_lenh', 'điều lệnh'),
         ('diem_dia_ly_quan_su', 'dia_ly_quan_su', 'địa hình quân sự'),
         ('diem_ban_sung', 'ban_sung', 'bắn súng'),
-        ('diem_the_luc', 'the_luc', 'thể lực'),
+       
         ('diem_kiem_tra_chinh_tri', 'kiem_tra_chinh_tri', 'chính trị'),
     ]
     for diem_field, xeploai_field, label in pair_rules:
