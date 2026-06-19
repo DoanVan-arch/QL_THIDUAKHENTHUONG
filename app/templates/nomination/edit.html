@@ -1819,16 +1819,21 @@ function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
         });
     }
 }
-
 function openEditItemModal(ctId) {
     var modal = new bootstrap.Modal(document.getElementById('editItemModal'));
     var loading = document.getElementById('editItemLoading');
     var content = document.getElementById('editItemContent');
     loading.style.display = 'block';
     content.style.display = 'none';
-    // Hide all criteria sections and field-wraps initially
-    document.querySelectorAll('#edit-criteria-row .form-section').forEach(function(s){ s.classList.add('hidden'); });
-    document.querySelectorAll('#edit-criteria-row .edit-field-wrap').forEach(function(w){ w.style.display='none'; });
+
+    // Reset: ẩn tất cả criteria sections và field-wraps
+    document.querySelectorAll('#edit-criteria-row .form-section').forEach(function(s) {
+        s.classList.add('hidden');
+    });
+    document.querySelectorAll('#edit-criteria-row .edit-field-wrap').forEach(function(w) {
+        w.style.display = 'none';
+    });
+
     document.getElementById('editItemForm').action = '/nomination/item/' + ctId + '/update';
     modal.show();
 
@@ -1838,100 +1843,220 @@ function openEditItemModal(ctId) {
             loading.style.display = 'none';
             content.style.display = 'block';
 
+            var form = document.getElementById('editItemForm');
             var isTapThe = !d.quan_nhan_id;
+
+            // ── 0. Header: hiển thị tên cá nhân / tập thể ─────────────────
             document.getElementById('edit-wrap-tap-the').style.display = isTapThe ? '' : 'none';
             document.getElementById('edit-wrap-ca-nhan').style.display = isTapThe ? 'none' : '';
 
             if (!isTapThe) {
-                document.getElementById('edit-hoten-display').textContent = d.ho_ten || ('ID: ' + d.quan_nhan_id);
-                document.getElementById('edit-doi-tuong-display').textContent = d.doi_tuong ? ('(' + d.doi_tuong + ')') : '';
+                document.getElementById('edit-hoten-display').textContent =
+                    d.ho_ten || ('ID: ' + d.quan_nhan_id);
+                document.getElementById('edit-doi-tuong-display').textContent =
+                    d.doi_tuong ? ('(' + d.doi_tuong + ')') : '';
             }
-            document.getElementById('edit-danh-hieu-display').textContent = d.loai_danh_hieu;
+            document.getElementById('edit-danh-hieu-display').textContent = d.loai_danh_hieu || '';
             var ttDisp = document.getElementById('edit-danh-hieu-tt-display');
-            if (ttDisp) ttDisp.textContent = d.loai_danh_hieu;
+            if (ttDisp) ttDisp.textContent = d.loai_danh_hieu || '';
 
-            // Fill all field values
-            var form = document.getElementById('editItemForm');
-            var simpleFields = [
-                'ten_don_vi_de_xuat','muc_do_hoan_thanh','phieu_tin_nhiem','ket_qua_ren_luyen',
-                'diem_kiem_tra_tin_hoc','kiem_tra_tin_hoc','diem_kiem_tra_dieu_lenh','kiem_tra_dieu_lenh',
-                'diem_dia_ly_quan_su','dia_ly_quan_su','diem_ban_sung','ban_sung','the_luc',
-                'diem_kiem_tra_chinh_tri','kiem_tra_chinh_tri','xep_loai_dang_vien','ket_qua_doan_the',
-                'xep_loai_doan_vien','hinh_thuc_khen_thuong_qc','ket_qua_phu_nu','hinh_thuc_khen_thuong_pn',
-                'chu_tri_don_vi_danh_hieu','danh_hieu_gv_gioi','tien_do_pgs','dinh_muc_giang_day',
-                'thoi_gian_lao_dong_kh','ket_qua_kiem_tra_giang','danh_hieu_hv_gioi','diem_tong_ket',
-                'xep_loai_tong_ket','ket_qua_thuc_hanh','hinh_thuc_tot_nghiep','diem_tn_ctd','diem_tn_ct','diem_tn_ta',
-                'diem_tn_mon4','diem_tn_chuyennganh','diem_tn_baove','diem_nckh','thanh_tich_ca_nhan_khac'
-            ];
-            simpleFields.forEach(function(f) {
-                var el = form.querySelector('[name="' + f + '"]');
-                if (el && d[f] !== undefined) el.value = d[f];
-            });
-            var nEl = form.querySelector('[name="nckh_noi_dung_text"]');
-            if (nEl) nEl.value = d.nckh_noi_dung || '';
-            // Populate NCKH checkboxes from saved value
+            // ── 1. Render tiêu chí tập thể động (nếu là tập thể) ──────────
+            // Gọi hàm renderTapTheCriteria đã có sẵn trên trang
+            // nhưng render vào container của MODAL, không phải form Add
+            var editTapTheContainer = document.getElementById('edit-tap-the-criteria-container');
+            var editTapTheSection   = document.getElementById('edit-section-tap-the-criteria');
+
+            if (isTapThe && editTapTheContainer && editTapTheSection) {
+                var byNhom = (TIEU_CHI_TAP_THE && TIEU_CHI_TAP_THE[d.loai_danh_hieu]) || null;
+                if (byNhom) {
+                    var html = '';
+                    Object.keys(byNhom).forEach(function(nhom) {
+                        var tcs = byNhom[nhom];
+                        html += '<div class="mb-3">'
+                             +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
+                             +  ' style="font-size:0.85rem;">' + (nhom || '') + '</div>'
+                             +  '<div class="row g-2">';
+                        tcs.forEach(function(tc) {
+                            html += '<div class="col-md-4 edit-field-wrap" data-field="' + tc.ma_truong + '">';
+                            html += '<label class="form-label" style="font-size:0.82rem;">' + tc.ten;
+                            if (tc.huong_dan) {
+                                html += ' <i class="bi bi-info-circle text-muted" title="'
+                                     + tc.huong_dan.replace(/"/g, '&quot;') + '"></i>';
+                            }
+                            html += '</label>';
+                            if (tc.loai_input === 'combobox' && tc.gia_tri_chon && tc.gia_tri_chon.length) {
+                                html += '<select class="form-select form-select-sm" name="' + tc.ma_truong + '">'
+                                     +  '<option value="">-- Chọn --</option>';
+                                tc.gia_tri_chon.forEach(function(opt) {
+                                    html += '<option value="' + opt + '">' + opt + '</option>';
+                                });
+                                html += '</select>';
+                            } else {
+                                html += '<input type="text" class="form-control form-control-sm"'
+                                     +  ' name="' + tc.ma_truong + '">';
+                            }
+                            html += '</div>';
+                        });
+                        html += '</div></div>';
+                    });
+                    editTapTheContainer.innerHTML = html;
+                    editTapTheSection.style.display = '';
+                } else {
+                    editTapTheContainer.innerHTML = '';
+                    editTapTheSection.style.display = 'none';
+                }
+            } else if (editTapTheSection) {
+                editTapTheSection.style.display = 'none';
+                if (editTapTheContainer) editTapTheContainer.innerHTML = '';
+            }
+
+            // ── 2. Điền dữ liệu ĐỘNG vào tất cả [name] trong form ─────────
+            // Thay vì hardcode simpleFields, quét toàn bộ input/select/textarea
+            // trong form (bao gồm cả fields tập thể vừa render ở bước 1)
+            fillFormFromData(form, d);
+
+            // ── 3. NCKH checkboxes ─────────────────────────────────────────
             var nckhVal = d.nckh_noi_dung || '';
-            var nckhParts = nckhVal.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+            // Đồng nhất separator với form Add ('; ') — hỗ trợ cả '\n' (dữ liệu cũ)
+            var nckhParts = nckhVal
+                .split(/;\s*|\n/)
+                .map(function(s) { return s.trim(); })
+                .filter(Boolean);
+
             form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
                 cb.checked = nckhParts.indexOf(cb.value.trim()) !== -1;
             });
-            // Sync hidden field on checkbox change
+
+            // Sync hidden field ngay khi load
+            syncNckhHiddenField(form);
+
+            // Gắn listener cho các lần thay đổi sau
             form.querySelectorAll('.edit-nckh-cb').forEach(function(cb) {
-                cb.addEventListener('change', function() {
-                    var checked = Array.from(form.querySelectorAll('.edit-nckh-cb:checked')).map(function(c){ return c.value; });
-                    var hid = form.querySelector('[name="nckh_noi_dung_text"]');
-                    if (hid) hid.value = checked.join('\n');
-                });
+                // Tránh duplicate listener
+                cb.removeEventListener('change', syncNckhHiddenField);
+                cb.addEventListener('change', function() { syncNckhHiddenField(form); });
             });
-            var gcEl = form.querySelector('[name="ghi_chu_item"]');
-            if (gcEl) gcEl.value = d.ghi_chu || '';
 
-            // Populate tap_the_data fields (collective nomination criteria)
-            if (isTapThe && d.tap_the_data) {
-                Object.keys(d.tap_the_data).forEach(function(key) {
-                    var el = form.querySelector('[name="tap_the_' + key + '"]');
-                    if (el && d.tap_the_data[key] !== undefined && d.tap_the_data[key] !== null) {
-                        el.value = d.tap_the_data[key];
-                    }
-                });
-            }
-
-            // Áp dụng visibility theo đối tượng + danh hiệu
+            // ── 4. Áp dụng visibility theo danh hiệu + đối tượng ──────────
             applyModalFieldVisibility(d.loai_danh_hieu || '', d.doi_tuong || '');
 
-            // Bug 3 fix: show/hide personnel-based sections using fetched flags
-            // (applyModalFieldVisibility skips these as they're normally managed by onPersonnelSelect)
+            // ── 5. Ẩn/hiện theo cờ nhân sự (chỉ áp dụng cho cá nhân) ──────
             if (!isTapThe) {
-                var secPN = document.getElementById('section-phu-nu');
-                var secDoan = document.getElementById('section-doan-the');
-                var secDangDoan = document.getElementById('edit-section-dang-doan');
-                var dangVienWrapModal = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="xep_loai_dang_vien"]');
-                if (secPN) secPN.classList.toggle('hidden', !d.la_hoi_vien_phu_nu);
-                if (secDoan) secDoan.classList.toggle('hidden', !d.la_doan_vien);
-                // Show the combined card if any personnel flag is set
-                if (secDangDoan) secDangDoan.classList.toggle('hidden', !(d.la_dang_vien || d.la_doan_vien || d.la_hoi_vien_phu_nu));
-                if (dangVienWrapModal) dangVienWrapModal.style.display = d.la_dang_vien ? '' : 'none';
-                // Show/hide sub-fields within the card
-                var kqDoanWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="ket_qua_doan_the"]');
-                var xlDoanWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="xep_loai_doan_vien"]');
-                var kqPNWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="ket_qua_phu_nu"]');
-                var htPNWrap = document.querySelector('#edit-criteria-row .edit-field-wrap[data-field="hinh_thuc_khen_thuong_pn"]');
-                if (kqDoanWrap) kqDoanWrap.style.display = d.la_doan_vien ? '' : 'none';
-                if (xlDoanWrap) xlDoanWrap.style.display = d.la_doan_vien ? '' : 'none';
-                if (kqPNWrap) kqPNWrap.style.display = d.la_hoi_vien_phu_nu ? '' : 'none';
-                if (htPNWrap) htPNWrap.style.display = d.la_hoi_vien_phu_nu ? '' : 'none';
+                applyPersonnelFlagsToModal(d);
             }
 
-            // Wire hinh_thuc_tot_nghiep change in modal
-            var htSelect = document.getElementById('editItemForm').querySelector('[name="hinh_thuc_tot_nghiep"]');
+            // ── 6. Wire + apply hinh_thuc_tot_nghiep ──────────────────────
+            var htSelect = form.querySelector('[name="hinh_thuc_tot_nghiep"]');
             if (htSelect) {
                 htSelect.onchange = function() { applyModalDiemTotNghiep(); };
+                applyModalDiemTotNghiep();
             }
         })
         .catch(function(err) {
-            loading.innerHTML = '<div class="alert alert-danger">Không tải được dữ liệu.</div>';
+            loading.innerHTML = '<div class="alert alert-danger">'
+                + '<i class="bi bi-exclamation-triangle me-2"></i>Không tải được dữ liệu.</div>';
             console.error(err);
         });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// fillFormFromData: điền toàn bộ input/select/textarea trong form từ object data
+// Ưu tiên: d[name] → d.tap_the_data[name] (cho tập thể)
+// ─────────────────────────────────────────────────────────────────────────────
+function fillFormFromData(form, d) {
+    // Các field đặc biệt — xử lý riêng, không điền tự động
+    var SKIP_FIELDS = {
+        'csrf_token'        : true,
+        'nckh_noi_dung'     : true,   // checkbox group — xử lý riêng
+        'nckh_noi_dung_text': true,   // hidden — sync từ checkbox
+    };
+
+    // Gom tất cả [name] unique trong form
+    var seen = {};
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
+        var name = el.getAttribute('name');
+        if (!name || SKIP_FIELDS[name] || seen[name]) return;
+        seen[name] = true;
+
+        var value = undefined;
+
+        // Ưu tiên 1: key trực tiếp trong d
+        if (d[name] !== undefined && d[name] !== null) {
+            value = d[name];
+        }
+        // Ưu tiên 2: trong d.tap_the_data (tập thể)
+        else if (d.tap_the_data && d.tap_the_data[name] !== undefined && d.tap_the_data[name] !== null) {
+            value = d.tap_the_data[name];
+        }
+        // Ưu tiên 3: thử bỏ prefix 'tap_the_' nếu có
+        else if (name.indexOf('tap_the_') === 0) {
+            var stripped = name.replace(/^tap_the_/, '');
+            if (d.tap_the_data && d.tap_the_data[stripped] !== undefined) {
+                value = d.tap_the_data[stripped];
+            } else if (d[stripped] !== undefined) {
+                value = d[stripped];
+            }
+        }
+
+        if (value !== undefined) {
+            el.value = value;
+        }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// syncNckhHiddenField: đồng bộ hidden field nckh_noi_dung_text từ checkboxes
+// ─────────────────────────────────────────────────────────────────────────────
+function syncNckhHiddenField(form) {
+    var checked = Array.from(form.querySelectorAll('.edit-nckh-cb:checked'))
+        .map(function(c) { return c.value; });
+    var hid = form.querySelector('[name="nckh_noi_dung_text"]');
+    if (hid) hid.value = checked.join('; '); // đồng nhất '; ' với form Add
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// applyPersonnelFlagsToModal: ẩn/hiện fields theo cờ nhân sự từ server
+// ─────────────────────────────────────────────────────────────────────────────
+function applyPersonnelFlagsToModal(d) {
+    var form = document.getElementById('editItemForm');
+
+    // Helper: lấy wrap của field trong modal
+    function getWrap(fieldName) {
+        return document.querySelector(
+            '#edit-criteria-row .edit-field-wrap[data-field="' + fieldName + '"]'
+        );
+    }
+
+    // Section Đảng/Đoàn/Phụ nữ tổng
+    var secDangDoan = document.getElementById('edit-section-dang-doan');
+    if (secDangDoan) {
+        var showSection = !!(d.la_dang_vien || d.la_doan_vien || d.la_hoi_vien_phu_nu);
+        secDangDoan.classList.toggle('hidden', !showSection);
+    }
+
+    // Đảng viên
+    var dangVienWrap = getWrap('xep_loai_dang_vien');
+    if (dangVienWrap) dangVienWrap.style.display = d.la_dang_vien ? '' : 'none';
+
+    // Đoàn viên
+    var doanFields = ['ket_qua_doan_the', 'xep_loai_doan_vien', 'hinh_thuc_khen_thuong_qc'];
+    doanFields.forEach(function(f) {
+        var w = getWrap(f);
+        if (w) w.style.display = d.la_doan_vien ? '' : 'none';
+    });
+
+    // Phụ nữ
+    var pnFields = ['ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn'];
+    pnFields.forEach(function(f) {
+        var w = getWrap(f);
+        if (w) w.style.display = d.la_hoi_vien_phu_nu ? '' : 'none';
+    });
+
+    // Chủ trì đơn vị — chỉ hiện nếu là chỉ huy hoặc bí thư
+    var chuTriWrap = getWrap('chu_tri_don_vi_danh_hieu');
+    if (chuTriWrap) {
+        chuTriWrap.style.display = (d.la_chi_huy || d.la_bi_thu) ? '' : 'none';
+    }
 }
 </script>
 {% endblock %}
