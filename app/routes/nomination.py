@@ -1005,7 +1005,12 @@ def submit_nomination(id):
     
     de_xuat.trang_thai = TrangThaiDeXuat.CHO_DUYET.value
     de_xuat.ngay_gui = datetime.utcnow()
-
+    for ct in de_xuat.chi_tiets:
+        ct.trang_thai = TrangThaiDeXuat.CHO_DUYET.value
+        ct.bi_loai = False  # reset lại nếu có thay đổi sau khi bị loại trước đó
+        ct.phong_loai = None
+        ct.ly_do_loai = None
+        ct.ngay_loai = None
     db.session.flush()
 
     # Sync per-item trang_thai → DANG_DUYET
