@@ -516,7 +516,11 @@ def _recompute_chi_tiet_status(de_xuat):
     dx_tt = de_xuat.trang_thai
     for ct in de_xuat.chi_tiets:
         if ct.bi_loai:
-            ct.trang_thai = TrangThaiChiTiet.TU_CHOI.value
+            ct.trang_thai = TrangThaiChiTiet.DANG_DUYET.value
+            ct.bi_loai = False  # reset bi_loai to avoid double-counting in future
+            ct.ly_do_loai = None
+            ct.phong_loai = None
+            ct.ngay_loai = None
             continue
         if dx_tt in (TrangThaiDeXuat.NHAP.value, TrangThaiDeXuat.CHO_DUYET.value,
                      TrangThaiDeXuat.DANG_DUYET.value, TrangThaiDeXuat.TU_CHOI.value):

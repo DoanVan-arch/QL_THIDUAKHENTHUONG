@@ -1000,9 +1000,11 @@ def submit_nomination(id):
                             chi_tiet_id=ct.id,
                             ket_qua=KetQuaDuyet.DONG_Y.value,
                         ))
-
+    
+    
     de_xuat.trang_thai = TrangThaiDeXuat.CHO_DUYET.value
     de_xuat.ngay_gui = datetime.utcnow()
+
     db.session.flush()
 
     # Sync per-item trang_thai → DANG_DUYET
@@ -1512,7 +1514,7 @@ def export_nomination_word(id):
             add_cell(row.cells[1], qn_obj.ho_ten if qn_obj else '')
             add_cell(row.cells[2], qn_obj.cap_bac if qn_obj else '')
             add_cell(row.cells[3], qn_obj.chuc_vu if qn_obj and qn_obj.chuc_vu else '')
-            add_cell(row.cells[4], get_don_vi_truc_thuoc(ct))
+            add_cell(row.cells[4], don_vi_ten if not qn_obj else get_don_vi_truc_thuoc(ct) or '')
             
             # Build tom tat - mỗi tiêu chí 1 dòng
             tom_tat_list = build_tom_tat(ct)

@@ -40,6 +40,11 @@
         <a href="{{ url_for('admin.export_tracking_excel', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
            class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
         <button class="btn btn-sm btn-outline-danger" onclick="printTracking()"><i class="bi bi-printer me-1"></i>In PDF</button>
+        <button type="button" class="btn btn-sm btn-danger d-none" id="btnBatchReject"
+        onclick="openBatchRejectModal()">
+    <i class="bi bi-x-circle me-1"></i>Từ chối đã chọn
+    (<span id="batchRejectCount">0</span>)
+</button>
     </div>
 </div>
 {% endif %}
@@ -126,6 +131,10 @@
         <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
             <thead>
                 <tr>
+                    <th class="col-cb text-center">
+                <input type="checkbox" class="form-check-input" id="checkAllCN"
+                            title="Chọn tất cả cá nhân" onchange="toggleCheckAll('CN',this.checked)">
+                </th>
                     <th class="col-stt">STT</th>
                     <th class="col-name">Họ tên</th>
                     <th class="col-donvi">Đơn vị</th>
@@ -164,6 +173,13 @@
                     {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
                 {% endfor %}
                 <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
+                    <td class="col-cb text-center">
+<input type="checkbox" class="form-check-input row-cb"
+            data-id="{{ ct.id }}"
+            data-table="CN"
+            data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else 'ID:' ~ ct.id)|e }}"
+            onchange="onRowCbChange()">
+</td>
                     <td class="col-stt">{{ loop.index }}</td>
                     <td class="col-name fw-semibold">
                         <div class="name-btn-group">
@@ -281,6 +297,10 @@
         <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
             <thead>
                 <tr>
+                    <th class="col-cb text-center">
+<input type="checkbox" class="form-check-input" id="checkAllTT"
+            title="Chọn tất cả tập thể" onchange="toggleCheckAll('TT',this.checked)">
+</th>
                     <th class="col-stt">STT</th>
                     <th class="col-name">Tên tập thể</th>
                     <th class="col-donvi">Đơn vị đề xuất</th>
@@ -308,6 +328,13 @@
                 {% set ct_can_approve = item.can_final_approve %}
                 {% set dx_tt = item.dx %}
                 <tr class="{% if ct_can_approve %}table-info{% endif %}">
+                    <td class="col-cb text-center">
+<input type="checkbox" class="form-check-input row-cb"
+            data-id="{{ ct.id }}"
+            data-table="TT"
+            data-name="{{ (ct.ten_don_vi_de_xuat or '')|e }}"
+            onchange="onRowCbChange()">
+</td>
                     <td class="col-stt">{{ loop.index }}</td>
                     <td class="col-name fw-semibold">
                         <div class="name-btn-group">
@@ -488,6 +515,49 @@
             </div>
         </form>
     </div></div>
+</div>
+<!-- Modal từ chối hàng loạt (thêm sau modal rejectNominationModal) -->
+<div class="modal fade" id="batchRejectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title">
+                    <i class="bi bi-x-circle me-2"></i>Từ chối các mục đã chọn
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Thao tác này sẽ từ chối <strong id="batchRejectCountLabel">0</strong> mục đã chọn
+                    và gửi thông báo lý do về đơn vị.
+                </div>
+                <!-- Danh sách tên đã chọn -->
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Danh sách đã chọn:</label>
+                    <ul class="list-unstyled mb-0 border rounded p-2 bg-light"
+                        id="batchRejectNameList"
+                        style="max-height:140px;overflow-y:auto;font-size:0.82rem;"></ul>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">
+                        Lý do từ chối <span class="text-danger">*</span>
+                    </label>
+                    <textarea class="form-control form-control-sm" id="batchRejectLyDo"
+                              rows="3" placeholder="Nhập lý do từ chối chung cho các mục đã chọn..."
+                              required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="batchRejectConfirm"
+                        onclick="submitBatchReject()">
+                    <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="modal fade" id="detailModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
@@ -775,7 +845,52 @@ div.tbl-scroll td.col-action {
 
 /* Detail-only columns hidden/shown via JS */
 .detail-only-col { display: table-cell; }
+/* ── Cột checkbox ── */
+.tbl-scroll .col-cb {
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    /* Sticky trái, sát cột STT */
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 3;
+    background: #fff;
+}
+.tbl-scroll thead .col-cb {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+}
+/* Cột STT dịch sang phải 36px (thêm col-cb) */
+.tbl-scroll .col-stt {
+    left: 36px !important;   /* 0 → 36px */
+}
+/* Cột Họ tên dịch sang phải 36px (36 + 42 = 78px) */
+.tbl-scroll .col-name {
+    left: 78px !important;   /* 42px → 78px */
+}
 
+/* Màu nền sticky checkbox theo trạng thái hàng */
+.tbl-scroll tr.table-info   .col-cb { background: #cff4fc !important; }
+.tbl-scroll tr.table-danger .col-cb { background: #f8d7da !important; }
+.tbl-scroll tbody tr:hover  .col-cb { background: #eef2f7 !important; }
+
+/* Checkbox trong header: màu trắng */
+.tbl-scroll thead .col-cb .form-check-input {
+    border-color: rgba(255,255,255,0.7);
+    background-color: transparent;
+}
+.tbl-scroll thead .col-cb .form-check-input:checked {
+    background-color: #fff;
+    border-color: #fff;
+}
+/* Nút batch reject nổi bật */
+#btnBatchReject {
+    animation: pulse-danger 1.5s infinite;
+}
+@keyframes pulse-danger {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,.4); }
+    50%       { box-shadow: 0 0 0 5px rgba(220,53,69,0); }
+}
 </style>
 
 <script>
@@ -1106,5 +1221,131 @@ function onNamHocChange(sel) {
     else { localStorage.removeItem('sharedNamHoc'); }
     sel.form.submit();
 }
+// ================================================================
+// CHECKBOX + BATCH REJECT
+// ================================================================
+
+// Thu thập tất cả checkbox đang được chọn
+function getCheckedItems() {
+    return Array.from(document.querySelectorAll('.row-cb:checked')).map(function(cb) {
+        return { id: cb.dataset.id, name: cb.dataset.name, table: cb.dataset.table };
+    });
+}
+
+// Cập nhật trạng thái nút "Từ chối đã chọn" trên toolbar
+function onRowCbChange() {
+    var items   = getCheckedItems();
+    var count   = items.length;
+    var btn     = document.getElementById('btnBatchReject');
+    var counter = document.getElementById('batchRejectCount');
+
+    if (btn)     btn.classList.toggle('d-none', count === 0);
+    if (counter) counter.textContent = count;
+
+    // Sync trạng thái checkbox "chọn tất cả" theo từng bảng
+    ['CN', 'TT'].forEach(function(tbl) {
+        var allCb  = document.getElementById('checkAll' + tbl);
+        if (!allCb) return;
+        var rows   = document.querySelectorAll('.row-cb[data-table="' + tbl + '"]');
+        var checked = document.querySelectorAll('.row-cb[data-table="' + tbl + '"]:checked');
+        if (!rows.length) return;
+        allCb.indeterminate = checked.length > 0 && checked.length < rows.length;
+        allCb.checked       = checked.length === rows.length;
+    });
+}
+
+// Chọn / bỏ chọn tất cả theo bảng (CN hoặc TT)
+function toggleCheckAll(tbl, checked) {
+    document.querySelectorAll('.row-cb[data-table="' + tbl + '"]').forEach(function(cb) {
+        cb.checked = checked;
+    });
+    onRowCbChange();
+}
+
+// Mở modal xác nhận từ chối hàng loạt
+function openBatchRejectModal() {
+    var items = getCheckedItems();
+    if (!items.length) return;
+
+    document.getElementById('batchRejectCountLabel').textContent = items.length;
+    document.getElementById('batchRejectLyDo').value = '';
+
+    var list = document.getElementById('batchRejectNameList');
+    list.innerHTML = items.map(function(item, idx) {
+        return '<li class="py-0">'
+             + '<span class="text-muted me-1">' + (idx + 1) + '.</span>'
+             + '<span>' + (item.name || ('ID: ' + item.id)) + '</span>'
+             + '</li>';
+    }).join('');
+
+    new bootstrap.Modal(document.getElementById('batchRejectModal')).show();
+}
+
+// Gửi request từ chối hàng loạt
+function submitBatchReject() {
+    var lyDo = (document.getElementById('batchRejectLyDo').value || '').trim();
+    if (!lyDo) {
+        document.getElementById('batchRejectLyDo').focus();
+        document.getElementById('batchRejectLyDo').classList.add('is-invalid');
+        return;
+    }
+    document.getElementById('batchRejectLyDo').classList.remove('is-invalid');
+
+    var items = getCheckedItems();
+    if (!items.length) return;
+
+    var ids = items.map(function(i) { return parseInt(i.id, 10); });
+    var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+    var btn = document.getElementById('batchRejectConfirm');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+
+    fetch('/admin/batch-reject-individuals', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ ids: ids, ly_do: lyDo })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            bootstrap.Modal.getInstance(
+                document.getElementById('batchRejectModal')
+            ).hide();
+            // Hiện thông báo thành công rồi reload
+            var toast = document.createElement('div');
+            toast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3 shadow';
+            toast.style.zIndex = '9999';
+            toast.style.minWidth = '260px';
+            toast.innerHTML = '<i class="bi bi-check-circle me-2"></i>'
+                + 'Đã từ chối <strong>' + ids.length + '</strong> mục thành công.';
+            document.body.appendChild(toast);
+            setTimeout(function() { location.reload(); }, 1200);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Xác nhận từ chối';
+        }
+    })
+    .catch(function(err) {
+        console.error(err);
+        alert('Lỗi kết nối. Vui lòng thử lại.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Xác nhận từ chối';
+    });
+}
+
+// Xoá trạng thái invalid khi người dùng gõ lý do
+document.addEventListener('DOMContentLoaded', function() {
+    var lyDoEl = document.getElementById('batchRejectLyDo');
+    if (lyDoEl) {
+        lyDoEl.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+        });
+    }
+});
 </script>
 {% endblock %}

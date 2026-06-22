@@ -2,7 +2,7 @@
 {% block title %}Chỉnh sửa đề xuất - {{ de_xuat.nam_hoc }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/css/tom-select.bootstrap5.min.css') }}">
 <style>
   .ts-wrapper.form-select { padding: 0; }
   .ts-wrapper .ts-control { border: none; box-shadow: none; min-height: 38px; }
@@ -249,7 +249,7 @@
                         </select> -->
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Số phiếu tín nhiệm</label>
+                        <label class="form-label">Số phiếu tín nhiệm (%)</label>
                         <input type="text" class="form-control" name="phieu_tin_nhiem">
                     </div>
                     <div class="col-md-6">
@@ -306,7 +306,7 @@
                         {{ tc_input('dia_ly_quan_su', 'VD: Khá') }}
                     </div>
                     <div class="col-md-4 hidden" id="wrap-xep-loai-dang-vien">
-                        <label class="form-label">Xếp loại đảng viên hằng năm</label>
+                        <label class="form-label">Xếp loại đảng viên</label>
                         {{ tc_input('xep_loai_dang_vien') }}
                     </div>
                     
@@ -642,18 +642,18 @@ var DANH_HIEU_PHAM_VI = {{ danh_hieu_pham_vi | default({}) | tojson }};
 var TIEU_CHI_TAP_THE = {{ tieu_chi_tap_the | default({}) | tojson }};
 
 // Nhom display labels
-var NHOM_LABEL = {
-    'ban_canbo': '',
-    'ban_tochuc': '',
-    'ban_tuyenhuan': '',
-    'ban_ctqc': '',
-    'ban_cntt': '',
-    'ban_tachuan': '',
-    'phong_daotao': '',
-    'phong_khqs': '',
-    'phong_hckt': '',
-    'ban_khaothi': '',
-};
+// var NHOM_LABEL = {
+//     'ban_canbo': '',
+//     'ban_tochuc': '',
+//     'ban_tuyenhuan': '',
+//     'ban_ctqc': '',
+//     'ban_cntt': '',
+//     'ban_tachuan': '',
+//     'phong_daotao': '',
+//     'phong_khqs': '',
+//     'phong_hckt': '',
+//     'ban_khaothi': '',
+// };
 
 // Tiêu chí tooltips from DB: {field_name: tooltip_text}
 var TIEU_CHI_TOOLTIPS = {{ tieu_chi_tooltips | default({}) | tojson }};
@@ -877,7 +877,7 @@ function annotateCriteriaGroupLabels() {
         if (oldBadge) oldBadge.remove();
 
         var meta = CRITERIA_META[fieldName] || {};
-        var groupName = (meta.nhom_ten || meta.nhom || '').trim();
+        var groupName = (meta.ten || meta.nhom || '').trim();
         if (!groupName) return;
 
         var badge = document.createElement('span');
@@ -1277,7 +1277,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/tom-select.complete.min.js') }}"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script> -->
 <script>
 (function() {
     var qnEl = document.getElementById('quan_nhan_select');
@@ -1469,13 +1470,13 @@ function updateSubmitButtonState() {
                 <div class="row g-3">
                   <div class="col-md-6 edit-field-wrap" data-field="muc_do_hoan_thanh">
                     <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
-                    <select name="muc_do_hoan_thanh" class="form-select">
+                    <!-- <select name="muc_do_hoan_thanh" class="form-select">
                       <option value="">-- Chọn --</option>
                       {% for m in muc_do_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
-                    </select>
+                    </select> -->
                   </div>
                   <div class="col-md-6 edit-field-wrap" data-field="phieu_tin_nhiem">
-                    <label class="form-label">Số phiếu tín nhiệm</label>
+                    <label class="form-label">Số phiếu tín nhiệm (%)</label>
                     <input type="text" name="phieu_tin_nhiem" class="form-control"
                            placeholder="VD: Tín nhiệm cao">
                   </div>
@@ -1538,7 +1539,7 @@ function updateSubmitButtonState() {
                 </div>
                 <div class="row g-3">
                   <div class="col-md-4 edit-field-wrap" data-field="xep_loai_dang_vien">
-                    <label class="form-label">Xếp loại đảng viên hằng năm</label>
+                    <label class="form-label">Xếp loại đảng viên</label>
                     {{ tc_input('xep_loai_dang_vien') }}
                   </div>
                   <div class="col-md-4 edit-field-wrap" data-field="ket_qua_doan_the">

@@ -1262,7 +1262,155 @@ def reject_from_tracking(id):
 
     flash('Đã từ chối đề xuất.', 'warning')
     return redirect(url_for('admin.approval_tracking'))
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPER: logic từ chối 1 chi tiết — dùng chung cho cả đơn lẻ lẫn hàng loạt
+# ─────────────────────────────────────────────────────────────────────────────
+def _reject_single_chi_tiet(ct, ly_do: str) -> str:
+    """
+    Từ chối 1 DeXuatChiTiet (cá nhân hoặc tập thể).
+    - Tạo/cập nhật PheDuyet + KetQuaDuyetChiTiet
+    - Đánh dấu ct.bi_loai, reset ct.admin_approved
+    - Recompute trạng thái đề xuất
+    - Gửi ThongBao về đơn vị
+    - Ghi log
 
+    Trả về: tên hiển thị (ho_ten hoặc ten_don_vi)
+    KHÔNG commit — caller tự commit sau khi xử lý xong batch.
+    """
+    de_xuat = ct.de_xuat
+
+    # ── 1. Đảm bảo PheDuyet admin tồn tại ───────────────────────────────────
+    admin_pd = PheDuyet.query.filter_by(
+        de_xuat_id=de_xuat.id,
+        phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
+    ).first()
+    if not admin_pd:
+        admin_pd = PheDuyet(
+            de_xuat_id=de_xuat.id,
+            phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
+            ket_qua=KetQuaDuyet.CHO_DUYET.value,
+        )
+        db.session.add(admin_pd)
+        db.session.flush()  # lấy admin_pd.id
+
+    # ── 2. Tạo/cập nhật KetQuaDuyetChiTiet ──────────────────────────────────
+    kq_ct = KetQuaDuyetChiTiet.query.filter_by(
+        phe_duyet_id=admin_pd.id,
+        chi_tiet_id=ct.id
+    ).first()
+    if kq_ct:
+        kq_ct.ket_qua = KetQuaDuyet.TU_CHOI.value
+        kq_ct.ly_do   = ly_do
+    else:
+        kq_ct = KetQuaDuyetChiTiet(
+            phe_duyet_id=admin_pd.id,
+            chi_tiet_id=ct.id,
+            ket_qua=KetQuaDuyet.TU_CHOI.value,
+            ly_do=ly_do,
+        )
+        db.session.add(kq_ct)
+
+    # ── 3. Reset admin_approved + đánh dấu bi_loai ───────────────────────────
+    ct.admin_approved = False
+    if not ct.bi_loai:
+        ct.bi_loai    = True
+        ct.ly_do_loai = ly_do
+        ct.phong_loai = PhongDuyet.ADMIN_TUYENHUAN.value
+        ct.ngay_loai  = datetime.utcnow()
+
+    # ── 4. Recompute trạng thái đề xuất ──────────────────────────────────────
+    from app.routes.approval import _recompute_de_xuat_status
+    _recompute_de_xuat_status(de_xuat)
+
+    # ── 5. Tên hiển thị ───────────────────────────────────────────────────────
+    ho_ten = (
+        ct.quan_nhan.ho_ten
+        if ct.quan_nhan
+        else (de_xuat.don_vi.ten_don_vi if de_xuat.don_vi else f'ID:{ct.id}')
+    )
+
+    # ── 6. Gửi ThongBao về đơn vị ────────────────────────────────────────────
+    unit_user = User.query.filter_by(
+        don_vi_id=de_xuat.don_vi_id,
+        role=Role.UNIT_USER
+    ).first()
+    if unit_user:
+        thong_bao = ThongBao(
+            user_id=unit_user.id,
+            de_xuat_id=de_xuat.id,
+            chi_tiet_id=ct.id,
+            loai='tu_choi',
+            tieu_de=f'Ban Tuyên huấn (Admin) loại khỏi đề xuất: {ho_ten}',
+            noi_dung=(
+                f'Lý do: {ly_do}. {ho_ten} đã bị loại khỏi đề xuất '
+                f'năm học {de_xuat.nam_hoc}. '
+                f'Các cá nhân/tập thể còn lại vẫn tiếp tục được xét duyệt.'
+            ),
+        )
+        db.session.add(thong_bao)
+
+    # ── 7. Ghi log ────────────────────────────────────────────────────────────
+    log_action(
+        'admin_reject_individual',
+        resource_type='chi_tiet',
+        resource_id=ct.id,
+        detail=f'{ho_ten} — lý do: {ly_do}',
+    )
+
+    return ho_ten
+# ─────────────────────────────────────────────────────────────────────────────
+# ROUTE: Từ chối hàng loạt (JSON API, dùng helper trong vòng lặp)
+# ─────────────────────────────────────────────────────────────────────────────
+@admin_bp.route('/batch-reject-individuals', methods=['POST'])
+@login_required
+@admin_required
+def batch_reject_individuals():
+    """Từ chối hàng loạt các chi tiết đề xuất đã chọn trên trang tracking."""
+    data  = request.get_json(force=True) or {}
+    ids   = data.get('ids') or []
+    ly_do = (data.get('ly_do') or '').strip()
+
+    if not ids:
+        return jsonify(success=False, message='Không có mục nào được chọn.')
+    if not ly_do:
+        return jsonify(success=False, message='Vui lòng nhập lý do từ chối.')
+
+    rejected = 0
+    skipped  = []   # ids không tìm thấy
+    errors   = []   # ids gặp lỗi runtime
+
+    for ct_id in ids:
+        ct = DeXuatChiTiet.query.get(ct_id)
+        if not ct:
+            skipped.append(ct_id)
+            continue
+        try:
+            _reject_single_chi_tiet(ct, ly_do)
+            rejected += 1
+        except Exception as e:
+            errors.append(f'ID {ct_id}: {str(e)}')
+
+    # Commit toàn bộ batch 1 lần duy nhất
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, message=f'Lỗi lưu dữ liệu: {str(e)}')
+
+    # Tổng hợp kết quả
+    msg_parts = [f'Đã từ chối {rejected} mục.']
+    if skipped:
+        msg_parts.append(f'Không tìm thấy: {len(skipped)} mục (ID: {skipped}).')
+    if errors:
+        msg_parts.append(f'Lỗi: {"; ".join(errors)}')
+
+    return jsonify(
+        success=True,
+        message=' '.join(msg_parts),
+        rejected=rejected,
+        skipped=len(skipped),
+        errors=errors,
+    )
 
 @admin_bp.route('/tracking/ct/<int:ct_id>/reject', methods=['POST'])
 @login_required
@@ -4356,7 +4504,7 @@ TIEU_CHI_OPTIONS = [
     ('diem_ban_sung', 'Điểm bắn súng'),
     ('the_luc', 'Thể lực'),
     ('diem_the_luc', 'Điểm thể lực'),
-    ('xep_loai_dang_vien', 'Xếp loại đảng viên hằng năm'),
+    ('xep_loai_dang_vien', 'Xếp loại đảng viên'),
     ('ket_qua_doan_the', 'Kết quả đoàn thể'),
     ('chu_tri_don_vi_danh_hieu', 'Chủ trì đơn vị đạt danh hiệu'),
     ('danh_hieu_gv_gioi', 'Danh hiệu GV giỏi'),
