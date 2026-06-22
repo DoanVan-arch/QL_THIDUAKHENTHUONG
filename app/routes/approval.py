@@ -522,6 +522,10 @@ def _recompute_chi_tiet_status(de_xuat):
         if dx_tt in (TrangThaiDeXuat.NHAP.value, TrangThaiDeXuat.CHO_DUYET.value,
                      TrangThaiDeXuat.DANG_DUYET.value, TrangThaiDeXuat.TU_CHOI.value):
             ct.trang_thai = TrangThaiChiTiet.DANG_DUYET.value
+            ct.ly_do_loai = None
+            ct.phong_loai = None
+            ct.ngay_loai = None
+            ct.bi_loai = False
         elif dx_tt == TrangThaiDeXuat.HOI_DONG.value:
             if ct.admin_approved:
                 ct.trang_thai = TrangThaiChiTiet.HOI_DONG.value
