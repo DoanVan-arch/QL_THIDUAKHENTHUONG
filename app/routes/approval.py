@@ -49,12 +49,22 @@ def _auto_finalize_scope_dept(de_xuat_id):
         for ct in de_xuat.chi_tiets:
             if ct.bi_loai:
                 continue
+            if ct.doi_tuong is None:
+                if  phong_val == PhongDuyet.BAN_SAUDAIHOC.value:
+                    # For Ban Quan luc, only certain doi_tuong are in scope
+                   
+                    ket_qua_1 = KetQuaDuyetChiTiet(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                        ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
+                    )
+                continue  # skip tập thể
             if ct.id not in existing:
-                in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
+               
                 
                 if phong_val != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_val != PhongDuyet.BAN_SAUDAIHOC.value:
                     # For Ban Quan luc, only certain doi_tuong are in scope
-                   
+                    in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
                     ket_qua_1 = KetQuaDuyetChiTiet(
                         phe_duyet_id=pd.id,
                         chi_tiet_id=ct.id,
