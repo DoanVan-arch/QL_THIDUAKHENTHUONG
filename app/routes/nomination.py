@@ -959,9 +959,10 @@ def submit_nomination(id):
     # Create pending approval records
     ca_nhan_items = [ct for ct in de_xuat.chi_tiets if ct.doi_tuong]  # tập thể có doi_tuong = None
     has_any_doan_the = any((ct.ket_qua_doan_the or '').strip() for ct in ca_nhan_items)
+    has_any_phu_nu = any((ct.ket_qua_phu_nu or '').strip() for ct in ca_nhan_items)
     # Chỉ auto-approve BAN_CTCQ khi có cá nhân nhưng không ai có kết quả đoàn thể
     # Nếu toàn bộ là tập thể → không auto-approve, để BAN_CTCQ xét bình thường
-    ctcq_auto = ca_nhan_items and not has_any_doan_the
+    ctcq_auto = ca_nhan_items and not has_any_doan_the and not has_any_phu_nu
 
     for phong in [PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
                   PhongDuyet.THU_TRUONG_PHONG_TMHC,
