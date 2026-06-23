@@ -1470,6 +1470,7 @@ function updateSubmitButtonState() {
                 <div class="row g-3">
                   <div class="col-md-6 edit-field-wrap" data-field="muc_do_hoan_thanh">
                     <label class="form-label">Mức độ hoàn thành nhiệm vụ</label>
+                     {{ tc_input('muc_do_hoan_thanh', 'VD: Giỏi') }}
                     <!-- <select name="muc_do_hoan_thanh" class="form-select">
                       <option value="">-- Chọn --</option>
                       {% for m in muc_do_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
@@ -2026,10 +2027,10 @@ function _modalRenderTapTheCriteria(danhHieu, isTapThe) {
         var tcs = byNhom[nhom];
         if (!tcs || !tcs.length) return;
 
-        html += '<div class="mb-3">'
-             +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
-             +  ' style="font-size:0.85rem;">' + (nhom || '') + '</div>'
-             +  '<div class="row g-2">';
+        // html += '<div class="mb-3">'
+        //      +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
+        //      +  ' style="font-size:0.85rem;">' + (nhom || '') + '</div>'
+        //      +  '<div class="row g-2">';
 
         tcs.forEach(function(tc) {
             html += '<div class="col-md-4 edit-field-wrap" data-field="' + tc.ma_truong + '">';

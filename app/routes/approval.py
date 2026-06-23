@@ -11,6 +11,8 @@ from app.utils.decorators import department_required
 from app.utils.activity_logger import log_action
 from datetime import datetime
 from io import BytesIO
+
+
 #thaydoi import theo nhu cau
 approval_bp = Blueprint('approval', __name__)
 
@@ -47,6 +49,7 @@ def _auto_finalize_scope_dept(de_xuat_id):
         # Ensure KetQuaDuyetChiTiet records exist for all chi_tiets
         existing = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
         for ct in de_xuat.chi_tiets:
+            in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
             if ct.bi_loai:
                 continue
             if ct.doi_tuong is None:
@@ -64,7 +67,7 @@ def _auto_finalize_scope_dept(de_xuat_id):
                 
                 if phong_val != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_val != PhongDuyet.BAN_SAUDAIHOC.value:
                     # For Ban Quan luc, only certain doi_tuong are in scope
-                    in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
+                    
                     ket_qua_1 = KetQuaDuyetChiTiet(
                         phe_duyet_id=pd.id,
                         chi_tiet_id=ct.id,
@@ -797,7 +800,7 @@ def review_nomination(id):
     phe_duyet = PheDuyet.query.filter_by(
         de_xuat_id=id, phong_duyet=phong_name
     ).first_or_404()
-
+   
     group_gate = _get_group_gate_for_pd(current_user.role, id)
     group_gate_by_ct = {}
     if current_user.role in _GROUP_CONFIRMATION:
@@ -814,7 +817,7 @@ def review_nomination(id):
             if phong_name == PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_name == PhongDuyet.BAN_SAUDAIHOC.value:
 
                 ket_qua_1 = KetQuaDuyetChiTiet(
-                            phe_duyet_id=pd.id,
+                            phe_duyet_id=phe_duyet.id,
                             chi_tiet_id=ct.id,
                             ket_qua=KetQuaDuyet.DONG_Y.value,
                         )
@@ -824,20 +827,20 @@ def review_nomination(id):
                 if phong_name != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_name != PhongDuyet.BAN_SAUDAIHOC.value:
 
                     ket_qua_1 = KetQuaDuyetChiTiet(
-                            phe_duyet_id=pd.id,
+                            phe_duyet_id=phe_duyet.id,
                             chi_tiet_id=ct.id,
                             ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
                         )
             else:
                 if ct.doi_tuong in ['Học viên sau đại học']:
                     ket_qua_1 = KetQuaDuyetChiTiet(
-                        phe_duyet_id=pd.id,
+                        phe_duyet_id=phe_duyet.id,
                         chi_tiet_id=ct.id,
                         ket_qua=KetQuaDuyet.CHO_DUYET.value,
                     )
                 else:
                     ket_qua_1 = KetQuaDuyetChiTiet(
-                        phe_duyet_id=pd.id,
+                        phe_duyet_id=phe_duyet.id,
                         chi_tiet_id=ct.id,
                         ket_qua=KetQuaDuyet.DONG_Y.value,
                     )

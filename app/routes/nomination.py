@@ -958,11 +958,11 @@ def submit_nomination(id):
 
     # Create pending approval records
     ca_nhan_items = [ct for ct in de_xuat.chi_tiets if ct.doi_tuong]  # tập thể có doi_tuong = None
-    has_any_doan_the = any((ct.ket_qua_doan_the or '').strip() for ct in ca_nhan_items)
-    has_any_phu_nu = any((ct.ket_qua_phu_nu or '').strip() for ct in ca_nhan_items)
+   # has_any_doan_the = any((ct.ket_qua_doan_the or '').strip() for ct in ca_nhan_items)
+   # has_any_phu_nu = any((ct.ket_qua_phu_nu or '').strip() for ct in ca_nhan_items)
     # Chỉ auto-approve BAN_CTCQ khi có cá nhân nhưng không ai có kết quả đoàn thể
     # Nếu toàn bộ là tập thể → không auto-approve, để BAN_CTCQ xét bình thường
-    ctcq_auto = ca_nhan_items and not has_any_doan_the and not has_any_phu_nu
+  #  ctcq_auto = ca_nhan_items and not has_any_doan_the and not has_any_phu_nu
 
     for phong in [PhongDuyet.PHONG_KHOAHOC, PhongDuyet.PHONG_DAOTAO,
                   PhongDuyet.THU_TRUONG_PHONG_TMHC,
@@ -976,9 +976,9 @@ def submit_nomination(id):
         if not existing:
             initial_ket_qua = KetQuaDuyet.CHO_DUYET.value
             initial_ghi_chu = None
-            if phong == PhongDuyet.BAN_CTCQ and ctcq_auto:
-                initial_ket_qua = KetQuaDuyet.DONG_Y.value
-                initial_ghi_chu = 'Tự động duyệt (không có dữ liệu kết quả đoàn thể)'
+            # if phong == PhongDuyet.BAN_CTCQ and ctcq_auto:
+            #     initial_ket_qua = KetQuaDuyet.DONG_Y.value
+            #     initial_ghi_chu = 'Tự động duyệt (không có dữ liệu kết quả đoàn thể)'
 
             pd = PheDuyet(
                 de_xuat_id=de_xuat.id,
@@ -989,19 +989,40 @@ def submit_nomination(id):
             db.session.add(pd)
             db.session.flush()
 
-            if phong == PhongDuyet.BAN_CTCQ and ctcq_auto:
-                for ct in de_xuat.chi_tiets:
-                    exists_item = KetQuaDuyetChiTiet.query.filter_by(
+            
+            for ct in de_xuat.chi_tiets:
+                if not ct.ket_qua_doan_the and not ct.ket_qua_doan_the.strip() and not ct.ket_qua_phu_nu and not ct.ket_qua_phu_nu.strip():
+                    existing = KetQuaDuyetChiTiet.query.filter_by(
                         phe_duyet_id=pd.id,
                         chi_tiet_id=ct.id,
                     ).first()
-                    if not exists_item:
+                    if existing:
+                        existing.ket_qua = KetQuaDuyet.DONG_Y.value
+                    else:
                         db.session.add(KetQuaDuyetChiTiet(
                             phe_duyet_id=pd.id,
                             chi_tiet_id=ct.id,
                             ket_qua=KetQuaDuyet.DONG_Y.value,
                         ))
-    
+                else:
+                    existing = KetQuaDuyetChiTiet.query.filter_by(
+                        phe_duyet_id=pd.id,
+                        chi_tiet_id=ct.id,
+                    ).first()
+                    if not existing:
+                        db.session.add(KetQuaDuyetChiTiet(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                            ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                        ))
+                    else:
+                        existing.ket_qua = KetQuaDuyet.CHO_DUYET.value
+        else:
+            # Reset existing approval to pending if re-submitting
+            existing.ket_qua = KetQuaDuyet.CHO_DUYET.value
+            existing.ly_do = None
+            existing.ghi_chu = None
+            db.session.flush()
     
     de_xuat.trang_thai = TrangThaiDeXuat.CHO_DUYET.value
     de_xuat.ngay_gui = datetime.utcnow()
