@@ -2027,10 +2027,10 @@ function _modalRenderTapTheCriteria(danhHieu, isTapThe) {
         var tcs = byNhom[nhom];
         if (!tcs || !tcs.length) return;
 
-        // html += '<div class="mb-3">'
-        //      +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
-        //      +  ' style="font-size:0.85rem;">' + (nhom || '') + '</div>'
-        //      +  '<div class="row g-2">';
+        html += '<div class="mb-3">'
+             +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
+             +  ' style="font-size:0.85rem;">' + ('') + '</div>'
+             +  '<div class="row g-2">';
 
         tcs.forEach(function(tc) {
             html += '<div class="col-md-4 edit-field-wrap" data-field="' + tc.ma_truong + '">';
