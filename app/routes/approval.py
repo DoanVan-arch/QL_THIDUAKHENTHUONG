@@ -55,44 +55,82 @@ def _auto_finalize_scope_dept(de_xuat_id):
             if ct.doi_tuong is None:
                 if  phong_val == PhongDuyet.BAN_SAUDAIHOC.value:
                     # For Ban Quan luc, only certain doi_tuong are in scope
-                   
-                    ket_qua_1 = KetQuaDuyetChiTiet(
-                        phe_duyet_id=pd.id,
-                        chi_tiet_id=ct.id,
-                        ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
-                    )
+                    existing = KetQuaDuyetChiTiet.query.filter_by(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                        ).first()
+                    if not existing:
+                        ket_qua_1 = KetQuaDuyetChiTiet(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                            ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
+                        )
+                    else:
+                        ket_qua_1 = existing
+                        if not in_scope and ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
+                            ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
+                            
                 continue  # skip tập thể
             if ct.id not in existing:
                
                 
                 if phong_val != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_val != PhongDuyet.BAN_SAUDAIHOC.value:
                     # For Ban Quan luc, only certain doi_tuong are in scope
-                    
-                    ket_qua_1 = KetQuaDuyetChiTiet(
-                        phe_duyet_id=pd.id,
-                        chi_tiet_id=ct.id,
-                        ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
-                    )
-                else:
-                    if ct.doi_tuong in ['Học viên sau đại học']:
+                    existing = KetQuaDuyetChiTiet.query.filter_by(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                        ).first()
+                    if not existing:
                         ket_qua_1 = KetQuaDuyetChiTiet(
                             phe_duyet_id=pd.id,
                             chi_tiet_id=ct.id,
-                            ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                            ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
                         )
                     else:
-                        ket_qua_1 = KetQuaDuyetChiTiet(
+                        ket_qua_1 = existing 
+                        if not in_scope and ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
+                            ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
+                            
+                else:
+                    if ct.doi_tuong in ['Học viên sau đại học']:
+                        existing = KetQuaDuyetChiTiet.query.filter_by(
                             phe_duyet_id=pd.id,
                             chi_tiet_id=ct.id,
-                            ket_qua=KetQuaDuyet.DONG_Y.value,
-                        )
+                        ).first()
+                        if not existing:
+                            ket_qua_1 = KetQuaDuyetChiTiet(
+                                phe_duyet_id=pd.id,
+                                chi_tiet_id=ct.id,
+                                ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                            )
+                        else:
+                            ket_qua_1 = existing
+                            if ket_qua_1.ket_qua != KetQuaDuyet.CHO_DUYET.value:
+                                ket_qua_1.ket_qua = KetQuaDuyet.CHO_DUYET.value
+                                
+                    else:
+                        existing = KetQuaDuyetChiTiet.query.filter_by(
+                            phe_duyet_id=pd.id,
+                            chi_tiet_id=ct.id,
+                        ).first()
+                        if not existing:
+                            ket_qua_1 = KetQuaDuyetChiTiet(
+                                phe_duyet_id=pd.id,
+                                chi_tiet_id=ct.id,
+                                ket_qua=KetQuaDuyet.DONG_Y.value,
+                            )
+                        else:
+                            ket_qua_1 = existing
+                            if ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
+                                ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
+                                
 
                 # Thêm nhiều bản ghi cùng lúc
                 db.session.add_all([ket_qua_1])
 
                 # Chỉ flush 1 lần duy nhất sau khi đã add xong
-                
-            db.session.flush()
+            #db.session.flush()
+        db.session.flush()
            
         # Re-check: if no CHO_DUYET remains among ACTIVE items → auto-finalize
         pending = KetQuaDuyetChiTiet.query.filter_by(

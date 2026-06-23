@@ -1005,18 +1005,20 @@ def submit_nomination(id):
                             ket_qua=KetQuaDuyet.DONG_Y.value,
                         ))
                 else:
-                    existing = KetQuaDuyetChiTiet.query.filter_by(
-                        phe_duyet_id=pd.id,
-                        chi_tiet_id=ct.id,
-                    ).first()
-                    if not existing:
-                        db.session.add(KetQuaDuyetChiTiet(
+                    if phong != PhongDuyet.BAN_CANBO and phong != PhongDuyet.BAN_QUANLUC and phong != PhongDuyet.PHONG_HAUCANKYTHUAT and phong != PhongDuyet.BAN_SAUDAIHOC:  # BAN_CANBO và BAN_CTCQ duyệt nhưng không auto-approve, để họ xét bình thường 
+                        existing = KetQuaDuyetChiTiet.query.filter_by(
                             phe_duyet_id=pd.id,
                             chi_tiet_id=ct.id,
-                            ket_qua=KetQuaDuyet.CHO_DUYET.value,
-                        ))
-                    else:
-                        existing.ket_qua = KetQuaDuyet.CHO_DUYET.value
+                        ).first()
+                        if not existing:
+                            db.session.add(KetQuaDuyetChiTiet(
+                                phe_duyet_id=pd.id,
+                                chi_tiet_id=ct.id,
+                                ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                            ))
+                        else:
+                            existing.ket_qua = KetQuaDuyet.CHO_DUYET.value
+                
         else:
             # Reset existing approval to pending if re-submitting
             existing.ket_qua = KetQuaDuyet.CHO_DUYET.value
