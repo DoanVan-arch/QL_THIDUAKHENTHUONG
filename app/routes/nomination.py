@@ -991,7 +991,7 @@ def submit_nomination(id):
 
             
             for ct in de_xuat.chi_tiets:
-                if not ct.ket_qua_doan_the and not ct.ket_qua_doan_the.strip() and not ct.ket_qua_phu_nu and not ct.ket_qua_phu_nu.strip():
+                if not ct.ket_qua_doan_the and not ct.ket_qua_doan_the and not ct.ket_qua_phu_nu and not ct.ket_qua_phu_nu:
                     existing = KetQuaDuyetChiTiet.query.filter_by(
                         phe_duyet_id=pd.id,
                         chi_tiet_id=ct.id,
