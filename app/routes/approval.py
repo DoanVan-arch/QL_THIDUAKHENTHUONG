@@ -129,8 +129,8 @@ def _auto_finalize_scope_dept(de_xuat_id):
                 db.session.add_all([ket_qua_1])
 
                 # Chỉ flush 1 lần duy nhất sau khi đã add xong
-            #db.session.flush()
-        db.session.flush()
+            db.session.flush()
+        
            
         # Re-check: if no CHO_DUYET remains among ACTIVE items → auto-finalize
         pending = KetQuaDuyetChiTiet.query.filter_by(
