@@ -65,11 +65,12 @@ def _auto_finalize_scope_dept(de_xuat_id):
                             chi_tiet_id=ct.id,
                             ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
                         )
+                        db.session.add(ket_qua_1)
                     else:
                         ket_qua_1 = existing
                         if not in_scope and ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
                             ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
-                            
+                            db.session.commit()
                 continue  # skip tập thể
             if ct.id not in existing:
                
@@ -86,10 +87,12 @@ def _auto_finalize_scope_dept(de_xuat_id):
                             chi_tiet_id=ct.id,
                             ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
                         )
+                        db.session.add(ket_qua_1)
                     else:
                         ket_qua_1 = existing 
                         if not in_scope and ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
                             ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
+                            db.session.commit()
                             
                 else:
                     if ct.doi_tuong in ['Học viên sau đại học']:
@@ -103,10 +106,12 @@ def _auto_finalize_scope_dept(de_xuat_id):
                                 chi_tiet_id=ct.id,
                                 ket_qua=KetQuaDuyet.CHO_DUYET.value,
                             )
+                            db.session.add(ket_qua_1)
                         else:
                             ket_qua_1 = existing
                             if ket_qua_1.ket_qua != KetQuaDuyet.CHO_DUYET.value:
                                 ket_qua_1.ket_qua = KetQuaDuyet.CHO_DUYET.value
+                                db.session.commit()
                                 
                     else:
                         existing = KetQuaDuyetChiTiet.query.filter_by(
@@ -119,15 +124,17 @@ def _auto_finalize_scope_dept(de_xuat_id):
                                 chi_tiet_id=ct.id,
                                 ket_qua=KetQuaDuyet.DONG_Y.value,
                             )
+                            db.session.add(ket_qua_1)
                         else:
                             ket_qua_1 = existing
                             if ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
                                 ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
+                                db.session.commit()
                                 
 
                 # Thêm nhiều bản ghi cùng lúc
-                db.session.add_all([ket_qua_1])
-                db.session.flush()
+                
+            db.session.flush()
 
                 # Chỉ flush 1 lần duy nhất sau khi đã add xong
             
