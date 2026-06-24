@@ -10,7 +10,7 @@ from app.models.user import User, Role, ROLE_DISPLAY
 from app.models.unit import DonVi, LoaiDonVi
 from app.models.personnel import QuanNhan, CapBac, HocHam, HocVi, DoiTuong
 from app.models.certificate import ChungChi, LoaiChungChi
-from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDanhHieu, DanhHieu, TieuChi
+from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat, LoaiDanhHieu, DanhHieu, TieuChi, TrangThaiChiTiet
 from app.models.evaluation import NhomTieuChi, DanhGiaHangNam, DiemQuyDinhDanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
 from app.models.reward import KhenThuong
@@ -2631,6 +2631,8 @@ def export_tracking_word():
         for ct, dx in items:
             qn_obj  = ct.quan_nhan
             trang_thai = dx.trang_thai
+            if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+                continue
             if ct.id in approved_ct_ids:
                 trang_thai = 'Đã khen thưởng'
 
@@ -2685,7 +2687,7 @@ def export_tracking_word():
 
         col_widths  = [0.8, 4.2, 2.5, 9.0]
         
-        headers_txt = ['STT', 'Tên đơn vị', 'Đơn vị đề xuất',
+        headers_txt = ['STT', 'Tên đơn vị', 'Đề xuất đơn vị',
                         'Ghi chú']
 
         tbl = doc.add_table(rows=1, cols=len(col_widths))
@@ -2708,12 +2710,12 @@ def export_tracking_word():
 
         for idx, (ct, dx) in enumerate(items, 1):
             trang_thai = dx.trang_thai
-            if ct.id in approved_ct_ids:
-                trang_thai = 'Đã khen thưởng'
+            if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+                continue
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
-            add_cell(row.cells[1], ct.ten_don_vi_de_xuat or '-')
-            add_cell(row.cells[2], dx.don_vi.ten_don_vi if dx.don_vi else '')
+            add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-')
+            add_cell(row.cells[1], dx.don_vi.ten_don_vi if dx.don_vi else '')
         
             cell = row.cells[3]
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
@@ -2723,26 +2725,54 @@ def export_tracking_word():
             p.paragraph_format.space_after  = Pt(1)
 
             criteria_list = []
+            criteria_list_1 = []
             td = ct.tap_the_dict or {}
             if td:
-                from app.models.nomination import TieuChi as _TieuChi
-                ma_truong_list = list(td.keys())
-                tieu_chi_map = {}
-                if ma_truong_list:
-                    tc_rows = _TieuChi.query.filter(
-                        _TieuChi.ma_truong.in_(ma_truong_list)
-                    ).all()
-                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
-                for key, val in td.items():
-                    if val and str(val).strip() not in ('', '0', 'None'):
-                        label = tieu_chi_map.get(key, key)
-                        criteria_list.append(f'{label}: {val}')
+                    from app.models.nomination import TieuChi as _TieuChi
+                    ma_truong_list = list(td.keys())
+                    tieu_chi_map = {}
+                    if ma_truong_list:
+                        tc_rows = _TieuChi.query.filter(
+                            _TieuChi.ma_truong.in_(ma_truong_list)
+                        ).all()
+                        tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
+                    
+                    quy_scores = [] # Mảng tạm lưu điểm các quý để tính trung bình
+                    
+                    for key, val in td.items():
+                        if val and str(val).strip() not in ('', '0', 'None'):
+                            label = tieu_chi_map.get(key, key)
+                            if key in ('th_diem_tdtx_quy1', 'th_diem_tdtx_quy2', 'th_diem_tdtx_quy3', 'th_diem_tdtx_quy4'):
+                                criteria_list_1.append(f'{label}: {val}')
+                                # Ép kiểu sang số để tính toán
+                                try:
+                                    quy_scores.append(float(val))
+                                except ValueError:
+                                    pass
+                            criteria_list.append(f'{label}: {val}')
 
             if ct.muc_do_hoan_thanh:
                 criteria_list.insert(0, f'Mức độ hoàn thành: {ct.muc_do_hoan_thanh}')
             if ct.ghi_chu and ct.ghi_chu.strip():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
+            
+            # --- Xử lý tính điểm trung bình ---
+            if quy_scores:
+                diem_trung_binh = sum(quy_scores) / len(quy_scores)
+                # Làm tròn 2 chữ số thập phân và loại bỏ số 0 vô nghĩa (vd: 8.0 -> 8)
+                diem_tb_str = f"{diem_trung_binh:g}"
+                criteria_list.append(f'Điểm trung bình các quý: {diem_tb_str}')
+            # ----------------------------------
 
+            if criteria_list_1:
+                for idx_c, item in enumerate(criteria_list):
+                    if idx_c > 0:
+                        p = row.cells[1].add_paragraph()
+                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p.paragraph_format.space_before = Pt(1)
+                        p.paragraph_format.space_after  = Pt(1)
+                    run = p.add_run(f'- {item}')
+                    set_font(run, size=10)
             if criteria_list:
                 for idx_c, item in enumerate(criteria_list):
                     if idx_c > 0:

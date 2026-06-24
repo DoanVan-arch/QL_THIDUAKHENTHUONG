@@ -1635,6 +1635,8 @@ def _build_nomination_word_doc(don_vi_ten, nam_hoc,
 
         # ── Data rows ────────────────────────────────────────────────────────────
         for idx, ct in enumerate(chi_tiets, 1):
+            if ct.bi_loai == True or ct.trang_thai == TrangThaiDeXuat.TU_CHOI.value:
+                continue
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
             add_cell(row.cells[1], ct.ten_don_vi_de_xuat or '-')

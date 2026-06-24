@@ -2030,7 +2030,8 @@ def export_word():
             ket_qua_str = item['ket_qua_str']
             row_shading = item['row_shading']
             kq_color    = item['kq_color']
-
+            if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+                continue
             qn_obj  = ct.quan_nhan
             ho_ten  = qn_obj.ho_ten  if qn_obj else (ct.ten_don_vi_de_xuat or don_vi)
             cap_bac = qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else ''
@@ -2097,7 +2098,7 @@ def export_word():
             para_font(p2, '(Không có)', size=10, italic=True)
             return
 
-        widths = [0.7, 5.5, 10.0]  # STT | Tên đơn vị | Ghi chú
+        widths = [0.7, 2.5,3, 10.0]  # STT | Tên đơn vị | Ghi chú
         
         tbl = doc.add_table(rows=1, cols=len(widths))
         set_fixed_table_widths(tbl, widths)
@@ -2132,7 +2133,7 @@ def export_word():
 
         # Header row
         hrow = tbl.rows[0]
-        for i, h in enumerate(['STT', 'Tên đơn vị', 'Ghi chú']):
+        for i, h in enumerate(['STT', 'Tên đơn vị','Đề xuất của đơn vị', 'Ghi chú']):
             run = add_cell(hrow.cells[i], h, bold=True, size=10,
                            align=WD_ALIGN_PARAGRAPH.CENTER)
             set_cell_shading(hrow.cells[i], '1B3A6B')
@@ -2145,7 +2146,8 @@ def export_word():
             ket_qua_str = item['ket_qua_str']
             row_shading = item['row_shading']
             kq_color    = item['kq_color']
-
+            if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+                continue
             ten_dv = (ct.ten_don_vi_de_xuat or item['don_vi'] or '-')
 
             row = tbl.add_row()
