@@ -9,16 +9,14 @@
         <h4><i class="bi bi-clipboard-check me-2"></i>Phê duyệt khen thưởng</h4>
         <small class="text-muted">{{ phong_name }}</small>
     </div>
-    {% if pending_reviews %}
-    {% if nam_hoc_filter %}
+    {% if pending_reviews and nam_hoc_filter %}
     <div class="toolbar-wrapper">
         <div class="toolbar-inner">
-            <!-- View mode toggle -->
-            <div class="btn-group btn-group-sm" role="group" id="viewModeGroup" title="Chế độ hiển thị">
-                <button type="button" class="btn btn-outline-navy" id="btnViewCompact" title="Rút gọn – chỉ hiện thao tác">
+            <div class="btn-group btn-group-sm" role="group" id="viewModeGroup">
+                <button type="button" class="btn btn-outline-navy" id="btnViewCompact" title="Rút gọn">
                     <i class="bi bi-list-ul me-1"></i>Rút gọn
                 </button>
-                <button type="button" class="btn btn-outline-navy" id="btnViewFull" title="Đầy đủ – hiện tất cả tiêu chí">
+                <button type="button" class="btn btn-outline-navy" id="btnViewFull" title="Đầy đủ">
                     <i class="bi bi-table me-1"></i>Đầy đủ
                 </button>
             </div>
@@ -26,16 +24,16 @@
                 <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
             </button>
             <a href="{{ url_for('approval.export_excel', nam_hoc=nam_hoc_filter) }}"
-               class="btn btn-outline-success btn-sm" title="Xuất Excel có timestamp">
+               class="btn btn-outline-success btn-sm">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
             <a href="{{ url_for('approval.export_word', nam_hoc=nam_hoc_filter) }}"
-               class="btn btn-outline-success btn-sm" title="Xuất Word có timestamp">
+               class="btn btn-outline-success btn-sm">
                 <i class="bi bi-file-earmark-word me-1"></i>Word
             </a>
             <div id="filterBar" class="d-flex gap-2 align-items-center flex-wrap">
                 <div class="input-group input-group-sm" style="width:200px;">
-                    <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo họ tên...">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                 </div>
                 <select class="form-select form-select-sm" id="unitFilter" style="width:220px;">
@@ -60,10 +58,9 @@
         </div>
     </div>
     {% endif %}
-    {% endif %}
 </div>
 
-<!-- Year filter (server-side) -->
+<!-- Year filter -->
 <div class="card-section mb-3">
     <div class="card-body-custom py-2">
         <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
@@ -99,7 +96,6 @@
 
 {% if pending_reviews %}
 
-{# Gom tất cả chi tiết cá nhân và tập thể từ mọi đơn vị #}
 {% set all_cn = [] %}
 {% set all_tt = [] %}
 {% for pd in pending_reviews %}
@@ -113,7 +109,6 @@
     {% endfor %}
 {% endfor %}
 
-{# Summary stats #}
 {% set ns = namespace(total=0, approved=0, rejected=0, pending=0) %}
 {% for item in all_cn + all_tt %}
     {% if item.ct.id not in out_of_scope_ct_ids %}
@@ -124,24 +119,13 @@
     {% else %}{% set ns.pending = ns.pending + 1 %}{% endif %}
     {% endif %}
 {% endfor %}
+
 <div class="d-flex gap-3 mb-3 flex-wrap" id="globalStats">
-    <div class="stat-mini">
-        <i class="bi bi-people-fill text-primary"></i>
-        <span>Tổng: <strong id="gs-total">{{ ns.total }}</strong></span>
-    </div>
-    <div class="stat-mini">
-        <i class="bi bi-hourglass-split text-warning"></i>
-        <span>Chờ duyệt: <strong id="gs-pending">{{ ns.pending }}</strong></span>
-    </div>
-    <div class="stat-mini">
-        <i class="bi bi-check-circle-fill text-success"></i>
-        <span>Nhất trí: <strong id="gs-approved">{{ ns.approved }}</strong></span>
-    </div>
+    <div class="stat-mini"><i class="bi bi-people-fill text-primary"></i><span>Tổng: <strong id="gs-total">{{ ns.total }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-hourglass-split text-warning"></i><span>Chờ duyệt: <strong id="gs-pending">{{ ns.pending }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-check-circle-fill text-success"></i><span>Nhất trí: <strong id="gs-approved">{{ ns.approved }}</strong></span></div>
     {% if ns.rejected > 0 %}
-    <div class="stat-mini">
-        <i class="bi bi-x-circle-fill text-danger"></i>
-        <span>Không NT: <strong id="gs-rejected">{{ ns.rejected }}</strong></span>
-    </div>
+    <div class="stat-mini"><i class="bi bi-x-circle-fill text-danger"></i><span>Không NT: <strong id="gs-rejected">{{ ns.rejected }}</strong></span></div>
     {% endif %}
 </div>
 
@@ -149,11 +133,10 @@
 {% if all_cn %}
 <div class="card-section mb-3">
     <div class="card-body-custom py-2 d-flex align-items-center gap-2 flex-wrap">
-        <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" title="Chọn cột hiển thị">
+        <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0">
             <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
         </button>
-        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" id="btnApproveAllCN"
-                title="Nhất trí tất cả cá nhân chưa duyệt">
+        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" id="btnApproveAllCN">
             <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
         </button>
         <h6 class="mb-0 ms-1"><i class="bi bi-person-fill me-2 text-primary"></i>Danh hiệu cá nhân
@@ -163,220 +146,214 @@
     <div class="tbl-mirror" id="mirrorCN"><div></div></div>
     <div class="tbl-outer" id="tblOuterCN">
         <div class="tbl-scroll">
-            <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan" style="font-size:0.82rem;">
+            <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
                 <thead>
                     <tr>
-                    <th class="sticky-stt">STT</th>
-                    <th class="sticky-name">Họ tên</th>
-                    <th class="col-don-vi">Đơn vị</th>
-                    <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
-                    <th class="col-doi-tuong">Đối tượng</th>
-                    <th class="col-lop">Lớp</th>
-                    <th class="col-danh-hieu">Danh hiệu</th>
-                    {% if display_fields %}
-                    {% for field in display_fields %}
-                    <th class="col-criteria" data-col-key="cn_{{ field }}" data-col-label="{{ field_labels[field] if field in field_labels else field }}"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
-                    {% endfor %}
-                    {% endif %}
-                    {% if show_evidence %}
-                    <th class="col-evidence" style="width:60px;">Minh chứng</th>
-                    {% else %}
-                    <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
-                    {% endif %}
-                    {% if is_ttr_role %}
-                        {% for gdept in gate_dept_fields %}
-                            {% for field in gdept.fields %}
-                            <th class="text-center col-gate-criteria {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.7rem; width:60px; max-width:70px;" title="{{ gdept.dept ~ ': ' ~ (field_labels[field] if field in field_labels else field) }}"><small>{{ field_labels[field] if field in field_labels else field }}</small></th>
+                        <th class="sticky-stt">STT</th>
+                        <th class="sticky-name">Họ tên</th>
+                        <th class="col-don-vi">Đơn vị</th>
+                        <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
+                        <th class="col-doi-tuong">Đối tượng</th>
+                        <th class="col-lop">Lớp</th>
+                        <th class="col-danh-hieu">Danh hiệu</th>
+                        {% for field in display_fields %}
+                        <th class="col-criteria" data-col-key="cn_{{ field }}" data-col-label="{{ field_labels[field] if field in field_labels else field }}">
+                            <small>{{ field_labels[field] if field in field_labels else field }}</small>
+                        </th>
+                        {% endfor %}
+                        {% if show_evidence %}
+                        <th class="col-evidence text-center">Minh chứng</th>
+                        {% else %}
+                        <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chứng">Tệp</th>
+                        {% endif %}
+                        {% if is_ttr_role %}
+                            {% for gdept in gate_dept_fields %}{% for field in gdept.fields %}
+                            <th class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}"
+                                title="{{ gdept.dept ~ ': ' ~ (field_labels[field] if field in field_labels else field) }}">
+                                <small>{{ field_labels[field] if field in field_labels else field }}</small>
+                            </th>
+                            {% endfor %}{% endfor %}
+                            {% for mcol in managed_dept_columns %}
+                            <th class="text-center col-managed"><small>{{ mcol }}</small></th>
                             {% endfor %}
-                        {% endfor %}
-                        {% for mcol in managed_dept_columns %}
-                        <th class="text-center" style="width:74px; font-size:0.72rem;"><small>{{ mcol }}</small></th>
-                        {% endfor %}
-                    {% elif managed_dept_columns %}
-                        {% for mcol in managed_dept_columns %}
-                        <th style="width:74px;"><small>{{ mcol }}</small></th>
-                        {% endfor %}
-                    {% endif %}
-                    <th style="width:100px;" class="text-center col-pending">Đang chờ</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in all_cn %}
-                {% set ct = item.ct %}
-                {% set pd = item.pd %}
-                {% set results = item.results %}
-                {% set kq = results[ct.id] if ct.id in results else None %}
-                {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
-                {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
-                {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
-                {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
-                {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
-                {% set has_edit_request = ct.id in edit_requests_by_ct %}
-                <tr id="row-{{ pd.id }}-{{ ct.id }}"
-                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% elif has_edit_request %}table-warning-custom{% endif %} ct-row"
-                    data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
-                    data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
-                    data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
-                    data-doi-tuong="{{ ct.doi_tuong or '' }}"
-                    data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td class="sticky-stt">{{ loop.index }}</td>
-                    <td class="fw-semibold sticky-name">
-                        <div class="name-btn-group">
-                            <div class="name-text">
-                                <span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span>
-                                {% if has_edit_request %}
-                                <span class="badge bg-warning text-dark ms-1" title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}"><i class="bi bi-pencil-square"></i></span>
-                                {% endif %}
+                        {% elif managed_dept_columns %}
+                            {% for mcol in managed_dept_columns %}
+                            <th class="col-managed"><small>{{ mcol }}</small></th>
+                            {% endfor %}
+                        {% endif %}
+                        <th class="col-pending text-center">Đang chờ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in all_cn %}
+                    {% set ct = item.ct %}
+                    {% set pd = item.pd %}
+                    {% set results = item.results %}
+                    {% set kq = results[ct.id] if ct.id in results else None %}
+                    {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
+                    {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
+                    {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
+                    {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                    {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
+                    {% set has_edit_request = ct.id in edit_requests_by_ct %}
+                    <tr id="row-{{ pd.id }}-{{ ct.id }}"
+                        class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% elif has_edit_request %}table-warning-custom{% endif %} ct-row"
+                        data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
+                        data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
+                        data-ho-ten="{{ ct.quan_nhan.ho_ten|lower }}"
+                        data-doi-tuong="{{ ct.doi_tuong or '' }}"
+                        data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
+                        <td class="sticky-stt">{{ loop.index }}</td>
+                        <td class="fw-semibold sticky-name">
+                            <div class="name-btn-group">
+                                <div class="name-text">
+                                    <span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span>
+                                    {% if has_edit_request %}
+                                    <span class="badge bg-warning text-dark ms-1" title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}"><i class="bi bi-pencil-square"></i></span>
+                                    {% endif %}
+                                </div>
+                                <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
+                                   class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
-                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
-                        </div>
-                    </td>
-                    <td class="col-don-vi"><small title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td class="col-cap-bac" title="{{ (ct.quan_nhan.cap_bac or '') ~ (' / ' ~ ct.quan_nhan.chuc_vu if ct.quan_nhan.chuc_vu else '') }}">
-                        <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
-                    </td>
-                    <td class="col-doi-tuong"><small title="{{ ct.doi_tuong or '-' }}">{{ ct.doi_tuong or '-' }}</small></td>
-                    <td class="col-lop"><small title="{{ ct.quan_nhan.lop or '-' }}">{{ ct.quan_nhan.lop or '-' }}</small></td>
-                    <td class="col-danh-hieu">
-                        {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
-                        {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
-                        {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                        {% else %}<span class="badge bg-secondary">ĐVTT</span>{% endif %}
-                    </td>
-                    {% for field in display_fields %}
-                    <td class="col-criteria" data-col-key="cn_{{ field }}">
-                        {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}<small class="text-muted">-</small>
-                        {% elif field == 'nckh_noi_dung' %}{% set val = ct|attr(field) %}{% if val %}<small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
-                        {% elif field == 'diem_nckh' %}{% set val = ct|attr(field) %}{% if val is not none %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
-                        {% else %}{% set val = ct|attr(field) %}{% if val %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}{% endif %}
-                    </td>
+                        </td>
+                        <td class="col-don-vi"><small>{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
+                        <td class="col-cap-bac">
+                            <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
+                        </td>
+                        <td class="col-doi-tuong"><small>{{ ct.doi_tuong or '-' }}</small></td>
+                        <td class="col-lop"><small>{{ ct.quan_nhan.lop or '-' }}</small></td>
+                        <td class="col-danh-hieu">
+                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
+                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                            {% else %}<span class="badge bg-secondary">ĐVTT</span>{% endif %}
+                        </td>
+                        {% for field in display_fields %}
+                        <td class="col-criteria" data-col-key="cn_{{ field }}">
+                            {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}<small class="text-muted">-</small>
+                            {% elif field == 'nckh_noi_dung' %}{% set val = ct|attr(field) %}{% if val %}<small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                            {% else %}{% set val = ct|attr(field) %}{% if val %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}{% endif %}
+                        </td>
+                        {% endfor %}
+                        {% if show_evidence %}
+                        <td class="col-evidence text-center">
+                            {% if ct.minh_chungs %}<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}"><i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small></button>
+                            {% else %}<small class="text-muted">-</small>{% endif %}
+                        </td>
+                        {% else %}
+                        <td class="col-mc text-center" data-col-key="cn_minh_chung">
+                            {% if ct.minh_chungs %}<a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% endif %}
+                        {% if is_ttr_role %}
+                            {% for gdept in gate_dept_fields %}{% for field in gdept.fields %}
+                            <td class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}">
+                                {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
+                                {% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                            </td>
+                            {% endfor %}{% endfor %}
+                            {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                            {% for mcol in managed_dept_columns %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                            <td class="text-center">
+                                {% if gate_kq == 'Đồng ý' %}<span class="badge bg-success"><i class="bi bi-check-lg"></i></span>
+                                {% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger"><i class="bi bi-x-lg"></i></span>
+                                {% else %}<span class="badge bg-warning text-dark"><i class="bi bi-hourglass"></i></span>{% endif %}
+                            </td>
+                            {% endfor %}
+                        {% elif managed_dept_columns %}
+                            {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                            {% for mcol in managed_dept_columns %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                            <td class="text-center">
+                                {% if gate_kq == 'Đồng ý' %}<span class="badge bg-success"><i class="bi bi-check-lg"></i></span>
+                                {% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger"><i class="bi bi-x-lg"></i></span>
+                                {% else %}<span class="badge bg-warning text-dark"><i class="bi bi-hourglass"></i></span>{% endif %}
+                            </td>
+                            {% endfor %}
+                        {% endif %}
+                        <td class="text-center col-pending">
+                            {% if is_out_of_scope %}
+                                <small class="text-muted d-block" style="font-size:0.68rem;">Ngoài phạm vi</small>
+                            {% elif not is_gate_ready %}
+                                <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
+                                {% if ct_gate and ct_gate.pending %}
+                                <small class="text-danger d-block" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chờ: {{ ct_gate.pending|join(', ') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <small class="text-muted d-block" style="font-size:0.68rem;">Tự động</small>
+                                <div class="form-check form-switch d-flex justify-content-center mb-0">
+                                    <input class="form-check-input toggle-approval" type="checkbox"
+                                           id="switch-{{ pd.id }}-{{ ct.id }}"
+                                           data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                           {% if is_approved %}checked{% endif %}
+                                           style="cursor:pointer;width:2.5em;height:1.3em;">
+                                </div>
+                                {# ★ FIX: dùng style display thay vì remove() — luôn render, ẩn/hiện bằng JS #}
+                                <a href="javascript:void(0)" class="reject-link text-danger"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   style="font-size:0.72rem;{% if is_approved or is_rejected %} display:none;{% endif %}">
+                                    Từ chối
+                                </a>
+                                {% if is_rejected %}
+                                <small class="text-danger d-block reason-text" id="reason-text-{{ pd.id }}-{{ ct.id }}"
+                                       style="font-size:0.72rem;" title="{{ kq.ly_do }}">
+                                    {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
+                                </small>
+                                {% else %}
+                                <small class="text-danger d-block reason-text" id="reason-text-{{ pd.id }}-{{ ct.id }}"
+                                       style="font-size:0.72rem;display:none;"></small>
+                                {% endif %}
+                                <a href="javascript:void(0)"
+                                   class="request-edit-link text-primary d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tập thể'))|e }}"
+                                   data-tap-the="false"
+                                   style="font-size:0.68rem;">
+                                    <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
+                                </a>
+                                {% if is_approved or is_rejected %}
+                                <a href="javascript:void(0)"
+                                   class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   style="font-size:0.68rem;">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
+                                </a>
+                                {% else %}
+                                <a href="javascript:void(0)"
+                                   class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   style="font-size:0.68rem;display:none;">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if not is_out_of_scope %}
+                    <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row">
+                        <td colspan="20">
+                            <div class="d-flex gap-2 align-items-center py-1 ps-3">
+                                <small class="text-danger fw-semibold text-nowrap"><i class="bi bi-x-circle me-1"></i>Lý do:</small>
+                                <input type="text" class="form-control form-control-sm"
+                                       id="reason-input-{{ pd.id }}-{{ ct.id }}"
+                                       placeholder="Nhập lý do không nhất trí..."
+                                       value="{{ kq.ly_do if kq and kq.ly_do else '' }}"
+                                       style="max-width:400px;">
+                                <button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn"
+                                        data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
+                                    <i class="bi bi-check me-1"></i>Lưu
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn"
+                                        data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">Hủy</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
                     {% endfor %}
-                    {% if show_evidence %}
-                    <td class="col-evidence text-center">
-                        {% if ct.minh_chungs %}<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}" title="{{ ct.minh_chungs|length }} minh chứng"><i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small></button>
-                        {% else %}<small class="text-muted">-</small>{% endif %}
-                    </td>
-                    {% else %}
-                    <td class="col-mc text-center" data-col-key="cn_minh_chung">
-                        {% if ct.minh_chungs %}
-                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% endif %}
-                    {% if is_ttr_role %}
-                        {% for gdept in gate_dept_fields %}{% for field in gdept.fields %}
-                        <td class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}" style="font-size:0.8rem;">{% set val = ct|attr(field) if ct|attr(field) is defined else None %}{% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}</td>
-                        {% endfor %}{% endfor %}
-                        {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
-                        {% for mcol in managed_dept_columns %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
-                        <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
-                        {% endfor %}
-                    {% elif managed_dept_columns %}
-                        {% for mcol in managed_dept_columns %}{% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
-                        <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
-                        {% endfor %}
-                    {% endif %}
-                    <td class="text-center col-pending">
-                    {% if is_out_of_scope %}
-                        {# ── Ngoài phạm vi: chỉ hiện nhãn, không cho duyệt ── #}
-                        <small class="text-muted d-block" style="font-size:0.68rem;">Ngoài phạm vi</small>
-
-                    {% elif not is_gate_ready %}
-                        {# ── Chưa đủ điều kiện (gate chưa xong) ── #}
-                        <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
-                        {% if ct_gate and ct_gate.pending %}
-                        <small class="text-danger d-block" style="font-size:0.7rem;"
-                            title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">
-                            Chờ: {{ ct_gate.pending|join(', ') }}
-                        </small>
-                        {% endif %}
-
-                    {% else %}
-                        {# ── Trong phạm vi + đủ điều kiện: hiện đầy đủ controls ── #}
-                        <small class="text-muted d-block" style="font-size:0.68rem;">Tự động</small>
-
-                        {# Toggle switch #}
-                        <div class="form-check form-switch d-flex justify-content-center mb-0">
-                            <input class="form-check-input toggle-approval" type="checkbox"
-                                id="switch-{{ pd.id }}-{{ ct.id }}"
-                                data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                {% if is_approved %}checked{% endif %}
-                                style="cursor:pointer; width:2.5em; height:1.3em;">
-                        </div>
-
-                        {# Từ chối — ẩn nếu đã approved hoặc đã rejected #}
-                        {% if not is_approved %}
-                        <a href="javascript:void(0)" class="reject-link text-danger"
-                        data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                        style="font-size:0.72rem;{% if is_rejected %} display:none;{% endif %}">
-                            Từ chối
-                        </a>
-                        {% endif %}
-
-                        {# Lý do từ chối (inline) #}
-                        {% if is_rejected %}
-                        <small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}"
-                            style="font-size:0.72rem;" title="{{ kq.ly_do }}">
-                            {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
-                        </small>
-                        {% endif %}
-
-                        {# Yêu cầu chỉnh sửa #}
-                        <a href="javascript:void(0)"
-                        class="request-edit-link text-primary d-block"
-                        data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                        data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tập thể'))|e }}"
-                        data-tap-the="false"
-                        style="font-size:0.68rem;"
-                        title="Yêu cầu đơn vị chỉnh sửa tiêu chí">
-                            <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
-                        </a>
-
-                        {# Thu hồi — chỉ hiện khi đã có kết quả #}
-                        {% if is_approved or is_rejected %}
-                        <a href="javascript:void(0)"
-                        class="revoke-item-link text-warning d-block"
-                        data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                        style="font-size:0.68rem;"
-                        title="Thu hồi kết quả duyệt">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
-                        </a>
-                        {% endif %}
-
-                    {% endif %}
-                </td>
-                </tr>
-                {# ── Hàng nhập lý do từ chối (ẩn mặc định) ── #}
-                {% if not is_out_of_scope %}
-                <tr id="reject-row-{{ pd.id }}-{{ ct.id }}"
-                    style="display:none;" class="table-light reject-reason-row">
-                    <td colspan="20">
-                        <div class="d-flex gap-2 align-items-center py-1 ps-3">
-                            <small class="text-danger fw-semibold text-nowrap">
-                                <i class="bi bi-x-circle me-1"></i>Lý do:
-                            </small>
-                            <input type="text" class="form-control form-control-sm"
-                                id="reason-input-{{ pd.id }}-{{ ct.id }}"
-                                placeholder="Nhập lý do không nhất trí..."
-                                value="{{ kq.ly_do if kq and kq.ly_do else '' }}"
-                                style="max-width:400px;">
-                            <button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn"
-                                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
-                                <i class="bi bi-check me-1"></i>Lưu
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn"
-                                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
-                                Hủy
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-                {% endfor %}
-            </tbody>
+                </tbody>
             </table>
-         </div>
-    </div>
+        </div>{# /tbl-scroll #}
+    </div>{# /tbl-outer #}
 </div>
 {% endif %}
 
@@ -384,11 +361,10 @@
 {% if all_tt %}
 <div class="card-section mb-3">
     <div class="card-body-custom py-2 d-flex align-items-center gap-2 flex-wrap">
-        <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" title="Chọn cột hiển thị">
+        <button type="button" id="btnColToggleTT" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0">
             <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
         </button>
-        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" id="btnApproveAllTT"
-                title="Nhất trí tất cả tập thể chưa duyệt">
+        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" id="btnApproveAllTT">
             <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
         </button>
         <h6 class="mb-0 ms-1"><i class="bi bi-building-fill me-2 text-secondary"></i>Danh hiệu tập thể
@@ -397,281 +373,245 @@
     </div>
     <div class="tbl-mirror" id="mirrorTT"><div></div></div>
     <div class="tbl-outer" id="tblOuterTT">
-    <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe" style="font-size:0.82rem;">
-            <thead>
-                <tr>
-                    <th class="sticky-stt">STT</th>
-                    <th class="sticky-name">Tên tập thể</th>
-                    <th class="col-don-vi">Đơn vị</th>
-                    <th class="col-danh-hieu">Danh hiệu</th>
-                    <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
-                    <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
-                    {% for f in tt_criteria_fields %}
-                    <th class="col-criteria" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}"><small>{{ tt_field_labels.get(f, f) }}</small></th>
-                    {% endfor %}
-                    <th class="col-criteria">{{ field_labels.get('thanh_tich_ca_nhan_khac', 'Thành tích khác') }}</th>
-                    <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
-                    {% if managed_dept_columns %}
-                        {% for mcol in managed_dept_columns %}
-                        <th style="width:74px;"><small>{{ mcol }}</small></th>
+        <div class="tbl-scroll">
+            <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
+                <thead>
+                    <tr>
+                        <th class="sticky-stt">STT</th>
+                        <th class="sticky-name">Tên tập thể</th>
+                        <th class="col-don-vi">Đơn vị</th>
+                        <th class="col-danh-hieu">Danh hiệu</th>
+                        <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
+                        <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
+                        {% for f in tt_criteria_fields %}
+                        <th class="col-criteria" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}">
+                            <small>{{ tt_field_labels.get(f, f) }}</small>
+                        </th>
                         {% endfor %}
-                    {% endif %}
-                    <th style="width:100px;" class="text-center col-pending">Đang chờ</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in all_tt %}
-                {% set ct = item.ct %}
-                {% set pd = item.pd %}
-                {% set results = item.results %}
-                {% set kq = results[ct.id] if ct.id in results else None %}
-                {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
-                {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
-                {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
-                {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
-                {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
-                {% set has_edit_request = ct.id in edit_requests_by_ct %}
-                <tr id="row-{{ pd.id }}-{{ ct.id }}"
-                    class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% elif has_edit_request %}table-warning-custom{% endif %} ct-row"
-                    data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
-                    data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
-                    data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
-                    data-doi-tuong=""
-                    data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
-                    <td class="sticky-stt">{{ loop.index }}</td>
-                    <td class="fw-semibold sticky-name">
-                        <div class="name-btn-group">
-                            <div class="name-text">
-                                <i class="bi bi-building text-secondary me-1"></i>{{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}
-                                {% if has_edit_request %}
-                                <span class="badge bg-warning text-dark ms-1" title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}"><i class="bi bi-pencil-square"></i></span>
-                                {% endif %}
+                        <th class="col-criteria">{{ field_labels.get('thanh_tich_ca_nhan_khac', 'Thành tích khác') }}</th>
+                        <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chứng">Tệp</th>
+                        {% if managed_dept_columns %}
+                            {% for mcol in managed_dept_columns %}
+                            <th class="col-managed"><small>{{ mcol }}</small></th>
+                            {% endfor %}
+                        {% endif %}
+                        <th class="col-pending text-center">Đang chờ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in all_tt %}
+                    {% set ct = item.ct %}
+                    {% set pd = item.pd %}
+                    {% set results = item.results %}
+                    {% set kq = results[ct.id] if ct.id in results else None %}
+                    {% set is_out_of_scope = ct.id in out_of_scope_ct_ids %}
+                    {% set is_approved = kq and kq.ket_qua == 'Đồng ý' %}
+                    {% set is_rejected = kq and kq.ket_qua == 'Từ chối' %}
+                    {% set ct_gate = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                    {% set is_gate_ready = (ct_gate is none) or ct_gate.can_review %}
+                    {% set has_edit_request = ct.id in edit_requests_by_ct %}
+                    <tr id="row-{{ pd.id }}-{{ ct.id }}"
+                        class="{% if is_out_of_scope %}d-none{% elif is_approved %}table-success{% elif is_rejected %}table-danger{% elif has_edit_request %}table-warning-custom{% endif %} ct-row"
+                        data-ct-id="{{ ct.id }}" data-danh-hieu="{{ ct.loai_danh_hieu or '' }}"
+                        data-pd-id="{{ pd.id }}" data-out-of-scope="{{ 'true' if is_out_of_scope else 'false' }}"
+                        data-ho-ten="{{ (ct.ten_don_vi_de_xuat or '')|lower }}"
+                        data-doi-tuong=""
+                        data-unit-name="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '' }}">
+                        <td class="sticky-stt">{{ loop.index }}</td>
+                        <td class="fw-semibold sticky-name">
+                            <div class="name-btn-group">
+                                <div class="name-text">
+                                    <i class="bi bi-building text-secondary me-1"></i>
+                                    {{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}
+                                    {% if has_edit_request %}
+                                    <span class="badge bg-warning text-dark ms-1"><i class="bi bi-pencil-square"></i></span>
+                                    {% endif %}
+                                </div>
+                                <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
+                                   class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
-                            <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
-                        </div>
-                    </td>
-                    <td class="col-don-vi"><small title="{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}">{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                    <td class="col-danh-hieu">
-                        {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                        {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
-                        {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
-                    </td>
-                    <td class="col-criteria"><small>{{ ct.muc_do_hoan_thanh or '-' }}</small></td>
-                    <td class="col-criteria"><small>{{ ct.chu_tri_don_vi_danh_hieu or '-' }}</small></td>
-                    {% set ttd = ct.tap_the_dict or {} %}
-                    {% for f in tt_criteria_fields %}
-                    <td class="col-criteria" data-col-key="tt_{{ f }}"><small>{{ ttd.get(f, '-') }}</small></td>
-                    {% endfor %}
-                    <td class="col-criteria"><small class="text-truncate d-inline-block" style="max-width:160px;" title="{{ ct.thanh_tich_ca_nhan_khac or '' }}">{{ ct.thanh_tich_ca_nhan_khac or '-' }}</small></td>
-                    <td class="col-mc text-center" data-col-key="tt_minh_chung">
-                        {% if ct.minh_chungs %}
-                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% if managed_dept_columns %}
-                        {% for mcol in managed_dept_columns %}{% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
-                        <td class="text-center">{% if gate_kq == 'Đồng ý' %}<span class="badge bg-success" title="{{ mcol }}: Đồng ý"><i class="bi bi-check-lg"></i></span>{% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger" title="{{ mcol }}: Từ chối"><i class="bi bi-x-lg"></i></span>{% else %}<span class="badge bg-warning text-dark" title="{{ mcol }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>{% endif %}</td>
+                        </td>
+                        <td class="col-don-vi"><small>{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
+                        <td class="col-danh-hieu">
+                            {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
+                            {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                        </td>
+                        <td class="col-criteria"><small>{{ ct.muc_do_hoan_thanh or '-' }}</small></td>
+                        <td class="col-criteria"><small>{{ ct.chu_tri_don_vi_danh_hieu or '-' }}</small></td>
+                        {% set ttd = ct.tap_the_dict or {} %}
+                        {% for f in tt_criteria_fields %}
+                        <td class="col-criteria" data-col-key="tt_{{ f }}"><small>{{ ttd.get(f, '-') }}</small></td>
                         {% endfor %}
+                        <td class="col-criteria"><small class="text-truncate d-inline-block" style="max-width:160px;" title="{{ ct.thanh_tich_ca_nhan_khac or '' }}">{{ ct.thanh_tich_ca_nhan_khac or '-' }}</small></td>
+                        <td class="col-mc text-center" data-col-key="tt_minh_chung">
+                            {% if ct.minh_chungs %}<a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% if managed_dept_columns %}
+                            {% set gate_obj = group_gate_by_ct[pd.id][ct.id] if group_gate_by_ct is defined and pd.id in group_gate_by_ct and ct.id in group_gate_by_ct[pd.id] else None %}
+                            {% for mcol in managed_dept_columns %}{% set gate_kq = gate_obj.results.get(mcol) if gate_obj else None %}
+                            <td class="text-center">
+                                {% if gate_kq == 'Đồng ý' %}<span class="badge bg-success"><i class="bi bi-check-lg"></i></span>
+                                {% elif gate_kq == 'Từ chối' %}<span class="badge bg-danger"><i class="bi bi-x-lg"></i></span>
+                                {% else %}<span class="badge bg-warning text-dark"><i class="bi bi-hourglass"></i></span>{% endif %}
+                            </td>
+                            {% endfor %}
+                        {% endif %}
+                        <td class="text-center col-pending">
+                            {% if is_out_of_scope %}
+                                <small class="text-muted d-block" style="font-size:0.68rem;">Ngoài phạm vi</small>
+                            {% elif not is_gate_ready %}
+                                <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
+                                {% if ct_gate and ct_gate.pending %}
+                                <small class="text-danger d-block" style="font-size:0.7rem;" title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">Chờ: {{ ct_gate.pending|join(', ') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <small class="text-muted d-block" style="font-size:0.68rem;">Tự động</small>
+                                <div class="form-check form-switch d-flex justify-content-center mb-0">
+                                    <input class="form-check-input toggle-approval" type="checkbox"
+                                           id="switch-{{ pd.id }}-{{ ct.id }}"
+                                           data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                           {% if is_approved %}checked{% endif %}
+                                           style="cursor:pointer;width:2.5em;height:1.3em;">
+                                </div>
+                                <a href="javascript:void(0)" class="reject-link text-danger"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   style="font-size:0.72rem;{% if is_approved or is_rejected %} display:none;{% endif %}">
+                                    Từ chối
+                                </a>
+                                {% if is_rejected %}
+                                <small class="text-danger d-block reason-text" id="reason-text-{{ pd.id }}-{{ ct.id }}"
+                                       style="font-size:0.72rem;" title="{{ kq.ly_do }}">
+                                    {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
+                                </small>
+                                {% else %}
+                                <small class="text-danger d-block reason-text" id="reason-text-{{ pd.id }}-{{ ct.id }}"
+                                       style="font-size:0.72rem;display:none;"></small>
+                                {% endif %}
+                                <a href="javascript:void(0)"
+                                   class="request-edit-link text-primary d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   data-name="{{ (ct.ten_don_vi_de_xuat or 'Tập thể')|e }}"
+                                   data-tap-the="true"
+                                   style="font-size:0.68rem;">
+                                    <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
+                                </a>
+                                {% if is_approved or is_rejected %}
+                                <a href="javascript:void(0)"
+                                   class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   style="font-size:0.68rem;">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
+                                </a>
+                                {% else %}
+                                <a href="javascript:void(0)"
+                                   class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
+                                   style="font-size:0.68rem;display:none;">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if not is_out_of_scope %}
+                    <tr id="reject-row-{{ pd.id }}-{{ ct.id }}" style="display:none;" class="table-light reject-reason-row">
+                        <td colspan="20">
+                            <div class="d-flex gap-2 align-items-center py-1 ps-3">
+                                <small class="text-danger fw-semibold text-nowrap"><i class="bi bi-x-circle me-1"></i>Lý do:</small>
+                                <input type="text" class="form-control form-control-sm"
+                                       id="reason-input-{{ pd.id }}-{{ ct.id }}"
+                                       placeholder="Nhập lý do không nhất trí..."
+                                       value="{{ kq.ly_do if kq and kq.ly_do else '' }}"
+                                       style="max-width:400px;">
+                                <button type="button" class="btn btn-sm btn-danger text-nowrap save-reject-btn"
+                                        data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
+                                    <i class="bi bi-check me-1"></i>Lưu
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn"
+                                        data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">Hủy</button>
+                            </div>
+                        </td>
+                    </tr>
                     {% endif %}
-                    <td class="text-center col-pending">
-    {% if is_out_of_scope %}
-        {# ── Ngoài phạm vi: chỉ hiện nhãn ── #}
-        <small class="text-muted d-block" style="font-size:0.68rem;">Ngoài phạm vi</small>
-
-    {% elif not is_gate_ready %}
-        {# ── Chưa đủ điều kiện ── #}
-        <small class="text-muted d-block" style="font-size:0.72rem;">Chưa đủ ĐK</small>
-        {% if ct_gate and ct_gate.pending %}
-        <small class="text-danger d-block" style="font-size:0.7rem;"
-               title="Chưa duyệt: {{ ct_gate.pending|join(', ') }}">
-            Chờ: {{ ct_gate.pending|join(', ') }}
-        </small>
-        {% endif %}
-
-    {% else %}
-        {# ── Trong phạm vi + đủ điều kiện ── #}
-        <small class="text-muted d-block" style="font-size:0.68rem;">Tự động</small>
-
-        {# Toggle switch #}
-        <div class="form-check form-switch d-flex justify-content-center mb-0">
-            <input class="form-check-input toggle-approval" type="checkbox"
-                   id="switch-{{ pd.id }}-{{ ct.id }}"
-                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                   {% if is_approved %}checked{% endif %}
-                   style="cursor:pointer; width:2.5em; height:1.3em;">
-        </div>
-
-        {# Từ chối #}
-        {% if not is_approved %}
-        <a href="javascript:void(0)" class="reject-link text-danger"
-           data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-           style="font-size:0.72rem;{% if is_rejected %} display:none;{% endif %}">
-            Từ chối
-        </a>
-        {% endif %}
-
-        {# Lý do từ chối #}
-        {% if is_rejected %}
-        <small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}"
-               style="font-size:0.72rem;" title="{{ kq.ly_do }}">
-            {{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}
-        </small>
-        {% endif %}
-
-        {# Yêu cầu chỉnh sửa #}
-        <a href="javascript:void(0)"
-           class="request-edit-link text-primary d-block"
-           data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-           data-name="{{ (ct.ten_don_vi_de_xuat or 'Tập thể')|e }}"
-           data-tap-the="true"
-           style="font-size:0.68rem;"
-           title="Yêu cầu đơn vị chỉnh sửa tiêu chí">
-            <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
-        </a>
-
-        {# Thu hồi #}
-        {% if is_approved or is_rejected %}
-        <a href="javascript:void(0)"
-           class="revoke-item-link text-warning d-block"
-           data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-           style="font-size:0.68rem;"
-           title="Thu hồi kết quả duyệt">
-            <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
-        </a>
-        {% endif %}
-
-    {% endif %}
-</td>
-</tr>
-
-{# ── Hàng nhập lý do từ chối (ẩn mặc định) ── #}
-{% if not is_out_of_scope %}
-<tr id="reject-row-{{ pd.id }}-{{ ct.id }}"
-    style="display:none;" class="table-light reject-reason-row">
-    <td colspan="20">
-        <div class="d-flex gap-2 align-items-center py-1 ps-3">
-            <small class="text-danger fw-semibold text-nowrap">
-                <i class="bi bi-x-circle me-1"></i>Lý do:
-            </small>
-            <input type="text" class="form-control form-control-sm"
-                   id="reason-input-{{ pd.id }}-{{ ct.id }}"
-                   placeholder="Nhập lý do không nhất trí..."
-                   value="{{ kq.ly_do if kq and kq.ly_do else '' }}"
-                   style="max-width:400px;">
-            <button type="button"
-                    class="btn btn-sm btn-danger text-nowrap save-reject-btn"
-                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
-                <i class="bi bi-check me-1"></i>Lưu
-            </button>
-            <button type="button"
-                    class="btn btn-sm btn-outline-secondary text-nowrap cancel-reject-btn"
-                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}">
-                Hủy
-            </button>
-        </div>
-    </td>
-</tr>
-{% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>{# /tbl-scroll #}
+    </div>{# /tbl-outer ← ĐÃ SỬA: đóng đúng chỗ #}
 </div>
 {% endif %}
 
 <!-- Evidence Modals -->
 {% if show_evidence %}
-{% for pd in pending_reviews %}
-{% for ct in pd.de_xuat.chi_tiets_active %}
-{% if ct.minh_chungs %}
+{% for pd in pending_reviews %}{% for ct in pd.de_xuat.chi_tiets_active %}{% if ct.minh_chungs %}
 <div class="modal fade" id="mcModal{{ ct.id }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header modal-header-navy">
-                <h6 class="modal-title">Minh chứng: {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex flex-wrap gap-2">
-                    {% for mc in ct.minh_chungs %}
-                    <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}"
-                         class="evidence-thumb" alt="{{ mc.ten_file_goc }}"
-                         onclick="showImageModal(this.src)" style="max-width:150px;">
-                    {% endfor %}
-                </div>
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header modal-header-navy">
+            <h6 class="modal-title">Minh chứng: {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="d-flex flex-wrap gap-2">
+                {% for mc in ct.minh_chungs %}
+                <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}" class="evidence-thumb" alt="{{ mc.ten_file_goc }}" style="max-width:150px;">
+                {% endfor %}
             </div>
         </div>
-    </div>
+    </div></div>
 </div>
-{% endif %}
-{% endfor %}
-{% endfor %}
+{% endif %}{% endfor %}{% endfor %}
 {% endif %}
 
-<!-- Batch approve confirmation modal -->
+<!-- Batch approve modal -->
 <div class="modal fade" id="batchApproveModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header modal-header-navy">
-                <h6 class="modal-title" id="batchApproveTitle">Xác nhận nhất trí</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p id="batchApproveMessage"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-success" id="batchApproveConfirm">
-                    <i class="bi bi-check-all me-1"></i>Xác nhận
-                </button>
-            </div>
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header modal-header-navy">
+            <h6 class="modal-title" id="batchApproveTitle">Xác nhận nhất trí</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-    </div>
+        <div class="modal-body"><p id="batchApproveMessage"></p></div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-success" id="batchApproveConfirm">
+                <i class="bi bi-check-all me-1"></i>Xác nhận
+            </button>
+        </div>
+    </div></div>
 </div>
 
-<!-- Request edit (yêu cầu chỉnh sửa) modal -->
+<!-- ★ Request edit modal — CHỈ 1 lần khai báo -->
 <div class="modal fade" id="requestEditModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header modal-header-navy">
-                <h6 class="modal-title"><i class="bi bi-pencil-square me-1"></i>Yêu cầu chỉnh sửa</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-2">Yêu cầu đơn vị chỉnh sửa các tiêu chí sau cho: <strong id="reqEditName"></strong></p>
-                <p class="text-muted small">Chỉ các tiêu chí bạn chọn sẽ được mở cho đơn vị chỉnh sửa, mọi thông tin khác giữ nguyên. Sau khi đơn vị sửa, chỉ ban của bạn cần duyệt lại.</p>
-
-                <!-- ★ THÊM: Thanh công cụ chọn nhanh -->
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="text-muted small fw-semibold">Chọn nhanh:</span>
-                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2"
-                            id="reqEditSelectAll" style="font-size:.78rem;">
-                        <i class="bi bi-check2-all me-1"></i>Tất cả
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
-                            id="reqEditDeselectAll" style="font-size:.78rem;">
-                        <i class="bi bi-square me-1"></i>Bỏ chọn
-                    </button>
-                    <!-- Đếm số tiêu chí đã chọn -->
-                    <span class="ms-auto text-muted small">
-                        Đã chọn: <strong id="reqEditSelectedCount">0</strong>
-                    </span>
-                </div>
-
-                <div id="reqEditFields" class="border rounded p-2 mb-3" style="max-height:260px; overflow:auto;"></div>
-                <label class="form-label fw-semibold">Lý do yêu cầu</label>
-                <textarea class="form-control" id="reqEditReason" rows="2" placeholder="Nhập lý do cần chỉnh sửa..."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" id="reqEditSubmit">
-                    <i class="bi bi-send me-1"></i>Gửi yêu cầu
-                </button>
-            </div>
+    <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header modal-header-navy">
+            <h6 class="modal-title"><i class="bi bi-pencil-square me-1"></i>Yêu cầu chỉnh sửa</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-    </div>
+        <div class="modal-body">
+            <p class="mb-2">Yêu cầu chỉnh sửa cho: <strong id="reqEditName"></strong></p>
+            <p class="text-muted small">Chỉ các tiêu chí bạn chọn sẽ được mở cho đơn vị chỉnh sửa.</p>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="text-muted small fw-semibold">Chọn nhanh:</span>
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" id="reqEditSelectAll" style="font-size:.78rem;">
+                    <i class="bi bi-check2-all me-1"></i>Tất cả
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="reqEditDeselectAll" style="font-size:.78rem;">
+                    <i class="bi bi-square me-1"></i>Bỏ chọn
+                </button>
+                <span class="ms-auto text-muted small">Đã chọn: <strong id="reqEditSelectedCount">0</strong></span>
+            </div>
+            <div id="reqEditFields" class="border rounded p-2 mb-3" style="max-height:260px;overflow:auto;"></div>
+            <label class="form-label fw-semibold">Lý do yêu cầu</label>
+            <textarea class="form-control" id="reqEditReason" rows="2" placeholder="Nhập lý do..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-primary" id="reqEditSubmit">
+                <i class="bi bi-send me-1"></i>Gửi yêu cầu
+            </button>
+        </div>
+    </div></div>
 </div>
 
 <script type="application/json" id="reqEditFieldData">
@@ -684,7 +624,7 @@
 {% else %}
 <div class="card-section">
     <div class="empty-state">
-        <i class="bi bi-check-circle d-block" style="font-size:2rem; color:var(--navy-primary);"></i>
+        <i class="bi bi-check-circle d-block" style="font-size:2rem;color:var(--navy-primary);"></i>
         <p>Không có đề xuất nào chờ duyệt</p>
         <a href="{{ url_for('approval.history') }}" class="btn btn-sm btn-outline-navy">
             <i class="bi bi-clock-history me-1"></i>Xem lịch sử
@@ -694,298 +634,174 @@
 {% endif %}
 
 <style>
-/* ── TOOLBAR ─────────────────────────────────────────── */
 .toolbar-wrapper {
-    display: block; position: sticky; top: 0; z-index: 100;
-    background: #fff; border-bottom: 1px solid #dee2e6;
-    padding: 6px 0; margin-bottom: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.07); width: 100%;
+    display:block; position:sticky; top:0; z-index:100;
+    background:#fff; border-bottom:1px solid #dee2e6;
+    padding:6px 0; margin-bottom:12px;
+    box-shadow:0 2px 6px rgba(0,0,0,.07); width:100%;
 }
 .toolbar-inner {
-    display: flex; align-items: center; gap: 8px;
-    flex-wrap: nowrap; overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; padding: 0 4px;
+    display:flex; align-items:center; gap:8px;
+    flex-wrap:nowrap; overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; padding:0 4px;
 }
-.toolbar-inner::-webkit-scrollbar { display: none; }
-.toolbar-inner > * { flex-shrink: 0; }
-
-/* ── STAT MINI ───────────────────────────────────────── */
+.toolbar-inner::-webkit-scrollbar { display:none; }
+.toolbar-inner > * { flex-shrink:0; }
 .stat-mini {
-    display: flex; align-items: center; gap: .4rem;
-    background: #fff; border: 1px solid var(--border-color);
-    border-radius: 8px; padding: .4rem .75rem; font-size: .82rem;
+    display:flex; align-items:center; gap:.4rem;
+    background:#fff; border:1px solid var(--border-color);
+    border-radius:8px; padding:.4rem .75rem; font-size:.82rem;
 }
-.stat-mini i { font-size: 1rem; }
-
-/* ── 2-LAYER WRAPPER ─────────────────────────────────── */
-.tbl-outer {
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-}
-.tbl-scroll {
-    display: block;
-    /* KHÔNG set overflow ở đây */
-}
-
-/* Mirror scrollbar trên đầu bảng */
-.tbl-mirror {
-    overflow-x: scroll;
-    overflow-y: hidden;
-    height: 14px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
-.tbl-mirror > div { height: 1px; }
-
-/* ── TABLE ───────────────────────────────────────────── */
+.tbl-outer { width:100%; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; }
+.tbl-scroll { display:block; }
+.tbl-mirror { overflow-x:scroll; overflow-y:hidden; height:14px; background:#f8f9fa; border-bottom:1px solid #dee2e6; }
+.tbl-mirror > div { height:1px; }
 .tbl-scroll table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    table-layout: auto !important;
-    width: max-content !important;
-    font-size: 0.82rem;
+    border-collapse:separate !important; border-spacing:0 !important;
+    table-layout:auto !important; width:max-content !important; font-size:0.82rem;
 }
-
-/* Restore borders */
-.tbl-scroll th,
-.tbl-scroll td {
-    border-bottom: 1px solid #dee2e6;
-    border-right:  1px solid #dee2e6;
-    padding: 4px 8px !important;
-    vertical-align: middle;
-    box-sizing: border-box;
+.tbl-scroll th, .tbl-scroll td {
+    border-bottom:1px solid #dee2e6; border-right:1px solid #dee2e6;
+    padding:4px 8px !important; vertical-align:middle; box-sizing:border-box;
 }
-.tbl-scroll th:first-child,
-.tbl-scroll td:first-child { border-left: 1px solid #dee2e6; }
-.tbl-scroll thead th        { border-top: 1px solid #dee2e6; }
-
-/* ── HEADER: cho phép xuống dòng, không cắt chữ ─────── */
-.tbl-scroll thead th {
-    white-space: normal !important;   /* ← xuống dòng khi cần */
-    word-break: break-word;
-    vertical-align: bottom;
-    line-height: 1.3;
-    text-align: center;
-}
-/* Các cột sticky header vẫn nowrap để không bị vỡ layout */
-.tbl-scroll thead .sticky-stt,
-.tbl-scroll thead .sticky-name,
-.tbl-scroll thead .sticky-action {
-    white-space: nowrap !important;
-    text-align: left;
-}
-
-/* ── BODY CELLS: nowrap để không vỡ dữ liệu ─────────── */
-.tbl-scroll tbody td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ── COLUMN WIDTHS — rộng hơn, đủ hiện tên cột ─────── */
-.tbl-scroll .col-don-vi        { width: 120px; min-width: 120px; }
-.tbl-scroll .col-cap-bac       { width: 160px; min-width: 160px; }
-.tbl-scroll .col-doi-tuong     { width: 90px;  min-width: 90px;  }
-.tbl-scroll .col-danh-hieu     { width: 75px;  min-width: 75px;  }
-.tbl-scroll .col-criteria      { width: 95px;  min-width: 90px;  }
-.tbl-scroll .col-evidence      { width: 60px;  min-width: 60px; text-align: center; }
-.tbl-scroll .col-gate-criteria { width: 72px;  min-width: 68px; }
-.tbl-scroll .col-managed       { width: 80px;  min-width: 74px;  }
-.tbl-scroll .col-pending       { width: 110px; min-width: 110px; }
-
-/* Truncate text bên trong cell body */
-.tbl-scroll .col-don-vi small,
-.tbl-scroll .col-cap-bac small,
-.tbl-scroll .col-doi-tuong small,
-.tbl-scroll .col-criteria small,
-.tbl-scroll .col-gate-criteria small {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-}
-
-/* ── STICKY LEFT: STT (left:0) ───────────────────────── */
+.tbl-scroll th:first-child, .tbl-scroll td:first-child { border-left:1px solid #dee2e6; }
+.tbl-scroll thead th { border-top:1px solid #dee2e6; white-space:normal !important; word-break:break-word; vertical-align:bottom; line-height:1.3; text-align:center; }
+.tbl-scroll thead .sticky-stt, .tbl-scroll thead .sticky-name, .tbl-scroll thead .col-pending { white-space:nowrap !important; }
+.tbl-scroll tbody td { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tbl-scroll .col-don-vi    { width:120px; min-width:120px; }
+.tbl-scroll .col-cap-bac   { width:160px; min-width:160px; }
+.tbl-scroll .col-doi-tuong { width:90px;  min-width:90px;  }
+.tbl-scroll .col-danh-hieu { width:75px;  min-width:75px;  }
+.tbl-scroll .col-criteria  { width:95px;  min-width:90px;  }
+.tbl-scroll .col-evidence  { width:60px;  min-width:60px; text-align:center; }
+.tbl-scroll .col-gate-criteria { width:72px; min-width:68px; }
+.tbl-scroll .col-managed   { width:80px;  min-width:74px;  }
+.tbl-scroll .col-pending   { width:110px; min-width:110px; }
+.tbl-scroll .col-lop       { width:70px;  min-width:70px;  }
+/* Sticky STT */
 .tbl-scroll .sticky-stt {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 2;
-    width: 34px; min-width: 34px; max-width: 34px;
-    background: #fff;
-    border-right: 2px solid #b0bec5 !important;
+    position:sticky !important; left:0 !important; z-index:2;
+    width:34px; min-width:34px; max-width:34px;
+    background:#fff; border-right:2px solid #b0bec5 !important;
 }
-.tbl-scroll thead .sticky-stt {
-    z-index: 4 !important;
-    background: var(--navy-primary, #1a3a5c) !important;
-    color: #fff !important;
-    white-space: nowrap !important;
-    text-align: center;
-}
-
-/* ── STICKY LEFT: HỌ TÊN (left:34px) ────────────────── */
+.tbl-scroll thead .sticky-stt { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
+/* Sticky Họ tên */
 .tbl-scroll .sticky-name {
-    position: sticky !important;
-    left: 34px !important;
-    z-index: 2;
-    width: 190px; min-width: 190px; max-width: 190px;
-    background: #fff;
-    box-shadow: 3px 0 6px rgba(0,0,0,.12);
-    overflow: hidden;
+    position:sticky !important; left:34px !important; z-index:2;
+    width:190px; min-width:190px; max-width:190px;
+    background:#fff; box-shadow:3px 0 6px rgba(0,0,0,.12); overflow:hidden;
 }
-.tbl-scroll thead .sticky-name {
-    z-index: 4 !important;
-    background: var(--navy-primary, #1a3a5c) !important;
-    color: #fff !important;
-    white-space: nowrap !important;
-    text-align: left;
-}
-
-/* ── STICKY RIGHT: ĐANG CHỜ ─────────────────────────── */
+.tbl-scroll thead .sticky-name { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
+/* Sticky Đang chờ */
 .tbl-scroll .col-pending {
-    position: sticky !important;
-    right: 0 !important;
-    z-index: 2;
-    background: #fff;
-    box-shadow: -3px 0 6px rgba(0,0,0,.10);
+    position:sticky !important; right:0 !important; z-index:2;
+    background:#fff; box-shadow:-3px 0 6px rgba(0,0,0,.10);
 }
-.tbl-scroll thead .col-pending {
-    z-index: 4 !important;
-    background: var(--navy-primary, #1a3a5c) !important;
-    color: #fff !important;
-}
-
-/* Row-state backgrounds cho sticky cols */
+.tbl-scroll thead .col-pending { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
+/* Row state backgrounds */
 .tbl-scroll tr.table-success .sticky-stt,
 .tbl-scroll tr.table-success .sticky-name,
-.tbl-scroll tr.table-success .col-pending { background: #d1e7dd !important; }
+.tbl-scroll tr.table-success .col-pending { background:#d1e7dd !important; }
 .tbl-scroll tr.table-danger  .sticky-stt,
 .tbl-scroll tr.table-danger  .sticky-name,
-.tbl-scroll tr.table-danger  .col-pending { background: #f8d7da !important; }
+.tbl-scroll tr.table-danger  .col-pending { background:#f8d7da !important; }
 .tbl-scroll tbody tr:hover   .sticky-stt,
 .tbl-scroll tbody tr:hover   .sticky-name,
-.tbl-scroll tbody tr:hover   .col-pending { background: #f0f4f8 !important; }
-
-/* ── NAME CELL ───────────────────────────────────────── */
-.name-btn-group { display: flex; align-items: flex-start; gap: 4px; }
-.name-btn-group .name-text {
-    flex: 1; min-width: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* ── MISC ────────────────────────────────────────────── */
-.toggle-approval:checked { background-color: #198754; border-color: #198754; }
-.toggle-approval { background-color: #adb5bd; border-color: #adb5bd; }
-.reject-link:hover { text-decoration: underline !important; }
-.border-left-dept { border-left: 2px solid #dee2e6 !important; }
-.btn-navy { background: var(--navy-primary); color: #fff; border-color: var(--navy-primary); }
-.btn-navy:hover { background: var(--navy-dark); color: #fff; }
-.btn-outline-navy { color: var(--navy-primary); border-color: var(--navy-primary); background: transparent; }
-.btn-outline-navy:hover { background: var(--navy-primary); color: #fff; }
-
-/* Compact view */
-.view-compact .col-criteria,
-.view-compact .col-evidence,
-.view-compact .col-gate-criteria { display: none !important; }
-
-/* Active view mode button */
-#viewModeGroup .btn.active {
-    background: var(--navy-primary);
-    color: #fff;
-    border-color: var(--navy-primary);
-}
-
-/* ── PRINT ───────────────────────────────────────────── */
-.print-timestamp { display: none; font-size: 0.82rem; color: #666; margin-bottom: 8px; }
+.tbl-scroll tbody tr:hover   .col-pending { background:#f0f4f8 !important; }
+/* Misc */
+.name-btn-group { display:flex; align-items:flex-start; gap:4px; }
+.name-btn-group .name-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.toggle-approval:checked { background-color:#198754; border-color:#198754; }
+.toggle-approval { background-color:#adb5bd; border-color:#adb5bd; }
+.border-left-dept { border-left:2px solid #dee2e6 !important; }
+.btn-navy { background:var(--navy-primary); color:#fff; border-color:var(--navy-primary); }
+.btn-navy:hover { background:var(--navy-dark); color:#fff; }
+.btn-outline-navy { color:var(--navy-primary); border-color:var(--navy-primary); background:transparent; }
+.btn-outline-navy:hover { background:var(--navy-primary); color:#fff; }
+.view-compact .col-criteria, .view-compact .col-evidence, .view-compact .col-gate-criteria { display:none !important; }
+#viewModeGroup .btn.active { background:var(--navy-primary); color:#fff; border-color:var(--navy-primary); }
+.card-section, .card-body-custom, .card-body,
+.main-content, .content-wrapper, .content-area,
+.page-content, .main-panel, .wrapper { overflow:visible !important; }
+.print-timestamp { display:none; font-size:0.82rem; color:#666; margin-bottom:8px; }
 @media print {
     .sidebar, .toolbar-wrapper, #filterBar, #globalStats,
-    .toggle-approval, .reject-link, .reject-reason-row,
-    .btn, button { display: none !important; }
-    .card-section { border: none !important; box-shadow: none !important; }
-    .print-timestamp { display: block !important; }
-    .col-gate-criteria, .col-evidence, .col-pending { display: none !important; }
+    .toggle-approval, .reject-link, .reject-reason-row, .btn, button { display:none !important; }
+    .card-section { border:none !important; box-shadow:none !important; }
+    .print-timestamp { display:block !important; }
+    .col-gate-criteria, .col-evidence, .col-pending { display:none !important; }
 }
 </style>
-
-
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-    // ===================== VIEW MODE (COMPACT / FULL) =====================
+    // ══════════════════════════════════════════════════════════
+    // VIEW MODE
+    // ══════════════════════════════════════════════════════════
     const VM_KEY = 'pendingListViewMode';
-    const tableCN = document.getElementById('tableCaNhan');
-    const tableTT = document.getElementById('tableTapThe');
-    const btnCompact = document.getElementById('btnViewCompact');
-    const btnFull = document.getElementById('btnViewFull');
+    const tableCN  = document.getElementById('tableCaNhan');
+    const tableTT  = document.getElementById('tableTapThe');
+    const btnC     = document.getElementById('btnViewCompact');
+    const btnF     = document.getElementById('btnViewFull');
 
     function applyViewMode(mode) {
         [tableCN, tableTT].forEach(t => {
             if (!t) return;
-            if (mode === 'compact') {
-                t.classList.add('view-compact');
-            } else {
-                t.classList.remove('view-compact');
-            }
+            t.classList.toggle('view-compact', mode === 'compact');
         });
-        if (mode === 'compact') {
-            btnCompact && btnCompact.classList.add('active');
-            btnFull && btnFull.classList.remove('active');
-        } else {
-            btnFull && btnFull.classList.add('active');
-            btnCompact && btnCompact.classList.remove('active');
-        }
+        btnC && btnC.classList.toggle('active', mode === 'compact');
+        btnF && btnF.classList.toggle('active', mode !== 'compact');
         try { localStorage.setItem(VM_KEY, mode); } catch(e) {}
     }
-
     let savedMode = 'full';
     try { savedMode = localStorage.getItem(VM_KEY) || 'full'; } catch(e) {}
     applyViewMode(savedMode);
+    btnC && btnC.addEventListener('click', () => applyViewMode('compact'));
+    btnF && btnF.addEventListener('click', () => applyViewMode('full'));
 
-    btnCompact && btnCompact.addEventListener('click', () => applyViewMode('compact'));
-    btnFull && btnFull.addEventListener('click', () => applyViewMode('full'));
+    // ══════════════════════════════════════════════════════════
+    // FILTERS
+    // ══════════════════════════════════════════════════════════
+    const unitFilter    = document.getElementById('unitFilter');
+    const danhHieuFilter= document.getElementById('danhHieuFilter');
+    const searchInput   = document.getElementById('searchInput');
+    const scopeFilter   = document.getElementById('scopeFilter');
+    const BAN_QUANLUC   = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Hạ sĩ quan, chiến sĩ'];
 
-    // ===================== FILTERS =====================
-    const unitFilter = document.getElementById('unitFilter');
-    const danhHieuFilter = document.getElementById('danhHieuFilter');
-    const searchInput = document.getElementById('searchInput');
-    const scopeFilter = document.getElementById('scopeFilter');
-
-    [unitFilter, danhHieuFilter, scopeFilter].forEach(el => el && el.addEventListener('change', applyFilters));
-    searchInput && searchInput.addEventListener('input', applyFilters);
-
-    const BAN_QUANLUC_DOI_TUONG = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Hạ sĩ quan, chiến sĩ'];
+    
 
     function applyFilters() {
-        const selUnit = unitFilter ? unitFilter.value : '';
-        const selDH = danhHieuFilter ? danhHieuFilter.value : '';
-        const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
-        const selScope = scopeFilter ? scopeFilter.value : '';
-
+        const selUnit  = unitFilter    ? unitFilter.value    : '';
+        const selDH    = danhHieuFilter? danhHieuFilter.value: '';
+        const search   = searchInput   ? searchInput.value.toLowerCase().trim() : '';
+        const selScope = scopeFilter   ? scopeFilter.value   : '';
         document.querySelectorAll('.ct-row').forEach(row => {
-            let visible = true;
-            if (selUnit && row.dataset.unitName !== selUnit) visible = false;
-            if (visible && selDH && row.dataset.danhHieu !== selDH) visible = false;
-            if (visible && search && !row.dataset.hoTen.includes(search)) visible = false;
-            if (visible && selScope) {
-                const isQL = BAN_QUANLUC_DOI_TUONG.includes(row.dataset.doiTuong || '');
-                if (selScope === 'quan_luc' && !isQL) visible = false;
-                if (selScope === 'can_bo' && isQL) visible = false;
+            let vis = true;
+            if (selUnit  && row.dataset.unitName  !== selUnit)  vis = false;
+            if (vis && selDH    && row.dataset.danhHieu  !== selDH)    vis = false;
+            if (vis && search   && !row.dataset.hoTen.includes(search)) vis = false;
+            if (vis && selScope) {
+                const isQL = BAN_QUANLUC.includes(row.dataset.doiTuong || '');
+                if (selScope === 'quan_luc' && !isQL) vis = false;
+                if (selScope === 'can_bo'   &&  isQL) vis = false;
             }
-            row.style.display = visible ? '' : 'none';
-            if (!visible) {
-                const rejectRow = document.getElementById(`reject-row-${row.dataset.pdId}-${row.dataset.ctId}`);
-                if (rejectRow) rejectRow.style.display = 'none';
+            row.style.display = vis ? '' : 'none';
+            if (!vis) {
+                const rr = document.getElementById(`reject-row-${row.dataset.pdId}-${row.dataset.ctId}`);
+                if (rr) rr.style.display = 'none';
             }
         });
         updateGlobalStats();
     }
+    [unitFilter, danhHieuFilter, scopeFilter].forEach(el => el && el.addEventListener('change', applyFilters));
+    searchInput && searchInput.addEventListener('input', applyFilters);
 
-    // ===================== TOGGLE SWITCHES =====================
+    // ══════════════════════════════════════════════════════════
+    // TOGGLE SWITCHES
+    // ══════════════════════════════════════════════════════════
     document.querySelectorAll('.toggle-approval').forEach(sw => {
         sw.addEventListener('change', function () {
             if (this.checked) {
@@ -1005,8 +821,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.save-reject-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const pdId = this.dataset.pdId, ctId = this.dataset.ctId;
-            const reason = document.getElementById(`reason-input-${pdId}-${ctId}`).value.trim();
-            if (!reason) { document.getElementById(`reason-input-${pdId}-${ctId}`).classList.add('is-invalid'); return; }
+            const inp  = document.getElementById(`reason-input-${pdId}-${ctId}`);
+            const reason = inp.value.trim();
+            if (!reason) { inp.classList.add('is-invalid'); return; }
+            inp.classList.remove('is-invalid');
             saveToggle(pdId, ctId, false, reason);
         });
     });
@@ -1014,235 +832,186 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.cancel-reject-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             hideRejectRow(this.dataset.pdId, this.dataset.ctId);
+            // ★ FIX: khi hủy, revert switch về trạng thái cũ
+            const sw = document.getElementById(`switch-${this.dataset.pdId}-${this.dataset.ctId}`);
+            if (sw) sw.checked = false;
         });
     });
 
-    document.querySelectorAll('[id^="reason-input-"]').forEach(input => {
-        input.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') { e.preventDefault(); this.closest('tr').querySelector('.save-reject-btn').click(); }
+    document.querySelectorAll('[id^="reason-input-"]').forEach(inp => {
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.closest('tr').querySelector('.save-reject-btn').click();
+            }
         });
     });
 
-    // ===================== REVOKE ITEM =====================
+    // ══════════════════════════════════════════════════════════
+    // REVOKE ITEM
+    // ══════════════════════════════════════════════════════════
     document.querySelectorAll('.revoke-item-link').forEach(link => {
         link.addEventListener('click', function () {
             const pdId = this.dataset.pdId, ctId = this.dataset.ctId;
-            if (!confirm('Thu hồi kết quả duyệt cho cá nhân/tập thể này?')) return;
-            fetch(`/approval/revoke-item/${pdId}/${ctId}`, {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'}})
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        // Reset UI: uncheck switch, restore reject-link, remove revoke link
-                        const sw = document.getElementById(`switch-${pdId}-${ctId}`);
-                        if (sw) { sw.checked = false; sw.disabled = false; }
-                        const switchCell = this.closest('td');
-                        // Remove reason text if present
-                        const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
-                        if (rt) rt.remove();
-                        // Show reject-link if hidden
-                        const rl = switchCell.querySelector('.reject-link');
-                        if (rl) { rl.style.display = ''; }
-                        // Remove this revoke link
-                        this.remove();
-                        // Re-enable PheDuyet revoke button if exists
-                        const revBtn = document.querySelector(`.revoke-btn[data-pd-id="${pdId}"]`);
-                        if (revBtn) revBtn.disabled = false;
-                    } else {
-                        alert(data.message || 'Không thể thu hồi.');
-                    }
-                })
-                .catch(() => alert('Lỗi kết nối.'));
+            if (!confirm('Thu hồi kết quả duyệt cho mục này?')) return;
+            fetch(`/approval/revoke-item/${pdId}/${ctId}`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const row = document.getElementById(`row-${pdId}-${ctId}`);
+                    row.classList.remove('table-success', 'table-danger');
+                    // Reset switch
+                    const sw = document.getElementById(`switch-${pdId}-${ctId}`);
+                    if (sw) sw.checked = false;
+                    // ★ FIX: hiện lại reject-link (không xóa, chỉ show)
+                    const rl = row.querySelector('.reject-link');
+                    if (rl) rl.style.display = '';
+                    // Ẩn reason-text
+                    const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
+                    if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
+                    // Ẩn revoke-link
+                    this.style.display = 'none';
+                    updateGlobalStats();
+                } else {
+                    alert(data.message || 'Không thể thu hồi.');
+                }
+            })
+            .catch(() => alert('Lỗi kết nối.'));
         });
     });
 
-    // ===================== REQUEST EDIT (yêu cầu chỉnh sửa) =====================
-    let reqEditFieldData = {ca_nhan: [], tap_the: []};
+    // ══════════════════════════════════════════════════════════
+    // ★ REQUEST EDIT MODAL — CHỈ 1 INSTANCE, khai báo 1 lần
+    // ══════════════════════════════════════════════════════════
+    let reqEditFieldData = { ca_nhan: [], tap_the: [] };
     try {
-        reqEditFieldData = JSON.parse(document.getElementById('reqEditFieldData').textContent);
-    } catch (e) {}
-    const reqEditModalEl = document.getElementById('requestEditModal');
-    const reqEditModal = reqEditModalEl ? new bootstrap.Modal(reqEditModalEl) : null;
-    
+        reqEditFieldData = JSON.parse(
+            document.getElementById('reqEditFieldData').textContent
+        );
+    } catch(e) {}
 
-    document.querySelectorAll('.request-edit-link').forEach(link => {
-        link.addEventListener('click', function () {
-            reqEditCtx.pdId = this.dataset.pdId;
-            reqEditCtx.ctId = this.dataset.ctId;
-            const isTapThe = this.dataset.tapThe === 'true';
-            document.getElementById('reqEditName').textContent = this.dataset.name || '';
-            document.getElementById('reqEditReason').value = '';
-            const fields = isTapThe ? reqEditFieldData.tap_the : reqEditFieldData.ca_nhan;
-            const box = document.getElementById('reqEditFields');
-            if (!fields.length) {
-                box.innerHTML = '<p class="text-muted small mb-0">Không có tiêu chí nào để chọn.</p>';
-            } else {
-                box.innerHTML = fields.map(f =>
-                    `<div class="form-check"><input class="form-check-input req-edit-field" type="checkbox" value="${f.ma_truong}" id="reqf-${f.ma_truong}"><label class="form-check-label" for="reqf-${f.ma_truong}">${f.ten}</label></div>`
-                ).join('');
-            }
-            if (reqEditModal) reqEditModal.show();
-        });
-    });
+    // ★ Instance modal duy nhất
+    const _reqEditModalEl = document.getElementById('requestEditModal');
+    const _reqEditModal   = _reqEditModalEl ? new bootstrap.Modal(_reqEditModalEl) : null;
+    let   _reqEditCtx     = { pdId: null, ctId: null };
 
-    
-    // ─── requestEditModal ────────────────────────────────────────────────────────
-    const requestEditModal = new bootstrap.Modal(document.getElementById('requestEditModal'));
-    let reqEditCtx = { pdId: null, ctId: null };
-
-    // ★ Hàm cập nhật bộ đếm — gọi bất cứ khi nào checkbox thay đổi
+    // Hàm cập nhật bộ đếm
     function _reqEditUpdateCount() {
-        const total   = document.querySelectorAll('.req-edit-field').length;
-        const checked = document.querySelectorAll('.req-edit-field:checked').length;
+        const total   = document.querySelectorAll('#reqEditFields .req-edit-field').length;
+        const checked = document.querySelectorAll('#reqEditFields .req-edit-field:checked').length;
         const el = document.getElementById('reqEditSelectedCount');
         if (el) el.textContent = `${checked} / ${total}`;
     }
 
-    // ★ Event delegation: bind 1 lần trên container, không cần re-bind sau render
+    // Event delegation trên container — bind 1 lần, không cần re-bind
     document.getElementById('reqEditFields').addEventListener('change', function (e) {
-        if (e.target.classList.contains('req-edit-field')) {
-            _reqEditUpdateCount();
-        }
+        if (e.target.classList.contains('req-edit-field')) _reqEditUpdateCount();
     });
 
-    // ★ Chọn tất cả
+    // Chọn tất cả / Bỏ chọn
     document.getElementById('reqEditSelectAll').addEventListener('click', function () {
-        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = true);
+        document.querySelectorAll('#reqEditFields .req-edit-field').forEach(cb => cb.checked = true);
         _reqEditUpdateCount();
     });
-
-    // ★ Bỏ chọn tất cả
     document.getElementById('reqEditDeselectAll').addEventListener('click', function () {
-        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = false);
+        document.querySelectorAll('#reqEditFields .req-edit-field').forEach(cb => cb.checked = false);
         _reqEditUpdateCount();
     });
 
-    // ★ Hàm mở modal — gọi từ nút "Yêu cầu chỉnh sửa" trên từng dòng
-    function openRequestEditModal(pdId, ctId, name, fields) {
-        // fields: [{value: 'field_key', label: 'Tên tiêu chí'}, ...]
-        reqEditCtx = { pdId, ctId };
+    // Mở modal khi click "Yêu cầu sửa"
+    document.querySelectorAll('.request-edit-link').forEach(link => {
+        link.addEventListener('click', function () {
+            _reqEditCtx.pdId = this.dataset.pdId;
+            _reqEditCtx.ctId = this.dataset.ctId;
+            const isTapThe   = this.dataset.tapThe === 'true';
 
-        document.getElementById('reqEditName').textContent = name;
-        document.getElementById('reqEditReason').value     = '';
+            document.getElementById('reqEditName').textContent   = this.dataset.name || '';
+            document.getElementById('reqEditReason').value       = '';
 
-        const container = document.getElementById('reqEditFields');
-        container.innerHTML = '';   // xóa cũ
+            const fields    = isTapThe ? reqEditFieldData.tap_the : reqEditFieldData.ca_nhan;
+            const container = document.getElementById('reqEditFields');
+            container.innerHTML = '';
 
-        if (!fields || fields.length === 0) {
-            container.innerHTML = '<p class="text-muted small mb-0">Không có tiêu chí nào khả dụng.</p>';
-        } else {
-            fields.forEach(f => {
-                const div   = document.createElement('div');
-                div.className = 'form-check';
-                div.innerHTML = `
-                    <input class="form-check-input req-edit-field"
-                        type="checkbox"
-                        id="ref_${f.value}"
-                        value="${f.value}">
-                    <label class="form-check-label small" for="ref_${f.value}">
-                        ${f.label}
-                    </label>`;
-                container.appendChild(div);
-            });
-        }
-
-        // Reset counter SAU KHI render xong
-        _reqEditUpdateCount();
-
-        requestEditModal.show();
-    }
-
-    // ★ Submit
-    const reqEditSubmit = document.getElementById('reqEditSubmit');
-    if (reqEditSubmit) {
-        reqEditSubmit.addEventListener('click', function () {
-            const checked = Array.from(
-                document.querySelectorAll('.req-edit-field:checked')
-            ).map(c => c.value);
-
-            // Loại trùng (phòng thủ)
-            const uniqueFields = [...new Set(checked)];
-
-            const reason = document.getElementById('reqEditReason').value.trim();
-
-            if (!uniqueFields.length) {
-                alert('Vui lòng chọn ít nhất một tiêu chí.');
-                return;
+            if (!fields || !fields.length) {
+                container.innerHTML = '<p class="text-muted small mb-0">Không có tiêu chí nào.</p>';
+            } else {
+                fields.forEach(f => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check';
+                    div.innerHTML = `
+                        <input class="form-check-input req-edit-field"
+                               type="checkbox" id="reqf_${f.ma_truong}" value="${f.ma_truong}">
+                        <label class="form-check-label small" for="reqf_${f.ma_truong}">${f.ten}</label>`;
+                    container.appendChild(div);
+                });
             }
-
-            this.disabled = true;
-            const btn = this;
-
-            fetch(`/approval/request-edit/${reqEditCtx.pdId}/${reqEditCtx.ctId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ fields: uniqueFields, ly_do: reason }),
-            })
-            .then(r => r.json())
-            .then(data => {
-                btn.disabled = false;
-                if (data.success) {
-                    requestEditModal.hide();
-                    showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    alert(data.message || 'Không thể gửi yêu cầu.');
-                }
-            })
-            .catch(() => {
-                btn.disabled = false;
-                alert('Lỗi kết nối.');
-            });
+            _reqEditUpdateCount();
+            if (_reqEditModal) _reqEditModal.show();
         });
-    }
+    });
 
-    // ===================== BATCH APPROVE =====================
+    // Submit yêu cầu sửa
+    document.getElementById('reqEditSubmit').addEventListener('click', function () {
+        const checked = [...new Set(
+            Array.from(document.querySelectorAll('#reqEditFields .req-edit-field:checked'))
+                 .map(c => c.value)
+        )];
+        const reason = document.getElementById('reqEditReason').value.trim();
+        if (!checked.length) { alert('Vui lòng chọn ít nhất một tiêu chí.'); return; }
+
+        this.disabled = true;
+        const btn = this;
+        fetch(`/approval/request-edit/${_reqEditCtx.pdId}/${_reqEditCtx.ctId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ fields: checked, ly_do: reason }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success) {
+                if (_reqEditModal) _reqEditModal.hide();
+                showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alert(data.message || 'Không thể gửi yêu cầu.');
+            }
+        })
+        .catch(() => { btn.disabled = false; alert('Lỗi kết nối.'); });
+    });
+
+    // ══════════════════════════════════════════════════════════
+    // BATCH APPROVE
+    // ══════════════════════════════════════════════════════════
     let batchPendingData = null;
-
-    function getAllPendingCtIds() {
-        const items = [];
-        document.querySelectorAll('.ct-row').forEach(row => {
-            if (row.style.display === 'none') return;
-            if (row.dataset.outOfScope === 'true') return;
-            const pdId = row.dataset.pdId, ctId = row.dataset.ctId;
-            const sw = document.getElementById(`switch-${pdId}-${ctId}`);
-            if (sw && !sw.checked && !sw.disabled) {
-                const reasonText = document.getElementById(`reason-text-${pdId}-${ctId}`);
-                if (!reasonText) items.push({ pdId, ctId: parseInt(ctId) });
-            }
-        });
-        // Group by pdId
-        const grouped = {};
-        items.forEach(({ pdId, ctId }) => {
-            if (!grouped[pdId]) grouped[pdId] = [];
-            grouped[pdId].push(ctId);
-        });
-        return Object.entries(grouped).map(([pdId, ctIds]) => ({ pdId, ctIds }));
-    }
 
     ['btnApproveAllCN', 'btnApproveAllTT'].forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (!btn) return;
         btn.addEventListener('click', function () {
             const tableId = btnId === 'btnApproveAllCN' ? 'tableCaNhan' : 'tableTapThe';
-            const table = document.getElementById(tableId);
-            const items = [];
+            const table   = document.getElementById(tableId);
+            const items   = [];
             table.querySelectorAll('.ct-row').forEach(row => {
                 if (row.style.display === 'none' || row.dataset.outOfScope === 'true') return;
                 const pdId = row.dataset.pdId, ctId = row.dataset.ctId;
-                const sw = document.getElementById(`switch-${pdId}-${ctId}`);
-                if (sw && !sw.checked && !sw.disabled && !document.getElementById(`reason-text-${pdId}-${ctId}`)) {
-                    items.push({ pdId, ctId: parseInt(ctId) });
-                }
+                const sw   = document.getElementById(`switch-${pdId}-${ctId}`);
+                const rt   = document.getElementById(`reason-text-${pdId}-${ctId}`);
+                const hasReason = rt && rt.style.display !== 'none' && rt.textContent.trim();
+                if (sw && !sw.checked && !hasReason) items.push({ pdId, ctId: parseInt(ctId) });
             });
-            if (items.length === 0) { showToast('Đã duyệt hết.', 'info'); return; }
+            if (!items.length) { showToast('Đã duyệt hết.', 'info'); return; }
             const grouped = {};
-            items.forEach(({ pdId, ctId }) => { if (!grouped[pdId]) grouped[pdId] = []; grouped[pdId].push(ctId); });
+            items.forEach(({ pdId, ctId }) => {
+                if (!grouped[pdId]) grouped[pdId] = [];
+                grouped[pdId].push(ctId);
+            });
             batchPendingData = Object.entries(grouped).map(([pdId, ctIds]) => ({ pdId, ctIds }));
             const label = btnId === 'btnApproveAllCN' ? 'cá nhân' : 'tập thể';
-            document.getElementById('batchApproveTitle').textContent = `Nhất trí tất cả ${label}`;
+            document.getElementById('batchApproveTitle').textContent   = `Nhất trí tất cả ${label}`;
             document.getElementById('batchApproveMessage').textContent = `Bạn có chắc muốn nhất trí ${items.length} mục chưa duyệt?`;
             new bootstrap.Modal(document.getElementById('batchApproveModal')).show();
         });
@@ -1252,14 +1021,13 @@ document.addEventListener('DOMContentLoaded', function () {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
         try {
-            const list = Array.isArray(batchPendingData) ? batchPendingData : [batchPendingData];
-            for (const item of list) {
+            for (const item of (Array.isArray(batchPendingData) ? batchPendingData : [batchPendingData])) {
                 await doBatchApprove(item.pdId, item.ctIds);
             }
             bootstrap.Modal.getInstance(document.getElementById('batchApproveModal')).hide();
             showToast('Đã nhất trí thành công!', 'success');
             setTimeout(() => location.reload(), 800);
-        } catch (err) {
+        } catch(err) {
             console.error(err);
             showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'danger');
         } finally {
@@ -1268,9 +1036,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ===================== HELPER FUNCTIONS =====================
+    // ══════════════════════════════════════════════════════════
+    // HELPER FUNCTIONS
+    // ══════════════════════════════════════════════════════════
     async function doBatchApprove(pdId, ctIds) {
-        const res = await fetch('/approval/batch-approve', {
+        const res  = await fetch('/approval/batch-approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
             body: JSON.stringify({ pd_id: parseInt(pdId), ct_ids: ctIds }),
@@ -1278,15 +1048,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Batch approve failed');
         ctIds.forEach(ctId => {
-            const sw = document.getElementById(`switch-${pdId}-${ctId}`);
-            if (sw) {
-                sw.checked = true;
-                const row = document.getElementById(`row-${pdId}-${ctId}`);
-                row.classList.remove('table-danger');
-                row.classList.add('table-success');
-                const rl = sw.closest('td').querySelector('.reject-link');
-                if (rl) rl.remove();
-            }
+            const sw  = document.getElementById(`switch-${pdId}-${ctId}`);
+            const row = document.getElementById(`row-${pdId}-${ctId}`);
+            if (!sw || !row) return;
+            sw.checked = true;
+            row.classList.remove('table-danger');
+            row.classList.add('table-success');
+            // ★ FIX: ẩn reject-link, không xóa
+            const rl = row.querySelector('.reject-link');
+            if (rl) rl.style.display = 'none';
+            // Ẩn reason-text
+            const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
+            if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
+            // Hiện revoke-link
+            const rv = row.querySelector('.revoke-item-link');
+            if (rv) rv.style.display = '';
         });
         updateGlobalStats();
         return data;
@@ -1294,7 +1070,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showRejectRow(pdId, ctId) {
         const row = document.getElementById(`reject-row-${pdId}-${ctId}`);
-        if (row) { row.style.display = ''; document.getElementById(`reason-input-${pdId}-${ctId}`).classList.remove('is-invalid'); document.getElementById(`reason-input-${pdId}-${ctId}`).focus(); }
+        if (!row) return;
+        row.style.display = '';
+        const inp = document.getElementById(`reason-input-${pdId}-${ctId}`);
+        if (inp) { inp.classList.remove('is-invalid'); inp.focus(); }
     }
 
     function hideRejectRow(pdId, ctId) {
@@ -1305,111 +1084,122 @@ document.addEventListener('DOMContentLoaded', function () {
     async function saveToggle(pdId, ctId, approved, lyDo) {
         const sw = document.getElementById(`switch-${pdId}-${ctId}`);
         try {
-            const res = await fetch(`/approval/toggle/${pdId}/${ctId}`, {
+            const res  = await fetch(`/approval/toggle/${pdId}/${ctId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ approved: approved, ly_do: lyDo }),
+                body: JSON.stringify({ approved, ly_do: lyDo }),
             });
             const data = await res.json();
-            if (!data.success) { alert(data.message || 'Có lỗi xảy ra'); sw.checked = !sw.checked; return; }
+            if (!data.success) {
+                alert(data.message || 'Có lỗi xảy ra');
+                if (sw) sw.checked = !sw.checked;
+                return;
+            }
 
             const row = document.getElementById(`row-${pdId}-${ctId}`);
             row.classList.remove('table-success', 'table-danger');
             hideRejectRow(pdId, ctId);
-            const switchCell = sw.closest('td');
+
+            const rl  = row.querySelector('.reject-link');
+            const rt  = document.getElementById(`reason-text-${pdId}-${ctId}`);
+            const rv  = row.querySelector('.revoke-item-link');
+
             if (approved) {
                 row.classList.add('table-success');
-                sw.checked = true;
-                const rl = switchCell.querySelector('.reject-link'); if (rl) rl.remove();
-                const rt = switchCell.querySelector('[id^="reason-text-"]'); if (rt) rt.remove();
+                if (sw) sw.checked = true;
+                // ★ FIX: ẩn reject-link (không xóa)
+                if (rl) rl.style.display = 'none';
+                // Ẩn reason-text
+                if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
+                // Hiện revoke-link
+                if (rv) rv.style.display = '';
             } else {
                 row.classList.add('table-danger');
-                sw.checked = false;
-                const rl = switchCell.querySelector('.reject-link'); if (rl) rl.style.display = 'none';
-                let rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
-                const shortReason = lyDo.length > 20 ? lyDo.substring(0, 20) + '...' : lyDo;
-                if (rt) { rt.textContent = shortReason; rt.title = lyDo; }
-                else {
-                    const small = document.createElement('small');
-                    small.className = 'text-danger d-block'; small.id = `reason-text-${pdId}-${ctId}`;
-                    small.style.fontSize = '0.72rem'; small.title = lyDo; small.textContent = shortReason;
-                    switchCell.appendChild(small);
+                if (sw) sw.checked = false;
+                // Ẩn reject-link
+                if (rl) rl.style.display = 'none';
+                // Hiện reason-text
+                const short = lyDo.length > 20 ? lyDo.substring(0, 20) + '...' : lyDo;
+                if (rt) {
+                    rt.textContent   = short;
+                    rt.title         = lyDo;
+                    rt.style.display = '';
                 }
+                // Hiện revoke-link
+                if (rv) rv.style.display = '';
             }
+
             updateGlobalStats();
             if (data.auto_finalized) showToast('Đã tự động hoàn tất duyệt cho đơn vị này.', 'success');
-        } catch (err) {
+        } catch(err) {
             console.error(err);
             alert('Lỗi kết nối. Vui lòng thử lại.');
-            sw.checked = !sw.checked;
+            if (sw) sw.checked = !sw.checked;
         }
     }
 
     function updateGlobalStats() {
-        let totalItems = 0, totalApproved = 0, totalRejected = 0;
+        let total = 0, approved = 0, rejected = 0;
         document.querySelectorAll('.ct-row').forEach(row => {
-            if (row.dataset.outOfScope === 'true') return;
-            totalItems++;
-            if (row.classList.contains('table-success')) totalApproved++;
-            else if (row.classList.contains('table-danger')) totalRejected++;
+            if (row.dataset.outOfScope === 'true' || row.style.display === 'none') return;
+            total++;
+            if (row.classList.contains('table-success')) approved++;
+            else if (row.classList.contains('table-danger')) rejected++;
         });
-        const pending = totalItems - totalApproved - totalRejected;
-        const gsTotal = document.getElementById('gs-total');
-        const gsPending = document.getElementById('gs-pending');
-        const gsApproved = document.getElementById('gs-approved');
-        const gsRejected = document.getElementById('gs-rejected');
-        if (gsTotal) gsTotal.textContent = totalItems;
-        if (gsPending) gsPending.textContent = pending;
-        if (gsApproved) gsApproved.textContent = totalApproved;
-        if (gsRejected) gsRejected.textContent = totalRejected;
+        const el = id => document.getElementById(id);
+        if (el('gs-total'))    el('gs-total').textContent    = total;
+        if (el('gs-pending'))  el('gs-pending').textContent  = total - approved - rejected;
+        if (el('gs-approved')) el('gs-approved').textContent = approved;
+        if (el('gs-rejected')) el('gs-rejected').textContent = rejected;
     }
 
     function showToast(message, type) {
-        const container = document.querySelector('.content-area') || document.querySelector('.page-header').parentNode;
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.style.fontSize = '0.85rem';
-        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-        container.insertBefore(alertDiv, container.firstChild);
-        setTimeout(() => alertDiv.remove(), 4000);
+        const container = document.querySelector('.content-area')
+                       || document.querySelector('.page-header').parentNode;
+        const div = document.createElement('div');
+        div.className = `alert alert-${type} alert-dismissible fade show`;
+        div.style.fontSize = '0.85rem';
+        div.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        container.insertBefore(div, container.firstChild);
+        setTimeout(() => div.remove(), 4000);
     }
 
+    // Filter bar toggle
     const toggleFilterBar = document.getElementById('toggleFilterBar');
-    const filterBar = document.getElementById('filterBar');
+    const filterBar       = document.getElementById('filterBar');
     if (toggleFilterBar && filterBar) {
-        toggleFilterBar.addEventListener('click', function() {
-            filterBar.classList.toggle('d-none');
-        });
+        toggleFilterBar.addEventListener('click', () => filterBar.classList.toggle('d-none'));
     }
 
-    const btnPrintPDF = document.getElementById('btnPrintPDF');
-    if (btnPrintPDF) btnPrintPDF.addEventListener('click', () => window.print());
-
+    // Init helpers
     initColToggle('tableCaNhan', 'btnColToggleCN');
     initColToggle('tableTapThe', 'btnColToggleTT');
     initMirrorScroll('mirrorCN', 'tblOuterCN');
     initMirrorScroll('mirrorTT', 'tblOuterTT');
-});
+}); // end DOMContentLoaded
 
-// ---- Mirror scrollbar (top ↔ bottom sync) ----
+// ══════════════════════════════════════════════════════════
+// MIRROR SCROLLBAR
+// ══════════════════════════════════════════════════════════
 function initMirrorScroll(mirrorId, outerId) {
     const mirror = document.getElementById(mirrorId);
     const outer  = document.getElementById(outerId);
     if (!mirror || !outer) return;
-    const inner = mirror.firstElementChild;
-    function syncWidth() { inner.style.width = outer.scrollWidth + 'px'; }
+    const inner  = mirror.firstElementChild;
+    function syncWidth() {
+        const tbl = outer.querySelector('table');
+        inner.style.width = (tbl ? tbl.offsetWidth : outer.scrollWidth) + 'px';
+    }
     syncWidth();
     if (window.ResizeObserver) new ResizeObserver(syncWidth).observe(outer);
     let lock = false;
-    mirror.addEventListener('scroll', function () {
-        if (lock) return; lock = true; outer.scrollLeft = mirror.scrollLeft; lock = false;
-    });
-    outer.addEventListener('scroll', function () {
-        if (lock) return; lock = true; mirror.scrollLeft = outer.scrollLeft; lock = false;
-    });
+    mirror.addEventListener('scroll', () => { if (lock) return; lock = true; outer.scrollLeft = mirror.scrollLeft; lock = false; });
+    outer.addEventListener('scroll',  () => { if (lock) return; lock = true; mirror.scrollLeft = outer.scrollLeft; lock = false; });
 }
 
-// ---- Column visibility toggle ----
+// ══════════════════════════════════════════════════════════
+// COLUMN TOGGLE
+// ══════════════════════════════════════════════════════════
 function initColToggle(tableId, btnId) {
     const table = document.getElementById(tableId);
     const btn   = document.getElementById(btnId);
@@ -1424,95 +1214,216 @@ function initColToggle(tableId, btnId) {
         panel.style.cssText = 'display:none;position:fixed;z-index:2000;min-width:210px;max-height:320px;overflow-y:auto;background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);';
         document.body.appendChild(panel);
     }
-    let html = '<div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2"><span class="fw-semibold small">Hiển thị cột</span><button type="button" class="btn-close" style="font-size:.65rem;" onclick="document.getElementById(\'' + btnId + '_panel\').style.display=\'none\'"></button></div>';
+    let html = `<div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2">
+        <span class="fw-semibold small">Hiển thị cột</span>
+        <button type="button" class="btn-close" style="font-size:.65rem;"
+                onclick="document.getElementById('${btnId}_panel').style.display='none'"></button>
+    </div>`;
     ths.forEach(th => {
-        const key = th.dataset.colKey, label = (th.dataset.colLabel || th.textContent.trim()).slice(0,35);
-        html += `<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="chk_${tableId}_${key}" checked onchange="applyColToggle('${tableId}','${storageKey}')"><label class="form-check-label small" for="chk_${tableId}_${key}" style="cursor:pointer;">${label}</label></div>`;
+        const key   = th.dataset.colKey;
+        const label = (th.dataset.colLabel || th.textContent.trim()).slice(0, 35);
+        html += `<div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox"
+                   id="chk_${tableId}_${key}" checked
+                   onchange="applyColToggle('${tableId}','${storageKey}')">
+            <label class="form-check-label small" for="chk_${tableId}_${key}" style="cursor:pointer;">${label}</label>
+        </div>`;
     });
-    html += `<div class="border-top pt-1 mt-2 d-flex gap-1"><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',true)">Tất cả</button><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',false)">Ẩn hết</button></div>`;
+    html += `<div class="border-top pt-1 mt-2 d-flex gap-1">
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;"
+                onclick="setAllColToggle('${tableId}','${storageKey}',true)">Tất cả</button>
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;"
+                onclick="setAllColToggle('${tableId}','${storageKey}',false)">Ẩn hết</button>
+    </div>`;
     panel.innerHTML = html;
     try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
-        ths.forEach(th => { const k = th.dataset.colKey; if (k in saved && !saved[k]) { const c = document.getElementById('chk_'+tableId+'_'+k); if (c) c.checked = false; } });
+        ths.forEach(th => {
+            const k = th.dataset.colKey;
+            if (k in saved && !saved[k]) {
+                const c = document.getElementById(`chk_${tableId}_${k}`);
+                if (c) c.checked = false;
+            }
+        });
     } catch(e) {}
     applyColToggle(tableId, storageKey);
     btn.addEventListener('click', function(e) {
         e.stopPropagation();
         const r = btn.getBoundingClientRect();
-        panel.style.top = (r.bottom + 4) + 'px';
+        panel.style.top  = (r.bottom + 4) + 'px';
         panel.style.left = Math.max(4, r.right - 210) + 'px';
         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     });
-    document.addEventListener('click', function(e) { if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none'; }, true);
+    document.addEventListener('click', function(e) {
+        if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none';
+    }, true);
 }
+
 function applyColToggle(tableId, storageKey) {
-    const table = document.getElementById(tableId); if (!table) return;
+    const table = document.getElementById(tableId);
+    if (!table) return;
     const state = {};
     table.querySelectorAll('thead th[data-col-key]').forEach(th => {
-        const key = th.dataset.colKey;
-        const chk = document.getElementById('chk_'+tableId+'_'+key);
+        const key     = th.dataset.colKey;
+        const chk     = document.getElementById(`chk_${tableId}_${key}`);
         const visible = chk ? chk.checked : true;
-        state[key] = visible;
-        table.querySelectorAll('[data-col-key="'+key+'"]').forEach(el => { el.style.display = visible ? '' : 'none'; });
+        state[key]    = visible;
+        table.querySelectorAll(`[data-col-key="${key}"]`).forEach(el => {
+            el.style.display = visible ? '' : 'none';
+        });
     });
     try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch(e) {}
 }
+
 function setAllColToggle(tableId, storageKey, visible) {
-    const table = document.getElementById(tableId); if (!table) return;
-    table.querySelectorAll('thead th[data-col-key]').forEach(th => { const c = document.getElementById('chk_'+tableId+'_'+th.dataset.colKey); if (c) c.checked = visible; });
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => {
+        const c = document.getElementById(`chk_${tableId}_${th.dataset.colKey}`);
+        if (c) c.checked = visible;
+    });
     applyColToggle(tableId, storageKey);
 }
 </script>
 
-<style>
-@media print {
-    .sidebar, .page-header .d-flex, #filterBar, #globalStats,
-    .btn-approve-unit, .toggle-approval, .reject-link,
-    .reject-reason-row, nav.pagination, .btn, button { display: none !important; }
-    .card-section { border: none !important; box-shadow: none !important; }
-    .print-timestamp { display: block !important; }
-    /* Ẩn các cột không thuộc tiêu chí của ban mình */
-    .col-gate-criteria, .col-evidence,
-    .col-pending, .col-action { display: none !important; }
+<!-- Shared năm học -->
+<script>
+(function() {
+    const LS_KEY = 'sharedNamHoc';
+    const cur    = '{{ nam_hoc_filter }}';
+    if (!cur) {
+        const saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('nam_hoc', saved);
+            window.location.replace(url.toString());
+            return;
+        }
+    } else { localStorage.setItem(LS_KEY, cur); }
+})();
+function onNamHocChange(sel) {
+    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
+    else           localStorage.removeItem('sharedNamHoc');
+    sel.form.submit();
 }
-.print-timestamp { display: none; font-size: 0.82rem; color: #666; margin-bottom: 8px; }
-.toolbar-wrapper {
-    display: block;
-    position: sticky;
-    top: 0;
-    z-index: 100;          /* ← Giảm z-index xuống, thấp hơn sidebar */
-    background: #fff;
-    border-bottom: 1px solid #dee2e6;
-    padding: 6px 0;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.07);
-    width: 100%;
-}
-.sidebar {  /* thay đúng class sidebar của bạn */
-    z-index: 1000 !important;
-}
-    .toolbar-inner {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: nowrap;           /* Không xuống dòng */
-        overflow-x: auto;            /* Scroll ngang khi màn nhỏ */
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding: 0 4px;
-    }
-    .toolbar-inner::-webkit-scrollbar { display: none; }
-    .toolbar-inner > * { flex-shrink: 0; } /* Không co lại */
+</script>
 
-</style>
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header py-2">
+            <h6 class="modal-title fw-semibold"><i class="bi bi-person-lines-fill me-1"></i>Chi tiết</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detailModalBody" style="font-size:0.85rem;"></div>
+        <div class="modal-footer py-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+    </div></div>
+</div>
+
+<script>
+function openDetailModal(ctId) {
+    const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+    const body  = document.getElementById('detailModalBody');
+    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
+    modal.show();
+    fetch('/admin/api/chi-tiet/' + ctId + '?dept_only=1')
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(d => {
+            const p = d.personal || {}, n = d.nomination || {};
+            const badges = [
+                p.la_chi_huy         ? '<span class="badge bg-danger">Cấp trưởng</span>'       : '',
+                p.la_bi_thu          ? '<span class="badge bg-primary">Bí thư</span>'           : '',
+                p.la_doan_vien       ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
+                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>'              : '',
+            ].filter(Boolean).join(' ');
+            let html = `<div class="row g-2 mb-2">
+              <div class="col-12"><h6 class="fw-bold mb-1">${p.ho_ten||'—'}</h6>${badges}</div>
+              <div class="col-6"><small class="text-muted d-block">Đơn vị</small>${n.don_vi||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Năm học</small>${n.nam_hoc||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Cấp bậc</small>${p.cap_bac||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Chức vụ</small>${p.chuc_vu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Đối tượng</small>${p.doi_tuong||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Danh hiệu</small>${n.loai_danh_hieu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Học hàm/vị</small>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Trạng thái</small>${n.trang_thai||'—'}</div>
+            </div>`;
+            if (d.criteria && d.criteria.length) {
+                const filled = d.criteria.filter(c => c.value && c.value !== 'None');
+                const empty  = d.criteria.filter(c => !c.value || c.value === 'None');
+                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.criteria.length + '</span></h6>';
+                html += '<table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
+                filled.forEach(c => {
+                    html += `<tr><td class="text-muted" style="width:52%">${c.label}</td><td class="fw-semibold">${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
+                });
+                if (empty.length) {
+                    html += `<tr class="table-light"><td colspan="2" class="text-muted small py-1 px-2">Chưa nhập (${empty.length}): ${empty.map(c=>c.label).join(', ')}</td></tr>`;
+                }
+                html += '</table>';
+            }
+            if (d.minh_chungs && d.minh_chungs.length) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.minh_chungs.length + '</span></h6>';
+                html += '<div class="d-flex flex-wrap gap-2 mb-2">';
+                d.minh_chungs.forEach(mc => {
+                    if (mc.is_image) {
+                        html += `<div class="text-center" style="max-width:120px;">
+                            <a href="${mc.url}" target="_blank" rel="noopener">
+                                <img src="${mc.url}" alt="${mc.ten_file}"
+                                     onerror="this.onerror=null;this.parentNode.innerHTML='<span class=\'text-muted small\'>Không tìm thấy</span>'"
+                                     style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;">
+                            </a>
+                            <div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div>
+                        </div>`;
+                    } else {
+                        html += `<a href="${mc.url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
+                        </a>`;
+                    }
+                });
+                html += '</div>';
+            }
+            const deptActed   = (d.dept_results||[]).filter(r => r.ket_qua && r.ket_qua !== 'auto');
+            const deptPending = (d.dept_results||[]).filter(r => !r.ket_qua);
+            if (deptActed.length) {
+                const badgeMap = {
+                    'Đồng ý':    '<span class="badge bg-success">Đồng ý</span>',
+                    'Chờ duyệt': '<span class="badge bg-warning text-dark">Chờ duyệt</span>',
+                    'Từ chối':   '<span class="badge bg-danger">Từ chối</span>',
+                };
+                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:.8rem;">';
+                deptActed.forEach(r => {
+                    const badge = badgeMap[r.ket_qua] || `<span class="badge bg-secondary">${r.ket_qua}</span>`;
+                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td>
+                             <td class="text-muted" style="font-size:.75rem;">${r.ngay_duyet?'<i class="bi bi-clock me-1"></i>'+r.ngay_duyet:''}</td>
+                             <td class="text-muted" style="font-size:.75rem;">${r.ghi_chu||''}</td></tr>`;
+                });
+                html += '</table>';
+                if (deptPending.length) html += `<p class="text-muted mb-2" style="font-size:.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
+            }
+            if (d.votes && d.votes.some(v => v.ket_qua)) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:.8rem;">';
+                d.votes.filter(v => v.ket_qua).forEach(v => {
+                    const cls = v.ket_qua === 'Đồng ý' ? 'text-success' : 'text-danger';
+                    html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
+                });
+                html += '</table>';
+            }
+            body.innerHTML = html;
+        })
+        .catch(e => { body.innerHTML = `<div class="alert alert-danger">Lỗi tải dữ liệu: ${e.message}</div>`; });
+}
+</script>
+
 <div class="print-timestamp">
     Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
     {% if nam_hoc_filter %} | Năm học: <strong>{{ nam_hoc_filter }}</strong>{% endif %}
 </div>
 <script>
-document.getElementById('printTimestamp') && (document.getElementById('printTimestamp').textContent =
-    new Date().toLocaleString('vi-VN'));
+const _pts = document.getElementById('printTimestamp');
+if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
 </script>
+
 {% endif %}{# end nam_hoc_filter #}
 <script>
 (function() {

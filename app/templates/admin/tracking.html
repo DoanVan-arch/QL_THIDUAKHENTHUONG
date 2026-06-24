@@ -4,12 +4,6 @@
 {% block content %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
-{% set status_class = {
-    'Chờ duyệt': 'badge-pending', 'Đang duyệt': 'badge-reviewing',
-    'Hội đồng': 'badge-approved', 'Phê duyệt cuối': 'badge-final',
-    'Từ chối': 'badge-rejected'
-} %}
-
 <div class="page-header">
     <div>
         <h4><i class="bi bi-eye me-2"></i>Theo dõi quy trình phê duyệt</h4>
@@ -41,11 +35,9 @@
            class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
         <a href="{{ url_for('admin.export_tracking_word', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
            class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-word me-1"></i>Word</a>
-        <button type="button" class="btn btn-sm btn-danger d-none" id="btnBatchReject"
-        onclick="openBatchRejectModal()">
-    <i class="bi bi-x-circle me-1"></i>Từ chối đã chọn
-    (<span id="batchRejectCount">0</span>)
-</button>
+        <button type="button" class="btn btn-sm btn-danger d-none" id="btnBatchReject" onclick="openBatchRejectModal()">
+            <i class="bi bi-x-circle me-1"></i>Từ chối đã chọn (<span id="batchRejectCount">0</span>)
+        </button>
     </div>
 </div>
 {% endif %}
@@ -58,9 +50,7 @@
     <div class="stat-mini"><i class="bi bi-arrow-repeat text-info"></i><span>Đang duyệt: <strong>{{ stats.reviewing }}</strong></span></div>
     <div class="stat-mini"><i class="bi bi-check-circle text-success"></i><span>6 CQ duyệt: <strong>{{ stats.dept_approved }}</strong></span></div>
     <div class="stat-mini"><i class="bi bi-shield-check text-primary"></i><span>PD cuối: <strong>{{ stats.final_approved }}</strong></span></div>
-    <!-- {% if stats.rejected > 0 %} -->
     <div class="stat-mini"><i class="bi bi-x-circle text-danger"></i><span>Từ chối: <strong>{{ stats.rejected }}</strong></span></div>
-    <!-- {% endif %} -->
 </div>
 {% endif %}
 
@@ -115,6 +105,7 @@
         <p class="mt-2 mb-0">Vui lòng <strong>chọn năm học</strong> để xem danh sách theo dõi phê duyệt.</p>
     </div>
 </div>
+
 {% elif flat_ca_nhan or flat_tap_the %}
 
 {# ===== BẢNG CÁ NHÂN ===== #}
@@ -127,162 +118,145 @@
         <h6 class="mb-0"><i class="bi bi-person me-2"></i>Cá nhân — {{ flat_ca_nhan|length }} người</h6>
     </div>
     <div class="tbl-mirror" id="mirrorCN"><div></div></div>
+    {# ★ tbl-outer: scroll container #}
     <div class="tbl-outer" id="tblOuterCN">
-    <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
-            <thead>
-                <tr>
-                    <th class="col-cb text-center">
-                <input type="checkbox" class="form-check-input" id="checkAllCN"
-                            title="Chọn tất cả cá nhân" onchange="toggleCheckAll('CN',this.checked)">
-                </th>
-                    <th class="col-stt">STT</th>
-                    <th class="col-name">Họ tên</th>
-                    <th class="col-donvi">Đơn vị</th>
-                    <th class="col-danhhieu-sticky">Danh hiệu</th>
-                    <th class="col-capbac">Cấp bậc / Chức vụ</th>
-                    <th class="col-doituong">Đối tượng</th>
-                    <th class="col-lop">Lớp</th>
-                   
-                    {% if view_mode == 'detail' %}
-                    <th class="col-namhoc detail-only-col">Năm học</th>
-                    {% for field in all_fields %}
-                    <th class="col-detail detail-only-col" data-col-key="cn_{{ field }}" data-col-label="{{ all_field_labels.get(field, field) }}" style="font-size:0.72rem;">{{ all_field_labels[field] }}</th>
+        {# ★ tbl-scroll: width wrapper, KHÔNG overflow #}
+        <div class="tbl-scroll">
+            <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
+                <thead>
+                    <tr>
+                        <th class="col-cb text-center">
+                            <input type="checkbox" class="form-check-input" id="checkAllCN"
+                                   title="Chọn tất cả cá nhân" onchange="toggleCheckAll('CN',this.checked)">
+                        </th>
+                        <th class="col-stt">STT</th>
+                        <th class="col-name">Họ tên</th>
+                        <th class="col-donvi">Đơn vị</th>
+                        <th class="col-danhhieu-sticky">Danh hiệu</th>
+                        <th class="col-capbac">Cấp bậc / Chức vụ</th>
+                        <th class="col-doituong">Đối tượng</th>
+                        <th class="col-lop">Lớp</th>
+                        {% if view_mode == 'detail' %}
+                        <th class="col-namhoc detail-only-col">Năm học</th>
+                        {% for field in all_fields %}
+                        <th class="col-detail detail-only-col"
+                            data-col-key="cn_{{ field }}"
+                            data-col-label="{{ all_field_labels.get(field, field) }}">{{ all_field_labels[field] }}</th>
+                        {% endfor %}
+                        {% endif %}
+                        <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chứng">Tệp</th>
+                        {% for col in tracking_dept_columns %}
+                        <th class="col-dept text-center" title="{{ col.label }}">
+                            <div class="dept-label">{{ col.label }}</div>
+                        </th>
+                        {% endfor %}
+                        <th class="col-action text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ct_data in flat_ca_nhan %}
+                    {% set ct = ct_data.ct %}
+                    {% set dx = ct_data.dx %}
+                    {% set dept_results = ct_data.dept_results %}
+                    {% set ct_can_approve = ct_data.can_final_approve %}
+                    {% set ns_r = namespace(any_rejected=false) %}
+                    {% for dn in dept_names %}
+                        {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
                     {% endfor %}
-                    {% else %}
-                    <th class="col-namhoc detail-only-col" style="display:none;">Năm học</th>
-                    {% for field in all_fields %}
-                    <th class="col-detail detail-only-col" data-col-key="cn_{{ field }}" data-col-label="{{ all_field_labels.get(field, field) }}" style="display:none;font-size:0.72rem;">{{ all_field_labels[field] }}</th>
-                    {% endfor %}
-                    {% endif %}
-                    <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
-                    {% for col in tracking_dept_columns %}
-                    <th class="col-dept text-center" title="{{ col.label }}">
-                        <div class="dept-label">{{ col.label }}</div>
-                    </th>
-                    {% endfor %}
-                    <th class="col-action text-center">Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ct_data in flat_ca_nhan %}
-                {% set ct = ct_data.ct %}
-                {% set dx = ct_data.dx %}
-                {% set dept_results = ct_data.dept_results %}
-                {% set ct_can_approve = ct_data.can_final_approve %}
-                {% set ns_r = namespace(any_rejected=false) %}
-                {% for dn in dept_names %}
-                    {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
-                {% endfor %}
-                <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
-                    <td class="col-cb text-center">
-<input type="checkbox" class="form-check-input row-cb"
-            data-id="{{ ct.id }}"
-            data-table="CN"
-            data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else 'ID:' ~ ct.id)|e }}"
-            onchange="onRowCbChange()">
-</td>
-                    <td class="col-stt">{{ loop.index }}</td>
-                    <td class="col-name fw-semibold">
-                        <div class="name-btn-group">
-                            <div class="name-text">
-                                {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
-                                {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
-                                <div class="d-flex flex-wrap gap-1 mt-1">
-                                    {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
-                                    {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
-                                    {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
-                                    {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                    <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
+                        <td class="col-cb text-center">
+                            <input type="checkbox" class="form-check-input row-cb"
+                                   data-id="{{ ct.id }}" data-table="CN"
+                                   data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else 'ID:' ~ ct.id)|e }}"
+                                   onchange="onRowCbChange()">
+                        </td>
+                        <td class="col-stt">{{ loop.index }}</td>
+                        <td class="col-name fw-semibold">
+                            <div class="name-btn-group">
+                                <div class="name-text">
+                                    {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
+                                    {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
+                                        {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
+                                        {% if qn.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
+                                        {% if qn.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
+                                <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
+                                   class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
+                        </td>
+                        <td class="col-danhhieu-sticky" title="{{ ct.loai_danh_hieu or '-' }}">
+                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
+                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                            {% else %}<span class="badge bg-secondary" style="max-width:75px;overflow:hidden;text-overflow:ellipsis;display:block;font-size:0.65rem;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                        </td>
+                        <td class="col-donvi" title="{{ ct_data.don_vi }}"><small>{{ ct_data.don_vi }}</small></td>
+                        <td class="col-capbac">
+                            {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
+                            {% else %}<small class="text-muted">-</small>{% endif %}
+                        </td>
+                        <td class="col-doituong"><small>{{ ct.doi_tuong or '-' }}</small></td>
+                        <td class="col-lop"><small>{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}</small></td>
+                        {% if view_mode == 'detail' %}
+                        <td class="col-namhoc detail-only-col"><small>{{ dx.nam_hoc }}</small></td>
+                        {% for field in all_fields %}
+                        <td class="col-detail detail-only-col text-center" data-col-key="cn_{{ field }}">
+                            {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
+                            {% if val is not none and val != '' and val != 0 %}
+                                {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac') %}
+                                <span class="d-block text-truncate" style="max-width:130px;" title="{{ val }}">{{ val }}</span>
+                                {% else %}{{ val }}{% endif %}
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% endfor %}
+                        {% endif %}
+                        <td class="col-mc text-center" data-col-key="cn_minh_chung">
+                            {% if ct.minh_chungs %}
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
-                               class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
-                        </div>
-                    </td>
-                    <td class="col-danhhieu-sticky" title="{{ ct.loai_danh_hieu or '-' }}">
-                        {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
-                        {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
-                        {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                        {% else %}<span class="badge bg-secondary" style="max-width:75px;overflow:hidden;text-overflow:ellipsis;display:block;font-size:0.65rem;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
-                    </td>
-                    <td class="col-donvi" title="{{ ct_data.don_vi }}"><small>{{ ct_data.don_vi }}</small></td>
-                    <td class="col-capbac" title="{% if ct.quan_nhan %}{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}{% endif %}">
-                        {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
-                        {% else %}<small class="text-muted">-</small>{% endif %}
-                    </td>
-                    <td class="col-doituong" title="{{ ct.doi_tuong or '-' }}"><small>{{ ct.doi_tuong or '-' }}</small></td>
-                    <td class="col-lop" title="{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}"><small>{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}</small></td>
-                   
-                    {% if view_mode == 'detail' %}
-                    <td class="col-namhoc detail-only-col"><small>{{ dx.nam_hoc }}</small></td>
-                    {% for field in all_fields %}
-                    <td class="col-detail detail-only-col text-center" data-col-key="cn_{{ field }}" style="font-size:0.75rem;">
-                        {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
-                        {% if val is not none and val != '' and val != 0 %}
-                            {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac') %}
-                            <span class="d-block text-truncate" style="max-width:130px;" title="{{ val }}">{{ val }}</span>
-                            {% else %}{{ val }}{% endif %}
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
+                               class="badge bg-secondary text-decoration-none"
+                               title="{{ ct.minh_chungs|length }} tệp"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% for col in tracking_dept_columns %}
+                        {% set dn = col.key %}
+                        <td class="col-dept text-center">
+                            {% set kq_obj = dept_results[dn] %}
+                            {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
+                                <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
+                                    <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
+                                </span>
+                            {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
+                                <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                            {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
+                                <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="col-action text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                {% if ct_can_approve %}
+                                <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
+                                        onclick="openIndividualApproveModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                                    <i class="bi bi-shield-check"></i>
+                                </button>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
+                                        onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
-                    {% else %}
-                    <td class="col-namhoc detail-only-col" style="display:none;"><small>{{ dx.nam_hoc }}</small></td>
-                    {% for field in all_fields %}
-                    <td class="col-detail detail-only-col text-center" data-col-key="cn_{{ field }}" style="display:none;font-size:0.75rem;">
-                        {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
-                        {% if val is not none and val != '' and val != 0 %}
-                            {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac') %}
-                            <span class="d-block text-truncate" style="max-width:130px;" title="{{ val }}">{{ val }}</span>
-                            {% else %}{{ val }}{% endif %}
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% endfor %}
-                    {% endif %}
-                    <td class="col-mc text-center" data-col-key="cn_minh_chung">
-                        {% if ct.minh_chungs %}
-                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% for col in tracking_dept_columns %}
-                    {% set dn = col.key %}
-                    <td class="col-dept text-center">
-                        {% set kq_obj = dept_results[dn] %}
-                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
-                            <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
-                                <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
-                            </span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
-                            <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
-                            <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% endfor %}
-                    <td class="col-action text-center">
-                        <div class="d-flex gap-1 justify-content-center">
-                            {% if ct_can_approve %}
-                            <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
-                                    onclick="openIndividualApproveModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
-                                <i class="bi bi-shield-check"></i>
-                            </button>
-                            {% endif %}
-                              <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
-                                    onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
-                            <!-- {% if dx.trang_thai in ['Hội đồng','Đang duyệt','Phê duyệt cuối'] %} -->
-                          
-                            <!-- {% endif %} -->
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    </div>
-</div>
+                </tbody>
+            </table>
+        </div>{# /tbl-scroll #}
+    </div>{# /tbl-outer ← ĐÃ SỬA: đóng đúng chỗ #}
+</div>{# /card-section #}
 {% endif %}
 
 {# ===== BẢNG TẬP THỂ ===== #}
@@ -295,131 +269,134 @@
         <h6 class="mb-0"><i class="bi bi-building me-2"></i>Tập thể — {{ flat_tap_the|length }} đơn vị</h6>
     </div>
     <div class="tbl-mirror" id="mirrorTT"><div></div></div>
+    {# ★ tbl-outer: scroll container #}
     <div class="tbl-outer" id="tblOuterTT">
-    <div class="tbl-scroll">
-        <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
-            <thead>
-                <tr>
-                    <th class="col-cb text-center">
-<input type="checkbox" class="form-check-input" id="checkAllTT"
-            title="Chọn tất cả tập thể" onchange="toggleCheckAll('TT',this.checked)">
-</th>
-                    <th class="col-stt">STT</th>
-                    <th class="col-name">Tên tập thể</th>
-                    <th class="col-donvi">Đơn vị đề xuất</th>
-                    <th class="col-danhhieu">Danh hiệu</th>
-                    <th class="col-namhoc">Năm học</th>
-                    <th class="col-normal text-center">Mức độ HTNV</th>
-                    <th class="col-normal text-center">Chủ trì ĐV</th>
-                    {% for f in tt_criteria_fields %}
-                    <th class="col-normal text-center" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}" style="font-size:0.72rem;">{{ tt_field_labels.get(f, f) }}</th>
-                    {% endfor %}
-                    <th class="col-normal text-center">T.tích khác</th>
-                    <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chứng" style="width:56px;min-width:50px;">Tệp</th>
-                    {% for col in tracking_dept_columns %}
-                    <th class="col-dept text-center" title="{{ col.label }}">
-                        <div class="dept-label">{{ col.label }}</div>
-                    </th>
-                    {% endfor %}
-                    <th class="col-action text-center">Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in flat_tap_the %}
-                {% set ct = item.ct %}
-                {% set dept_results = item.dept_results %}
-                {% set ct_can_approve = item.can_final_approve %}
-                {% set dx_tt = item.dx %}
-                <tr class="{% if ct_can_approve %}table-info{% endif %}">
-                    <td class="col-cb text-center">
-<input type="checkbox" class="form-check-input row-cb"
-            data-id="{{ ct.id }}"
-            data-table="TT"
-            data-name="{{ (ct.ten_don_vi_de_xuat or '')|e }}"
-            onchange="onRowCbChange()">
-</td>
-                    <td class="col-stt">{{ loop.index }}</td>
-                    <td class="col-name fw-semibold">
-                        <div class="name-btn-group">
-                            <div class="name-text">
-                                <i class="bi bi-building text-primary me-1"></i>
-                                {{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}
+        {# ★ tbl-scroll: width wrapper #}
+        <div class="tbl-scroll">
+            <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
+                <thead>
+                    <tr>
+                        <th class="col-cb text-center">
+                            <input type="checkbox" class="form-check-input" id="checkAllTT"
+                                   title="Chọn tất cả tập thể" onchange="toggleCheckAll('TT',this.checked)">
+                        </th>
+                        <th class="col-stt">STT</th>
+                        <th class="col-name">Tên tập thể</th>
+                        <th class="col-donvi">Đơn vị đề xuất</th>
+                        <th class="col-danhhieu">Danh hiệu</th>
+                        <th class="col-namhoc">Năm học</th>
+                        <th class="col-normal text-center">Mức độ HTNV</th>
+                        <th class="col-normal text-center">Chủ trì ĐV</th>
+                        {% for f in tt_criteria_fields %}
+                        <th class="col-normal text-center"
+                            data-col-key="tt_{{ f }}"
+                            data-col-label="{{ tt_field_labels.get(f, f) }}">{{ tt_field_labels.get(f, f) }}</th>
+                        {% endfor %}
+                        <th class="col-normal text-center">T.tích khác</th>
+                        <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chứng">Tệp</th>
+                        {% for col in tracking_dept_columns %}
+                        <th class="col-dept text-center" title="{{ col.label }}">
+                            <div class="dept-label">{{ col.label }}</div>
+                        </th>
+                        {% endfor %}
+                        <th class="col-action text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in flat_tap_the %}
+                    {% set ct = item.ct %}
+                    {% set dept_results = item.dept_results %}
+                    {% set ct_can_approve = item.can_final_approve %}
+                    {% set dx_tt = item.dx %}
+                    <tr class="{% if ct_can_approve %}table-info{% endif %}">
+                        <td class="col-cb text-center">
+                            <input type="checkbox" class="form-check-input row-cb"
+                                   data-id="{{ ct.id }}" data-table="TT"
+                                   data-name="{{ (ct.ten_don_vi_de_xuat or '')|e }}"
+                                   onchange="onRowCbChange()">
+                        </td>
+                        <td class="col-stt">{{ loop.index }}</td>
+                        <td class="col-name fw-semibold">
+                            <div class="name-btn-group">
+                                <div class="name-text">
+                                    <i class="bi bi-building text-primary me-1"></i>
+                                    {{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}
+                                </div>
+                                <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
+                                   class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
+                        </td>
+                        <td class="col-donvi" title="{{ item.don_vi }}"><small>{{ item.don_vi }}</small></td>
+                        <td class="col-danhhieu" title="{{ ct.loai_danh_hieu or '-' }}">
+                            {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
+                            {% else %}<span class="badge bg-secondary" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;display:block;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                        </td>
+                        <td class="col-namhoc"><small>{{ dx_tt.nam_hoc }}</small></td>
+                        <td class="col-normal text-center">
+                            {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="col-normal text-center">
+                            {% if ct.chu_tri_don_vi_danh_hieu %}
+                            <span class="d-block text-truncate" style="max-width:130px;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% set ttd = ct.tap_the_dict or {} %}
+                        {% for f in tt_criteria_fields %}
+                        <td class="col-normal text-center" data-col-key="tt_{{ f }}">
+                            {% set fval = ttd.get(f,'') %}
+                            {% if fval %}<span>{{ fval }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="col-normal text-center">
+                            {% if ct.thanh_tich_ca_nhan_khac %}
+                            <span class="d-block text-truncate" style="max-width:120px;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="col-mc text-center" data-col-key="tt_minh_chung">
+                            {% if ct.minh_chungs %}
                             <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
-                               class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
-                        </div>
-                    </td>
-                    <td class="col-donvi" title="{{ item.don_vi }}"><small>{{ item.don_vi }}</small></td>
-                    <td class="col-danhhieu" title="{{ ct.loai_danh_hieu or '-' }}">
-                        {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                        {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
-                        {% else %}<span class="badge bg-secondary" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;display:block;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
-                    </td>
-                    <td class="col-namhoc"><small>{{ dx_tt.nam_hoc }}</small></td>
-                    <td class="col-normal text-center" style="font-size:0.75rem;">
-                        {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    <td class="col-normal text-center" style="font-size:0.75rem;">
-                        {% if ct.chu_tri_don_vi_danh_hieu %}
-                        <span class="d-block text-truncate" style="max-width:130px;" title="{{ ct.chu_tri_don_vi_danh_hieu }}">{{ ct.chu_tri_don_vi_danh_hieu }}</span>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% set ttd = ct.tap_the_dict or {} %}
-                    {% for f in tt_criteria_fields %}
-                    <td class="col-normal text-center" data-col-key="tt_{{ f }}" style="font-size:0.75rem;">
-                        {% set fval = ttd.get(f,'') %}
-                        {% if fval %}<span>{{ fval }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
+                               class="badge bg-secondary text-decoration-none"
+                               title="{{ ct.minh_chungs|length }} tệp"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% for col in tracking_dept_columns %}
+                        {% set dn = col.key %}
+                        <td class="col-dept text-center">
+                            {% set kq_obj = dept_results[dn] %}
+                            {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
+                                <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
+                                    <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
+                                </span>
+                            {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
+                                <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
+                            {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
+                                <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="col-action text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                {% if ct_can_approve %}
+                                <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
+                                        onclick="openIndividualApproveModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
+                                    <i class="bi bi-shield-check"></i>
+                                </button>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
+                                        onclick="openRejectIndividualModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
-                    <td class="col-normal text-center" style="font-size:0.75rem;">
-                        {% if ct.thanh_tich_ca_nhan_khac %}
-                        <span class="d-block text-truncate" style="max-width:120px;" title="{{ ct.thanh_tich_ca_nhan_khac }}">{{ ct.thanh_tich_ca_nhan_khac }}</span>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    <td class="col-mc text-center" data-col-key="tt_minh_chung">
-                        {% if ct.minh_chungs %}
-                        <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})" class="badge bg-secondary text-decoration-none" title="{{ ct.minh_chungs|length }} tệp đính kèm"><i class="bi bi-paperclip"></i> {{ ct.minh_chungs|length }}</a>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% for col in tracking_dept_columns %}
-                    {% set dn = col.key %}
-                    <td class="col-dept text-center">
-                        {% set kq_obj = dept_results[dn] %}
-                        {% if kq_obj and kq_obj.ket_qua == 'Đồng ý' %}
-                            <span class="badge bg-success" title="{{ dn }}: Đồng ý{% if kq_obj.auto %} (tự động){% endif %}">
-                                <i class="bi bi-check-lg"></i>{% if kq_obj.auto %}<small class="ms-1">A</small>{% endif %}
-                            </span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Từ chối' %}
-                            <span class="badge bg-danger" title="{{ dn }}: Từ chối"><i class="bi bi-x-lg"></i></span>
-                        {% elif kq_obj and kq_obj.ket_qua == 'Chờ duyệt' %}
-                            <span class="badge bg-warning text-dark" title="{{ dn }}: Chờ duyệt"><i class="bi bi-hourglass"></i></span>
-                        {% else %}<span class="text-muted">-</span>{% endif %}
-                    </td>
-                    {% endfor %}
-                    <td class="col-action text-center">
-                        <div class="d-flex gap-1 justify-content-center">
-                            {% if ct_can_approve %}
-                            <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
-                                    onclick="openIndividualApproveModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
-                                <i class="bi bi-shield-check"></i>
-                            </button>
-                            {% endif %}
-                             <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
-                                    onclick="openRejectIndividualModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
-                            <!-- {% if dx_tt.trang_thai in ['Hội đồng','Đang duyệt','Phê duyệt cuối'] %} -->
-                           
-                            <!-- {% endif %} -->
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+                </tbody>
+            </table>
+        </div>{# /tbl-scroll #}
+    </div>{# /tbl-outer ← ĐÃ SỬA: đóng đúng chỗ #}
+</div>{# /card-section #}
 {% endif %}
 
 {% else %}
@@ -438,7 +415,7 @@
 {% endif %}
 {% endif %}
 
-<!-- MODALS (giữ nguyên) -->
+<!-- ================================================================ MODALS -->
 <div class="modal fade" id="individualApproveModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
         <form id="individualApproveForm" method="POST" action="">
@@ -460,6 +437,7 @@
         </form>
     </div></div>
 </div>
+
 <div class="modal fade" id="batchFinalModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header" style="background:linear-gradient(135deg,var(--navy-primary),var(--navy-light));color:#fff;">
@@ -477,6 +455,7 @@
         </div>
     </div></div>
 </div>
+
 <div class="modal fade" id="rejectIndividualModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
         <form id="rejectIndividualForm" method="POST" action="">
@@ -498,6 +477,7 @@
         </form>
     </div></div>
 </div>
+
 <div class="modal fade" id="rejectNominationModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
         <form id="rejectNominationForm" method="POST" action="">
@@ -519,49 +499,38 @@
         </form>
     </div></div>
 </div>
-<!-- Modal từ chối hàng loạt (thêm sau modal rejectNominationModal) -->
+
 <div class="modal fade" id="batchRejectModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white py-2">
-                <h6 class="modal-title">
-                    <i class="bi bi-x-circle me-2"></i>Từ chối các mục đã chọn
-                </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header bg-danger text-white py-2">
+            <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối các mục đã chọn</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Thao tác này sẽ từ chối <strong id="batchRejectCountLabel">0</strong> mục đã chọn và gửi thông báo về đơn vị.
             </div>
-            <div class="modal-body">
-                <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    Thao tác này sẽ từ chối <strong id="batchRejectCountLabel">0</strong> mục đã chọn
-                    và gửi thông báo lý do về đơn vị.
-                </div>
-                <!-- Danh sách tên đã chọn -->
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold text-muted">Danh sách đã chọn:</label>
-                    <ul class="list-unstyled mb-0 border rounded p-2 bg-light"
-                        id="batchRejectNameList"
-                        style="max-height:140px;overflow-y:auto;font-size:0.82rem;"></ul>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label small fw-semibold">
-                        Lý do từ chối <span class="text-danger">*</span>
-                    </label>
-                    <textarea class="form-control form-control-sm" id="batchRejectLyDo"
-                              rows="3" placeholder="Nhập lý do từ chối chung cho các mục đã chọn..."
-                              required></textarea>
-                </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold text-muted">Danh sách đã chọn:</label>
+                <ul class="list-unstyled mb-0 border rounded p-2 bg-light" id="batchRejectNameList"
+                    style="max-height:140px;overflow-y:auto;font-size:0.82rem;"></ul>
             </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-outline-secondary"
-                        data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-danger" id="batchRejectConfirm"
-                        onclick="submitBatchReject()">
-                    <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
-                </button>
+            <div class="mb-2">
+                <label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                <textarea class="form-control form-control-sm" id="batchRejectLyDo" rows="3"
+                          placeholder="Nhập lý do từ chối chung..." required></textarea>
             </div>
         </div>
-    </div>
+        <div class="modal-footer py-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-danger" id="batchRejectConfirm" onclick="submitBatchReject()">
+                <i class="bi bi-x-circle me-1"></i>Xác nhận từ chối
+            </button>
+        </div>
+    </div></div>
 </div>
+
 <div class="modal fade" id="detailModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-header py-2">
@@ -610,36 +579,42 @@
 .toolbar-inner > * { flex-shrink:0; }
 
 /* ============================================================
-   TABLE SCROLL WRAPPER — KHÔNG phải scroll container
-   Scroll container là .tbl-outer (overflow-x:auto)
-   .tbl-scroll chỉ là block width:max-content, không overflow
+   SCROLL LAYOUT
+   .tbl-outer  → overflow-x:auto  (scroll container)
+   .tbl-scroll → width:max-content (width wrapper, KHÔNG overflow)
 ============================================================ */
-.tbl-scroll {
-    display: block;
-    width: max-content;
-    min-width: 100%;
-    overflow: visible !important;   /* NOT the scroll container — .tbl-outer handles scroll */
+.tbl-outer {
+    width: 100%;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
+.tbl-scroll {
+    display: block;
+    /* ★ FIX: bỏ min-width:100% — chỉ dùng max-content để tránh conflict */
+    width: max-content;
+    overflow: visible;
+}
 
+/* Mirror scrollbar trên đầu bảng */
+.tbl-mirror {
+    overflow-x: scroll;
+    overflow-y: hidden;
+    height: 14px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+.tbl-mirror > div { height: 1px; }
 
 /* ============================================================
-   TABLE
-   QUAN TRỌNG:
-     - border-collapse: SEPARATE  (collapse phá sticky)
-     - table-layout: auto          (fixed phá sticky)
-     - width: max-content          (rộng theo nội dung)
-     - min-width: 100%             (tối thiểu bằng container)
+   TABLE — border-collapse:separate bắt buộc cho sticky
 ============================================================ */
 .tbl-scroll table {
     border-collapse: separate !important;
     border-spacing: 0 !important;
     table-layout: auto !important;
     width: max-content !important;
-    /* KHÔNG có min-width: 100% */
     font-size: 0.82rem;
 }
-/* Base borders (bù lại do border-collapse:separate) */
 .tbl-scroll th,
 .tbl-scroll td {
     border-bottom: 1px solid #dee2e6;
@@ -653,10 +628,10 @@
 }
 .tbl-scroll th:first-child,
 .tbl-scroll td:first-child { border-left: 1px solid #dee2e6; }
-.tbl-scroll thead th       { border-top:  1px solid #dee2e6; }
+.tbl-scroll thead th       { border-top: 1px solid #dee2e6; }
 
 /* ============================================================
-   WIDTH CÁC CỘT — đặt min-width để header không bị cắt chữ
+   CHIỀU RỘNG CỘT
 ============================================================ */
 .tbl-scroll .col-stt      { width:42px;  min-width:42px;  max-width:42px; }
 .tbl-scroll .col-name     { width:210px; min-width:210px; }
@@ -664,15 +639,16 @@
 .tbl-scroll .col-capbac   { width:185px; min-width:150px; }
 .tbl-scroll .col-doituong { width:120px; min-width:100px; }
 .tbl-scroll .col-danhhieu { width:110px; min-width:90px;  }
+.tbl-scroll .col-lop      { width:80px;  min-width:70px;  }
 .tbl-scroll .col-namhoc   { width:90px;  min-width:80px;  }
 .tbl-scroll .col-normal   { width:130px; min-width:100px; }
 .tbl-scroll .col-detail   { width:115px; min-width:100px; }
+.tbl-scroll .col-mc       { width:56px;  min-width:50px;  }
 .tbl-scroll .col-action   { width:92px;  min-width:92px;  max-width:92px; }
+.tbl-scroll .col-dept     { width:72px;  min-width:72px;  max-width:80px; }
+.tbl-scroll .col-cb       { width:36px;  min-width:36px;  max-width:36px; }
 
-/* Dept columns: đủ rộng để header hiện chữ, body dùng badge nhỏ */
-.tbl-scroll .col-dept { width:72px; min-width:72px; max-width:80px; }
-
-/* Header dept: cho phép wrap để hiện đủ tên */
+/* Dept header: wrap text */
 .tbl-scroll thead .col-dept {
     white-space: normal !important;
     overflow: visible !important;
@@ -685,13 +661,26 @@
 }
 
 /* ============================================================
-   STICKY TRÁI: STT  (left: 0)
-   - z-index:3 cho tbody, z-index:5 cho thead
-   - background PHẢI được đặt rõ ràng
+   STICKY COLUMNS
+   Thứ tự: col-cb(0) → col-stt(36) → col-name(78) → col-danhhieu-sticky(288) | col-action(right:0)
 ============================================================ */
-.tbl-scroll .col-stt {
+
+/* Checkbox */
+.tbl-scroll .col-cb {
     position: sticky !important;
     left: 0 !important;
+    z-index: 3;
+    background: #fff;
+}
+.tbl-scroll thead .col-cb {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+}
+
+/* STT */
+.tbl-scroll .col-stt {
+    position: sticky !important;
+    left: 36px !important;
     z-index: 3;
     background: #fff;
     border-right: 2px solid #b0bec5 !important;
@@ -702,12 +691,10 @@
     color: #fff !important;
 }
 
-/* ============================================================
-   STICKY TRÁI: HỌ TÊN  (left: 42px)
-============================================================ */
+/* Họ tên */
 .tbl-scroll .col-name {
     position: sticky !important;
-    left: 42px !important;
+    left: 78px !important;   /* 36 + 42 */
     z-index: 3;
     background: #fff;
     box-shadow: 3px 0 6px rgba(0,0,0,.12);
@@ -718,17 +705,22 @@
     color: #fff !important;
 }
 
-/* Màu nền sticky theo trạng thái hàng */
-.tbl-scroll tr.table-info   .col-stt,
-.tbl-scroll tr.table-info   .col-name   { background: #cff4fc !important; }
-.tbl-scroll tr.table-danger .col-stt,
-.tbl-scroll tr.table-danger .col-name   { background: #f8d7da !important; }
-.tbl-scroll tbody tr:hover  .col-stt,
-.tbl-scroll tbody tr:hover  .col-name   { background: #eef2f7 !important; }
+/* Danh hiệu (chỉ bảng cá nhân) */
+.tbl-scroll .col-danhhieu-sticky {
+    position: sticky !important;
+    left: 288px !important;  /* 36 + 42 + 210 */
+    z-index: 3;
+    width: 80px; min-width: 80px; max-width: 80px;
+    background: #fff;
+    box-shadow: 3px 0 6px rgba(0,0,0,.10);
+}
+.tbl-scroll thead .col-danhhieu-sticky {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
 
-/* ============================================================
-   STICKY PHẢI: THAO TÁC  (right: 0)
-============================================================ */
+/* Thao tác */
 .tbl-scroll .col-action {
     position: sticky !important;
     right: 0 !important;
@@ -741,143 +733,27 @@
     background: var(--navy-primary, #1a3a5c) !important;
     color: #fff !important;
 }
+
+/* ── Màu nền sticky theo trạng thái hàng ── */
+.tbl-scroll tr.table-info   .col-cb,
+.tbl-scroll tr.table-info   .col-stt,
+.tbl-scroll tr.table-info   .col-name,
+.tbl-scroll tr.table-info   .col-danhhieu-sticky,
 .tbl-scroll tr.table-info   .col-action { background: #cff4fc !important; }
+
+.tbl-scroll tr.table-danger .col-cb,
+.tbl-scroll tr.table-danger .col-stt,
+.tbl-scroll tr.table-danger .col-name,
+.tbl-scroll tr.table-danger .col-danhhieu-sticky,
 .tbl-scroll tr.table-danger .col-action { background: #f8d7da !important; }
+
+.tbl-scroll tbody tr:hover  .col-cb,
+.tbl-scroll tbody tr:hover  .col-stt,
+.tbl-scroll tbody tr:hover  .col-name,
+.tbl-scroll tbody tr:hover  .col-danhhieu-sticky,
 .tbl-scroll tbody tr:hover  .col-action { background: #eef2f7 !important; }
 
-/* ============================================================
-   NAME CELL
-============================================================ */
-.name-btn-group { display:flex; align-items:flex-start; gap:4px; }
-.name-btn-group .name-text {
-    flex:1; min-width:0;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-
-/* ============================================================
-   BTN NAVY
-============================================================ */
-.btn-navy { background:var(--navy-primary); color:#fff; border-color:var(--navy-primary); }
-.btn-navy:hover { background:var(--navy-dark); color:#fff; }
-.btn-outline-navy { color:var(--navy-primary); border-color:var(--navy-primary); background:transparent; }
-.btn-outline-navy:hover { background:var(--navy-primary); color:#fff; }
-
-.unit-card.filtered-out { display:none !important; }
-
-/* ============================================================
-   PRINT
-============================================================ */
-@media print {
-    .no-print, .toolbar-wrapper { display:none !important; }
-    .card-section { box-shadow:none !important; border:1px solid #ccc !important; }
-    body { font-size:10pt; }
-    .badge { border:1px solid #666; color:#000 !important; background:transparent !important; }
-    #trackingPrintTimestamp { display:block !important; }
-}
-/* ===== FIX STICKY: Override mọi thứ từ base.html ===== */
-
-/* 1. Tăng specificity cho border-collapse */
-.tbl-scroll > table,
-.tbl-scroll > .table,
-div.tbl-scroll table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    table-layout: auto !important;
-    width: max-content !important;
-}
-
-/* 2. Bỏ overflow:hidden trên các wrapper phổ biến */
-.card-section,
-.card-body-custom,
-.card-body {
-    overflow: visible !important;
-}
-
-/* 3. Đảm bảo sticky hoạt động với specificity cao nhất */
-div.tbl-scroll th.col-stt,
-div.tbl-scroll td.col-stt {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 3 !important;
-    background: #fff;
-}
-div.tbl-scroll th.col-name,
-div.tbl-scroll td.col-name {
-    position: sticky !important;
-    left: 42px !important;
-    z-index: 3 !important;
-    background: #fff;
-}
-div.tbl-scroll th.col-action,
-div.tbl-scroll td.col-action {
-    position: sticky !important;
-    right: 0 !important;
-    z-index: 3 !important;
-    background: #fff;
-}
-/* Thử fix overflow trên các wrapper phổ biến */
-.card-section,
-.card-body-custom,
-.card-body,
-.main-content,
-.content-wrapper,
-.content-area,
-.page-content,
-.main-panel,
-.wrapper {
-    overflow: visible !important;
-}
-/* Outer: scroll container */
-.tbl-outer {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-/* .tbl-scroll defined above — no duplicate needed */
-
-/* Mirror scrollbar trên đầu bảng */
-.tbl-mirror {
-    overflow-x: scroll;
-    overflow-y: hidden;
-    height: 14px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
-.tbl-mirror > div { height: 1px; }
-
-/* Detail-only columns hidden/shown via JS */
-.detail-only-col { display: table-cell; }
-/* ── Cột checkbox ── */
-.tbl-scroll .col-cb {
-    width: 36px;
-    min-width: 36px;
-    max-width: 36px;
-    /* Sticky trái, sát cột STT */
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 3;
-    background: #fff;
-}
-.tbl-scroll thead .col-cb {
-    z-index: 5;
-    background: var(--navy-primary, #1a3a5c) !important;
-}
-/* Cột STT dịch sang phải 36px (thêm col-cb) */
-.tbl-scroll .col-stt {
-    left: 36px !important;   /* 0 → 36px */
-}
-/* Cột Họ tên dịch sang phải 36px (36 + 42 = 78px) */
-.tbl-scroll .col-name {
-    left: 78px !important;   /* 42px → 78px */
-}
-
-/* Màu nền sticky checkbox theo trạng thái hàng */
-.tbl-scroll tr.table-info   .col-cb { background: #cff4fc !important; }
-.tbl-scroll tr.table-danger .col-cb { background: #f8d7da !important; }
-.tbl-scroll tbody tr:hover  .col-cb { background: #eef2f7 !important; }
-
-/* Checkbox trong header: màu trắng */
+/* Checkbox header trắng */
 .tbl-scroll thead .col-cb .form-check-input {
     border-color: rgba(255,255,255,0.7);
     background-color: transparent;
@@ -886,80 +762,66 @@ div.tbl-scroll td.col-action {
     background-color: #fff;
     border-color: #fff;
 }
-/* Nút batch reject nổi bật */
-#btnBatchReject {
-    animation: pulse-danger 1.5s infinite;
+
+/* ============================================================
+   MISC
+============================================================ */
+.name-btn-group { display:flex; align-items:flex-start; gap:4px; }
+.name-btn-group .name-text {
+    flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
+.btn-navy { background:var(--navy-primary); color:#fff; border-color:var(--navy-primary); }
+.btn-navy:hover { background:var(--navy-dark); color:#fff; }
+.btn-outline-navy { color:var(--navy-primary); border-color:var(--navy-primary); background:transparent; }
+.btn-outline-navy:hover { background:var(--navy-primary); color:#fff; }
+.unit-card.filtered-out { display:none !important; }
+.detail-only-col { display: table-cell; }
+
+/* Bỏ overflow:hidden từ base.html */
+.card-section, .card-body-custom, .card-body,
+.main-content, .content-wrapper, .content-area,
+.page-content, .main-panel, .wrapper {
+    overflow: visible !important;
+}
+
+/* Batch reject pulse */
+#btnBatchReject { animation: pulse-danger 1.5s infinite; }
 @keyframes pulse-danger {
     0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,.4); }
     50%       { box-shadow: 0 0 0 5px rgba(220,53,69,0); }
 }
 
-/*
-  Thứ tự sticky trái (trái → phải):
-  col-cb    : left: 0       width: 36px
-  col-stt   : left: 36px    width: 42px
-  col-name  : left: 78px    width: 210px
-  col-danhhieu-sticky: left: 288px   width: 80px  ← THÊM MỚI
-*/
-
-/* Dịch col-stt sang phải 36px (do có col-cb) */
-.tbl-scroll .col-stt  { left: 36px !important; }
-
-/* Dịch col-name sang phải 36+42=78px */
-.tbl-scroll .col-name { left: 78px !important; }
-
-/* ── THÊM: Danh hiệu sticky ── */
-.tbl-scroll .col-danhhieu-sticky {
-    position: sticky !important;
-    left: 288px !important;   /* 36 + 42 + 210 = 288px */
-    z-index: 3;
-    width: 80px;
-    min-width: 80px;
-    max-width: 80px;
-    background: #fff;
-    box-shadow: 3px 0 6px rgba(0,0,0,.10);
+@media print {
+    .no-print, .toolbar-wrapper { display:none !important; }
+    .card-section { box-shadow:none !important; border:1px solid #ccc !important; }
+    body { font-size:10pt; }
+    .badge { border:1px solid #666; color:#000 !important; background:transparent !important; }
 }
-.tbl-scroll thead .col-danhhieu-sticky {
-    z-index: 5;
-    background: var(--navy-primary, #1a3a5c) !important;
-    color: #fff !important;
-}
-
-/* Màu nền sticky danh hiệu theo trạng thái hàng */
-.tbl-scroll tr.table-info   .col-danhhieu-sticky { background: #cff4fc !important; }
-.tbl-scroll tr.table-danger .col-danhhieu-sticky { background: #f8d7da !important; }
-.tbl-scroll tbody tr:hover  .col-danhhieu-sticky { background: #eef2f7 !important; }
-
 </style>
 
 <script>
-// ---- View mode toggle (compact / detail) — no page reload ----
+/* ---- View mode toggle ---- */
 function setViewMode(mode) {
     const isDetail = mode === 'detail';
-    // toggle all detail-only cells
     document.querySelectorAll('.detail-only-col').forEach(el => {
         el.style.display = isDetail ? '' : 'none';
     });
-    // update button states
     const btnC = document.getElementById('btnViewCompact');
     const btnD = document.getElementById('btnViewDetail');
     if (btnC) { btnC.classList.toggle('btn-navy', !isDetail); btnC.classList.toggle('btn-outline-navy', isDetail); }
     if (btnD) { btnD.classList.toggle('btn-navy', isDetail); btnD.classList.toggle('btn-outline-navy', !isDetail); }
-    // update URL without reload
     const url = new URL(window.location.href);
     url.searchParams.set('view', mode);
     history.pushState({view: mode}, '', url.toString());
-    // re-sync mirror scrollbar widths after layout change
     ['tblOuterCN','tblOuterTT'].forEach(outerId => {
         const outer = document.getElementById(outerId);
         if (!outer) return;
-        const scroll = outer.querySelector('.tbl-scroll');
-        const mirrorDiv = document.getElementById(outerId.replace('tblOuter','mirror'))
-                          || document.getElementById('mirror' + outerId.replace('tblOuter',''));
-        if (!mirrorDiv) return;
-        const inner = mirrorDiv.querySelector('div');
-        if (inner && scroll) inner.style.width = scroll.scrollWidth + 'px';
+        const mirrorId = outerId.replace('tblOuter','mirror');
+        const mirror   = document.getElementById(mirrorId);
+        if (!mirror) return;
+        const inner = mirror.querySelector('div');
+        if (inner) inner.style.width = outer.scrollWidth + 'px';
     });
 }
 
@@ -969,36 +831,38 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
         const raw = document.getElementById('nominationData').textContent.trim();
         nominations = JSON.parse(raw.replace(/,\s*\]/, ']'));
-    } catch(e) { console.warn('Parse error:', e); }
+    } catch(e) { console.warn('nominationData parse error:', e); }
 
+    /* Unit filter */
     const unitFilter = document.getElementById('unitFilter');
     if (unitFilter) {
         unitFilter.addEventListener('change', function () {
-            const selected = this.value;
+            const sel = this.value;
             document.querySelectorAll('.unit-card').forEach(card => {
-                card.classList.toggle('filtered-out', !!(selected && card.dataset.unitName !== selected));
+                card.classList.toggle('filtered-out', !!(sel && card.dataset.unitName !== sel));
             });
         });
     }
 
+    /* Batch final approve */
     let batchIds = [];
     document.querySelectorAll('.btn-approve-unit').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const unitName = this.dataset.unitName;
             const unitNoms = nominations.filter(n => n.unit === unitName);
-            if (!unitNoms.length) { alert('Đơn vị này không có đề xuất nào sẵn sàng phê duyệt cuối.'); return; }
+            if (!unitNoms.length) { alert('Không có đề xuất nào sẵn sàng phê duyệt cuối.'); return; }
             batchIds = unitNoms.map(n => n.id);
             document.getElementById('batchFinalTitle').textContent = 'PD cuối: ' + unitName;
             document.getElementById('batchFinalMessage').innerHTML =
-                'Phê duyệt cuối <strong>' + unitNoms.length + '</strong> đề xuất của đơn vị <strong>"' + unitName + '"</strong>?<br>' +
+                'Phê duyệt cuối <strong>' + unitNoms.length + '</strong> đề xuất của <strong>"' + unitName + '"</strong>?<br>' +
                 '<small class="text-muted">' + unitNoms.map(n => n.name).join(', ') + '</small>';
             document.getElementById('batchGhiChu').value = '';
             new bootstrap.Modal(document.getElementById('batchFinalModal')).show();
         });
     });
 
-    const btnApproveAll = document.getElementById('btnApproveAll');
+        const btnApproveAll = document.getElementById('btnApproveAll');
     if (btnApproveAll) {
         btnApproveAll.addEventListener('click', function() {
             if (!nominations.length) { alert('Không có đề xuất nào sẵn sàng phê duyệt cuối.'); return; }
@@ -1018,9 +882,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const ghiChu = document.getElementById('batchGhiChu').value.trim();
         try {
             const res = await fetch('/admin/batch-final-approve', {
-                method:'POST',
-                headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
-                body:JSON.stringify({ids:batchIds, ghi_chu:ghiChu}),
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ ids: batchIds, ghi_chu: ghiChu }),
             });
             const data = await res.json();
             if (data.success) {
@@ -1033,21 +897,33 @@ document.addEventListener('DOMContentLoaded', function () {
             this.innerHTML = '<i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt';
         }
     });
+
+    /* Init helpers */
     initColToggle('tableCaNhan', 'btnColToggleCN');
     initColToggle('tableTapThe', 'btnColToggleTT');
     initMirrorScroll('mirrorCN', 'tblOuterCN');
     initMirrorScroll('mirrorTT', 'tblOuterTT');
+
+    /* Batch reject: xóa invalid khi gõ */
+    const lyDoEl = document.getElementById('batchRejectLyDo');
+    if (lyDoEl) lyDoEl.addEventListener('input', function() { this.classList.remove('is-invalid'); });
 });
 
-// ---- Mirror scrollbar (top ↔ bottom sync) ----
+/* ---- Mirror scrollbar (top ↔ bottom sync) ---- */
 function initMirrorScroll(mirrorId, outerId) {
     const mirror = document.getElementById(mirrorId);
     const outer  = document.getElementById(outerId);
     if (!mirror || !outer) return;
-    const inner = mirror.firstElementChild;
-    function syncWidth() { inner.style.width = outer.scrollWidth + 'px'; }
+    const inner  = mirror.firstElementChild;
+
+    function syncWidth() {
+        /* ★ FIX: đo scrollWidth của bảng bên trong, không phải outer */
+        const tbl = outer.querySelector('table');
+        inner.style.width = (tbl ? tbl.offsetWidth : outer.scrollWidth) + 'px';
+    }
     syncWidth();
     if (window.ResizeObserver) new ResizeObserver(syncWidth).observe(outer);
+
     let lock = false;
     mirror.addEventListener('scroll', function () {
         if (lock) return; lock = true; outer.scrollLeft = mirror.scrollLeft; lock = false;
@@ -1057,82 +933,149 @@ function initMirrorScroll(mirrorId, outerId) {
     });
 }
 
-// ---- Column visibility toggle ----
+/* ---- Column visibility toggle ---- */
 function initColToggle(tableId, btnId) {
     const table = document.getElementById(tableId);
     const btn   = document.getElementById(btnId);
     if (!table || !btn) return;
+
     const storageKey = 'col_toggle_' + tableId;
     const ths = Array.from(table.querySelectorAll('thead th[data-col-key]'));
     if (!ths.length) return;
+
     let panel = document.getElementById(btnId + '_panel');
     if (!panel) {
         panel = document.createElement('div');
         panel.id = btnId + '_panel';
-        panel.style.cssText = 'display:none;position:fixed;z-index:2000;min-width:210px;max-height:320px;overflow-y:auto;background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);';
+        panel.style.cssText = [
+            'display:none', 'position:fixed', 'z-index:2000',
+            'min-width:210px', 'max-height:320px', 'overflow-y:auto',
+            'background:#fff', 'border:1px solid #dee2e6', 'border-radius:6px',
+            'padding:8px', 'box-shadow:0 4px 12px rgba(0,0,0,.15)'
+        ].join(';');
         document.body.appendChild(panel);
     }
-    let html = '<div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2"><span class="fw-semibold small">Hiển thị cột</span><button type="button" class="btn-close" style="font-size:.65rem;" onclick="document.getElementById(\'' + btnId + '_panel\').style.display=\'none\'"></button></div>';
+
+    let html = '<div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2">'
+             + '<span class="fw-semibold small">Hiển thị cột</span>'
+             + '<button type="button" class="btn-close" style="font-size:.65rem;" '
+             + 'onclick="document.getElementById(\'' + btnId + '_panel\').style.display=\'none\'"></button></div>';
+
     ths.forEach(th => {
-        const key = th.dataset.colKey, label = (th.dataset.colLabel || th.textContent.trim()).slice(0,35);
-        html += `<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="chk_${tableId}_${key}" data-table="${tableId}" data-col-key="${key}" checked onchange="applyColToggle('${tableId}','${storageKey}')"><label class="form-check-label small" for="chk_${tableId}_${key}" style="cursor:pointer;">${label}</label></div>`;
+        const key   = th.dataset.colKey;
+        const label = (th.dataset.colLabel || th.textContent.trim()).slice(0, 35);
+        html += `<div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox"
+                   id="chk_${tableId}_${key}"
+                   data-table="${tableId}" data-col-key="${key}" checked
+                   onchange="applyColToggle('${tableId}','${storageKey}')">
+            <label class="form-check-label small" for="chk_${tableId}_${key}" style="cursor:pointer;">${label}</label>
+        </div>`;
     });
-    html += `<div class="border-top pt-1 mt-2 d-flex gap-1"><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',true)">Tất cả</button><button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;" onclick="setAllColToggle('${tableId}','${storageKey}',false)">Ẩn hết</button></div>`;
+
+    html += `<div class="border-top pt-1 mt-2 d-flex gap-1">
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;"
+                onclick="setAllColToggle('${tableId}','${storageKey}',true)">Tất cả</button>
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;"
+                onclick="setAllColToggle('${tableId}','${storageKey}',false)">Ẩn hết</button>
+    </div>`;
     panel.innerHTML = html;
+
+    /* Restore từ localStorage */
     try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
-        ths.forEach(th => { const k = th.dataset.colKey; if (k in saved && !saved[k]) { const c = document.getElementById('chk_'+tableId+'_'+k); if (c) c.checked = false; } });
+        ths.forEach(th => {
+            const k = th.dataset.colKey;
+            if (k in saved && !saved[k]) {
+                const c = document.getElementById('chk_' + tableId + '_' + k);
+                if (c) c.checked = false;
+            }
+        });
     } catch(e) {}
     applyColToggle(tableId, storageKey);
+
     btn.addEventListener('click', function(e) {
         e.stopPropagation();
         const r = btn.getBoundingClientRect();
-        panel.style.top = (r.bottom + 4) + 'px';
+        panel.style.top  = (r.bottom + 4) + 'px';
         panel.style.left = Math.max(4, r.right - 210) + 'px';
         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     });
-    document.addEventListener('click', function(e) { if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none'; }, true);
+    document.addEventListener('click', function(e) {
+        if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none';
+    }, true);
 }
+
 function applyColToggle(tableId, storageKey) {
-    const table = document.getElementById(tableId); if (!table) return;
+    const table = document.getElementById(tableId);
+    if (!table) return;
     const state = {};
     table.querySelectorAll('thead th[data-col-key]').forEach(th => {
-        const key = th.dataset.colKey;
-        const chk = document.getElementById('chk_'+tableId+'_'+key);
+        const key     = th.dataset.colKey;
+        const chk     = document.getElementById('chk_' + tableId + '_' + key);
         const visible = chk ? chk.checked : true;
-        state[key] = visible;
-        table.querySelectorAll('[data-col-key="'+key+'"]').forEach(el => { el.style.display = visible ? '' : 'none'; });
+        state[key]    = visible;
+        table.querySelectorAll('[data-col-key="' + key + '"]').forEach(el => {
+            el.style.display = visible ? '' : 'none';
+        });
     });
     try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch(e) {}
 }
+
 function setAllColToggle(tableId, storageKey, visible) {
-    const table = document.getElementById(tableId); if (!table) return;
-    table.querySelectorAll('thead th[data-col-key]').forEach(th => { const c = document.getElementById('chk_'+tableId+'_'+th.dataset.colKey); if (c) c.checked = visible; });
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => {
+        const c = document.getElementById('chk_' + tableId + '_' + th.dataset.colKey);
+        if (c) c.checked = visible;
+    });
     applyColToggle(tableId, storageKey);
 }
 
+/* ---- Modal helpers ---- */
 function openIndividualApproveModal(ctId, hoTen) {
     document.getElementById('individualApproveForm').action =
-        '{{ url_for("admin.final_approve_individual", ct_id=0) }}'.replace('/0/','/'+ctId+'/').replace('/0','/'+ctId);
+        '{{ url_for("admin.final_approve_individual", ct_id=0) }}'
+            .replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
     document.getElementById('approveIndividualName').textContent = hoTen;
     new bootstrap.Modal(document.getElementById('individualApproveModal')).show();
 }
 
+function openRejectIndividualModal(ctId, hoTen) {
+    document.getElementById('rejectIndividualForm').action =
+        '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'
+            .replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+    document.getElementById('rejectIndividualName').textContent = hoTen;
+    document.querySelector('#rejectIndividualForm textarea[name="ly_do"]').value = '';
+    new bootstrap.Modal(document.getElementById('rejectIndividualModal')).show();
+}
+
+function openRejectNominationModal(dxId, label) {
+    document.getElementById('rejectNominationForm').action =
+        '{{ url_for("admin.reject_from_tracking", id=0) }}'
+            .replace('/0/', '/' + dxId + '/').replace('/0', '/' + dxId);
+    document.getElementById('rejectNominationName').textContent = label;
+    document.querySelector('#rejectNominationForm textarea[name="ly_do"]').value = '';
+    new bootstrap.Modal(document.getElementById('rejectNominationModal')).show();
+}
+
+/* ---- Detail modal ---- */
 function openDetailModal(ctId) {
     const modal = new bootstrap.Modal(document.getElementById('detailModal'));
     const body  = document.getElementById('detailModalBody');
     body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
     modal.show();
     fetch('/admin/api/chi-tiet/' + ctId)
-        .then(r => { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(d => {
-            const p = d.personal||{}, n = d.nomination||{};
+            const p = d.personal || {}, n = d.nomination || {};
             const badges = [
-                p.la_chi_huy         ? '<span class="badge bg-danger">Cấp trưởng</span>' : '',
-                p.la_bi_thu          ? '<span class="badge bg-primary">Bí thư</span>'    : '',
-                p.la_doan_vien       ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
-                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>'       : '',
+                p.la_chi_huy         ? '<span class="badge bg-danger">Cấp trưởng</span>'        : '',
+                p.la_bi_thu          ? '<span class="badge bg-primary">Bí thư</span>'            : '',
+                p.la_doan_vien       ? '<span class="badge bg-info text-dark">Đoàn viên</span>'  : '',
+                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>'               : '',
             ].filter(Boolean).join(' ');
+
             let html = `<div class="row g-2 mb-2">
               <div class="col-12"><h6 class="fw-bold mb-1">${p.ho_ten||'—'}</h6>${badges}</div>
               <div class="col-6"><small class="text-muted d-block">Đơn vị</small>${n.don_vi||'—'}</div>
@@ -1144,186 +1087,177 @@ function openDetailModal(ctId) {
               <div class="col-6"><small class="text-muted d-block">Học hàm/vị</small>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div>
               <div class="col-6"><small class="text-muted d-block">Trạng thái</small>${n.trang_thai||'—'}</div>
             </div>`;
-            // Tiêu chí — show ALL, highlight non-empty
+
             if (d.criteria && d.criteria.length) {
                 const filled = d.criteria.filter(c => c.value && c.value !== 'None');
                 const empty  = d.criteria.filter(c => !c.value || c.value === 'None');
-                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.criteria.length + '</span></h6>';
-                html += '<table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
+                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí '
+                      + '<span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.criteria.length + '</span></h6>'
+                      + '<table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
                 filled.forEach(c => {
-                    html += `<tr><td class="text-muted" style="width:52%">${c.label}</td><td class="fw-semibold">${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
+                    html += `<tr><td class="text-muted" style="width:52%">${c.label}</td>
+                             <td class="fw-semibold">${c.value}${c.score ? ` <small class="text-muted">(${c.score})</small>` : ''}</td></tr>`;
                 });
                 if (empty.length) {
-                    html += `<tr class="table-light"><td colspan="2" class="text-muted small py-1 px-2">Chưa nhập (${empty.length} tiêu chí): ${empty.map(c=>c.label).join(', ')}</td></tr>`;
+                    html += `<tr class="table-light"><td colspan="2" class="text-muted small py-1 px-2">
+                             Chưa nhập (${empty.length}): ${empty.map(c => c.label).join(', ')}</td></tr>`;
                 }
                 html += '</table>';
             }
-            // Minh chứng — clickable links + image preview
+
             if (d.minh_chungs && d.minh_chungs.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng đính kèm <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.minh_chungs.length + '</span></h6>';
-                html += '<div class="d-flex flex-wrap gap-2 mb-2">';
+                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng '
+                      + '<span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.minh_chungs.length + '</span></h6>'
+                      + '<div class="d-flex flex-wrap gap-2 mb-2">';
                 d.minh_chungs.forEach(mc => {
                     if (mc.is_image) {
                         html += `<div class="text-center" style="max-width:120px;">
                             <a href="${mc.url}" target="_blank" rel="noopener">
                                 <img src="${mc.url}" alt="${mc.ten_file}"
-                                     onerror="this.onerror=null;this.parentNode.innerHTML='<span class=\'text-muted small\'><i class=\'bi bi-image text-muted\'></i><br>Không tìm thấy</span>'"
+                                     onerror="this.onerror=null;this.parentNode.innerHTML='<span class=\'text-muted small\'>Không tìm thấy</span>'"
                                      style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;">
                             </a>
                             <div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div>
                         </div>`;
                     } else {
-                        html += `<a href="${mc.url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;" title="${mc.ten_file}">
-                            <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
-                        </a>`;
+                        html += `<a href="${mc.url}" target="_blank" rel="noopener"
+                                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;" title="${mc.ten_file}">
+                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
+                                 </a>`;
                     }
                 });
                 html += '</div>';
             }
-            // Dept approvals
-            const deptActed   = (d.dept_results||[]).filter(r => r.ket_qua && r.ket_qua !== 'auto');
-            const deptPending = (d.dept_results||[]).filter(r => !r.ket_qua);
-            if (deptActed.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:.8rem;">';
-                deptActed.forEach(r => {
-                    const badgeMap = {
-                    'Đồng ý': '<span class="badge bg-success">Đồng ý</span>',
-                    'Chờ duyệt': '<span class="badge bg-warning text-dark">Chờ duyệt</span>',
-                    'Từ chối': '<span class="badge bg-danger">Từ chối</span>'
-                };
 
-                // Nếu r.ket_qua không khớp với cái nào ở trên, mặc định sẽ lấy 'Từ chối' (hoặc bạn có thể đổi tùy ý)
-                const badge = badgeMap[r.ket_qua] || '<span class="badge bg-danger">Từ chối</span>';
-                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:.75rem;">${r.ngay_duyet?'<i class="bi bi-clock me-1"></i>'+r.ngay_duyet:''}</td><td class="text-muted" style="font-size:.75rem;">${r.ghi_chu||''}</td></tr>`;
+            const deptActed   = (d.dept_results || []).filter(r => r.ket_qua && r.ket_qua !== 'auto');
+            const deptPending = (d.dept_results || []).filter(r => !r.ket_qua);
+            if (deptActed.length) {
+                const badgeMap = {
+                    'Đồng ý':    '<span class="badge bg-success">Đồng ý</span>',
+                    'Chờ duyệt': '<span class="badge bg-warning text-dark">Chờ duyệt</span>',
+                    'Từ chối':   '<span class="badge bg-danger">Từ chối</span>',
+                };
+                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6>'
+                      + '<table class="table table-sm table-bordered mb-1" style="font-size:.8rem;">';
+                deptActed.forEach(r => {
+                    const badge = badgeMap[r.ket_qua] || '<span class="badge bg-secondary">' + r.ket_qua + '</span>';
+                    html += `<tr>
+                        <td style="width:42%">${r.dept}</td>
+                        <td>${badge}</td>
+                        <td class="text-muted" style="font-size:.75rem;">${r.ngay_duyet ? '<i class="bi bi-clock me-1"></i>' + r.ngay_duyet : ''}</td>
+                        <td class="text-muted" style="font-size:.75rem;">${r.ghi_chu || ''}</td>
+                    </tr>`;
                 });
                 html += '</table>';
-                if (deptPending.length) html += `<p class="text-muted mb-2" style="font-size:.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
+                if (deptPending.length) {
+                    html += `<p class="text-muted mb-2" style="font-size:.75rem;">
+                             <i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r => r.dept).join(', ')}</p>`;
+                }
             }
-            if (d.votes && d.votes.some(v=>v.ket_qua)) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:.8rem;">';
-                d.votes.filter(v=>v.ket_qua).forEach(v => {
-                    const cls = v.ket_qua==='Đồng ý' ? 'text-success' : 'text-danger';
-                    html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
+
+            if (d.votes && d.votes.some(v => v.ket_qua)) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6>'
+                      + '<table class="table table-sm mb-0" style="font-size:.8rem;">';
+                d.votes.filter(v => v.ket_qua).forEach(v => {
+                    const cls = v.ket_qua === 'Đồng ý' ? 'text-success' : 'text-danger';
+                    html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu || ''}</td></tr>`;
                 });
                 html += '</table>';
             }
+
             body.innerHTML = html;
         })
-        .catch(e => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu: '+e.message+'</div>'; });
+        .catch(e => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu: ' + e.message + '</div>'; });
 }
 
-function openRejectIndividualModal(ctId, hoTen) {
-    document.getElementById('rejectIndividualForm').action =
-        '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'.replace('/0/','/'+ctId+'/').replace('/0','/'+ctId);
-    document.getElementById('rejectIndividualName').textContent = hoTen;
-    document.querySelector('#rejectIndividualForm textarea[name="ly_do"]').value = '';
-    new bootstrap.Modal(document.getElementById('rejectIndividualModal')).show();
-}
-
-function openRejectNominationModal(dxId, label) {
-    document.getElementById('rejectNominationForm').action =
-        '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0/','/'+dxId+'/').replace('/0','/'+dxId);
-    document.getElementById('rejectNominationName').textContent = label;
-    document.querySelector('#rejectNominationForm textarea[name="ly_do"]').value = '';
-    new bootstrap.Modal(document.getElementById('rejectNominationModal')).show();
-}
-
+/* ---- Print ---- */
 function printTracking() {
-    var ts = document.getElementById('trackingPrintTimestamp');
+    let ts = document.getElementById('trackingPrintTimestamp');
     if (!ts) {
-        ts = document.createElement('div'); ts.id = 'trackingPrintTimestamp';
+        ts = document.createElement('div');
+        ts.id = 'trackingPrintTimestamp';
         ts.style.cssText = 'display:none;position:fixed;bottom:10px;right:10px;font-size:9pt;color:#666;';
         document.body.appendChild(ts);
     }
-    var now = new Date(), pad = n => n<10?'0'+n:n;
-    ts.textContent = 'In lúc: '+pad(now.getHours())+':'+pad(now.getMinutes())+' ngày '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
+    const now = new Date(), pad = n => n < 10 ? '0' + n : n;
+    ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes())
+                   + ' ngày ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear();
     ts.style.display = 'block';
     window.print();
 }
 </script>
 
 <script>
+/* ---- Shared năm học (localStorage) ---- */
 (function() {
-    var LS_KEY = 'sharedNamHoc';
-    var currentNamHoc = '{{ nam_hoc_filter }}';
+    const LS_KEY = 'sharedNamHoc';
+    const currentNamHoc = '{{ nam_hoc_filter }}';
     if (!currentNamHoc) {
-        var saved = localStorage.getItem(LS_KEY);
+        const saved = localStorage.getItem(LS_KEY);
         if (saved) {
-            var url = new URL(window.location.href);
+            const url = new URL(window.location.href);
             url.searchParams.set('nam_hoc', saved);
             window.location.replace(url.toString());
             return;
         }
     } else { localStorage.setItem(LS_KEY, currentNamHoc); }
 })();
+
 function onNamHocChange(sel) {
-    if (sel.value) { localStorage.setItem('sharedNamHoc', sel.value); }
-    else { localStorage.removeItem('sharedNamHoc'); }
+    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
+    else           localStorage.removeItem('sharedNamHoc');
     sel.form.submit();
 }
-// ================================================================
-// CHECKBOX + BATCH REJECT
-// ================================================================
 
-// Thu thập tất cả checkbox đang được chọn
+/* ================================================================
+   CHECKBOX + BATCH REJECT
+================================================================ */
 function getCheckedItems() {
-    return Array.from(document.querySelectorAll('.row-cb:checked')).map(function(cb) {
-        return { id: cb.dataset.id, name: cb.dataset.name, table: cb.dataset.table };
-    });
+    return Array.from(document.querySelectorAll('.row-cb:checked')).map(cb => ({
+        id:    cb.dataset.id,
+        name:  cb.dataset.name,
+        table: cb.dataset.table,
+    }));
 }
 
-// Cập nhật trạng thái nút "Từ chối đã chọn" trên toolbar
 function onRowCbChange() {
-    var items   = getCheckedItems();
-    var count   = items.length;
-    var btn     = document.getElementById('btnBatchReject');
-    var counter = document.getElementById('batchRejectCount');
-
+    const items   = getCheckedItems();
+    const count   = items.length;
+    const btn     = document.getElementById('btnBatchReject');
+    const counter = document.getElementById('batchRejectCount');
     if (btn)     btn.classList.toggle('d-none', count === 0);
     if (counter) counter.textContent = count;
 
-    // Sync trạng thái checkbox "chọn tất cả" theo từng bảng
-    ['CN', 'TT'].forEach(function(tbl) {
-        var allCb  = document.getElementById('checkAll' + tbl);
+    ['CN', 'TT'].forEach(tbl => {
+        const allCb  = document.getElementById('checkAll' + tbl);
         if (!allCb) return;
-        var rows   = document.querySelectorAll('.row-cb[data-table="' + tbl + '"]');
-        var checked = document.querySelectorAll('.row-cb[data-table="' + tbl + '"]:checked');
+        const rows    = document.querySelectorAll('.row-cb[data-table="' + tbl + '"]');
+        const checked = document.querySelectorAll('.row-cb[data-table="' + tbl + '"]:checked');
         if (!rows.length) return;
         allCb.indeterminate = checked.length > 0 && checked.length < rows.length;
         allCb.checked       = checked.length === rows.length;
     });
 }
 
-// Chọn / bỏ chọn tất cả theo bảng (CN hoặc TT)
 function toggleCheckAll(tbl, checked) {
-    document.querySelectorAll('.row-cb[data-table="' + tbl + '"]').forEach(function(cb) {
-        cb.checked = checked;
-    });
+    document.querySelectorAll('.row-cb[data-table="' + tbl + '"]').forEach(cb => { cb.checked = checked; });
     onRowCbChange();
 }
 
-// Mở modal xác nhận từ chối hàng loạt
 function openBatchRejectModal() {
-    var items = getCheckedItems();
+    const items = getCheckedItems();
     if (!items.length) return;
-
     document.getElementById('batchRejectCountLabel').textContent = items.length;
     document.getElementById('batchRejectLyDo').value = '';
-
-    var list = document.getElementById('batchRejectNameList');
-    list.innerHTML = items.map(function(item, idx) {
-        return '<li class="py-0">'
-             + '<span class="text-muted me-1">' + (idx + 1) + '.</span>'
-             + '<span>' + (item.name || ('ID: ' + item.id)) + '</span>'
-             + '</li>';
-    }).join('');
-
+    const list = document.getElementById('batchRejectNameList');
+    list.innerHTML = items.map((item, idx) =>
+        `<li class="py-0"><span class="text-muted me-1">${idx + 1}.</span><span>${item.name || 'ID: ' + item.id}</span></li>`
+    ).join('');
     new bootstrap.Modal(document.getElementById('batchRejectModal')).show();
 }
 
-// Gửi request từ chối hàng loạt
 function submitBatchReject() {
-    var lyDo = (document.getElementById('batchRejectLyDo').value || '').trim();
+    const lyDo = (document.getElementById('batchRejectLyDo').value || '').trim();
     if (!lyDo) {
         document.getElementById('batchRejectLyDo').focus();
         document.getElementById('batchRejectLyDo').classList.add('is-invalid');
@@ -1331,61 +1265,42 @@ function submitBatchReject() {
     }
     document.getElementById('batchRejectLyDo').classList.remove('is-invalid');
 
-    var items = getCheckedItems();
+    const items     = getCheckedItems();
     if (!items.length) return;
+    const ids       = items.map(i => parseInt(i.id, 10));
+    const csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    const btn       = document.getElementById('batchRejectConfirm');
 
-    var ids = items.map(function(i) { return parseInt(i.id, 10); });
-    var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-
-    var btn = document.getElementById('batchRejectConfirm');
-    btn.disabled = true;
+    btn.disabled  = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
 
     fetch('/admin/batch-reject-individuals', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({ ids: ids, ly_do: lyDo })
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ ids, ly_do: lyDo }),
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+    .then(r => r.json())
+    .then(data => {
         if (data.success) {
-            bootstrap.Modal.getInstance(
-                document.getElementById('batchRejectModal')
-            ).hide();
-            // Hiện thông báo thành công rồi reload
-            var toast = document.createElement('div');
+            bootstrap.Modal.getInstance(document.getElementById('batchRejectModal')).hide();
+            const toast = document.createElement('div');
             toast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3 shadow';
-            toast.style.zIndex = '9999';
-            toast.style.minWidth = '260px';
-            toast.innerHTML = '<i class="bi bi-check-circle me-2"></i>'
-                + 'Đã từ chối <strong>' + ids.length + '</strong> mục thành công.';
+            toast.style.cssText = 'z-index:9999;min-width:260px;';
+            toast.innerHTML = '<i class="bi bi-check-circle me-2"></i>Đã từ chối <strong>' + ids.length + '</strong> mục thành công.';
             document.body.appendChild(toast);
-            setTimeout(function() { location.reload(); }, 1200);
+            setTimeout(() => location.reload(), 1200);
         } else {
             alert(data.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
-            btn.disabled = false;
+            btn.disabled  = false;
             btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Xác nhận từ chối';
         }
     })
-    .catch(function(err) {
+    .catch(err => {
         console.error(err);
         alert('Lỗi kết nối. Vui lòng thử lại.');
-        btn.disabled = false;
+        btn.disabled  = false;
         btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Xác nhận từ chối';
     });
 }
-
-// Xoá trạng thái invalid khi người dùng gõ lý do
-document.addEventListener('DOMContentLoaded', function() {
-    var lyDoEl = document.getElementById('batchRejectLyDo');
-    if (lyDoEl) {
-        lyDoEl.addEventListener('input', function() {
-            this.classList.remove('is-invalid');
-        });
-    }
-});
 </script>
 {% endblock %}
