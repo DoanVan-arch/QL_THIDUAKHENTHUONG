@@ -2595,11 +2595,12 @@ def export_tracking_word():
 
         # Cột: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Năm học | Trạng thái | Tóm tắt | Ghi chú
         col_widths = [0.7, 3.5, 1.8, 2.2, 2.5, 8.5, 1.0]
-        set_fixed_table_widths(tbl, col_widths)
+        
         headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
                        'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
 
         tbl = doc.add_table(rows=1, cols=len(col_widths))
+        set_fixed_table_widths(tbl, col_widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style     = 'Table Grid'
         tbl.autofit   = True
@@ -2683,11 +2684,12 @@ def export_tracking_word():
             return
 
         col_widths  = [0.8, 4.2, 2.5, 9.0]
-        set_fixed_table_widths(tbl, col_widths)
+        
         headers_txt = ['STT', 'Tên đơn vị', 'Đơn vị đề xuất',
                         'Ghi chú']
 
         tbl = doc.add_table(rows=1, cols=len(col_widths))
+        set_fixed_table_widths(tbl, col_widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style     = 'Table Grid'
         tbl.autofit   = True

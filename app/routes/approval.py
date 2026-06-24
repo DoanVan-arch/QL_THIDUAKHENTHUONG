@@ -1970,8 +1970,9 @@ def export_word():
 
         # Widths: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú
         widths = [0.7, 3.5, 1.8, 2.2, 2.5, 5.0, 1.5]
-        set_fixed_table_widths(tbl, widths)
+        
         tbl = doc.add_table(rows=1, cols=len(widths))
+        set_fixed_table_widths(tbl, widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style     = 'Table Grid'
         tbl.autofit   = True
@@ -2092,8 +2093,9 @@ def export_word():
             return
 
         widths = [0.7, 10.0, 5.5]
-        set_fixed_table_widths(tbl, widths)
+        
         tbl = doc.add_table(rows=1, cols=len(widths))
+        set_fixed_table_widths(tbl, widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style     = 'Table Grid'
         tbl.autofit   = True
