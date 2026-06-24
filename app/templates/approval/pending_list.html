@@ -29,9 +29,10 @@
                class="btn btn-outline-success btn-sm" title="Xuất Excel có timestamp">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnPrintPDF" title="In PDF có timestamp">
-                <i class="bi bi-printer me-1"></i>In PDF
-            </button>
+            <a href="{{ url_for('approval.export_word', nam_hoc=nam_hoc_filter) }}"
+               class="btn btn-outline-success btn-sm" title="Xuất Word có timestamp">
+                <i class="bi bi-file-earmark-word me-1"></i>Word
+            </a>
             <div id="filterBar" class="d-flex gap-2 align-items-center flex-wrap">
                 <div class="input-group input-group-sm" style="width:200px;">
                     <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo họ tên..." aria-label="Tìm kiếm">
@@ -278,6 +279,13 @@
                     <td class="text-center col-pending">
                         {% if is_out_of_scope %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input" type="checkbox" checked disabled style="width:2.5em; height:1.3em; opacity:0.5;"></div>
+                        {% if not is_approved %}<a href="javascript:void(0)" class="reject-link text-danger" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>{% endif %}
+                        <a href="javascript:void(0)" class="request-edit-link text-primary d-block" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tập thể'))|e }}" data-tap-the="false" style="font-size:0.68rem;" title="Yêu cầu đơn vị chỉnh sửa tiêu chí"><i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa</a>
+                        {% if is_rejected %}<small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}" style="font-size:0.72rem;" title="{{ kq.ly_do }}">{{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}</small>{% endif %}
+                        {% if is_approved or is_rejected %}
+                        <a href="javascript:void(0)" class="revoke-item-link text-warning d-block" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.68rem;" title="Thu hồi kết quả duyệt"><i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi</a>
+                        {% endif %}
+                        {% else %}
                         <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
                         {% elif is_gate_ready %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input toggle-approval" type="checkbox" id="switch-{{ pd.id }}-{{ ct.id }}" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" {% if is_approved %}checked{% endif %} style="cursor:pointer; width:2.5em; height:1.3em;"></div>
@@ -402,6 +410,10 @@
                     <td class="text-center col-pending">
                         {% if is_out_of_scope %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input" type="checkbox" checked disabled style="width:2.5em; height:1.3em; opacity:0.5;"></div>
+                         {% if not is_approved %}<a href="javascript:void(0)" class="reject-link text-danger" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.72rem; {% if is_rejected %}display:none;{% endif %}">Từ chối</a>{% endif %}
+                        <a href="javascript:void(0)" class="request-edit-link text-primary d-block" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" data-name="{{ (ct.ten_don_vi_de_xuat or 'Tập thể')|e }}" data-tap-the="true" style="font-size:0.68rem;" title="Yêu cầu đơn vị chỉnh sửa tiêu chí"><i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa</a>
+                        {% if is_rejected %}<small class="text-danger d-block" id="reason-text-{{ pd.id }}-{{ ct.id }}" style="font-size:0.72rem;" title="{{ kq.ly_do }}">{{ kq.ly_do[:20] }}{% if kq.ly_do|length > 20 %}...{% endif %}</small>{% endif %}
+                        {% else %}
                         <small class="text-muted" style="font-size:0.68rem;">Tự động</small>
                         {% elif is_gate_ready %}
                         <div class="form-check form-switch d-flex justify-content-center mb-0"><input class="form-check-input toggle-approval" type="checkbox" id="switch-{{ pd.id }}-{{ ct.id }}" data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" {% if is_approved %}checked{% endif %} style="cursor:pointer; width:2.5em; height:1.3em;"></div>

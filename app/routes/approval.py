@@ -1720,3 +1720,369 @@ def export_excel():
     filename = f'phe_duyet_{phong_name.replace(" ", "_")}_{ts_file}.xlsx'
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                      as_attachment=True, download_name=filename)
+@approval_bp.route('/export-word')
+@login_required
+@department_required
+def export_word():
+    """Export danh sách phê duyệt khen thưởng ra Word theo mẫu."""
+    from io import BytesIO
+    from datetime import date, datetime
+    from docx import Document
+    from docx.shared import Cm, Pt, RGBColor
+    from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    db.session.expire_all()
+
+    phong_name     = ROLE_TO_PHONG.get(current_user.role, '')
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+
+    # ── Query ─────────────────────────────────────────────────────────────────
+    q = PheDuyet.query.filter_by(phong_duyet=phong_name, ket_qua=KetQuaDuyet.CHO_DUYET.value)
+    if nam_hoc_filter:
+        q = q.join(DeXuat, PheDuyet.de_xuat_id == DeXuat.id).filter(DeXuat.nam_hoc == nam_hoc_filter)
+    pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
+
+    # Out-of-scope
+    out_of_scope_ct_ids = set()
+    if current_user.role in (Role.BAN_QUANLUC, Role.BAN_CANBO):
+        for pd in pending_reviews:
+            for ct in pd.de_xuat.chi_tiets:
+                if not _is_in_dept_scope(current_user.role, ct.doi_tuong):
+                    out_of_scope_ct_ids.add(ct.id)
+
+    all_item_results = {
+        pd.id: {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet}
+        for pd in pending_reviews
+    }
+
+    phong_fields_map = get_phong_fields()
+    field_labels     = get_field_labels()
+    criteria_fields  = phong_fields_map.get(current_user.role, [])
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+    def set_font(run, bold=False, size=11, italic=False, color=None):
+        run.bold       = bold
+        run.italic     = italic
+        run.font.size  = Pt(size)
+        run.font.name  = 'Times New Roman'
+        if color:
+            run.font.color.rgb = RGBColor(*color)
+
+    def add_cell(cell, text, bold=False, size=10,
+                 align=WD_ALIGN_PARAGRAPH.LEFT, color=None):
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        p = cell.paragraphs[0]
+        p.alignment = align
+        p.paragraph_format.space_before = Pt(1)
+        p.paragraph_format.space_after  = Pt(1)
+        run = p.add_run(str(text) if text is not None else '')
+        set_font(run, bold=bold, size=size, color=color)
+
+    def set_cell_shading(cell, hex_color):
+        tcPr  = cell._tc.get_or_add_tcPr()
+        shd   = OxmlElement('w:shd')
+        shd.set(qn('w:val'),   'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'),  hex_color)
+        tcPr.append(shd)
+
+    def set_repeat_table_header(row):
+        tr   = row._tr
+        trPr = tr.get_or_add_trPr()
+        if trPr.find(qn('w:tblHeader')) is None:
+            trPr.append(OxmlElement('w:tblHeader'))
+
+    def _para(cell, is_first=False, align=WD_ALIGN_PARAGRAPH.CENTER):
+        p = cell.paragraphs[0] if is_first else cell.add_paragraph()
+        p.alignment = align
+        p.paragraph_format.space_before      = Pt(0)
+        p.paragraph_format.space_after       = Pt(0)
+        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        p.paragraph_format.left_indent       = Pt(0)
+        p.paragraph_format.right_indent      = Pt(0)
+        return p
+
+    def _lock_cell_width(cell, width_cm):
+        cell.width = Cm(width_cm)
+        tcPr = cell._tc.get_or_add_tcPr()
+        tcW  = tcPr.find(qn('w:tcW'))
+        if tcW is None:
+            tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
+        tcW.set(qn('w:w'), str(int(Cm(width_cm) / 635)))
+        tcW.set(qn('w:type'), 'dxa')
+
+    def _remove_cell_borders(cell):
+        tcPr      = cell._tc.get_or_add_tcPr()
+        tcBorders = OxmlElement('w:tcBorders')
+        for edge in ('top','left','bottom','right','insideH','insideV'):
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), 'none'); tag.set(qn('w:sz'), '0')
+            tag.set(qn('w:space'), '0'); tag.set(qn('w:color'), 'auto')
+            tcBorders.append(tag)
+        tcPr.append(tcBorders)
+
+    def _clear_cell_margin(cell):
+        tcPr  = cell._tc.get_or_add_tcPr()
+        tcMar = tcPr.find(qn('w:tcMar'))
+        if tcMar is None:
+            tcMar = OxmlElement('w:tcMar'); tcPr.append(tcMar)
+        for edge in ('top','left','bottom','right'):
+            tag = tcMar.find(qn(f'w:{edge}'))
+            if tag is None:
+                tag = OxmlElement(f'w:{edge}'); tcMar.append(tag)
+            tag.set(qn('w:w'), '0'); tag.set(qn('w:type'), 'dxa')
+
+    def _set_cell_pad(cell, left_cm=0, right_cm=0):
+        tcPr  = cell._tc.get_or_add_tcPr()
+        tcMar = tcPr.find(qn('w:tcMar'))
+        if tcMar is None:
+            tcMar = OxmlElement('w:tcMar'); tcPr.append(tcMar)
+        for edge, val in (('left', left_cm), ('right', right_cm)):
+            tag = tcMar.find(qn(f'w:{edge}'))
+            if tag is None:
+                tag = OxmlElement(f'w:{edge}'); tcMar.append(tag)
+            tag.set(qn('w:w'), str(int(Cm(val) / 635)))
+            tag.set(qn('w:type'), 'dxa')
+
+    # ── Document setup ────────────────────────────────────────────────────────
+    doc = Document()
+
+    PAGE_W_CM     = 21.0
+    MARGIN_L      = 3.5
+    MARGIN_R      = 1.5
+    PRINT_W_CM    = PAGE_W_CM - MARGIN_L - MARGIN_R   # 16.0
+    HEADER_W_CM   = PAGE_W_CM                          # 21.0
+    OVERFLOW_EACH = (HEADER_W_CM - PRINT_W_CM) / 2    # 2.5
+
+    LEFT_CM  = 9.5
+    RIGHT_CM = 11.5
+
+    for section in doc.sections:
+        section.top_margin    = Cm(2)
+        section.bottom_margin = Cm(2)
+        section.left_margin   = Cm(MARGIN_L)
+        section.right_margin  = Cm(MARGIN_R)
+
+    # ── Bảng header Quốc hiệu ────────────────────────────────────────────────
+    tbl_header = doc.add_table(rows=1, cols=2)
+    tbl_header.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_header.autofit   = False
+
+    tblPr = tbl_header._tbl.tblPr
+    tblW  = tblPr.find(qn('w:tblW'))
+    if tblW is None:
+        tblW = OxmlElement('w:tblW'); tblPr.append(tblW)
+    tblW.set(qn('w:w'), str(int(Cm(HEADER_W_CM) / 635)))
+    tblW.set(qn('w:type'), 'dxa')
+
+    tblLayout = tblPr.find(qn('w:tblLayout'))
+    if tblLayout is None:
+        tblLayout = OxmlElement('w:tblLayout'); tblPr.append(tblLayout)
+    tblLayout.set(qn('w:type'), 'fixed')
+
+    tblInd = tblPr.find(qn('w:tblInd'))
+    if tblInd is not None:
+        tblPr.remove(tblInd)
+
+    tblGrid = tbl_header._tbl.find(qn('w:tblGrid'))
+    if tblGrid is not None:
+        tbl_header._tbl.remove(tblGrid)
+    tblGrid = OxmlElement('w:tblGrid')
+    tbl_header._tbl.insert(1, tblGrid)
+    for w in [LEFT_CM, RIGHT_CM]:
+        gridCol = OxmlElement('w:gridCol')
+        gridCol.set(qn('w:w'), str(int(Cm(w) / 635)))
+        tblGrid.append(gridCol)
+
+    lc = tbl_header.rows[0].cells[0]
+    rc = tbl_header.rows[0].cells[1]
+    for cell, w in ((lc, LEFT_CM), (rc, RIGHT_CM)):
+        _lock_cell_width(cell, w)
+        _remove_cell_borders(cell)
+        _clear_cell_margin(cell)
+    _set_cell_pad(lc, left_cm=OVERFLOW_EACH)
+    _set_cell_pad(rc, right_cm=OVERFLOW_EACH)
+
+    p_l1 = _para(lc, is_first=True)
+    set_font(p_l1.add_run('TRƯỜNG SĨ QUAN CHÍNH TRỊ'), size=12)
+    p_l2 = _para(lc)
+    r_l2 = p_l2.add_run(phong_name.upper())
+    set_font(r_l2, bold=True, size=12); r_l2.underline = True
+    _para(lc).add_run('')   # dòng trống cân bằng chiều cao
+
+    p_r1 = _para(rc, is_first=True)
+    set_font(p_r1.add_run('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), bold=True, size=12)
+    p_r2 = _para(rc)
+    r_r2 = p_r2.add_run('Độc lập - Tự do - Hạnh phúc')
+    set_font(r_r2, bold=True, size=12); r_r2.underline = True
+    p_r3 = _para(rc)
+    p_r3.paragraph_format.space_before = Pt(3)
+    today = date.today()
+    set_font(
+        p_r3.add_run(f'Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}'),
+        size=11, italic=True
+    )
+
+    for row in tbl_header.rows:
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                p.paragraph_format.space_before      = Pt(0)
+                p.paragraph_format.space_after       = Pt(0)
+                p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+
+    # ── Tiêu đề ───────────────────────────────────────────────────────────────
+    doc.add_paragraph()
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    set_font(
+        p_title.add_run(
+            f'DANH SÁCH PHÊ DUYỆT KHEN THƯỞNG'
+            f'{(" NĂM HỌC " + nam_hoc_filter) if nam_hoc_filter else ""}'
+        ),
+        bold=True, size=13
+    )
+
+    p_sub = doc.add_paragraph()
+    p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    set_font(
+        p_sub.add_run(f'({phong_name} — Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})'),
+        size=10, italic=True
+    )
+    doc.add_paragraph()
+
+    # ── Bảng dữ liệu ─────────────────────────────────────────────────────────
+    # Cột cố định: STT | Đơn vị | Họ tên | Cấp bậc | Chức vụ | Đối tượng | Danh hiệu | Kết quả
+    # + cột tiêu chí động
+    BASE_HEADERS = ['STT', 'Đơn vị', 'Họ và tên', 'Cấp bậc',
+                    'Chức vụ', 'Đối tượng', 'Danh hiệu', 'Kết quả']
+    BASE_WIDTHS  = [0.7,   3.2,     2.8,       1.8,
+                    2.2,        1.8,        2.2,        2.5]
+
+    crit_headers = [field_labels.get(f, f) for f in criteria_fields]
+    crit_widths  = [2.0] * len(criteria_fields)
+
+    all_headers = BASE_HEADERS + crit_headers
+    all_widths  = BASE_WIDTHS  + crit_widths
+
+    tbl = doc.add_table(rows=1, cols=len(all_headers))
+    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl.style     = 'Table Grid'
+    tbl.autofit   = True
+
+    tblPr_t = tbl._tbl.tblPr
+    tblLayout_t = tblPr_t.find(qn('w:tblLayout'))
+    if tblLayout_t is None:
+        tblLayout_t = OxmlElement('w:tblLayout'); tblPr_t.append(tblLayout_t)
+    tblLayout_t.set(qn('w:type'), 'autofit')
+
+    # Đặt chiều rộng cột
+    for i, w in enumerate(all_widths):
+        twips = int(Cm(w) / 635)
+        tc    = tbl.rows[0].cells[i]._tc
+        tcPr  = tc.get_or_add_tcPr()
+        tcW   = tcPr.find(qn('w:tcW'))
+        if tcW is None:
+            tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
+        tcW.set(qn('w:w'), str(twips)); tcW.set(qn('w:type'), 'dxa')
+
+    # Header row
+    hrow = tbl.rows[0]
+    for i, h in enumerate(all_headers):
+        c = hrow.cells[i]
+        add_cell(c, h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
+        set_cell_shading(c, '1B3A6B')
+        # Chữ trắng cho header
+        c.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    set_repeat_table_header(hrow)
+
+    # Data rows
+    stt = 0
+    for pd in pending_reviews:
+        results = all_item_results.get(pd.id, {})
+        don_vi  = pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else ''
+
+        for ct in pd.de_xuat.chi_tiets:
+            if ct.id in out_of_scope_ct_ids:
+                continue
+
+            stt += 1
+            kq = results.get(ct.id)
+            if kq:
+                if kq.ket_qua == KetQuaDuyet.DONG_Y.value:
+                    ket_qua_str  = 'Nhất trí'
+                    row_shading  = 'D4EDDA'   # xanh nhạt
+                    kq_color     = (0x15, 0x5724)
+                elif kq.ket_qua == KetQuaDuyet.TU_CHOI.value:
+                    ket_qua_str  = f'Không NT: {kq.ly_do or ""}'
+                    row_shading  = 'F8D7DA'   # đỏ nhạt
+                    kq_color     = (0x72, 0x1C, 0x24)
+                else:
+                    ket_qua_str  = 'Chờ duyệt'
+                    row_shading  = None
+                    kq_color     = None
+            else:
+                ket_qua_str = 'Chờ duyệt'
+                row_shading = None
+                kq_color    = None
+
+            qn_obj  = ct.quan_nhan
+            ho_ten  = qn_obj.ho_ten  if qn_obj else don_vi
+            cap_bac = qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else ''
+            chuc_vu = qn_obj.chuc_vu if qn_obj and qn_obj.chuc_vu else ''
+
+            is_tap_the  = qn_obj is None
+            tt_dict     = ct.tap_the_dict or {}
+            crit_vals   = [
+                (tt_dict.get(f, '') if is_tap_the else (getattr(ct, f, '') or ''))
+                for f in criteria_fields
+            ]
+
+            row_data = [
+                str(stt), don_vi, ho_ten, cap_bac, chuc_vu,
+                ct.doi_tuong or '', ct.loai_danh_hieu or '', ket_qua_str
+            ] + [str(v) if v is not None else '' for v in crit_vals]
+
+            row = tbl.add_row()
+            for i, val in enumerate(row_data):
+                cell = row.cells[i]
+                align = WD_ALIGN_PARAGRAPH.CENTER if i == 0 else WD_ALIGN_PARAGRAPH.LEFT
+                # Màu chữ kết quả
+                color = kq_color if i == 7 else None
+                add_cell(cell, val, size=10, align=align, color=color)
+                if row_shading:
+                    set_cell_shading(cell, row_shading)
+
+    # ── Dòng tổng cộng ────────────────────────────────────────────────────────
+    sum_row = tbl.add_row()
+    tbl.cell(sum_row._tr.getparent().index(sum_row._tr), 0)
+    # Merge tất cả ô dòng tổng
+    merged = sum_row.cells[0]
+    for i in range(1, len(all_headers)):
+        merged = merged.merge(sum_row.cells[i])
+    add_cell(merged, f'Tổng cộng: {stt} cá nhân/tập thể', bold=True, size=10)
+    set_cell_shading(merged, 'EEF2FF')
+
+    # ── Footer ────────────────────────────────────────────────────────────────
+    p_foot = doc.add_paragraph()
+    p_foot.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r_foot = p_foot.add_run(
+        f'(Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})'
+    )
+    r_foot.font.size      = Pt(9)
+    r_foot.font.italic    = True
+    r_foot.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+
+    # ── Xuất file ─────────────────────────────────────────────────────────────
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    ts_file  = datetime.now().strftime('%Y%m%d_%H%M')
+    filename = f'phe_duyet_{phong_name.replace(" ", "_")}_{ts_file}.docx'
+    return send_file(
+        buf, as_attachment=True, download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
