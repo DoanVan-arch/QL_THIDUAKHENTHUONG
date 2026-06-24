@@ -2541,7 +2541,7 @@ def export_tracking_word():
     p_r3.paragraph_format.space_before = Pt(3)
     today = date.today()
     set_font(
-        p_r3.add_run(f'Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}'),
+        p_r3.add_run(f'\n Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}'),
         size=11, italic=True
     )
 
@@ -2574,7 +2574,11 @@ def export_tracking_word():
                  size=10, italic=True)
 
     doc.add_paragraph()
-
+    def para_font(para, text, bold=False, size=11, align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
+        para.alignment = align
+        run = para.add_run(text)
+        set_font(run, bold=bold, size=size, italic=italic)
+        return run
     # ── Hàm build bảng cá nhân ───────────────────────────────────────────────
     def add_personnel_section(label, items, stt_start=1):
         """items: list of (ct, dx)"""
@@ -2643,7 +2647,7 @@ def export_tracking_word():
             if ct.ket_qua_ren_luyen:    parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
             if ct.thanh_tich_ca_nhan_khac: parts.append(ct.thanh_tich_ca_nhan_khac)
 
-            cell_tt = row.cells[7]
+            cell_tt = row.cells[5]
             cell_tt.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             p_tt = cell_tt.paragraphs[0]
             p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -2660,7 +2664,7 @@ def export_tracking_word():
             else:
                 set_font(p_tt.add_run('-'), size=10)
 
-            add_cell(row.cells[8], ct.ghi_chu or '')
+            add_cell(row.cells[6], ct.ghi_chu or '')
             stt += 1
 
         return stt
@@ -2707,7 +2711,7 @@ def export_tracking_word():
             add_cell(row.cells[1], ct.ten_don_vi_de_xuat or '-')
             add_cell(row.cells[2], dx.don_vi.ten_don_vi if dx.don_vi else '')
         
-            add_cell(row.cells[5], ct.ghi_chu or '')
+            add_cell(row.cells[3], ct.ghi_chu or '')
 
     # ── Xuất các phần ────────────────────────────────────────────────────────
     add_unit_section('I. Danh hiệu Đơn vị quyết thắng',  ds_quyet_thang)
@@ -2722,7 +2726,42 @@ def export_tracking_word():
             add_personnel_section(label, items)
         else:
             add_unit_section(label, items)
+     # --- Ký tên ---
+    doc.add_paragraph()
+    tbl_sign = doc.add_table(rows=1, cols=2)
+    tbl_sign.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for cell in tbl_sign.rows[0].cells:
+        for edge in ('top','left','bottom','right'):
+            tc = cell._tc; tcPr = tc.get_or_add_tcPr()
+            b = OxmlElement('w:tcBorders')
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), 'none')
+            b.append(tag)
+            tcPr.append(b)
 
+    left_sign = tbl_sign.rows[0].cells[0]
+    right_sign = tbl_sign.rows[0].cells[1]
+
+    # Ký xác nhận bên trái
+    p_sl = left_sign.paragraphs[0]
+    p_sl.alignment = WD_ALIGN_PARAGRAPH.CENTER
+   # para_font(p_sl, 'XÁC NHẬN CỦA CẤP TRÊN', bold=True, size=11)
+    left_sign.add_paragraph()
+    left_sign.add_paragraph()
+    left_sign.add_paragraph()
+
+    # Ký đơn vị bên phải
+    # Ký đơn vị bên phải
+    p_sr = right_sign.paragraphs[0]
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
+    para_font(p_sr, 'THỦ TRƯỞNG ĐƠN VỊ', bold=True, size=11, align=WD_ALIGN_PARAGRAPH.CENTER)
+    
+    p_sr2 = right_sign.add_paragraph()
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
+    para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True, align=WD_ALIGN_PARAGRAPH.CENTER)
+    
+
+   
     # ── Footer timestamp ──────────────────────────────────────────────────────
     p_ts = doc.add_paragraph()
     p_ts.alignment = WD_ALIGN_PARAGRAPH.RIGHT
