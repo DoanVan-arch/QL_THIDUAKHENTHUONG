@@ -1724,7 +1724,7 @@ def export_excel():
 @login_required
 @department_required
 def export_word():
-    """Export danh sách phê duyệt khen thưởng ra Word theo mẫu."""
+    """Export danh sách phê duyệt khen thưởng ra Word — 4 mục theo danh hiệu."""
     from io import BytesIO
     from datetime import date, datetime
     from docx import Document
@@ -1762,7 +1762,59 @@ def export_word():
     field_labels     = get_field_labels()
     criteria_fields  = phong_fields_map.get(current_user.role, [])
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    # ── Phân loại chi tiết theo danh hiệu ────────────────────────────────────
+    # Mỗi item: dict {ct, pd, don_vi, kq, ket_qua_str, row_shading, kq_color}
+    ds_don_vi_qt  = []   # Đơn vị quyết thắng
+    ds_don_vi_tt  = []   # Đơn vị tiên tiến
+    ds_ca_nhan_td = []   # Chiến sĩ thi đua
+    ds_ca_nhan_tt = []   # Chiến sĩ tiên tiến
+    seen_ids      = set()
+
+    for pd in pending_reviews:
+        results = all_item_results.get(pd.id, {})
+        don_vi  = pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else ''
+        for ct in pd.de_xuat.chi_tiets:
+            if ct.id in out_of_scope_ct_ids or ct.id in seen_ids:
+                continue
+            seen_ids.add(ct.id)
+
+            kq = results.get(ct.id)
+            if kq:
+                if kq.ket_qua == KetQuaDuyet.DONG_Y.value:
+                    ket_qua_str = 'Nhất trí'
+                    row_shading = 'D4EDDA'
+                    kq_color    = (0x15, 0x57, 0x24)
+                elif kq.ket_qua == KetQuaDuyet.TU_CHOI.value:
+                    ket_qua_str = f'Không NT: {kq.ly_do or ""}'
+                    row_shading = 'F8D7DA'
+                    kq_color    = (0x72, 0x1C, 0x24)
+                else:
+                    ket_qua_str = 'Chờ duyệt'
+                    row_shading = None
+                    kq_color    = None
+            else:
+                ket_qua_str = 'Chờ duyệt'
+                row_shading = None
+                kq_color    = None
+
+            item = dict(ct=ct, pd=pd, don_vi=don_vi,
+                        kq=kq, ket_qua_str=ket_qua_str,
+                        row_shading=row_shading, kq_color=kq_color)
+
+            dh = (ct.loai_danh_hieu or '').strip()
+            if dh == 'Đơn vị quyết thắng':
+                ds_don_vi_qt.append(item)
+            elif dh == 'Đơn vị tiên tiến':
+                ds_don_vi_tt.append(item)
+            elif dh == 'Chiến sĩ thi đua':
+                ds_ca_nhan_td.append(item)
+            elif dh == 'Chiến sĩ tiên tiến':
+                ds_ca_nhan_tt.append(item)
+            # Bỏ qua danh hiệu khác (hoặc thêm ds_khac nếu cần)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # HELPERS
+    # ═══════════════════════════════════════════════════════════════════════════
     def set_font(run, bold=False, size=11, italic=False, color=None):
         run.bold       = bold
         run.italic     = italic
@@ -1770,6 +1822,13 @@ def export_word():
         run.font.name  = 'Times New Roman'
         if color:
             run.font.color.rgb = RGBColor(*color)
+
+    def para_font(para, text, bold=False, size=11,
+                  align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
+        para.alignment = align
+        run = para.add_run(text)
+        set_font(run, bold=bold, size=size, italic=italic)
+        return run
 
     def add_cell(cell, text, bold=False, size=10,
                  align=WD_ALIGN_PARAGRAPH.LEFT, color=None):
@@ -1780,10 +1839,11 @@ def export_word():
         p.paragraph_format.space_after  = Pt(1)
         run = p.add_run(str(text) if text is not None else '')
         set_font(run, bold=bold, size=size, color=color)
+        return run
 
     def set_cell_shading(cell, hex_color):
-        tcPr  = cell._tc.get_or_add_tcPr()
-        shd   = OxmlElement('w:shd')
+        tcPr = cell._tc.get_or_add_tcPr()
+        shd  = OxmlElement('w:shd')
         shd.set(qn('w:val'),   'clear')
         shd.set(qn('w:color'), 'auto')
         shd.set(qn('w:fill'),  hex_color)
@@ -1794,16 +1854,6 @@ def export_word():
         trPr = tr.get_or_add_trPr()
         if trPr.find(qn('w:tblHeader')) is None:
             trPr.append(OxmlElement('w:tblHeader'))
-
-    def _para(cell, is_first=False, align=WD_ALIGN_PARAGRAPH.CENTER):
-        p = cell.paragraphs[0] if is_first else cell.add_paragraph()
-        p.alignment = align
-        p.paragraph_format.space_before      = Pt(0)
-        p.paragraph_format.space_after       = Pt(0)
-        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-        p.paragraph_format.left_indent       = Pt(0)
-        p.paragraph_format.right_indent      = Pt(0)
-        return p
 
     def _lock_cell_width(cell, width_cm):
         cell.width = Cm(width_cm)
@@ -1817,10 +1867,12 @@ def export_word():
     def _remove_cell_borders(cell):
         tcPr      = cell._tc.get_or_add_tcPr()
         tcBorders = OxmlElement('w:tcBorders')
-        for edge in ('top','left','bottom','right','insideH','insideV'):
+        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
             tag = OxmlElement(f'w:{edge}')
-            tag.set(qn('w:val'), 'none'); tag.set(qn('w:sz'), '0')
-            tag.set(qn('w:space'), '0'); tag.set(qn('w:color'), 'auto')
+            tag.set(qn('w:val'),   'none')
+            tag.set(qn('w:sz'),    '0')
+            tag.set(qn('w:space'), '0')
+            tag.set(qn('w:color'), 'auto')
             tcBorders.append(tag)
         tcPr.append(tcBorders)
 
@@ -1829,25 +1881,284 @@ def export_word():
         tcMar = tcPr.find(qn('w:tcMar'))
         if tcMar is None:
             tcMar = OxmlElement('w:tcMar'); tcPr.append(tcMar)
-        for edge in ('top','left','bottom','right'):
+        for edge in ('top', 'left', 'bottom', 'right'):
             tag = tcMar.find(qn(f'w:{edge}'))
             if tag is None:
                 tag = OxmlElement(f'w:{edge}'); tcMar.append(tag)
             tag.set(qn('w:w'), '0'); tag.set(qn('w:type'), 'dxa')
 
-    def _set_cell_pad(cell, left_cm=0, right_cm=0):
+    def _set_cell_pad_left(cell, cm):
         tcPr  = cell._tc.get_or_add_tcPr()
         tcMar = tcPr.find(qn('w:tcMar'))
         if tcMar is None:
             tcMar = OxmlElement('w:tcMar'); tcPr.append(tcMar)
-        for edge, val in (('left', left_cm), ('right', right_cm)):
-            tag = tcMar.find(qn(f'w:{edge}'))
-            if tag is None:
-                tag = OxmlElement(f'w:{edge}'); tcMar.append(tag)
-            tag.set(qn('w:w'), str(int(Cm(val) / 635)))
-            tag.set(qn('w:type'), 'dxa')
+        tag = tcMar.find(qn('w:left'))
+        if tag is None:
+            tag = OxmlElement('w:left'); tcMar.append(tag)
+        tag.set(qn('w:w'), str(int(Cm(cm) / 635)))
+        tag.set(qn('w:type'), 'dxa')
 
-    # ── Document setup ────────────────────────────────────────────────────────
+    def _set_cell_pad_right(cell, cm):
+        tcPr  = cell._tc.get_or_add_tcPr()
+        tcMar = tcPr.find(qn('w:tcMar'))
+        if tcMar is None:
+            tcMar = OxmlElement('w:tcMar'); tcPr.append(tcMar)
+        tag = tcMar.find(qn('w:right'))
+        if tag is None:
+            tag = OxmlElement('w:right'); tcMar.append(tag)
+        tag.set(qn('w:w'), str(int(Cm(cm) / 635)))
+        tag.set(qn('w:type'), 'dxa')
+
+    def _para(cell, is_first=False, align=WD_ALIGN_PARAGRAPH.CENTER):
+        p = cell.paragraphs[0] if is_first else cell.add_paragraph()
+        p.alignment = align
+        p.paragraph_format.space_before      = Pt(0)
+        p.paragraph_format.space_after       = Pt(0)
+        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        p.paragraph_format.left_indent       = Pt(0)
+        p.paragraph_format.right_indent      = Pt(0)
+        return p
+
+    def build_tom_tat(ct):
+        """Tóm tắt thành tích — trả về list, mỗi tiêu chí 1 dòng."""
+        parts = []
+        if ct.muc_do_hoan_thanh:
+            parts.append(ct.muc_do_hoan_thanh)
+        if ct.diem_tong_ket:
+            parts.append(f'Kết quả học tập: {ct.diem_tong_ket}')
+        if ct.ket_qua_ren_luyen:
+            parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+        if ct.hinh_thuc_tot_nghiep:
+            tn = [f'TN: {ct.hinh_thuc_tot_nghiep}']
+            for attr, label in (
+                ('diem_tn_ctd',        'CTĐ-CT'),
+                ('diem_tn_ct',         'CT'),
+                ('diem_tn_ta',         'TA'),
+                ('diem_tn_mon4',       'Môn 4'),
+                ('diem_tn_chuyennganh','Chuyên ngành'),
+                ('diem_tn_baove',      'Bảo vệ'),
+            ):
+                val = getattr(ct, attr, None)
+                if val:
+                    tn.append(f'{label}: {val}')
+            parts.append(', '.join(tn))
+        if ct.mo_ta_khoa_hoc:
+            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
+        if ct.thanh_tich_ca_nhan_khac:
+            parts.append(ct.thanh_tich_ca_nhan_khac)
+        # Tiêu chí động của ban
+        for f in criteria_fields:
+            val = getattr(ct, f, None) or ''
+            if val:
+                label = field_labels.get(f, f)
+                parts.append(f'{label}: {val}')
+        return parts
+
+    # ── Hàm thêm bảng cá nhân ────────────────────────────────────────────────
+    def add_personnel_table(doc, items, section_label, stt_start=1):
+        """Bảng 7 cột: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú"""
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(6)
+        p.paragraph_format.space_after  = Pt(2)
+        para_font(p, section_label, bold=True, size=11)
+
+        if not items:
+            p2 = doc.add_paragraph()
+            para_font(p2, '(Không có)', size=10, italic=True)
+            return stt_start
+
+        # Widths: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú
+        widths = [0.7, 3.5, 1.8, 2.2, 2.5, 5.0, 1.5]
+        tbl = doc.add_table(rows=1, cols=len(widths))
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style     = 'Table Grid'
+        tbl.autofit   = True
+
+        tblPr = tbl._tbl.tblPr
+        tblLayout = tblPr.find(qn('w:tblLayout'))
+        if tblLayout is None:
+            tblLayout = OxmlElement('w:tblLayout'); tblPr.append(tblLayout)
+        tblLayout.set(qn('w:type'), 'autofit')
+
+        # tblGrid
+        tblGrid = tbl._tbl.find(qn('w:tblGrid'))
+        if tblGrid is not None:
+            tbl._tbl.remove(tblGrid)
+        tblGrid = OxmlElement('w:tblGrid')
+        tbl._tbl.insert(1, tblGrid)
+        for w in widths:
+            gc = OxmlElement('w:gridCol')
+            gc.set(qn('w:w'), str(int(Cm(w) / 635)))
+            tblGrid.append(gc)
+
+        # Chiều rộng từng cột
+        for i, w in enumerate(widths):
+            twips = int(Cm(w) / 635)
+            tc    = tbl.rows[0].cells[i]._tc
+            tcPr  = tc.get_or_add_tcPr()
+            tcW   = tcPr.find(qn('w:tcW'))
+            if tcW is None:
+                tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
+            tcW.set(qn('w:w'), str(twips)); tcW.set(qn('w:type'), 'dxa')
+
+        # Header row
+        headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
+                       'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
+        hrow = tbl.rows[0]
+        for i, h in enumerate(headers_txt):
+            run = add_cell(hrow.cells[i], h, bold=True, size=10,
+                           align=WD_ALIGN_PARAGRAPH.CENTER)
+            set_cell_shading(hrow.cells[i], '1B3A6B')
+            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        set_repeat_table_header(hrow)
+
+        # Data rows
+        stt = stt_start
+        for item in items:
+            ct          = item['ct']
+            don_vi      = item['don_vi']
+            ket_qua_str = item['ket_qua_str']
+            row_shading = item['row_shading']
+            kq_color    = item['kq_color']
+
+            qn_obj  = ct.quan_nhan
+            ho_ten  = qn_obj.ho_ten  if qn_obj else (ct.ten_don_vi_de_xuat or don_vi)
+            cap_bac = qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else ''
+            chuc_vu = qn_obj.chuc_vu if qn_obj and qn_obj.chuc_vu else ''
+
+            row = tbl.add_row()
+            add_cell(row.cells[0], str(stt), align=WD_ALIGN_PARAGRAPH.CENTER)
+            add_cell(row.cells[1], ho_ten)
+            add_cell(row.cells[2], cap_bac)
+            add_cell(row.cells[3], chuc_vu)
+            add_cell(row.cells[4], don_vi)
+
+            # Cột Tóm tắt — mỗi tiêu chí 1 dòng
+            tom_tat_list = build_tom_tat(ct)
+            cell_tt = row.cells[5]
+            cell_tt.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p_tt = cell_tt.paragraphs[0]
+            p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p_tt.paragraph_format.space_before = Pt(1)
+            p_tt.paragraph_format.space_after  = Pt(1)
+            if tom_tat_list:
+                for idx_i, item_txt in enumerate(tom_tat_list):
+                    if idx_i > 0:
+                        p_tt = cell_tt.add_paragraph()
+                        p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p_tt.paragraph_format.space_before = Pt(1)
+                        p_tt.paragraph_format.space_after  = Pt(1)
+                    set_font(p_tt.add_run(f'- {item_txt}'), size=10)
+            else:
+                set_font(p_tt.add_run('-'), size=10)
+
+            # Cột Ghi chú — hiện kết quả duyệt
+            run_kq = add_cell(row.cells[6], ket_qua_str, size=9,
+                              align=WD_ALIGN_PARAGRAPH.CENTER)
+            if kq_color:
+                run_kq.font.color.rgb = RGBColor(*kq_color)
+
+            if row_shading:
+                for c in row.cells:
+                    set_cell_shading(c, row_shading)
+
+            stt += 1
+
+        # Dòng tổng
+        sum_row = tbl.add_row()
+        merged  = sum_row.cells[0]
+        for i in range(1, len(widths)):
+            merged = merged.merge(sum_row.cells[i])
+        add_cell(merged, f'Tổng cộng: {stt - stt_start} người', bold=True, size=10)
+        set_cell_shading(merged, 'EEF2FF')
+
+        return stt  # trả về stt tiếp theo (nếu cần đánh số liên tục)
+
+    # ── Hàm thêm bảng đơn vị ─────────────────────────────────────────────────
+    def add_unit_table(doc, items, section_label):
+        """Bảng 3 cột: STT | Tên đơn vị | Ghi chú"""
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(6)
+        p.paragraph_format.space_after  = Pt(2)
+        para_font(p, section_label, bold=True, size=11)
+
+        if not items:
+            p2 = doc.add_paragraph()
+            para_font(p2, '(Không có)', size=10, italic=True)
+            return
+
+        widths = [0.7, 10.0, 5.5]
+        tbl = doc.add_table(rows=1, cols=len(widths))
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style     = 'Table Grid'
+        tbl.autofit   = True
+
+        tblPr = tbl._tbl.tblPr
+        tblLayout = tblPr.find(qn('w:tblLayout'))
+        if tblLayout is None:
+            tblLayout = OxmlElement('w:tblLayout'); tblPr.append(tblLayout)
+        tblLayout.set(qn('w:type'), 'autofit')
+
+        tblGrid = tbl._tbl.find(qn('w:tblGrid'))
+        if tblGrid is not None:
+            tbl._tbl.remove(tblGrid)
+        tblGrid = OxmlElement('w:tblGrid')
+        tbl._tbl.insert(1, tblGrid)
+        for w in widths:
+            gc = OxmlElement('w:gridCol')
+            gc.set(qn('w:w'), str(int(Cm(w) / 635)))
+            tblGrid.append(gc)
+
+        for i, w in enumerate(widths):
+            twips = int(Cm(w) / 635)
+            tc    = tbl.rows[0].cells[i]._tc
+            tcPr  = tc.get_or_add_tcPr()
+            tcW   = tcPr.find(qn('w:tcW'))
+            if tcW is None:
+                tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
+            tcW.set(qn('w:w'), str(twips)); tcW.set(qn('w:type'), 'dxa')
+
+        # Header row
+        hrow = tbl.rows[0]
+        for i, h in enumerate(['STT', 'Tên đơn vị', 'Ghi chú']):
+            run = add_cell(hrow.cells[i], h, bold=True, size=10,
+                           align=WD_ALIGN_PARAGRAPH.CENTER)
+            set_cell_shading(hrow.cells[i], '1B3A6B')
+            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        set_repeat_table_header(hrow)
+
+        # Data rows
+        for idx, item in enumerate(items, 1):
+            ct          = item['ct']
+            ket_qua_str = item['ket_qua_str']
+            row_shading = item['row_shading']
+            kq_color    = item['kq_color']
+
+            ten_dv = (ct.ten_don_vi_de_xuat or item['don_vi'] or '-')
+
+            row = tbl.add_row()
+            add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
+            add_cell(row.cells[1], ten_dv)
+            run_kq = add_cell(row.cells[2], ket_qua_str, size=9,
+                              align=WD_ALIGN_PARAGRAPH.CENTER)
+            if kq_color:
+                run_kq.font.color.rgb = RGBColor(*kq_color)
+
+            if row_shading:
+                for c in row.cells:
+                    set_cell_shading(c, row_shading)
+
+        # Dòng tổng
+        sum_row = tbl.add_row()
+        merged  = sum_row.cells[0]
+        for i in range(1, len(widths)):
+            merged = merged.merge(sum_row.cells[i])
+        add_cell(merged, f'Tổng cộng: {len(items)} đơn vị', bold=True, size=10)
+        set_cell_shading(merged, 'EEF2FF')
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # DOCUMENT SETUP
+    # ═══════════════════════════════════════════════════════════════════════════
     doc = Document()
 
     PAGE_W_CM     = 21.0
@@ -1856,9 +2167,8 @@ def export_word():
     PRINT_W_CM    = PAGE_W_CM - MARGIN_L - MARGIN_R   # 16.0
     HEADER_W_CM   = PAGE_W_CM                          # 21.0
     OVERFLOW_EACH = (HEADER_W_CM - PRINT_W_CM) / 2    # 2.5
-
-    LEFT_CM  = 9.5
-    RIGHT_CM = 11.5
+    LEFT_CM       = 9.5
+    RIGHT_CM      = 11.5
 
     for section in doc.sections:
         section.top_margin    = Cm(2)
@@ -1866,7 +2176,7 @@ def export_word():
         section.left_margin   = Cm(MARGIN_L)
         section.right_margin  = Cm(MARGIN_R)
 
-    # ── Bảng header Quốc hiệu ────────────────────────────────────────────────
+    # ── Header Quốc hiệu ─────────────────────────────────────────────────────
     tbl_header = doc.add_table(rows=1, cols=2)
     tbl_header.alignment = WD_TABLE_ALIGNMENT.CENTER
     tbl_header.autofit   = False
@@ -1903,15 +2213,15 @@ def export_word():
         _lock_cell_width(cell, w)
         _remove_cell_borders(cell)
         _clear_cell_margin(cell)
-    _set_cell_pad(lc, left_cm=OVERFLOW_EACH)
-    _set_cell_pad(rc, right_cm=OVERFLOW_EACH)
+    _set_cell_pad_left(lc,  OVERFLOW_EACH)
+    _set_cell_pad_right(rc, OVERFLOW_EACH)
 
     p_l1 = _para(lc, is_first=True)
     set_font(p_l1.add_run('TRƯỜNG SĨ QUAN CHÍNH TRỊ'), size=12)
     p_l2 = _para(lc)
     r_l2 = p_l2.add_run(phong_name.upper())
     set_font(r_l2, bold=True, size=12); r_l2.underline = True
-    _para(lc).add_run('')   # dòng trống cân bằng chiều cao
+    _para(lc).add_run('')
 
     p_r1 = _para(rc, is_first=True)
     set_font(p_r1.add_run('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), bold=True, size=12)
@@ -1925,7 +2235,6 @@ def export_word():
         p_r3.add_run(f'Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}'),
         size=11, italic=True
     )
-
     for row in tbl_header.rows:
         for cell in row.cells:
             for p in cell.paragraphs:
@@ -1944,126 +2253,30 @@ def export_word():
         ),
         bold=True, size=13
     )
-
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     set_font(
-        p_sub.add_run(f'({phong_name} — Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})'),
+        p_sub.add_run(
+            f'({phong_name} — Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})'
+        ),
         size=10, italic=True
     )
     doc.add_paragraph()
 
-    # ── Bảng dữ liệu ─────────────────────────────────────────────────────────
-    # Cột cố định: STT | Đơn vị | Họ tên | Cấp bậc | Chức vụ | Đối tượng | Danh hiệu | Kết quả
-    # + cột tiêu chí động
-    BASE_HEADERS = ['STT', 'Đơn vị', 'Họ và tên', 'Cấp bậc',
-                    'Chức vụ', 'Đối tượng', 'Danh hiệu', 'Kết quả']
-    BASE_WIDTHS  = [0.7,   3.2,     2.8,       1.8,
-                    2.2,        1.8,        2.2,        2.5]
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 4 MỤC THEO DANH HIỆU
+    # ═══════════════════════════════════════════════════════════════════════════
+    add_unit_table(doc, ds_don_vi_qt,
+                   'I. Danh hiệu Đơn vị quyết thắng')
 
-    crit_headers = [field_labels.get(f, f) for f in criteria_fields]
-    crit_widths  = [2.0] * len(criteria_fields)
+    add_unit_table(doc, ds_don_vi_tt,
+                   'II. Danh hiệu Đơn vị tiên tiến')
 
-    all_headers = BASE_HEADERS + crit_headers
-    all_widths  = BASE_WIDTHS  + crit_widths
+    add_personnel_table(doc, ds_ca_nhan_td,
+                        'III. Danh hiệu Chiến sĩ thi đua')
 
-    tbl = doc.add_table(rows=1, cols=len(all_headers))
-    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-    tbl.style     = 'Table Grid'
-    tbl.autofit   = True
-
-    tblPr_t = tbl._tbl.tblPr
-    tblLayout_t = tblPr_t.find(qn('w:tblLayout'))
-    if tblLayout_t is None:
-        tblLayout_t = OxmlElement('w:tblLayout'); tblPr_t.append(tblLayout_t)
-    tblLayout_t.set(qn('w:type'), 'autofit')
-
-    # Đặt chiều rộng cột
-    for i, w in enumerate(all_widths):
-        twips = int(Cm(w) / 635)
-        tc    = tbl.rows[0].cells[i]._tc
-        tcPr  = tc.get_or_add_tcPr()
-        tcW   = tcPr.find(qn('w:tcW'))
-        if tcW is None:
-            tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
-        tcW.set(qn('w:w'), str(twips)); tcW.set(qn('w:type'), 'dxa')
-
-    # Header row
-    hrow = tbl.rows[0]
-    for i, h in enumerate(all_headers):
-        c = hrow.cells[i]
-        add_cell(c, h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
-        set_cell_shading(c, '1B3A6B')
-        # Chữ trắng cho header
-        c.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-    set_repeat_table_header(hrow)
-
-    # Data rows
-    stt = 0
-    for pd in pending_reviews:
-        results = all_item_results.get(pd.id, {})
-        don_vi  = pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else ''
-
-        for ct in pd.de_xuat.chi_tiets:
-            if ct.id in out_of_scope_ct_ids:
-                continue
-
-            stt += 1
-            kq = results.get(ct.id)
-            if kq:
-                if kq.ket_qua == KetQuaDuyet.DONG_Y.value:
-                    ket_qua_str  = 'Nhất trí'
-                    row_shading  = 'D4EDDA'   # xanh nhạt
-                    kq_color     = (0x15, 0x5724)
-                elif kq.ket_qua == KetQuaDuyet.TU_CHOI.value:
-                    ket_qua_str  = f'Không NT: {kq.ly_do or ""}'
-                    row_shading  = 'F8D7DA'   # đỏ nhạt
-                    kq_color     = (0x72, 0x1C, 0x24)
-                else:
-                    ket_qua_str  = 'Chờ duyệt'
-                    row_shading  = None
-                    kq_color     = None
-            else:
-                ket_qua_str = 'Chờ duyệt'
-                row_shading = None
-                kq_color    = None
-
-            qn_obj  = ct.quan_nhan
-            ho_ten  = qn_obj.ho_ten  if qn_obj else don_vi
-            cap_bac = qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else ''
-            chuc_vu = qn_obj.chuc_vu if qn_obj and qn_obj.chuc_vu else ''
-
-            is_tap_the  = qn_obj is None
-            tt_dict     = ct.tap_the_dict or {}
-            crit_vals   = [
-                (tt_dict.get(f, '') if is_tap_the else (getattr(ct, f, '') or ''))
-                for f in criteria_fields
-            ]
-
-            row_data = [
-                str(stt), don_vi, ho_ten, cap_bac, chuc_vu,
-                ct.doi_tuong or '', ct.loai_danh_hieu or '', ket_qua_str
-            ] + [str(v) if v is not None else '' for v in crit_vals]
-
-            row = tbl.add_row()
-            for i, val in enumerate(row_data):
-                cell = row.cells[i]
-                align = WD_ALIGN_PARAGRAPH.CENTER if i == 0 else WD_ALIGN_PARAGRAPH.LEFT
-                # Màu chữ kết quả
-                color = kq_color if i == 7 else None
-                add_cell(cell, val, size=10, align=align, color=color)
-                if row_shading:
-                    set_cell_shading(cell, row_shading)
-
-    # ── Dòng tổng cộng ────────────────────────────────────────────────────────
-    sum_row = tbl.add_row()
-    tbl.cell(sum_row._tr.getparent().index(sum_row._tr), 0)
-    # Merge tất cả ô dòng tổng
-    merged = sum_row.cells[0]
-    for i in range(1, len(all_headers)):
-        merged = merged.merge(sum_row.cells[i])
-    add_cell(merged, f'Tổng cộng: {stt} cá nhân/tập thể', bold=True, size=10)
-    set_cell_shading(merged, 'EEF2FF')
+    add_personnel_table(doc, ds_ca_nhan_tt,
+                        'IV. Danh hiệu Chiến sĩ tiên tiến')
 
     # ── Footer ────────────────────────────────────────────────────────────────
     p_foot = doc.add_paragraph()
