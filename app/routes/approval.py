@@ -11,7 +11,8 @@ from app.utils.decorators import department_required
 from app.utils.activity_logger import log_action
 from datetime import datetime
 from io import BytesIO
-
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 #thaydoi import theo nhu cau
 approval_bp = Blueprint('approval', __name__)
@@ -1969,6 +1970,7 @@ def export_word():
 
         # Widths: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú
         widths = [0.7, 3.5, 1.8, 2.2, 2.5, 5.0, 1.5]
+        set_fixed_table_widths(tbl, widths)
         tbl = doc.add_table(rows=1, cols=len(widths))
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style     = 'Table Grid'
@@ -2004,7 +2006,9 @@ def export_word():
         # Header row
         headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
                        'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
+        
         hrow = tbl.rows[0]
+
         for i, h in enumerate(headers_txt):
             run = add_cell(hrow.cells[i], h, bold=True, size=10,
                            align=WD_ALIGN_PARAGRAPH.CENTER)
@@ -2088,6 +2092,7 @@ def export_word():
             return
 
         widths = [0.7, 10.0, 5.5]
+        set_fixed_table_widths(tbl, widths)
         tbl = doc.add_table(rows=1, cols=len(widths))
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style     = 'Table Grid'
@@ -2287,6 +2292,39 @@ def export_word():
     r_foot.font.size      = Pt(9)
     r_foot.font.italic    = True
     r_foot.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+    # --- Ký tên ---
+    doc.add_paragraph()
+    tbl_sign = doc.add_table(rows=1, cols=2)
+    tbl_sign.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for cell in tbl_sign.rows[0].cells:
+        for edge in ('top','left','bottom','right'):
+            tc = cell._tc; tcPr = tc.get_or_add_tcPr()
+            b = OxmlElement('w:tcBorders')
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), 'none')
+            b.append(tag)
+            tcPr.append(b)
+
+    left_sign = tbl_sign.rows[0].cells[0]
+    right_sign = tbl_sign.rows[0].cells[1]
+
+    # Ký xác nhận bên trái
+    p_sl = left_sign.paragraphs[0]
+    p_sl.alignment = WD_ALIGN_PARAGRAPH.CENTER
+   # para_font(p_sl, 'XÁC NHẬN CỦA CẤP TRÊN', bold=True, size=11)
+    left_sign.add_paragraph()
+    left_sign.add_paragraph()
+    left_sign.add_paragraph()
+
+    # Ký đơn vị bên phải
+    # Ký đơn vị bên phải
+    p_sr = right_sign.paragraphs[0]
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
+    para_font(p_sr, 'THỦ TRƯỞNG ĐƠN VỊ', bold=True, size=11, align=WD_ALIGN_PARAGRAPH.CENTER)
+    
+    p_sr2 = right_sign.add_paragraph()
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
+    para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True, align=WD_ALIGN_PARAGRAPH.CENTER)
     try:
         protect_document_formatting_only(doc, 'bth123')
     except Exception:
@@ -2303,6 +2341,41 @@ def export_word():
         buf, as_attachment=True, download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+def set_fixed_table_widths(tbl, widths_cm):
+        """Can thiệp sâu vào XML để khóa chết chiều rộng bảng, Word không thể tự đổi"""
+        # 1. Ép kiểu bảng thành Fixed Layout (Không tự co giãn)
+        tbl.autofit = False
+        tblPr = tbl._tbl.tblPr
+        tblLayout = tblPr.find(qn('w:tblLayout'))
+        if tblLayout is None:
+            tblLayout = OxmlElement('w:tblLayout')
+            tblPr.append(tblLayout)
+        tblLayout.set(qn('w:type'), 'fixed')
+
+        # 2. Xóa lưới cột cũ và xây lại khung lưới mới theo đúng kích thước cm
+        tblGrid = tbl._tbl.find(qn('w:tblGrid'))
+        if tblGrid is not None:
+            tbl._tbl.remove(tblGrid)
+        tblGrid = OxmlElement('w:tblGrid')
+        tbl._tbl.insert(1, tblGrid)  # Chèn khung lưới vào đúng vị trí chuẩn XML
+
+        for w in widths_cm:
+            gridCol = OxmlElement('w:gridCol')
+            # Chuyển đổi Cm sang đơn vị Twips của Word (1 twip = 635 EMUs)
+            gridCol.set(qn('w:w'), str(int(Cm(w) / 635)))
+            tblGrid.append(gridCol)
+
+        # 3. Khóa cứng chiều rộng ở cấp độ từng Ô (Cell)
+        for i, w in enumerate(widths_cm):
+            twips_val = str(int(Cm(w) / 635))
+            for row in tbl.rows:
+                tcPr = row.cells[i]._tc.get_or_add_tcPr()
+                tcW = tcPr.find(qn('w:tcW'))
+                if tcW is None:
+                    tcW = OxmlElement('w:tcW')
+                    tcPr.append(tcW)
+                tcW.set(qn('w:w'), twips_val)
+                tcW.set(qn('w:type'), 'dxa')
 def add_corner_logo(doc):
     """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
     import os
