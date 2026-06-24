@@ -2595,6 +2595,7 @@ def export_tracking_word():
 
         # Cột: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Năm học | Trạng thái | Tóm tắt | Ghi chú
         col_widths = [0.7, 3.5, 1.8, 2.2, 2.5, 8.5, 1.0]
+        set_fixed_table_widths(tbl, col_widths)
         headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
                        'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
 
@@ -2682,6 +2683,7 @@ def export_tracking_word():
             return
 
         col_widths  = [0.8, 4.2, 2.5, 9.0]
+        set_fixed_table_widths(tbl, col_widths)
         headers_txt = ['STT', 'Tên đơn vị', 'Đơn vị đề xuất',
                         'Ghi chú']
 
@@ -4023,6 +4025,7 @@ def export_b3_excel():
 
     # ── Header cột ──────────────────────────────────────────────────────────
     COL_WIDTHS = [6, 28, 14, 22, 30, 12, 48]
+    
     COL_HEADERS = ['TT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Danh hiệu', 'Tóm tắt thành tích']
     for ci, (hdr, w) in enumerate(zip(COL_HEADERS, COL_WIDTHS), 1):
         c = ws.cell(row=5, column=ci, value=hdr)
