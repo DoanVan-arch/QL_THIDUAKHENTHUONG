@@ -2097,7 +2097,7 @@ def export_word():
             para_font(p2, '(Không có)', size=10, italic=True)
             return
 
-        widths = [0.7, 10.0, 5.5]
+        widths = [0.7, 5.5, 10.0]  # STT | Tên đơn vị | Ghi chú
         
         tbl = doc.add_table(rows=1, cols=len(widths))
         set_fixed_table_widths(tbl, widths)
@@ -2151,10 +2151,50 @@ def export_word():
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
             add_cell(row.cells[1], ten_dv)
-            run_kq = add_cell(row.cells[2], ket_qua_str, size=9,
-                              align=WD_ALIGN_PARAGRAPH.CENTER)
-            if kq_color:
-                run_kq.font.color.rgb = RGBColor(*kq_color)
+           
+            
+
+            cell = row.cells[2]
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = cell.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.space_before = Pt(1)
+            p.paragraph_format.space_after  = Pt(1)
+
+            criteria_list = []
+            td = ct.tap_the_dict or {}
+            if td:
+                from app.models.nomination import TieuChi as _TieuChi
+                ma_truong_list = list(td.keys())
+                tieu_chi_map = {}
+                if ma_truong_list:
+                    tc_rows = _TieuChi.query.filter(
+                        _TieuChi.ma_truong.in_(ma_truong_list)
+                    ).all()
+                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
+                for key, val in td.items():
+                    if val and str(val).strip() not in ('', '0', 'None'):
+                        label = tieu_chi_map.get(key, key)
+                        criteria_list.append(f'{label}: {val}')
+
+            if ct.muc_do_hoan_thanh:
+                criteria_list.insert(0, f'Mức độ hoàn thành: {ct.muc_do_hoan_thanh}')
+            if ct.ghi_chu and ct.ghi_chu.strip():
+                criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
+
+            if criteria_list:
+                for idx_c, item in enumerate(criteria_list):
+                    if idx_c > 0:
+                        p = cell.add_paragraph()
+                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p.paragraph_format.space_before = Pt(1)
+                        p.paragraph_format.space_after  = Pt(1)
+                    run = p.add_run(f'- {item}')
+                    set_font(run, size=10)
+            else:
+                run = p.add_run('-')
+                set_font(run, size=10)
+                
 
             if row_shading:
                 for c in row.cells:

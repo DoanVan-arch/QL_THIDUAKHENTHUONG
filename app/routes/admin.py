@@ -2715,7 +2715,46 @@ def export_tracking_word():
             add_cell(row.cells[1], ct.ten_don_vi_de_xuat or '-')
             add_cell(row.cells[2], dx.don_vi.ten_don_vi if dx.don_vi else '')
         
-            add_cell(row.cells[3], ct.ghi_chu or '')
+            cell = row.cells[3]
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = cell.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.space_before = Pt(1)
+            p.paragraph_format.space_after  = Pt(1)
+
+            criteria_list = []
+            td = ct.tap_the_dict or {}
+            if td:
+                from app.models.nomination import TieuChi as _TieuChi
+                ma_truong_list = list(td.keys())
+                tieu_chi_map = {}
+                if ma_truong_list:
+                    tc_rows = _TieuChi.query.filter(
+                        _TieuChi.ma_truong.in_(ma_truong_list)
+                    ).all()
+                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
+                for key, val in td.items():
+                    if val and str(val).strip() not in ('', '0', 'None'):
+                        label = tieu_chi_map.get(key, key)
+                        criteria_list.append(f'{label}: {val}')
+
+            if ct.muc_do_hoan_thanh:
+                criteria_list.insert(0, f'Mức độ hoàn thành: {ct.muc_do_hoan_thanh}')
+            if ct.ghi_chu and ct.ghi_chu.strip():
+                criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
+
+            if criteria_list:
+                for idx_c, item in enumerate(criteria_list):
+                    if idx_c > 0:
+                        p = cell.add_paragraph()
+                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p.paragraph_format.space_before = Pt(1)
+                        p.paragraph_format.space_after  = Pt(1)
+                    run = p.add_run(f'- {item}')
+                    set_font(run, size=10)
+            else:
+                run = p.add_run('-')
+                set_font(run, size=10)
 
     # ── Xuất các phần ────────────────────────────────────────────────────────
     add_unit_section('I. Danh hiệu Đơn vị quyết thắng',  ds_quyet_thang)
