@@ -2523,9 +2523,9 @@ def export_tracking_word():
             return stt_start
 
         # Cột: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Năm học | Trạng thái | Tóm tắt | Ghi chú
-        col_widths = [0.7, 3.5, 1.8, 2.2, 2.5, 1.5, 2.5, 4.5, 1.0]
+        col_widths = [0.7, 3.5, 1.8, 2.2, 2.5, 8.5, 1.0]
         headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
-                       'Đơn vị', 'Năm học', 'Trạng thái', 'Tóm tắt thành tích', 'Ghi chú']
+                       'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
 
         tbl = doc.add_table(rows=1, cols=len(col_widths))
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -2567,8 +2567,7 @@ def export_tracking_word():
             add_cell(row.cells[2], qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else '')
             add_cell(row.cells[3], qn_obj.chuc_vu  if qn_obj and qn_obj.chuc_vu  else '')
             add_cell(row.cells[4], dx.don_vi.ten_don_vi if dx.don_vi else '')
-            add_cell(row.cells[5], dx.nam_hoc or '')
-            add_cell(row.cells[6], trang_thai)
+          
 
             # Tóm tắt thành tích
             parts = []
@@ -2611,9 +2610,9 @@ def export_tracking_word():
             set_font(doc.add_paragraph().add_run('(Không có)'), size=10, italic=True)
             return
 
-        col_widths  = [0.8, 4.2, 2.5, 1.5, 2.5, 5.0]
+        col_widths  = [0.8, 4.2, 2.5, 9.0]
         headers_txt = ['STT', 'Tên đơn vị', 'Đơn vị đề xuất',
-                       'Năm học', 'Trạng thái', 'Ghi chú']
+                        'Ghi chú']
 
         tbl = doc.add_table(rows=1, cols=len(col_widths))
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -2640,8 +2639,7 @@ def export_tracking_word():
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
             add_cell(row.cells[1], ct.ten_don_vi_de_xuat or '-')
             add_cell(row.cells[2], dx.don_vi.ten_don_vi if dx.don_vi else '')
-            add_cell(row.cells[3], dx.nam_hoc or '')
-            add_cell(row.cells[4], trang_thai)
+        
             add_cell(row.cells[5], ct.ghi_chu or '')
 
     # ── Xuất các phần ────────────────────────────────────────────────────────
@@ -2673,7 +2671,7 @@ def export_tracking_word():
         protect_document_formatting_only(doc, 'bth123')
     except Exception:
         pass
-
+    add_corner_logo(doc)
     buf = BytesIO()
     doc.save(buf)
     buf.seek(0)

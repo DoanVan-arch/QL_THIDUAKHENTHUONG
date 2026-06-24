@@ -2287,7 +2287,11 @@ def export_word():
     r_foot.font.size      = Pt(9)
     r_foot.font.italic    = True
     r_foot.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
-
+    try:
+        protect_document_formatting_only(doc, 'bth123')
+    except Exception:
+        pass
+    add_corner_logo(doc)
     # ── Xuất file ─────────────────────────────────────────────────────────────
     buf = BytesIO()
     doc.save(buf)
@@ -2299,3 +2303,78 @@ def export_word():
         buf, as_attachment=True, download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+def add_corner_logo(doc):
+    """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
+    import os
+    from flask import current_app
+    
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
+    
+    if not os.path.exists(logo_path):
+        # Fallback to main logo if watermark doesn't exist
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        if not os.path.exists(logo_path):
+            return
+    
+    try:
+        for section in doc.sections:
+            header = section.header
+            
+            # Thêm paragraph mới vào cuối header (sau table header hiện tại)
+            para = header.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            
+            # Set paragraph spacing để logo sát lề trên
+            para.paragraph_format.space_before = Pt(0)
+            para.paragraph_format.space_after = Pt(0)
+            
+            # Thêm logo nhỏ căn phải (1.5cm)
+            run = para.add_run()
+            run.add_picture(logo_path, width=Cm(1.5))
+            
+    except Exception as e:
+        print(f"Warning: Could not add corner logo: {e}")
+
+
+def protect_document_formatting_only(doc, password: str):
+    """
+    Khóa tài liệu: chỉ đọc nội dung (readOnly).
+    Mật khẩu được hash theo chuẩn Office 2010+ (Agile Encryption).
+    """
+    # 1. Tạo salt ngẫu nhiên (16 bytes)
+    salt = os.urandom(16)
+    salt_b64 = binascii.b2a_base64(salt).strip().decode()
+
+    # 2. Hash lần đầu: SHA-512(salt + password)
+    # Lưu ý: password bắt buộc encode sang chuẩn UTF-16 Little Endian
+    key = hashlib.sha512(salt + password.encode('utf-16le')).digest()
+    
+    # 3. Lặp 100.000 vòng để chống brute-force
+    spin_count = 100000
+    for i in range(spin_count):
+        iterator = i.to_bytes(4, byteorder='little')
+        # SỬA LỖI: Cần cộng iterator ở PHÍA SAU hash của vòng lặp liền trước
+        key = hashlib.sha512(key + iterator).digest()
+        
+    hash_b64 = binascii.b2a_base64(key).strip().decode()
+
+    # 4. Lấy cấu hình settings của docx
+    settings = doc.settings.element
+
+    # Xóa thẻ documentProtection cũ nếu có
+    for old in settings.findall(qn('w:documentProtection')):
+        settings.remove(old)
+
+    # 5. Tạo thẻ <w:documentProtection> theo chuẩn Office đời mới
+    doc_prot = OxmlElement('w:documentProtection')
+    doc_prot.set(qn('w:edit'),          'readOnly')
+    doc_prot.set(qn('w:enforcement'),   '1')
+    
+    # BỎ CÁC THẺ CŨ (cryptProviderType, v.v.). SỬ DỤNG CHUẨN AGILE MỚI:
+    doc_prot.set(qn('w:algorithmName'), 'SHA-512')
+    doc_prot.set(qn('w:spinCount'),     str(spin_count))
+    doc_prot.set(qn('w:hashValue'),     hash_b64)     # Đã đổi từ w:hash thành w:hashValue
+    doc_prot.set(qn('w:saltValue'),     salt_b64)     # Đã đổi từ w:salt thành w:saltValue
+
+    # Chèn vào đầu <w:settings>
+    settings.insert(0, doc_prot)
