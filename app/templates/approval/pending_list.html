@@ -908,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
     const reqEditModalEl = document.getElementById('requestEditModal');
     const reqEditModal = reqEditModalEl ? new bootstrap.Modal(reqEditModalEl) : null;
-    let reqEditCtx = {pdId: null, ctId: null};
+    
 
     document.querySelectorAll('.request-edit-link').forEach(link => {
         link.addEventListener('click', function () {
@@ -930,30 +930,117 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    
+    // ─── requestEditModal ────────────────────────────────────────────────────────
+    const requestEditModal = new bootstrap.Modal(document.getElementById('requestEditModal'));
+    let reqEditCtx = { pdId: null, ctId: null };
+
+    // ★ Hàm cập nhật bộ đếm — gọi bất cứ khi nào checkbox thay đổi
+    function _reqEditUpdateCount() {
+        const total   = document.querySelectorAll('.req-edit-field').length;
+        const checked = document.querySelectorAll('.req-edit-field:checked').length;
+        const el = document.getElementById('reqEditSelectedCount');
+        if (el) el.textContent = `${checked} / ${total}`;
+    }
+
+    // ★ Event delegation: bind 1 lần trên container, không cần re-bind sau render
+    document.getElementById('reqEditFields').addEventListener('change', function (e) {
+        if (e.target.classList.contains('req-edit-field')) {
+            _reqEditUpdateCount();
+        }
+    });
+
+    // ★ Chọn tất cả
+    document.getElementById('reqEditSelectAll').addEventListener('click', function () {
+        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = true);
+        _reqEditUpdateCount();
+    });
+
+    // ★ Bỏ chọn tất cả
+    document.getElementById('reqEditDeselectAll').addEventListener('click', function () {
+        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = false);
+        _reqEditUpdateCount();
+    });
+
+    // ★ Hàm mở modal — gọi từ nút "Yêu cầu chỉnh sửa" trên từng dòng
+    function openRequestEditModal(pdId, ctId, name, fields) {
+        // fields: [{value: 'field_key', label: 'Tên tiêu chí'}, ...]
+        reqEditCtx = { pdId, ctId };
+
+        document.getElementById('reqEditName').textContent = name;
+        document.getElementById('reqEditReason').value     = '';
+
+        const container = document.getElementById('reqEditFields');
+        container.innerHTML = '';   // xóa cũ
+
+        if (!fields || fields.length === 0) {
+            container.innerHTML = '<p class="text-muted small mb-0">Không có tiêu chí nào khả dụng.</p>';
+        } else {
+            fields.forEach(f => {
+                const div   = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input req-edit-field"
+                        type="checkbox"
+                        id="ref_${f.value}"
+                        value="${f.value}">
+                    <label class="form-check-label small" for="ref_${f.value}">
+                        ${f.label}
+                    </label>`;
+                container.appendChild(div);
+            });
+        }
+
+        // Reset counter SAU KHI render xong
+        _reqEditUpdateCount();
+
+        requestEditModal.show();
+    }
+
+    // ★ Submit
     const reqEditSubmit = document.getElementById('reqEditSubmit');
     if (reqEditSubmit) {
         reqEditSubmit.addEventListener('click', function () {
-            const checked = Array.from(document.querySelectorAll('.req-edit-field:checked')).map(c => c.value);
+            const checked = Array.from(
+                document.querySelectorAll('.req-edit-field:checked')
+            ).map(c => c.value);
+
+            // Loại trùng (phòng thủ)
+            const uniqueFields = [...new Set(checked)];
+
             const reason = document.getElementById('reqEditReason').value.trim();
-            if (!checked.length) { alert('Vui lòng chọn ít nhất một tiêu chí.'); return; }
+
+            if (!uniqueFields.length) {
+                alert('Vui lòng chọn ít nhất một tiêu chí.');
+                return;
+            }
+
             this.disabled = true;
+            const btn = this;
+
             fetch(`/approval/request-edit/${reqEditCtx.pdId}/${reqEditCtx.ctId}`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
-                body: JSON.stringify({fields: checked, ly_do: reason}),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ fields: uniqueFields, ly_do: reason }),
             })
-                .then(r => r.json())
-                .then(data => {
-                    this.disabled = false;
-                    if (data.success) {
-                        if (reqEditModal) reqEditModal.hide();
-                        showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
-                        setTimeout(() => window.location.reload(), 1000);
-                    } else {
-                        alert(data.message || 'Không thể gửi yêu cầu.');
-                    }
-                })
-                .catch(() => { this.disabled = false; alert('Lỗi kết nối.'); });
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                if (data.success) {
+                    requestEditModal.hide();
+                    showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    alert(data.message || 'Không thể gửi yêu cầu.');
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                alert('Lỗi kết nối.');
+            });
         });
     }
 
