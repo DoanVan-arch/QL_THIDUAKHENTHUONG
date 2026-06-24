@@ -37,7 +37,7 @@
         <button type="button" class="btn btn-sm btn-success" id="btnApproveAll">
             <i class="bi bi-shield-check me-1"></i>PD cuối toàn bộ
         </button>
-        <a href="{{ url_for('admin.export_tracking_excel', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
+        <a href="{{ url_for('admin.export_tracking_word', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
            class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
         <button class="btn btn-sm btn-outline-danger" onclick="printTracking()"><i class="bi bi-printer me-1"></i>In PDF</button>
         <button type="button" class="btn btn-sm btn-danger d-none" id="btnBatchReject"
@@ -138,10 +138,11 @@
                     <th class="col-stt">STT</th>
                     <th class="col-name">Họ tên</th>
                     <th class="col-donvi">Đơn vị</th>
+                    <th class="col-danhhieu-sticky">Danh hiệu</th>
                     <th class="col-capbac">Cấp bậc / Chức vụ</th>
                     <th class="col-doituong">Đối tượng</th>
                     <th class="col-lop">Lớp</th>
-                    <th class="col-danhhieu">Danh hiệu</th>
+                   
                     {% if view_mode == 'detail' %}
                     <th class="col-namhoc detail-only-col">Năm học</th>
                     {% for field in all_fields %}
@@ -198,6 +199,12 @@
                                class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                         </div>
                     </td>
+                    <td class="col-danhhieu-sticky" title="{{ ct.loai_danh_hieu or '-' }}">
+                        {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
+                        {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                        {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                        {% else %}<span class="badge bg-secondary" style="max-width:75px;overflow:hidden;text-overflow:ellipsis;display:block;font-size:0.65rem;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
+                    </td>
                     <td class="col-donvi" title="{{ ct_data.don_vi }}"><small>{{ ct_data.don_vi }}</small></td>
                     <td class="col-capbac" title="{% if ct.quan_nhan %}{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}{% endif %}">
                         {% if ct.quan_nhan %}<small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
@@ -205,12 +212,7 @@
                     </td>
                     <td class="col-doituong" title="{{ ct.doi_tuong or '-' }}"><small>{{ ct.doi_tuong or '-' }}</small></td>
                     <td class="col-lop" title="{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}"><small>{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}</small></td>
-                    <td class="col-danhhieu" title="{{ ct.loai_danh_hieu or '-' }}">
-                        {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
-                        {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
-                        {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                        {% else %}<span class="badge bg-secondary" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;display:block;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
-                    </td>
+                   
                     {% if view_mode == 'detail' %}
                     <td class="col-namhoc detail-only-col"><small>{{ dx.nam_hoc }}</small></td>
                     {% for field in all_fields %}
@@ -891,6 +893,43 @@ div.tbl-scroll td.col-action {
     0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,.4); }
     50%       { box-shadow: 0 0 0 5px rgba(220,53,69,0); }
 }
+
+/*
+  Thứ tự sticky trái (trái → phải):
+  col-cb    : left: 0       width: 36px
+  col-stt   : left: 36px    width: 42px
+  col-name  : left: 78px    width: 210px
+  col-danhhieu-sticky: left: 288px   width: 80px  ← THÊM MỚI
+*/
+
+/* Dịch col-stt sang phải 36px (do có col-cb) */
+.tbl-scroll .col-stt  { left: 36px !important; }
+
+/* Dịch col-name sang phải 36+42=78px */
+.tbl-scroll .col-name { left: 78px !important; }
+
+/* ── THÊM: Danh hiệu sticky ── */
+.tbl-scroll .col-danhhieu-sticky {
+    position: sticky !important;
+    left: 288px !important;   /* 36 + 42 + 210 = 288px */
+    z-index: 3;
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
+    background: #fff;
+    box-shadow: 3px 0 6px rgba(0,0,0,.10);
+}
+.tbl-scroll thead .col-danhhieu-sticky {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
+
+/* Màu nền sticky danh hiệu theo trạng thái hàng */
+.tbl-scroll tr.table-info   .col-danhhieu-sticky { background: #cff4fc !important; }
+.tbl-scroll tr.table-danger .col-danhhieu-sticky { background: #f8d7da !important; }
+.tbl-scroll tbody tr:hover  .col-danhhieu-sticky { background: #eef2f7 !important; }
+
 </style>
 
 <script>

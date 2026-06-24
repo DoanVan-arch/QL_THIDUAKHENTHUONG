@@ -488,6 +488,24 @@
             <div class="modal-body">
                 <p class="mb-2">Yêu cầu đơn vị chỉnh sửa các tiêu chí sau cho: <strong id="reqEditName"></strong></p>
                 <p class="text-muted small">Chỉ các tiêu chí bạn chọn sẽ được mở cho đơn vị chỉnh sửa, mọi thông tin khác giữ nguyên. Sau khi đơn vị sửa, chỉ ban của bạn cần duyệt lại.</p>
+
+                <!-- ★ THÊM: Thanh công cụ chọn nhanh -->
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="text-muted small fw-semibold">Chọn nhanh:</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2"
+                            id="reqEditSelectAll" style="font-size:.78rem;">
+                        <i class="bi bi-check2-all me-1"></i>Tất cả
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                            id="reqEditDeselectAll" style="font-size:.78rem;">
+                        <i class="bi bi-square me-1"></i>Bỏ chọn
+                    </button>
+                    <!-- Đếm số tiêu chí đã chọn -->
+                    <span class="ms-auto text-muted small">
+                        Đã chọn: <strong id="reqEditSelectedCount">0</strong>
+                    </span>
+                </div>
+
                 <div id="reqEditFields" class="border rounded p-2 mb-3" style="max-height:260px; overflow:auto;"></div>
                 <label class="form-label fw-semibold">Lý do yêu cầu</label>
                 <textarea class="form-control" id="reqEditReason" rows="2" placeholder="Nhập lý do cần chỉnh sửa..."></textarea>
@@ -1276,6 +1294,38 @@ function onNamHocChange(sel) {
     else { localStorage.removeItem('sharedNamHoc'); }
     sel.form.submit();
 }
+// ── Hàm cập nhật bộ đếm số tiêu chí đã chọn ──────────────────────────────
+function updateReqEditCount() {
+    const total   = document.querySelectorAll('.req-edit-field').length;
+    const checked = document.querySelectorAll('.req-edit-field:checked').length;
+    const el = document.getElementById('reqEditSelectedCount');
+    if (el) el.textContent = checked + ' / ' + total;
+}
+
+// ── Nút "Chọn tất cả" ─────────────────────────────────────────────────────
+const btnSelectAll = document.getElementById('reqEditSelectAll');
+if (btnSelectAll) {
+    btnSelectAll.addEventListener('click', function () {
+        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = true);
+        updateReqEditCount();
+    });
+}
+
+// ── Nút "Bỏ chọn tất cả" ─────────────────────────────────────────────────
+const btnDeselectAll = document.getElementById('reqEditDeselectAll');
+if (btnDeselectAll) {
+    btnDeselectAll.addEventListener('click', function () {
+        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = false);
+        updateReqEditCount();
+    });
+}
+
+// ── Cập nhật bộ đếm mỗi khi checkbox thay đổi (dùng event delegation) ────
+document.getElementById('reqEditFields').addEventListener('change', function (e) {
+    if (e.target.classList.contains('req-edit-field')) {
+        updateReqEditCount();
+    }
+});
 </script>
 
 <!-- Detail Modal alo -->

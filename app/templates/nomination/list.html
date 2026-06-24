@@ -7,10 +7,46 @@
         <h4><i class="bi bi-award me-2"></i>Đề xuất khen thưởng</h4>
         <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleFilterBar">
             <i class="bi bi-funnel me-1"></i>Lọc dữ liệu
         </button>
+
+        <!-- ★ THÊM: Nút xuất Word tất cả đề xuất -->
+        {% if nominations.items %}
+        <div class="dropdown">
+            <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button"
+                    id="btnExportAllWord" data-bs-toggle="dropdown" aria-expanded="false"
+                    title="Xuất Word tổng hợp tất cả đề xuất">
+                <i class="bi bi-file-earmark-word me-1"></i>Xuất Word
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:220px;">
+                <li>
+                    <h6 class="dropdown-header">Chọn năm học</h6>
+                </li>
+                {% set nam_hoc_set = [] %}
+                {% for dx in nominations.items %}
+                    {% if dx.nam_hoc and dx.nam_hoc not in nam_hoc_set %}
+                        {% if nam_hoc_set.append(dx.nam_hoc) %}{% endif %}
+                    {% endif %}
+                {% endfor %}
+                {% for nh in nam_hoc_set %}
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('nomination.export_all_word', nam_hoc=nh) }}">
+                        <i class="bi bi-file-earmark-word text-success me-2"></i>{{ nh }}
+                    </a>
+                </li>
+                {% endfor %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('nomination.export_all_word') }}">
+                        <i class="bi bi-files text-primary me-2"></i>Tất cả năm học
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+
         <a href="{{ url_for('nomination.create_nomination') }}" class="btn btn-gold">
             <i class="bi bi-plus-lg me-1"></i> Tạo đề xuất mới
         </a>

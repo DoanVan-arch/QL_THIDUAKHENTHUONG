@@ -48,95 +48,66 @@ def _auto_finalize_scope_dept(de_xuat_id):
             continue
         # Ensure KetQuaDuyetChiTiet records exist for all chi_tiets
         existing = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
+        # 1. Lấy toàn bộ ID chi tiết để truy vấn một lần duy nhất (Tránh N+1 Query)
+        chi_tiet_ids = [ct.id for ct in de_xuat.chi_tiets]
+
+        # 2. Lấy ra tất cả các kết quả duyệt hiện có của phe_duyet_id này dưới dạng Dictionary
+        existing_records_list = KetQuaDuyetChiTiet.query.filter(
+            KetQuaDuyetChiTiet.phe_duyet_id == pd.id,
+            KetQuaDuyetChiTiet.chi_tiet_id.in_(chi_tiet_ids)
+        ).all()
+        existing_dict = {kq.chi_tiet_id: kq for kq in existing_records_list}
+
+        # 3. Xử lý logic
         for ct in de_xuat.chi_tiets:
-            in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
             if ct.bi_loai:
                 continue
+                
+            in_scope = _is_in_dept_scope(scope_role, ct.doi_tuong)
+            target_ket_qua = None
+            skip_record = False
+
+            # --- XÁC ĐỊNH TRẠNG THÁI (KẾT QUẢ) MONG MUỐN ---
             if ct.doi_tuong is None:
-                if  phong_val == PhongDuyet.BAN_SAUDAIHOC.value:
-                    # For Ban Quan luc, only certain doi_tuong are in scope
-                    existing = KetQuaDuyetChiTiet.query.filter_by(
-                            phe_duyet_id=pd.id,
-                            chi_tiet_id=ct.id,
-                        ).first()
-                    if not existing:
-                        ket_qua_1 = KetQuaDuyetChiTiet(
-                            phe_duyet_id=pd.id,
-                            chi_tiet_id=ct.id,
-                            ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
-                        )
-                        db.session.add(ket_qua_1)
-                    else:
-                        ket_qua_1 = existing
-                        if not in_scope and ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
-                            ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
-                            db.session.commit()
-                continue  # skip tập thể
-            if ct.id not in existing:
-               
-                
-                if phong_val != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_val != PhongDuyet.BAN_SAUDAIHOC.value:
-                    # For Ban Quan luc, only certain doi_tuong are in scope
-                    existing = KetQuaDuyetChiTiet.query.filter_by(
-                            phe_duyet_id=pd.id,
-                            chi_tiet_id=ct.id,
-                        ).first()
-                    if not existing:
-                        ket_qua_1 = KetQuaDuyetChiTiet(
-                            phe_duyet_id=pd.id,
-                            chi_tiet_id=ct.id,
-                            ket_qua=KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value,
-                        )
-                        db.session.add(ket_qua_1)
-                    else:
-                        ket_qua_1 = existing 
-                        if not in_scope and ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
-                            ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
-                            db.session.commit()
-                            
+                if phong_val == PhongDuyet.BAN_SAUDAIHOC.value:
+                    target_ket_qua = KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value
                 else:
-                    if ct.doi_tuong in ['Học viên sau đại học']:
-                        existing = KetQuaDuyetChiTiet.query.filter_by(
-                            phe_duyet_id=pd.id,
-                            chi_tiet_id=ct.id,
-                        ).first()
-                        if not existing:
-                            ket_qua_1 = KetQuaDuyetChiTiet(
-                                phe_duyet_id=pd.id,
-                                chi_tiet_id=ct.id,
-                                ket_qua=KetQuaDuyet.CHO_DUYET.value,
-                            )
-                            db.session.add(ket_qua_1)
-                        else:
-                            ket_qua_1 = existing
-                            if ket_qua_1.ket_qua != KetQuaDuyet.CHO_DUYET.value:
-                                ket_qua_1.ket_qua = KetQuaDuyet.CHO_DUYET.value
-                                db.session.commit()
-                                
+                    skip_record = True  # skip tập thể cho các phòng khác
+                    
+            else:
+                # Nếu không phải Phòng HCKT và không phải Ban SĐH
+                if phong_val not in (PhongDuyet.PHONG_HAUCANKYTHUAT.value, PhongDuyet.BAN_SAUDAIHOC.value):
+                    target_ket_qua = KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value
+                else:
+                    # Nếu là Phòng HCKT hoặc Ban SĐH
+                    if ct.doi_tuong == 'Học viên sau đại học':
+                        target_ket_qua = KetQuaDuyet.CHO_DUYET.value
                     else:
-                        existing = KetQuaDuyetChiTiet.query.filter_by(
-                            phe_duyet_id=pd.id,
-                            chi_tiet_id=ct.id,
-                        ).first()
-                        if not existing:
-                            ket_qua_1 = KetQuaDuyetChiTiet(
-                                phe_duyet_id=pd.id,
-                                chi_tiet_id=ct.id,
-                                ket_qua=KetQuaDuyet.DONG_Y.value,
-                            )
-                            db.session.add(ket_qua_1)
-                        else:
-                            ket_qua_1 = existing
-                            if ket_qua_1.ket_qua != KetQuaDuyet.DONG_Y.value:
-                                ket_qua_1.ket_qua = KetQuaDuyet.DONG_Y.value
-                                db.session.commit()
-                                
+                        target_ket_qua = KetQuaDuyet.DONG_Y.value
 
-                # Thêm nhiều bản ghi cùng lúc
-                
-            db.session.flush()
+            # Nếu thuộc diện bỏ qua (tập thể của phòng khác) thì chuyển sang chi tiết tiếp theo
+            if skip_record:
+                continue
 
-                # Chỉ flush 1 lần duy nhất sau khi đã add xong
+            # --- ÁP DỤNG THAY ĐỔI VÀO DATABASE (KHÔNG GỌI QUERY NỮA) ---
+            if ct.id in existing_dict:
+                # Đã tồn tại -> Cập nhật nếu giá trị khác với kết quả mong muốn
+                ket_qua_hien_tai = existing_dict[ct.id]
+                if ket_qua_hien_tai.ket_qua != target_ket_qua:
+                    ket_qua_hien_tai.ket_qua = target_ket_qua
+                    # KHÔNG commit ở đây, chờ làm xong hết mới flush
+            else:
+                # Chưa tồn tại -> Thêm mới
+                ket_qua_moi = KetQuaDuyetChiTiet(
+                    phe_duyet_id=pd.id,
+                    chi_tiet_id=ct.id,
+                    ket_qua=target_ket_qua
+                )
+                db.session.add(ket_qua_moi)
+
+        # 4. Lưu tất cả thay đổi xuống database trong 1 lần duy nhất
+        db.session.flush() 
+# Lưu ý: Tuỳ luồng xử lý bên ngoài, bạn có thể cân nhắc dùng db.session.commit() nếu đây là cuối tiến trình.
             
         
            
@@ -1179,7 +1150,7 @@ def request_edit(pd_id, ct_id):
 
     allowed = _reviewable_fields_for_role(current_user.role, ct)
     fields = [f for f in fields if f in allowed]
-    if not fields:
+    if not fields and not phong_name == PhongDuyet.BAN_TUYENHUAN.value:
         return jsonify({'success': False, 'message': 'Các tiêu chí được chọn không thuộc phạm vi duyệt của bạn.'}), 400
 
     # Reuse an existing open request for the same item from the same department.

@@ -1882,54 +1882,78 @@ function applyModalFieldVisibility(selectedDanhHieu, selectedDoiTuong) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Hàm chính: mở modal sửa, tái hiện đúng UI/logic của form Add New Item
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// openEditItemModal — cập nhật: truyền d vào _modalRenderTapTheCriteria
+// ─────────────────────────────────────────────────────────────────────────────
 function openEditItemModal(ctId) {
     var modalEl = document.getElementById('editItemModal');
-    var modal   = new bootstrap.Modal(modalEl);
+    var modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
     var loading = document.getElementById('editItemLoading');
     var content = document.getElementById('editItemContent');
 
-    // Reset UI
     loading.style.display = 'block';
     content.style.display = 'none';
+
+    // Reset: xoá container tập thể
+    var editTTContainer = document.getElementById('edit-tap-the-criteria-container');
+    if (editTTContainer) editTTContainer.innerHTML = '';
+
+    // Reset section: dùng classList.add('hidden') + xoá inline style
+    document.querySelectorAll('#edit-criteria-row .form-section').forEach(function(s) {
+        s.classList.add('hidden');
+        s.style.display = '';
+    });
+    document.querySelectorAll('#edit-criteria-row .edit-field-wrap').forEach(function(w) {
+        w.style.display = 'none';
+    });
+
     document.getElementById('editItemForm').action = '/nomination/item/' + ctId + '/update';
     modal.show();
 
     fetch('/nomination/item/' + ctId + '/data')
         .then(function(r) { return r.json(); })
         .then(function(d) {
+            // DEBUG — bỏ comment khi cần kiểm tra
+            // console.log('[EditModal] data:', JSON.stringify(d, null, 2));
+
             loading.style.display = 'none';
             content.style.display = 'block';
 
-            var form      = document.getElementById('editItemForm');
-            var danhHieu  = d.loai_danh_hieu || '';
-            var phamVi    = (DANH_HIEU_PHAM_VI && DANH_HIEU_PHAM_VI[danhHieu]) || 'Cá nhân';
-            var isTapThe  = (phamVi === 'Đơn vị');
-            var doiTuong  = isTapThe ? '' : (d.doi_tuong || '');
+            var form     = document.getElementById('editItemForm');
+            var danhHieu = d.loai_danh_hieu || '';
+            var phamVi   = (DANH_HIEU_PHAM_VI && DANH_HIEU_PHAM_VI[danhHieu]) || 'Cá nhân';
+            var isTapThe = (phamVi === 'Đơn vị');
+            var doiTuong = isTapThe ? '' : (d.doi_tuong || '');
 
-            // ── BƯỚC 1: Header info ─────────────────────────────────────────
+            // BƯỚC 1: Header
             _modalSetHeader(d, isTapThe, danhHieu);
 
-            // ── BƯỚC 2: Toggle block cá nhân / tập thể (giống togglePhamViBlocks) ──
-            _modalTogglePhamViBlocks(isTapThe);
+            // BƯỚC 2: Toggle wrap
+            var wrapCN = document.getElementById('edit-wrap-ca-nhan');
+            var wrapTT = document.getElementById('edit-wrap-tap-the');
+            if (wrapCN) wrapCN.style.display = isTapThe ? 'none' : '';
+            if (wrapTT) wrapTT.style.display = isTapThe ? '' : 'none';
 
-            // ── BƯỚC 3: Render tiêu chí tập thể động (giống renderTapTheCriteria) ──
-            _modalRenderTapTheCriteria(danhHieu, isTapThe);
+            // BƯỚC 3: Render tiêu chí tập thể + điền data ngay
+            // Truyền d để điền giá trị ngay sau khi render HTML
+            _modalRenderTapTheCriteria(danhHieu, isTapThe, d);
 
-            // ── BƯỚC 4: Ẩn/hiện các section cá nhân (giống applyCriteriaVisibilityByGroup) ──
+            // BƯỚC 4: Visibility cá nhân (truyền đủ 3 tham số)
             _modalApplySectionVisibility(danhHieu, doiTuong, isTapThe);
 
-            // ── BƯỚC 5: Điền data vào toàn bộ fields (động, không hardcode) ──
+            // BƯỚC 5: Điền data toàn bộ fields còn lại
             _modalFillAllFields(form, d, isTapThe);
 
-            // ── BƯỚC 6: NCKH checkboxes ────────────────────────────────────
+            // BƯỚC 6: NCKH
             _modalFillNckh(form, d.nckh_noi_dung || '');
 
-            // ── BƯỚC 7: Cờ nhân sự (chỉ cá nhân) ─────────────────────────
+            // BƯỚC 7: Cờ nhân sự
             if (!isTapThe) {
                 _modalApplyPersonnelFlags(d);
             }
 
-            // ── BƯỚC 8: Tốt nghiệp ─────────────────────────────────────────
+            // BƯỚC 8: Tốt nghiệp
             var htSelect = form.querySelector('[name="hinh_thuc_tot_nghiep"]');
             if (htSelect) {
                 htSelect.onchange = applyModalDiemTotNghiep;
@@ -1938,12 +1962,11 @@ function openEditItemModal(ctId) {
         })
         .catch(function(err) {
             loading.innerHTML = '<div class="alert alert-danger">'
-                + '<i class="bi bi-exclamation-triangle me-2"></i>Không tải được dữ liệu. '
+                + '<i class="bi bi-exclamation-triangle me-2"></i>Không tải được dữ liệu: '
                 + err + '</div>';
             console.error(err);
         });
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // BƯỚC 1: Set header display
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2009,13 +2032,20 @@ function _modalTogglePhamViBlocks(isTapThe) {
 // BƯỚC 3: Render tiêu chí tập thể động vào modal
 // Tương đương renderTapTheCriteria() của form Add
 // ─────────────────────────────────────────────────────────────────────────────
-function _modalRenderTapTheCriteria(danhHieu, isTapThe) {
+// ─────────────────────────────────────────────────────────────────────────────
+// BƯỚC 3: Render tiêu chí tập thể động
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// _modalRenderTapTheCriteria — render field với prefix tap_the_ để khớp backend
+// ─────────────────────────────────────────────────────────────────────────────
+function _modalRenderTapTheCriteria(danhHieu, isTapThe, dataObj) {
     var section   = document.getElementById('edit-section-tap-the-criteria');
     var container = document.getElementById('edit-tap-the-criteria-container');
     if (!section || !container) return;
 
     if (!isTapThe || !danhHieu || !TIEU_CHI_TAP_THE || !TIEU_CHI_TAP_THE[danhHieu]) {
-        section.style.display = 'none';
+        section.classList.add('hidden');
+        section.style.display = '';
         container.innerHTML = '';
         return;
     }
@@ -2027,22 +2057,27 @@ function _modalRenderTapTheCriteria(danhHieu, isTapThe) {
         var tcs = byNhom[nhom];
         if (!tcs || !tcs.length) return;
 
+        var nhomLabel = (NHOM_META && NHOM_META[nhom] && NHOM_META[nhom].ten) || nhom || '';
+
         html += '<div class="mb-3">'
              +  '<div class="fw-semibold text-secondary border-bottom pb-1 mb-2"'
-             +  ' style="font-size:0.85rem;">' + ('') + '</div>'
+             +  ' style="font-size:0.85rem;">' + nhomLabel + '</div>'
              +  '<div class="row g-2">';
 
         tcs.forEach(function(tc) {
-            html += '<div class="col-md-4 edit-field-wrap" data-field="' + tc.ma_truong + '">';
+            // ★ KEY FIX: name = 'tap_the_' + ma_truong để khớp backend
+            var fieldName = 'tap_the_' + tc.ma_truong;
+
+            html += '<div class="col-md-4 edit-field-wrap" data-field="' + fieldName + '">';
             html += '<label class="form-label" style="font-size:0.82rem;">' + tc.ten;
             if (tc.huong_dan) {
                 html += ' <i class="bi bi-info-circle text-muted ms-1" title="'
-                     + tc.huong_dan.replace(/"/g, '&quot;') + '"></i>';
+                     +  tc.huong_dan.replace(/"/g, '&quot;') + '"></i>';
             }
             html += '</label>';
 
             if (tc.loai_input === 'combobox' && tc.gia_tri_chon && tc.gia_tri_chon.length) {
-                html += '<select class="form-select form-select-sm" name="' + tc.ma_truong + '">'
+                html += '<select class="form-select form-select-sm" name="' + fieldName + '">'
                      +  '<option value="">-- Chọn --</option>';
                 tc.gia_tri_chon.forEach(function(opt) {
                     html += '<option value="' + opt + '">' + opt + '</option>';
@@ -2050,98 +2085,202 @@ function _modalRenderTapTheCriteria(danhHieu, isTapThe) {
                 html += '</select>';
             } else {
                 html += '<input type="text" class="form-control form-control-sm"'
-                     +  ' name="' + tc.ma_truong + '">';
+                     +  ' name="' + fieldName + '">';
             }
-            html += '</div>'; // col
+            html += '</div>';
         });
 
-        html += '</div></div>'; // row + mb-3
+        html += '</div></div>';
     });
 
     container.innerHTML = html;
+
+    // Hiện section
+    section.classList.remove('hidden');
     section.style.display = '';
+
+    // ── Điền giá trị ngay sau khi render ─────────────────────────────────
+    if (dataObj) {
+        // tap_the_data từ server: {ma_truong: value} (KHÔNG có prefix tap_the_)
+        var tapTheData = {};
+        if (dataObj.tap_the_data) {
+            // Server có thể trả JSON string hoặc object
+            if (typeof dataObj.tap_the_data === 'string') {
+                try { tapTheData = JSON.parse(dataObj.tap_the_data); } catch(e) {}
+            } else {
+                tapTheData = dataObj.tap_the_data;
+            }
+        }
+
+        container.querySelectorAll('input[name], select[name]').forEach(function(el) {
+            var fieldName = el.getAttribute('name'); // 'tap_the_cb_xeploai'
+            if (!fieldName) return;
+
+            // Bỏ prefix để tìm trong tap_the_data
+            var rawKey = fieldName.indexOf('tap_the_') === 0
+                ? fieldName.slice(8)   // 'cb_xeploai'
+                : fieldName;
+
+            var val = tapTheData[rawKey];
+            if (val === undefined || val === null || val === '') return;
+
+            var strVal = String(val);
+            if (el.tagName === 'SELECT') {
+                for (var i = 0; i < el.options.length; i++) {
+                    if (el.options[i].value === strVal) {
+                        el.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else {
+                el.value = strVal;
+            }
+        });
+    }
 }
 
+
 // ─────────────────────────────────────────────────────────────────────────────
-// BƯỚC 4: Ẩn/hiện các section cá nhân theo danh hiệu + đối tượng
-// Tương đương applyCriteriaVisibilityByGroup() của form Add
+// BƯỚC 4: Ẩn/hiện section + field-wrap cá nhân
 // ─────────────────────────────────────────────────────────────────────────────
 function _modalApplySectionVisibility(danhHieu, doiTuong, isTapThe) {
-    // Tập thể: tất cả section cá nhân đã ẩn ở bước 2 → không cần xử lý thêm
-    if (isTapThe) return;
+    // FIX nguyên nhân 3: nhận đúng tham số isTapThe
+    if (isTapThe) return;  // tập thể: section cá nhân đã hidden từ reset, không xử lý thêm
 
     var currentCriteria = (danhHieu && DANH_HIEU_TIEU_CHI && DANH_HIEU_TIEU_CHI[danhHieu])
         ? DANH_HIEU_TIEU_CHI[danhHieu] : [];
+    var effDT = doiTuong || '';
 
-    var effDoiTuong = doiTuong || '';
-
-    // Duyệt từng edit-field-wrap, áp dụng fieldVisibility()
+    // Áp dụng fieldVisibility() cho từng edit-field-wrap
     document.querySelectorAll('#edit-criteria-row .edit-field-wrap[data-field]').forEach(function(wrap) {
-        var fieldName = wrap.getAttribute('data-field');
-
-        // diem_tn_* do applyModalDiemTotNghiep quản lý
-        if (MODAL_DIEM_TN_SET && MODAL_DIEM_TN_SET[fieldName]) return;
+        var fn = wrap.getAttribute('data-field');
+        if (MODAL_DIEM_TN_SET && MODAL_DIEM_TN_SET[fn]) return; // do applyModalDiemTotNghiep quản lý
 
         var vis;
-        try {
-            vis = fieldVisibility(fieldName, danhHieu, effDoiTuong, currentCriteria);
-        } catch(e) {
-            vis = 'no_opinion';
-        }
+        try { vis = fieldVisibility(fn, danhHieu, effDT, currentCriteria); }
+        catch(e) { vis = 'no_opinion'; }
 
-        if (vis === 'hide') {
-            wrap.style.display = 'none';
-        } else if (vis === 'show') {
-            wrap.style.display = '';
-        } else {
-            // no_opinion: hiện nếu có đối tượng
-            wrap.style.display = effDoiTuong ? '' : 'none';
-        }
+        if (vis === 'hide')       wrap.style.display = 'none';
+        else if (vis === 'show')  wrap.style.display = '';
+        else /* no_opinion */     wrap.style.display = effDT ? '' : 'none';
     });
 
-    // Ẩn/hiện từng section dựa trên số field visible bên trong
-    var caNhanSections = [
-        'edit-section-chung', 'edit-section-quansu', 'edit-section-dang-doan',
-        'edit-section-giangvien', 'edit-section-pgs', 'edit-section-hocvien',
-        'edit-section-totnghiep', 'edit-section-nckh', 'edit-section-thanhtich'
+    // Ẩn/hiện section theo số field visible bên trong
+    var CA_NHAN_SECTIONS = [
+        'edit-section-chung', 'edit-section-quansu',
+        'edit-section-giangvien', 'edit-section-pgs',
+        'edit-section-hocvien', 'edit-section-totnghiep',
+        'edit-section-nckh', 'edit-section-thanhtich'
+        // edit-section-dang-doan: do _modalApplyPersonnelFlags quản lý
     ];
-
-    caNhanSections.forEach(function(id) {
+    CA_NHAN_SECTIONS.forEach(function(id) {
         var sec = document.getElementById(id);
         if (!sec) return;
-        // edit-section-dang-doan: do _modalApplyPersonnelFlags quản lý
-        if (id === 'edit-section-dang-doan') return;
-
-        var visibleCount = Array.from(
-            sec.querySelectorAll('.edit-field-wrap')
-        ).filter(function(w) { return w.style.display !== 'none'; }).length;
-
-        sec.classList.toggle('hidden', visibleCount === 0);
+        var hasVisible = Array.from(sec.querySelectorAll('.edit-field-wrap'))
+            .some(function(w) { return w.style.display !== 'none'; });
+        // Dùng style.display thay vì classList để nhất quán với reset
+        sec.classList.toggle('hidden', !hasVisible);
     });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BƯỚC 5: Điền data vào toàn bộ fields — hoàn toàn động, không hardcode
+// BƯỚC 5: Điền data động — quét toàn bộ input trong form (kể cả tập thể)
 // ─────────────────────────────────────────────────────────────────────────────
 function _modalFillAllFields(form, d, isTapThe) {
     var SKIP = {
         'csrf_token'        : true,
-        'nckh_noi_dung'     : true,  // checkbox group — xử lý riêng ở bước 6
-        'nckh_noi_dung_text': true,  // hidden — sync từ checkbox
+        'nckh_noi_dung'     : true,
+        'nckh_noi_dung_text': true,
     };
 
-    var seen = {};
-    form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
-        var name = el.getAttribute('name');
-        if (!name || SKIP[name] || seen[name]) return;
-        seen[name] = true;
+    if (isTapThe) {
+        // ── Tập thể: điền TỪNG field theo name, KHÔNG dùng seen{} ──────────
+        // Lý do: các field tập thể vừa được render động vào DOM,
+        // không bị xung đột với field cá nhân (đã hidden)
+        form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
+            var name = el.getAttribute('name');
+            if (!name || SKIP[name]) return;
 
-        var value = _resolveFieldValue(name, d, isTapThe);
-        if (value !== undefined && value !== null) {
-            el.value = String(value);
-        }
-    });
+            var val = _modalResolveValue(name, d, true);
+            if (val === undefined || val === null) return;
+
+            var strVal = String(val);
+
+            if (el.tagName === 'SELECT') {
+                // Tìm option khớp (so sánh cả value và text để chắc chắn)
+                var matched = false;
+                for (var i = 0; i < el.options.length; i++) {
+                    if (el.options[i].value === strVal) {
+                        el.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+                // Nếu không khớp option value, thử khớp text
+                if (!matched) {
+                    for (var j = 0; j < el.options.length; j++) {
+                        if (el.options[j].text.trim() === strVal) {
+                            el.selectedIndex = j;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                el.value = strVal;
+            }
+        });
+
+    } else {
+        // ── Cá nhân: dùng seen{} như cũ ────────────────────────────────────
+        var seen = {};
+        form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(el) {
+            var name = el.getAttribute('name');
+            if (!name || SKIP[name] || seen[name]) return;
+            seen[name] = true;
+
+            var val = _modalResolveValue(name, d, false);
+            if (val === undefined || val === null) return;
+
+            var strVal = String(val);
+            if (el.tagName === 'SELECT') {
+                for (var i = 0; i < el.options.length; i++) {
+                    if (el.options[i].value === strVal) {
+                        el.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else {
+                el.value = strVal;
+            }
+        });
+    }
 }
+
+function _modalResolveValue(name, d, isTapThe) {
+    // Ưu tiên 1: key trực tiếp trong d (kể cả false, 0, '')
+    if (name in d && d[name] !== null && d[name] !== undefined) {
+        return d[name];
+    }
+
+    if (!isTapThe) return undefined;
+
+    // Ưu tiên 2: tap_the_data[name]
+    if (d.tap_the_data && typeof d.tap_the_data === 'object') {
+        if (name in d.tap_the_data && d.tap_the_data[name] !== null && d.tap_the_data[name] !== undefined) {
+            return d.tap_the_data[name];
+        }
+        // Ưu tiên 3: bỏ prefix tap_the_
+        if (name.indexOf('tap_the_') === 0) {
+            var stripped = name.slice(8);
+            if (stripped in d.tap_the_data && d.tap_the_data[stripped] !== null) {
+                return d.tap_the_data[stripped];
+            }
+        }
+    }
+
+    return undefined;
+}
+
 
 // Giải quyết giá trị cho 1 field từ data server
 // Ưu tiên: d[name] → d.tap_the_data[name] → d[name.replace('tap_the_','')] 

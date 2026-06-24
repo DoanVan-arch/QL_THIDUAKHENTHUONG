@@ -24,7 +24,18 @@ from datetime import datetime
 from html import escape
 from sqlalchemy import case
 from sqlalchemy.exc import ProgrammingError, OperationalError
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.shared import Pt, Cm, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+from io import BytesIO
+from flask import send_file
+from datetime import date
 
+import hashlib, binascii, os
 admin_bp = Blueprint('admin', __name__)
 
 # The six reviewing departments (excluding admin)
@@ -458,11 +469,11 @@ def approval_tracking():
             dx = nom_data['dx']
             for ct_entry in nom_data['chi_tiets']:
                 ct = ct_entry['ct']
-                qn = ct.quan_nhan
+                
                 flat_ca_nhan.append({
                     **ct_entry,
                     'don_vi': dx.don_vi.ten_don_vi if dx.don_vi else '',
-                    'chuc_vu': qn.chuc_vu if qn else '',
+                    'loai_danh_hieu': ct.loai_danh_hieu if ct.loai_danh_hieu else '',
                     'dx': dx,
                 })
             for ct_entry in nom_data['tap_the_chi_tiets']:
@@ -470,13 +481,14 @@ def approval_tracking():
                 flat_tap_the.append({
                     **ct_entry,
                     'don_vi': dx.don_vi.ten_don_vi if dx.don_vi else '',
+                    'loai_danh_hieu': ct.loai_danh_hieu if ct.loai_danh_hieu else '',
                     'dx': dx,
                 })
 
     # Sort cá nhân: theo đơn vị rồi chức vụ
-    flat_ca_nhan.sort(key=lambda x: (x['don_vi'], x['chuc_vu'] or ''))
+    flat_ca_nhan.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu'] or ''))
     # Sort tập thể: theo đơn vị
-    flat_tap_the.sort(key=lambda x: x['don_vi'])
+    flat_tap_the.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu'] or ''))
 
     danh_hieu_list = [e.value for e in LoaiDanhHieu]
 
@@ -741,7 +753,7 @@ def api_chi_tiet_detail(ct_id):
             ('th_diem_tdtx_quy3', 'Điểm thi đua Quý III', None),
             ('th_diem_tdtx_quy4', 'Điểm Thi đua  Quý IV', None),
             ('th_kq_ktra_ct_pct_dyc', 'Tỷ lệ kết quả kiểm tra chính trị đạt yêu cầu trở lên', None),
-            ('th_kq_ktra_ct_xeploai', 'Kết quả kiểm tra chính trị đơn vị đạt:', None),
+            ('th_kq_ktra_ct_xeploai', 'Kết quả kiểm tra chính trị đơn vị đạt', None),
             ('ctqc_xeploai_doanvien', 'Xếp loại đoàn viên', None),
             ('ctqc_xeploai_tcd', 'Xếp loại tổ chức đoàn', None),
             ('ctqc_xeploai_hoivien_phunu', 'Tỷ lệ xếp loại hội viên phụ nữ hoàn thành nhiệm vụ trở lên (%)', None),
@@ -2213,7 +2225,727 @@ def export_tracking_excel():
     return send_file(output, as_attachment=True,
                      download_name='_'.join(fname_parts) + '.xlsx',
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+@admin_bp.route('/tracking/export-word')
+@login_required
+@admin_required
+def export_tracking_word():
+    """Export bảng theo dõi quy trình phê duyệt ra Word (theo mẫu khen thưởng)."""
+    import datetime as _dt
+    from io import BytesIO
+    from datetime import date
+    from docx import Document
+    from docx.shared import Cm, Pt, RGBColor
+    from docx.enum.text import WD_LINE_SPACING
+    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
 
+    db.session.expire_all()
+
+    # ── Tham số lọc (giống export_tracking_excel) ────────────────────────────
+    status_filter    = request.args.get('status', '')
+    unit_filter      = request.args.get('unit', '')
+    danh_hieu_filter = request.args.get('danh_hieu', '')
+    search_query     = request.args.get('q', '').strip()
+    scope_filter     = request.args.get('scope', '')
+    nam_hoc_filter   = request.args.get('nam_hoc', '')
+
+    query = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+    if nam_hoc_filter:
+        query = query.filter(DeXuat.nam_hoc == nam_hoc_filter)
+    if status_filter:
+        query = query.filter(DeXuat.trang_thai == status_filter)
+    if unit_filter:
+        query = query.join(DonVi).filter(DonVi.ten_don_vi == unit_filter)
+    else:
+        query = query.join(DonVi, DeXuat.don_vi_id == DonVi.id)
+
+    nominations = query.order_by(
+        DonVi.thu_tu.asc(), DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()
+    ).all()
+
+    approved_ct_ids = set(
+        row[0] for row in db.session.query(KhenThuong.chi_tiet_id).all()
+    )
+
+    # ── Gom chi tiết theo danh hiệu ──────────────────────────────────────────
+    ds_quyet_thang   = []
+    ds_tien_tien_dv  = []
+    ds_chien_si_tdcs = []
+    ds_chien_si_tt   = []
+    ds_khac          = {}
+    seen_ids         = set()
+
+    for dx in nominations:
+        for ct in dx.chi_tiets:
+            if ct.id in seen_ids:
+                continue
+            seen_ids.add(ct.id)
+
+            if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter:
+                continue
+            if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG:
+                continue
+            if scope_filter == 'can_bo' and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG:
+                continue
+
+            ho_ten = (ct.quan_nhan.ho_ten if ct.quan_nhan
+                      else (ct.ten_don_vi_de_xuat or ''))
+            if search_query and search_query.lower() not in ho_ten.lower():
+                continue
+
+            dh = (ct.loai_danh_hieu or '').strip()
+            if   dh == 'Đơn vị quyết thắng':  ds_quyet_thang.append((ct, dx))
+            elif dh == 'Đơn vị tiên tiến':     ds_tien_tien_dv.append((ct, dx))
+            elif dh == 'Chiến sĩ thi đua':     ds_chien_si_tdcs.append((ct, dx))
+            elif dh == 'Chiến sĩ tiên tiến':   ds_chien_si_tt.append((ct, dx))
+            else: ds_khac.setdefault(dh, []).append((ct, dx))
+
+    title_nam_hoc = nam_hoc_filter or 'TẤT CẢ NĂM HỌC'
+
+    # ── Helpers font / cell ───────────────────────────────────────────────────
+    def set_font(run, bold=False, size=11, italic=False, color=None):
+        run.bold       = bold
+        run.italic     = italic
+        run.font.size  = Pt(size)
+        run.font.name  = 'Times New Roman'
+        if color:
+            run.font.color.rgb = RGBColor(*color)
+
+    def add_cell(cell, text, bold=False, size=10, align=WD_ALIGN_PARAGRAPH.LEFT):
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        p = cell.paragraphs[0]
+        p.alignment = align
+        p.paragraph_format.space_before = Pt(1)
+        p.paragraph_format.space_after  = Pt(1)
+        run = p.add_run(str(text))
+        set_font(run, bold=bold, size=size)
+
+    def set_repeat_table_header(row):
+        tr   = row._tr
+        trPr = tr.get_or_add_trPr()
+        if trPr.find(qn('w:tblHeader')) is None:
+            trPr.append(OxmlElement('w:tblHeader'))
+
+    def _para(cell, is_first=False, align=WD_ALIGN_PARAGRAPH.CENTER):
+        p = cell.paragraphs[0] if is_first else cell.add_paragraph()
+        p.alignment = align
+        p.paragraph_format.space_before      = Pt(0)
+        p.paragraph_format.space_after       = Pt(0)
+        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        p.paragraph_format.left_indent       = Pt(0)
+        p.paragraph_format.right_indent      = Pt(0)
+        return p
+
+    def _lock_cell_width(cell, width_cm):
+        cell.width = Cm(width_cm)
+        tcPr = cell._tc.get_or_add_tcPr()
+        tcW  = tcPr.find(qn('w:tcW'))
+        if tcW is None:
+            tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
+        tcW.set(qn('w:w'), str(int(Cm(width_cm) / 635)))
+        tcW.set(qn('w:type'), 'dxa')
+
+    def _remove_cell_borders(cell):
+        tcPr     = cell._tc.get_or_add_tcPr()
+        tcBorders = OxmlElement('w:tcBorders')
+        for edge in ('top','left','bottom','right','insideH','insideV'):
+            tag = OxmlElement(f'w:{edge}')
+            tag.set(qn('w:val'), 'none'); tag.set(qn('w:sz'), '0')
+            tag.set(qn('w:space'), '0'); tag.set(qn('w:color'), 'auto')
+            tcBorders.append(tag)
+        tcPr.append(tcBorders)
+
+    def _clear_cell_margin(cell):
+        tcPr  = cell._tc.get_or_add_tcPr()
+        tcMar = tcPr.find(qn('w:tcMar'))
+        if tcMar is None:
+            tcMar = OxmlElement('w:tcMar'); tcPr.append(tcMar)
+        for edge in ('top','left','bottom','right'):
+            tag = tcMar.find(qn(f'w:{edge}'))
+            if tag is None:
+                tag = OxmlElement(f'w:{edge}'); tcMar.append(tag)
+            tag.set(qn('w:w'), '0'); tag.set(qn('w:type'), 'dxa')
+
+    def _set_cell_pad(cell, left_cm=0, right_cm=0):
+        tcPr  = cell._tc.get_or_add_tcPr()
+        tcMar = tcPr.find(qn('w:tcMar'))
+        if tcMar is None:
+            tcMar = OxmlElement('w:tcMar'); tcPr.append(tcMar)
+        for edge, val in (('left', left_cm), ('right', right_cm)):
+            tag = tcMar.find(qn(f'w:{edge}'))
+            if tag is None:
+                tag = OxmlElement(f'w:{edge}'); tcMar.append(tag)
+            tag.set(qn('w:w'), str(int(Cm(val) / 635)))
+            tag.set(qn('w:type'), 'dxa')
+
+    def add_page_number(run):
+        fldChar1 = OxmlElement('w:fldChar')
+        fldChar1.set(qn('w:fldCharType'), 'begin')
+        instrText = OxmlElement('w:instrText')
+        instrText.text = 'PAGE'
+        fldChar2 = OxmlElement('w:fldChar')
+        fldChar2.set(qn('w:fldCharType'), 'end')
+        run._r.append(fldChar1)
+        run._r.append(instrText)
+        run._r.append(fldChar2)
+
+    # ── Build document ────────────────────────────────────────────────────────
+    doc = Document()
+
+    PAGE_W_CM    = 21.0
+    MARGIN_L     = 3.5
+    MARGIN_R     = 1.5
+    PRINT_W_CM   = PAGE_W_CM - MARGIN_L - MARGIN_R   # 16.0
+    HEADER_W_CM  = PAGE_W_CM                          # 21.0
+    OVERFLOW_EACH = (HEADER_W_CM - PRINT_W_CM) / 2   # 2.5
+    LEFT_CM      = 9.5
+    RIGHT_CM     = 11.5
+
+    for section in doc.sections:
+        section.top_margin    = Cm(2)
+        section.bottom_margin = Cm(2)
+        section.left_margin   = Cm(MARGIN_L)
+        section.right_margin  = Cm(MARGIN_R)
+        section.different_first_page_header_footer = True
+        header   = section.header
+        p_header = header.paragraphs[0] if header.paragraphs else header.add_paragraph()
+        p_header.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_header.clear()
+        add_page_number(p_header.add_run())
+
+    # ── Bảng header Quốc hiệu ────────────────────────────────────────────────
+    tbl_header = doc.add_table(rows=1, cols=2)
+    tbl_header.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_header.autofit   = False
+
+    tblPr = tbl_header._tbl.tblPr
+    tblW  = tblPr.find(qn('w:tblW'))
+    if tblW is None:
+        tblW = OxmlElement('w:tblW'); tblPr.append(tblW)
+    tblW.set(qn('w:w'), str(int(Cm(HEADER_W_CM) / 635)))
+    tblW.set(qn('w:type'), 'dxa')
+
+    tblLayout = tblPr.find(qn('w:tblLayout'))
+    if tblLayout is None:
+        tblLayout = OxmlElement('w:tblLayout'); tblPr.append(tblLayout)
+    tblLayout.set(qn('w:type'), 'fixed')
+
+    tblInd = tblPr.find(qn('w:tblInd'))
+    if tblInd is not None:
+        tblPr.remove(tblInd)
+
+    tblGrid = tbl_header._tbl.find(qn('w:tblGrid'))
+    if tblGrid is not None:
+        tbl_header._tbl.remove(tblGrid)
+    tblGrid = OxmlElement('w:tblGrid')
+    tbl_header._tbl.insert(1, tblGrid)
+    for w in [LEFT_CM, RIGHT_CM]:
+        gridCol = OxmlElement('w:gridCol')
+        gridCol.set(qn('w:w'), str(int(Cm(w) / 635)))
+        tblGrid.append(gridCol)
+
+    left_cell  = tbl_header.rows[0].cells[0]
+    right_cell = tbl_header.rows[0].cells[1]
+    _lock_cell_width(left_cell,  LEFT_CM)
+    _lock_cell_width(right_cell, RIGHT_CM)
+    _remove_cell_borders(left_cell)
+    _remove_cell_borders(right_cell)
+    _clear_cell_margin(left_cell)
+    _clear_cell_margin(right_cell)
+    _set_cell_pad(left_cell,  left_cm=OVERFLOW_EACH)
+    _set_cell_pad(right_cell, right_cm=OVERFLOW_EACH)
+
+    p_l1 = _para(left_cell, is_first=True)
+    set_font(p_l1.add_run('TRƯỜNG SĨ QUAN CHÍNH TRỊ'), bold=False, size=12)
+    p_l2 = _para(left_cell)
+    r2   = p_l2.add_run('CƠ QUAN THƯỜNG TRỰC')
+    set_font(r2, bold=True, size=12); r2.underline = True
+    p_l3 = _para(left_cell)
+    set_font(p_l3.add_run(''), size=11)
+
+    p_r1 = _para(right_cell, is_first=True)
+    set_font(p_r1.add_run('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'), bold=True, size=12)
+    p_r2 = _para(right_cell)
+    r_r2 = p_r2.add_run('Độc lập - Tự do - Hạnh phúc')
+    set_font(r_r2, bold=True, size=12); r_r2.underline = True
+    p_r3 = _para(right_cell)
+    p_r3.paragraph_format.space_before = Pt(3)
+    today = date.today()
+    set_font(
+        p_r3.add_run(f'Hà Nội, ngày {today.day} tháng {today.month} năm {today.year}'),
+        size=11, italic=True
+    )
+
+    for row in tbl_header.rows:
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                p.paragraph_format.space_before      = Pt(0)
+                p.paragraph_format.space_after       = Pt(0)
+                p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+
+    # ── Tiêu đề tài liệu ─────────────────────────────────────────────────────
+    doc.add_paragraph()
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    set_font(
+        p_title.add_run(f'DANH SÁCH THEO DÕI PHÊ DUYỆT KHEN THƯỞNG NĂM HỌC {title_nam_hoc}'),
+        bold=True, size=13
+    )
+
+    # Thông tin lọc
+    filter_parts = []
+    if status_filter:    filter_parts.append(f'Trạng thái: {status_filter}')
+    if unit_filter:      filter_parts.append(f'Đơn vị: {unit_filter}')
+    if danh_hieu_filter: filter_parts.append(f'Danh hiệu: {danh_hieu_filter}')
+    if scope_filter:     filter_parts.append(f'Diện: {"Quân lực" if scope_filter == "quan_luc" else "Cán bộ"}')
+    if filter_parts:
+        p_filter = doc.add_paragraph()
+        p_filter.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        set_font(p_filter.add_run('(' + '  |  '.join(filter_parts) + ')'),
+                 size=10, italic=True)
+
+    doc.add_paragraph()
+
+    # ── Hàm build bảng cá nhân ───────────────────────────────────────────────
+    def add_personnel_section(label, items, stt_start=1):
+        """items: list of (ct, dx)"""
+        p_sec = doc.add_paragraph()
+        p_sec.paragraph_format.space_before = Pt(4)
+        p_sec.paragraph_format.space_after  = Pt(2)
+        run_sec = p_sec.add_run(label)
+        set_font(run_sec, bold=True, size=11)
+
+        if not items:
+            p_empty = doc.add_paragraph()
+            set_font(p_empty.add_run('(Không có)'), size=10, italic=True)
+            return stt_start
+
+        # Cột: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Năm học | Trạng thái | Tóm tắt | Ghi chú
+        col_widths = [0.7, 3.5, 1.8, 2.2, 2.5, 1.5, 2.5, 4.5, 1.0]
+        headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
+                       'Đơn vị', 'Năm học', 'Trạng thái', 'Tóm tắt thành tích', 'Ghi chú']
+
+        tbl = doc.add_table(rows=1, cols=len(col_widths))
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style     = 'Table Grid'
+        tbl.autofit   = True
+
+        tblPr_t = tbl._tbl.tblPr
+        tblLayout_t = tblPr_t.find(qn('w:tblLayout'))
+        if tblLayout_t is None:
+            tblLayout_t = OxmlElement('w:tblLayout'); tblPr_t.append(tblLayout_t)
+        tblLayout_t.set(qn('w:type'), 'autofit')
+
+        for i, w in enumerate(col_widths):
+            twips = int(Cm(w) / 635)
+            for row in tbl.rows:
+                tc   = row.cells[i]._tc
+                tcPr = tc.get_or_add_tcPr()
+                tcW  = tcPr.find(qn('w:tcW'))
+                if tcW is None:
+                    tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
+                tcW.set(qn('w:w'), str(twips)); tcW.set(qn('w:type'), 'dxa')
+
+        hrow = tbl.rows[0]
+        for i, h in enumerate(headers_txt):
+            add_cell(hrow.cells[i], h, bold=True, size=10,
+                     align=WD_ALIGN_PARAGRAPH.CENTER)
+        set_repeat_table_header(hrow)
+
+        stt = stt_start
+        for ct, dx in items:
+            qn_obj  = ct.quan_nhan
+            trang_thai = dx.trang_thai
+            if ct.id in approved_ct_ids:
+                trang_thai = 'Đã khen thưởng'
+
+            row = tbl.add_row()
+            add_cell(row.cells[0], str(stt), align=WD_ALIGN_PARAGRAPH.CENTER)
+            add_cell(row.cells[1], qn_obj.ho_ten if qn_obj else '')
+            add_cell(row.cells[2], qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else '')
+            add_cell(row.cells[3], qn_obj.chuc_vu  if qn_obj and qn_obj.chuc_vu  else '')
+            add_cell(row.cells[4], dx.don_vi.ten_don_vi if dx.don_vi else '')
+            add_cell(row.cells[5], dx.nam_hoc or '')
+            add_cell(row.cells[6], trang_thai)
+
+            # Tóm tắt thành tích
+            parts = []
+            if ct.muc_do_hoan_thanh:    parts.append(ct.muc_do_hoan_thanh)
+            if ct.diem_tong_ket:        parts.append(f'Kết quả HT: {ct.diem_tong_ket}')
+            if ct.ket_qua_ren_luyen:    parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+            if ct.thanh_tich_ca_nhan_khac: parts.append(ct.thanh_tich_ca_nhan_khac)
+
+            cell_tt = row.cells[7]
+            cell_tt.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p_tt = cell_tt.paragraphs[0]
+            p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p_tt.paragraph_format.space_before = Pt(1)
+            p_tt.paragraph_format.space_after  = Pt(1)
+            if parts:
+                for idx_p, part in enumerate(parts):
+                    if idx_p > 0:
+                        p_tt = cell_tt.add_paragraph()
+                        p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p_tt.paragraph_format.space_before = Pt(1)
+                        p_tt.paragraph_format.space_after  = Pt(1)
+                    set_font(p_tt.add_run(f'- {part}'), size=10)
+            else:
+                set_font(p_tt.add_run('-'), size=10)
+
+            add_cell(row.cells[8], ct.ghi_chu or '')
+            stt += 1
+
+        return stt
+
+    # ── Hàm build bảng tập thể ───────────────────────────────────────────────
+    def add_unit_section(label, items):
+        """items: list of (ct, dx)"""
+        p_sec = doc.add_paragraph()
+        p_sec.paragraph_format.space_before = Pt(4)
+        p_sec.paragraph_format.space_after  = Pt(2)
+        set_font(p_sec.add_run(label), bold=True, size=11)
+
+        if not items:
+            set_font(doc.add_paragraph().add_run('(Không có)'), size=10, italic=True)
+            return
+
+        col_widths  = [0.8, 4.2, 2.5, 1.5, 2.5, 5.0]
+        headers_txt = ['STT', 'Tên đơn vị', 'Đơn vị đề xuất',
+                       'Năm học', 'Trạng thái', 'Ghi chú']
+
+        tbl = doc.add_table(rows=1, cols=len(col_widths))
+        tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl.style     = 'Table Grid'
+        tbl.autofit   = True
+
+        tblPr_t = tbl._tbl.tblPr
+        tblLayout_t = tblPr_t.find(qn('w:tblLayout'))
+        if tblLayout_t is None:
+            tblLayout_t = OxmlElement('w:tblLayout'); tblPr_t.append(tblLayout_t)
+        tblLayout_t.set(qn('w:type'), 'autofit')
+
+        hrow = tbl.rows[0]
+        for i, h in enumerate(headers_txt):
+            add_cell(hrow.cells[i], h, bold=True, size=10,
+                     align=WD_ALIGN_PARAGRAPH.CENTER)
+        set_repeat_table_header(hrow)
+
+        for idx, (ct, dx) in enumerate(items, 1):
+            trang_thai = dx.trang_thai
+            if ct.id in approved_ct_ids:
+                trang_thai = 'Đã khen thưởng'
+            row = tbl.add_row()
+            add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
+            add_cell(row.cells[1], ct.ten_don_vi_de_xuat or '-')
+            add_cell(row.cells[2], dx.don_vi.ten_don_vi if dx.don_vi else '')
+            add_cell(row.cells[3], dx.nam_hoc or '')
+            add_cell(row.cells[4], trang_thai)
+            add_cell(row.cells[5], ct.ghi_chu or '')
+
+    # ── Xuất các phần ────────────────────────────────────────────────────────
+    add_unit_section('I. Danh hiệu Đơn vị quyết thắng',  ds_quyet_thang)
+    add_unit_section('II. Danh hiệu Đơn vị tiên tiến',   ds_tien_tien_dv)
+    add_personnel_section('III. Danh hiệu Chiến sĩ thi đua cơ sở', ds_chien_si_tdcs)
+    add_personnel_section('IV. Danh hiệu Chiến sĩ tiên tiến',      ds_chien_si_tt)
+
+    roman = ['V','VI','VII','VIII','IX','X']
+    for idx, (dh_name, items) in enumerate(ds_khac.items()):
+        label = f'{roman[idx] if idx < len(roman) else str(idx+5)}. {dh_name}'
+        if items and items[0][0].quan_nhan:
+            add_personnel_section(label, items)
+        else:
+            add_unit_section(label, items)
+
+    # ── Footer timestamp ──────────────────────────────────────────────────────
+    p_ts = doc.add_paragraph()
+    p_ts.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    run_ts = p_ts.add_run(
+        f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M ngày %d/%m/%Y")})'
+    )
+    run_ts.font.size    = Pt(9)
+    run_ts.font.italic  = True
+    run_ts.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+
+    # ── Bảo vệ + xuất file ───────────────────────────────────────────────────
+    try:
+        protect_document_formatting_only(doc, 'bth123')
+    except Exception:
+        pass
+
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    fname_parts = ['TheoDoiPheduyet']
+    if nam_hoc_filter:
+        fname_parts.append(nam_hoc_filter.replace('-', '_'))
+    fname_parts.append(_dt.datetime.now().strftime('%d%m%Y'))
+    filename = '_'.join(fname_parts) + '.docx'
+
+    return send_file(
+        buf, as_attachment=True, download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+def set_fixed_table_widths(tbl, widths_cm):
+        """Can thiệp sâu vào XML để khóa chết chiều rộng bảng, Word không thể tự đổi"""
+        # 1. Ép kiểu bảng thành Fixed Layout (Không tự co giãn)
+        tbl.autofit = False
+        tblPr = tbl._tbl.tblPr
+        tblLayout = tblPr.find(qn('w:tblLayout'))
+        if tblLayout is None:
+            tblLayout = OxmlElement('w:tblLayout')
+            tblPr.append(tblLayout)
+        tblLayout.set(qn('w:type'), 'fixed')
+
+        # 2. Xóa lưới cột cũ và xây lại khung lưới mới theo đúng kích thước cm
+        tblGrid = tbl._tbl.find(qn('w:tblGrid'))
+        if tblGrid is not None:
+            tbl._tbl.remove(tblGrid)
+        tblGrid = OxmlElement('w:tblGrid')
+        tbl._tbl.insert(1, tblGrid)  # Chèn khung lưới vào đúng vị trí chuẩn XML
+
+        for w in widths_cm:
+            gridCol = OxmlElement('w:gridCol')
+            # Chuyển đổi Cm sang đơn vị Twips của Word (1 twip = 635 EMUs)
+            gridCol.set(qn('w:w'), str(int(Cm(w) / 635)))
+            tblGrid.append(gridCol)
+
+        # 3. Khóa cứng chiều rộng ở cấp độ từng Ô (Cell)
+        for i, w in enumerate(widths_cm):
+            twips_val = str(int(Cm(w) / 635))
+            for row in tbl.rows:
+                tcPr = row.cells[i]._tc.get_or_add_tcPr()
+                tcW = tcPr.find(qn('w:tcW'))
+                if tcW is None:
+                    tcW = OxmlElement('w:tcW')
+                    tcPr.append(tcW)
+                tcW.set(qn('w:w'), twips_val)
+                tcW.set(qn('w:type'), 'dxa')
+def add_page_number(run):
+        """Thêm mã trường đếm số trang tự động (PAGE) vào run"""
+        fldChar1 = OxmlElement('w:fldChar')
+        fldChar1.set(qn('w:fldCharType'), 'begin')
+
+        instrText = OxmlElement('w:instrText')
+        instrText.set(qn('xml:space'), 'preserve')
+        instrText.text = "PAGE"
+
+        fldChar2 = OxmlElement('w:fldChar')
+        fldChar2.set(qn('w:fldCharType'), 'separate')
+
+        fldChar3 = OxmlElement('w:fldChar')
+        fldChar3.set(qn('w:fldCharType'), 'end')
+
+        run._r.append(fldChar1)
+        run._r.append(instrText)
+        run._r.append(fldChar2)
+        run._r.append(fldChar3)
+def add_text_watermark(doc, text="TRƯỜNG SĨ QUAN CHÍNH TRỊ"):
+    """Thêm text watermark xéo góc 45 độ, mờ, ở giữa trang."""
+    try:
+        for section in doc.sections:
+            header = section.header
+            # Tạo paragraph trong header
+            para = header.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Thêm run với text
+            run = para.add_run(text)
+            run.font.size = Pt(48)
+            run.font.name = 'Times New Roman'
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(192, 192, 192)  # Light gray
+            
+            # Access paragraph XML to add rotation and positioning
+            p_element = para._element
+            pPr = p_element.get_or_add_pPr()
+            
+            # Create text box frame with rotation
+            # Note: This is a simplified approach - true watermark needs more complex XML
+            # For better watermark effect, we'll use the shape approach below
+            
+    except Exception as e:
+        print(f"Warning: Could not add text watermark: {e}")
+
+
+def add_logo_footer(doc):
+    """Thêm logo nhỏ và số trang vào footer cuối trang."""
+    import os
+    from flask import current_app
+    
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
+    
+    if not os.path.exists(logo_path):
+        # Fallback to main logo if watermark doesn't exist
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        if not os.path.exists(logo_path):
+            return
+    
+    try:
+        for section in doc.sections:
+            footer = section.footer
+            
+            # Thêm số trang ở giữa
+            para_page = footer.add_paragraph()
+            para_page.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            para_page.paragraph_format.space_before = Pt(2)
+            para_page.paragraph_format.space_after = Pt(2)
+            
+            # Add page number field
+            run_page = para_page.add_run()
+            run_page.font.size = Pt(10)
+            run_page.font.name = 'Times New Roman'
+            
+            # Insert page number field code
+            from docx.oxml import OxmlElement
+            from docx.oxml.ns import qn
+            
+            fldChar1 = OxmlElement('w:fldChar')
+            fldChar1.set(qn('w:fldCharType'), 'begin')
+            
+            instrText = OxmlElement('w:instrText')
+            instrText.set(qn('xml:space'), 'preserve')
+            instrText.text = 'PAGE'
+            
+            fldChar2 = OxmlElement('w:fldChar')
+            fldChar2.set(qn('w:fldCharType'), 'end')
+            
+            run_page._element.append(fldChar1)
+            run_page._element.append(instrText)
+            run_page._element.append(fldChar2)
+            
+            # Thêm logo nhỏ bên dưới số trang
+            para = footer.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Thêm logo nhỏ (1.2cm)
+            run = para.add_run()
+            run.add_picture(logo_path, width=Cm(1.2))
+            
+            # Thêm text bên dưới logo
+            para2 = footer.add_paragraph()
+            para2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run2 = para2.add_run('Trường Sĩ quan Chính trị')
+            run2.font.size = Pt(7)
+            run2.font.name = 'Times New Roman'
+            run2.font.italic = True
+            run2.font.color.rgb = RGBColor(128, 128, 128)
+            
+    except Exception as e:
+        print(f"Warning: Could not add footer logo: {e}")
+
+
+def add_corner_logo(doc):
+    """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
+    import os
+    from flask import current_app
+    
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
+    
+    if not os.path.exists(logo_path):
+        # Fallback to main logo if watermark doesn't exist
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        if not os.path.exists(logo_path):
+            return
+    
+    try:
+        for section in doc.sections:
+            header = section.header
+            
+            # Thêm paragraph mới vào cuối header (sau table header hiện tại)
+            para = header.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            
+            # Set paragraph spacing để logo sát lề trên
+            para.paragraph_format.space_before = Pt(0)
+            para.paragraph_format.space_after = Pt(0)
+            
+            # Thêm logo nhỏ căn phải (1.5cm)
+            run = para.add_run()
+            run.add_picture(logo_path, width=Cm(1.5))
+            
+    except Exception as e:
+        print(f"Warning: Could not add corner logo: {e}")
+
+
+def add_logo_watermark(doc):
+    """Thêm watermark logo vào tất cả các trang - DEPRECATED, use specific functions above."""
+    import os
+    from flask import current_app
+    
+    # Đường dẫn logo
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+    
+    if not os.path.exists(logo_path):
+        return  # Skip if logo not found
+    
+    try:
+        for section in doc.sections:
+            # Thêm watermark vào header của section
+            header = section.header
+            
+            # Tạo paragraph cho watermark - đặt ở cuối header
+            para = header.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Thêm hình ảnh watermark với opacity thấp
+            run = para.add_run()
+            picture = run.add_picture(logo_path, width=Cm(6))
+            
+            # Note: Đơn giản hóa - chỉ thêm logo vào header
+            # Không cần chuyển thành anchor phức tạp, vì có thể gây lỗi
+            # Logo sẽ xuất hiện ở đầu mỗi trang trong header
+            
+    except Exception as e:
+        # Nếu watermark fails, không làm crash toàn bộ export
+        print(f"Warning: Could not add watermark: {e}")
+        pass
+
+
+def protect_document_formatting_only(doc, password: str):
+    """
+    Khóa tài liệu: chỉ đọc nội dung (readOnly).
+    Mật khẩu được hash theo chuẩn Office 2010+ (Agile Encryption).
+    """
+    # 1. Tạo salt ngẫu nhiên (16 bytes)
+    salt = os.urandom(16)
+    salt_b64 = binascii.b2a_base64(salt).strip().decode()
+
+    # 2. Hash lần đầu: SHA-512(salt + password)
+    # Lưu ý: password bắt buộc encode sang chuẩn UTF-16 Little Endian
+    key = hashlib.sha512(salt + password.encode('utf-16le')).digest()
+    
+    # 3. Lặp 100.000 vòng để chống brute-force
+    spin_count = 100000
+    for i in range(spin_count):
+        iterator = i.to_bytes(4, byteorder='little')
+        # SỬA LỖI: Cần cộng iterator ở PHÍA SAU hash của vòng lặp liền trước
+        key = hashlib.sha512(key + iterator).digest()
+        
+    hash_b64 = binascii.b2a_base64(key).strip().decode()
+
+    # 4. Lấy cấu hình settings của docx
+    settings = doc.settings.element
+
+    # Xóa thẻ documentProtection cũ nếu có
+    for old in settings.findall(qn('w:documentProtection')):
+        settings.remove(old)
+
+    # 5. Tạo thẻ <w:documentProtection> theo chuẩn Office đời mới
+    doc_prot = OxmlElement('w:documentProtection')
+    doc_prot.set(qn('w:edit'),          'readOnly')
+    doc_prot.set(qn('w:enforcement'),   '1')
+    
+    # BỎ CÁC THẺ CŨ (cryptProviderType, v.v.). SỬ DỤNG CHUẨN AGILE MỚI:
+    doc_prot.set(qn('w:algorithmName'), 'SHA-512')
+    doc_prot.set(qn('w:spinCount'),     str(spin_count))
+    doc_prot.set(qn('w:hashValue'),     hash_b64)     # Đã đổi từ w:hash thành w:hashValue
+    doc_prot.set(qn('w:saltValue'),     salt_b64)     # Đã đổi từ w:salt thành w:saltValue
+
+    # Chèn vào đầu <w:settings>
+    settings.insert(0, doc_prot)
 
 @admin_bp.route('/reward-list/export-hoi-dong-excel')
 @login_required
