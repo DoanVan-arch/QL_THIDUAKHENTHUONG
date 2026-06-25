@@ -2763,11 +2763,11 @@ def export_tracking_word():
                 diem_trung_binh = sum(quy_scores) / len(quy_scores)
                 # Làm tròn 2 chữ số thập phân và loại bỏ số 0 vô nghĩa (vd: 8.0 -> 8)
                 diem_tb_str = f"{diem_trung_binh:g}"
-                criteria_list.append(f'Điểm trung bình các quý: {diem_tb_str}')
+                criteria_list_1.append(f'Điểm trung bình các quý: {diem_tb_str}')
             # ----------------------------------
 
             if criteria_list_1:
-                for idx_c, item in enumerate(criteria_list):
+                for idx_c, item in enumerate(criteria_list_1):
                     if idx_c > 0:
                         p = row.cells[1].add_paragraph()
                         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
