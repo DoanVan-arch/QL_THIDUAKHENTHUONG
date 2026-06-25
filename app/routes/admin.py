@@ -2711,82 +2711,100 @@ def export_tracking_word():
         set_repeat_table_header(hrow)
 
         for idx, (ct, dx) in enumerate(items, 1):
-            trang_thai = dx.trang_thai
             if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
                 continue
+
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
-           
-            add_cell(row.cells[1], dx.don_vi.ten_don_vi if dx.don_vi else '')
             add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-')
-            cell = row.cells[3]
-            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-            p = cell.paragraphs[0]
-            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            p.paragraph_format.space_before = Pt(1)
-            p.paragraph_format.space_after  = Pt(1)
 
-            criteria_list = []
-            criteria_list_1 = []
+            # ── Cột 1: Tên đơn vị (cells[1]) ──────────────────────────────
+            cell_donvi = row.cells[1]
+            cell_donvi.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p_donvi = cell_donvi.paragraphs[0]
+            p_donvi.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p_donvi.paragraph_format.space_before = Pt(1)
+            p_donvi.paragraph_format.space_after  = Pt(1)
+            run_donvi = p_donvi.add_run(dx.don_vi.ten_don_vi if dx.don_vi else '')
+            set_font(run_donvi, size=10, bold=True)
+
+            # ── Cột 3: Ghi chú (cells[3]) ─────────────────────────────────
+            cell_ghichu = row.cells[3]
+            cell_ghichu.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p_ghichu = cell_ghichu.paragraphs[0]
+            p_ghichu.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p_ghichu.paragraph_format.space_before = Pt(1)
+            p_ghichu.paragraph_format.space_after  = Pt(1)
+
+            # ── Parse tap_the_dict ─────────────────────────────────────────
+            criteria_list   = []   # Tiêu chí thường → vào cells[3]
+            criteria_list_1 = []   # Điểm các quý   → vào cells[1] (dưới tên đơn vị)
+            quy_scores      = []   # ★ Khai báo ngoài if td để tránh NameError
+
             td = ct.tap_the_dict or {}
             if td:
-                    from app.models.nomination import TieuChi as _TieuChi
-                    ma_truong_list = list(td.keys())
-                    tieu_chi_map = {}
-                    if ma_truong_list:
-                        tc_rows = _TieuChi.query.filter(
-                            _TieuChi.ma_truong.in_(ma_truong_list)
-                        ).all()
-                        tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
-                    
-                    quy_scores = [] # Mảng tạm lưu điểm các quý để tính trung bình
-                    
-                    for key, val in td.items():
-                        if val and str(val).strip() not in ('', '0', 'None'):
-                            label = tieu_chi_map.get(key, key)
-                            if key in ('th_diem_tdtx_quy1', 'th_diem_tdtx_quy2', 'th_diem_tdtx_quy3', 'th_diem_tdtx_quy4'):
-                                criteria_list_1.append(f'{label}: {val}')
-                                # Ép kiểu sang số để tính toán
-                                try:
-                                    quy_scores.append(float(val))
-                                except ValueError:
-                                    pass
-                            else:
-                                criteria_list.append(f'{label}: {val}')
+                from app.models.nomination import TieuChi as _TieuChi
+                ma_truong_list = list(td.keys())
+                tieu_chi_map   = {}
+                if ma_truong_list:
+                    tc_rows      = _TieuChi.query.filter(
+                        _TieuChi.ma_truong.in_(ma_truong_list)
+                    ).all()
+                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
 
+                QUY_KEYS = {'th_diem_tdtx_quy1', 'th_diem_tdtx_quy2',
+                            'th_diem_tdtx_quy3', 'th_diem_tdtx_quy4'}
+
+                for key, val in td.items():
+                    if not val or str(val).strip() in ('', '0', 'None'):
+                        continue
+                    label = tieu_chi_map.get(key, key)
+                    if key in QUY_KEYS:
+                        criteria_list_1.append(f'{label}: {val}')
+                        try:
+                            quy_scores.append(float(val))
+                        except (ValueError, TypeError):
+                            pass
+                    else:
+                        criteria_list.append(f'{label}: {val}')
+
+            # Thêm điểm trung bình vào cells[1]
+            if quy_scores:
+                diem_tb     = sum(quy_scores) / len(quy_scores)
+                diem_tb_str = f'{diem_tb:g}'
+                criteria_list_1.append(f'Điểm trung bình các quý: {diem_tb_str}')
+
+            # Thêm mức độ hoàn thành + ghi chú vào cells[3]
             if ct.muc_do_hoan_thanh:
                 criteria_list.insert(0, f'Mức độ hoàn thành: {ct.muc_do_hoan_thanh}')
             if ct.ghi_chu and ct.ghi_chu.strip():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
-            
-            # --- Xử lý tính điểm trung bình ---
-            if quy_scores:
-                diem_trung_binh = sum(quy_scores) / len(quy_scores)
-                # Làm tròn 2 chữ số thập phân và loại bỏ số 0 vô nghĩa (vd: 8.0 -> 8)
-                diem_tb_str = f"{diem_trung_binh:g}"
-                criteria_list_1.append(f'Điểm trung bình các quý: {diem_tb_str}')
-            # ----------------------------------
 
-            if criteria_list_1:
-                for idx_c, item in enumerate(criteria_list_1):
-                    if idx_c > 0:
-                        p = row.cells[1].add_paragraph()
-                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                        p.paragraph_format.space_before = Pt(1)
-                        p.paragraph_format.space_after  = Pt(1)
-                    run = p.add_run(f'- {item}')
-                    set_font(run, size=10)
+            # ── Ghi điểm các quý vào cells[1] (dưới tên đơn vị) ──────────
+            for item in criteria_list_1:
+                p = cell_donvi.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                p.paragraph_format.space_before = Pt(1)
+                p.paragraph_format.space_after  = Pt(1)
+                run = p.add_run(f'- {item}')
+                set_font(run, size=10)
+
+            # ── Ghi tiêu chí vào cells[3] ─────────────────────────────────
             if criteria_list:
-                for idx_c, item in enumerate(criteria_list):
-                    if idx_c > 0:
-                        p = cell.add_paragraph()
-                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                        p.paragraph_format.space_before = Pt(1)
-                        p.paragraph_format.space_after  = Pt(1)
-                    run = p.add_run(f'- {item}')
+                first = True
+                for item in criteria_list:
+                    if first:
+                        p_cur = p_ghichu
+                        first = False
+                    else:
+                        p_cur = cell_ghichu.add_paragraph()
+                        p_cur.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p_cur.paragraph_format.space_before = Pt(1)
+                        p_cur.paragraph_format.space_after  = Pt(1)
+                    run = p_cur.add_run(f'- {item}')
                     set_font(run, size=10)
             else:
-                run = p.add_run('-')
+                run = p_ghichu.add_run('-')
                 set_font(run, size=10)
 
     # ── Xuất các phần ────────────────────────────────────────────────────────
