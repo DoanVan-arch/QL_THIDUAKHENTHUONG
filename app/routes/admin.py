@@ -2722,7 +2722,7 @@ def export_tracking_word():
 
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
-            add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-', align=WD_ALIGN_PARAGRAPH.CENTER)
+        #   add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-', align=WD_ALIGN_PARAGRAPH.CENTER)
             add_cell(row.cells[1], dx.don_vi.ten_don_vi if dx.don_vi else '', align=WD_ALIGN_PARAGRAPH.CENTER)
             # ── Cột 1: Tên đơn vị (cells[1]) ──────────────────────────────
             cell_donvi = row.cells[2]
