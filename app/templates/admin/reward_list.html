@@ -571,17 +571,19 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             </button>
                             {# ★ NÚT HẠ DANH HIỆU Bảng 3 #}
                             {% if kt.loai_danh_hieu in ('Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
-                            <button type="button" class="btn btn-sm btn-outline-warning text-dark"
-                                    title="Hạ danh hiệu"
+                             {# ★ NÚT HẠ DANH HIỆU — dùng ct, KHÔNG phải kt #}
+                            {% if ct.loai_danh_hieu in ('Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
+                            <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
                                     onclick="openDowngradeModal(
-                                        {{ kt.id }},
-                                        '{{ kt.ho_ten|e }}',
-                                        '{{ kt.loai_danh_hieu }}',
-                                        '{{ 'Chiến sĩ tiên tiến' if kt.loai_danh_hieu == 'Chiến sĩ thi đua' else 'Đơn vị tiên tiến' }}',
-                                        'kt'
+                                        {{ ct.id }},
+                                        '{{ ct.ten_don_vi_de_xuat|e }}',
+                                        '{{ ct.loai_danh_hieu }}',
+                                        '{{ 'Chiến sĩ tiên tiến' if ct.loai_danh_hieu == 'Chiến sĩ thi đua' else 'Đơn vị tiên tiến' }}',
+                                        'ct'
                                     )">
-                                <i class="bi bi-arrow-down-circle"></i>
+                                <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
                             </button>
+                            {% endif %}
                             {% elif can_admin_action %}
                             <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
                             {% endif %}
