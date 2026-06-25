@@ -1350,12 +1350,21 @@ function setAllColToggle(tableId, storageKey, visible) {
     if (!cur) {
         const saved = localStorage.getItem(LS_KEY);
         if (saved) {
-            const url = new URL(window.location.href);
-            url.searchParams.set('nam_hoc', saved);
-            window.location.replace(url.toString());
-            return;
+            // Kiểm tra tránh loop: nếu URL đã có nam_hoc thì không redirect nữa
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.get('nam_hoc')) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('nam_hoc', saved);
+                window.location.replace(url.toString());
+                return;
+            } else {
+                // URL có nam_hoc nhưng backend không nhận → xóa localStorage tránh loop
+                localStorage.removeItem(LS_KEY);
+            }
         }
-    } else { localStorage.setItem(LS_KEY, cur); }
+    } else {
+        localStorage.setItem(LS_KEY, cur);
+    }
 })();
 function onNamHocChange(sel) {
     if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
@@ -1471,14 +1480,14 @@ function openDetailModal(ctId) {
 }
 </script>
 
-<div class="print-timestamp">
+<!-- <div class="print-timestamp">
     Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
     {% if nam_hoc_filter %} | Năm học: <strong>{{ nam_hoc_filter }}</strong>{% endif %}
 </div>
 <script>
 const _pts = document.getElementById('printTimestamp');
 if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
-</script>
+</script> -->
 
 {% endif %}{# end nam_hoc_filter #}
 
