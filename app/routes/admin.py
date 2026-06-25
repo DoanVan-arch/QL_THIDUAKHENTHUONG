@@ -2716,9 +2716,9 @@ def export_tracking_word():
                 continue
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
-            add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-')
+           
             add_cell(row.cells[1], dx.don_vi.ten_don_vi if dx.don_vi else '')
-        
+            add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-')
             cell = row.cells[3]
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             p = cell.paragraphs[0]
@@ -2751,7 +2751,8 @@ def export_tracking_word():
                                     quy_scores.append(float(val))
                                 except ValueError:
                                     pass
-                            criteria_list.append(f'{label}: {val}')
+                            else:
+                                criteria_list.append(f'{label}: {val}')
 
             if ct.muc_do_hoan_thanh:
                 criteria_list.insert(0, f'Mức độ hoàn thành: {ct.muc_do_hoan_thanh}')
