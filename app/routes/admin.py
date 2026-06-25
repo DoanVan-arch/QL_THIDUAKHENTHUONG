@@ -1246,6 +1246,101 @@ def confirm_khong_dong_y_ct(ct_id):
     name = ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi)
     flash(f'Đã xác nhận Không đồng ý cho {name}. Sẽ hiển thị trong Bảng 3 mục Bị từ chối.', 'info')
     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+# ── Mapping hạ danh hiệu ──────────────────────────────────────────────────
+_DOWNGRADE_MAP = {
+    'Chiến sĩ thi đua':   'Chiến sĩ tiên tiến',
+    'Đơn vị quyết thắng': 'Đơn vị tiên tiến',
+}
+
+@admin_bp.route('/reward-list/downgrade-ct/<int:ct_id>', methods=['POST'])
+@login_required
+@admin_required
+def downgrade_danh_hieu_ct(ct_id):
+    """
+    Hạ danh hiệu cho một chi tiết đề xuất đang ở Bảng 2 (PHE_DUYET_CUOI):
+      CSTD  → CSTT
+      DVQT  → DVTT
+    Đồng thời tạo KhenThuong với danh hiệu mới (hạ cấp).
+    """
+    ct = DeXuatChiTiet.query.get_or_404(ct_id)
+    de_xuat = ct.de_xuat
+
+    if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+        flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
+        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+
+    new_dh = _DOWNGRADE_MAP.get(ct.loai_danh_hieu)
+    if not new_dh:
+        flash(f'Danh hiệu "{ct.loai_danh_hieu}" không thể hạ cấp.', 'warning')
+        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+
+    # Kiểm tra chưa có KhenThuong cho ct này
+    if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
+        flash('Cá nhân/tập thể này đã được xác nhận khen thưởng, không thể hạ danh hiệu.', 'warning')
+        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+
+    old_dh = ct.loai_danh_hieu
+    ct.loai_danh_hieu = new_dh  # Cập nhật trực tiếp trên chi tiết đề xuất
+
+    name = ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi)
+    now  = datetime.utcnow()
+
+    kt = KhenThuong(
+        de_xuat_id=de_xuat.id,
+        chi_tiet_id=ct.id,
+        quan_nhan_id=ct.quan_nhan_id,
+        don_vi_id=de_xuat.don_vi_id,
+        ho_ten=name,
+        cap_bac=ct.quan_nhan.cap_bac if ct.quan_nhan else None,
+        chuc_vu=ct.quan_nhan.chuc_vu if ct.quan_nhan else None,
+        doi_tuong=ct.doi_tuong,
+        loai_danh_hieu=new_dh,   # ← danh hiệu mới (hạ cấp)
+        nam_hoc=de_xuat.nam_hoc,
+        nguoi_duyet_id=current_user.id,
+        ngay_duyet=now,
+    )
+    db.session.add(kt)
+    db.session.commit()
+
+    log_action('admin_downgrade_danh_hieu', resource_type='chi_tiet', resource_id=ct.id,
+               detail=f'{name}: {old_dh} → {new_dh}, năm học {de_xuat.nam_hoc}')
+    db.session.commit()
+
+    flash(f'Đã hạ danh hiệu {name}: {old_dh} → {new_dh}.', 'success')
+    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+
+
+@admin_bp.route('/reward-list/downgrade-kt/<int:kt_id>', methods=['POST'])
+@login_required
+@admin_required
+def downgrade_khen_thuong(kt_id):
+    """
+    Hạ danh hiệu cho một KhenThuong đã xác nhận (Bảng 3):
+      CSTD  → CSTT
+      DVQT  → DVTT
+    Cập nhật cả KhenThuong lẫn DeXuatChiTiet.
+    """
+    kt = KhenThuong.query.get_or_404(kt_id)
+    ct = DeXuatChiTiet.query.get(kt.chi_tiet_id)
+
+    new_dh = _DOWNGRADE_MAP.get(kt.loai_danh_hieu)
+    if not new_dh:
+        flash(f'Danh hiệu "{kt.loai_danh_hieu}" không thể hạ cấp.', 'warning')
+        return redirect(url_for('admin.reward_list', nam_hoc=kt.nam_hoc))
+
+    old_dh = kt.loai_danh_hieu
+    kt.loai_danh_hieu = new_dh
+    if ct:
+        ct.loai_danh_hieu = new_dh  # đồng bộ chi tiết đề xuất
+
+    db.session.commit()
+
+    log_action('admin_downgrade_khen_thuong', resource_type='khen_thuong', resource_id=kt.id,
+               detail=f'{kt.ho_ten}: {old_dh} → {new_dh}, năm học {kt.nam_hoc}')
+    db.session.commit()
+
+    flash(f'Đã hạ danh hiệu {kt.ho_ten}: {old_dh} → {new_dh}.', 'success')
+    return redirect(url_for('admin.reward_list', nam_hoc=kt.nam_hoc))
 
 
 @admin_bp.route('/reward-list/vote-ct/<int:ct_id>', methods=['POST'])
@@ -2888,11 +2983,22 @@ def export_tracking_word():
         fname_parts.append(nam_hoc_filter.replace('-', '_'))
     fname_parts.append(_dt.datetime.now().strftime('%d%m%Y'))
     filename = '_'.join(fname_parts) + '.docx'
-
-    return send_file(
+    
+    # ── Tạo response với cookie báo hiệu hoàn thành ──────────────────────────
+    response = send_file(
         buf, as_attachment=True, download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+    # ★ Set cookie để FE biết file đã sẵn sàng → ẩn loading overlay
+    response.set_cookie(
+        'export_done', '1',
+        max_age=30,          # tự hết hạn sau 30s
+        httponly=False,      # FE cần đọc được
+        samesite='Lax',
+        path='/'
+    )
+    return response
+
 def set_fixed_table_widths(tbl, widths_cm):
         """Can thiệp sâu vào XML để khóa chết chiều rộng bảng, Word không thể tự đổi"""
         # 1. Ép kiểu bảng thành Fixed Layout (Không tự co giãn)

@@ -1,4 +1,5 @@
-﻿{% extends "base.html" %}
+﻿
+{% extends "base.html" %}
 {% block title %}Phê duyệt khen thưởng{% endblock %}
 
 {% block content %}
@@ -311,7 +312,7 @@
                                    data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tập thể'))|e }}"
                                    data-tap-the="false"
                                    style="font-size:0.68rem;">
-                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Cập nhật yêu cầu{% else %}Yêu cầu sửa{% endif %}
+                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Yêu cầu sửa{% else %}Yêu cầu sửa{% endif %}
                                 </a>
                                 {% if is_approved or is_rejected %}
                                 <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"
@@ -496,7 +497,7 @@
                                    data-name="{{ (ct.ten_don_vi_de_xuat or 'Tập thể')|e }}"
                                    data-tap-the="true"
                                    style="font-size:0.68rem;">
-                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Cập nhật yêu cầu{% else %}Yêu cầu sửa{% endif %}
+                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Yêu cầu sửa{% else %}Yêu cầu sửa{% endif %}
                                 </a>
                                 {% if is_approved or is_rejected %}
                                 <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"

@@ -430,7 +430,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             {% endif %}
                             {% if can_admin_action and row.all_voted %}
                             <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
                                         onclick="return confirm('Xác nhận ĐỒNG Ý khen thưởng?')">
                                     <i class="bi bi-check2-circle me-1"></i>Đồng ý
@@ -440,6 +440,19 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                     data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
                                 <i class="bi bi-x-circle me-1"></i>Không đồng ý
                             </button>
+                            {# ★ NÚT HẠ DANH HIỆU — chỉ hiện khi có thể hạ cấp #}
+                            {% if ct.loai_danh_hieu in ('Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
+                            <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
+                                    onclick="openDowngradeModal(
+                                        {{ ct.id }},
+                                        '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat)|e }}',
+                                        '{{ ct.loai_danh_hieu }}',
+                                        '{{ 'Chiến sĩ tiên tiến' if ct.loai_danh_hieu == 'Chiến sĩ thi đua' else 'Đơn vị tiên tiến' }}',
+                                        'ct'
+                                    )">
+                                <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
+                            </button>
+                            {% endif %}
                             {% elif can_admin_action %}
                             <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
                             {% endif %}
@@ -555,6 +568,19 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
                                     data-bs-toggle="modal" data-bs-target="#kdyModalTT{{ ct.id }}">
                                 <i class="bi bi-x-circle me-1"></i>Không đồng ý
+                            </button>
+                            {# ★ NÚT HẠ DANH HIỆU Bảng 3 #}
+                            {% if kt.loai_danh_hieu in ('Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
+                            <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                                    title="Hạ danh hiệu"
+                                    onclick="openDowngradeModal(
+                                        {{ kt.id }},
+                                        '{{ kt.ho_ten|e }}',
+                                        '{{ kt.loai_danh_hieu }}',
+                                        '{{ 'Chiến sĩ tiên tiến' if kt.loai_danh_hieu == 'Chiến sĩ thi đua' else 'Đơn vị tiên tiến' }}',
+                                        'kt'
+                                    )">
+                                <i class="bi bi-arrow-down-circle"></i>
                             </button>
                             {% elif can_admin_action %}
                             <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
@@ -727,6 +753,20 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                     onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
+                            {# ★ NÚT HẠ DANH HIỆU Bảng 3 #}
+                            {% if kt.loai_danh_hieu in ('Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
+                            <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                                    title="Hạ danh hiệu"
+                                    onclick="openDowngradeModal(
+                                        {{ kt.id }},
+                                        '{{ kt.ho_ten|e }}',
+                                        '{{ kt.loai_danh_hieu }}',
+                                        '{{ 'Chiến sĩ tiên tiến' if kt.loai_danh_hieu == 'Chiến sĩ thi đua' else 'Đơn vị tiên tiến' }}',
+                                        'kt'
+                                    )">
+                                <i class="bi bi-arrow-down-circle"></i>
+                            </button>
+                            {% endif %}
                             {% endif %}
                         </td>
                     </tr>
@@ -788,6 +828,20 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                     onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
+                            {# ★ NÚT HẠ DANH HIỆU Bảng 3 #}
+                            {% if kt.loai_danh_hieu in ('Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
+                            <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                                    title="Hạ danh hiệu"
+                                    onclick="openDowngradeModal(
+                                        {{ kt.id }},
+                                        '{{ kt.ho_ten|e }}',
+                                        '{{ kt.loai_danh_hieu }}',
+                                        '{{ 'Chiến sĩ tiên tiến' if kt.loai_danh_hieu == 'Chiến sĩ thi đua' else 'Đơn vị tiên tiến' }}',
+                                        'kt'
+                                    )">
+                                <i class="bi bi-arrow-down-circle"></i>
+                            </button>
+                            {% endif %}
                             {% endif %}
                         </td>
                     </tr>
@@ -923,6 +977,44 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                     </button>
                 </form>
             </div>
+        </div>
+    </div>
+</div>
+{# ===== Downgrade Modal ===== #}
+<div class="modal fade" id="downgradeModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form id="downgradeForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header" style="background:#ffc107;">
+                    <h6 class="modal-title text-dark">
+                        <i class="bi bi-arrow-down-circle me-2"></i>Hạ danh hiệu
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2" style="font-size:0.9rem;">
+                        Xác nhận hạ danh hiệu cho:<br>
+                        <strong id="downgradeName"></strong>
+                    </p>
+                    <div class="d-flex align-items-center gap-2 my-3 justify-content-center">
+                        <span class="badge fs-6" id="downgradeOldBadge"></span>
+                        <i class="bi bi-arrow-right text-muted fs-5"></i>
+                        <span class="badge fs-6" id="downgradeNewBadge"></span>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Thao tác này sẽ cập nhật danh hiệu và ghi nhận khen thưởng với danh hiệu mới.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning btn-sm text-dark">
+                        <i class="bi bi-arrow-down-circle me-1"></i>Xác nhận hạ danh hiệu
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -1303,5 +1395,39 @@ function onNamHocChange(sel) {
     }
     sel.form.submit();
 }
+// ===== Downgrade Modal =====
+var DOWNGRADE_CT_URL = '{{ url_for("admin.downgrade_danh_hieu_ct", ct_id=0) }}'.replace('/0', '/');
+var DOWNGRADE_KT_URL = '{{ url_for("admin.downgrade_khen_thuong",  kt_id=0) }}'.replace('/0', '/');
+
+var _BADGE_MAP = {
+    'Chiến sĩ thi đua':   ['bg-warning text-dark', 'CSTD'],
+    'Chiến sĩ tiên tiến': ['bg-info text-dark',    'CSTT'],
+    'Đơn vị quyết thắng': ['bg-navy',              'DVQT'],
+    'Đơn vị tiên tiến':   ['bg-secondary',         'DVTT'],
+};
+
+function openDowngradeModal(id, name, oldDH, newDH, type) {
+    // Đặt action URL
+    var url = (type === 'kt' ? DOWNGRADE_KT_URL : DOWNGRADE_CT_URL) + id;
+    document.getElementById('downgradeForm').action = url;
+
+    // Tên
+    document.getElementById('downgradeName').textContent = name;
+
+    // Badge cũ
+    var oldInfo = _BADGE_MAP[oldDH] || ['bg-secondary', oldDH];
+    var oldBadge = document.getElementById('downgradeOldBadge');
+    oldBadge.className = 'badge fs-6 ' + oldInfo[0];
+    oldBadge.textContent = oldInfo[1];
+
+    // Badge mới
+    var newInfo = _BADGE_MAP[newDH] || ['bg-secondary', newDH];
+    var newBadge = document.getElementById('downgradeNewBadge');
+    newBadge.className = 'badge fs-6 ' + newInfo[0];
+    newBadge.textContent = newInfo[1];
+
+    new bootstrap.Modal(document.getElementById('downgradeModal')).show();
+}
+
 </script>
 {% endblock %}

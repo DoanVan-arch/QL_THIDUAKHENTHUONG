@@ -1358,5 +1358,136 @@ function submitBatchReject() {
         btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Xác nhận từ chối';
     });
 }
+// ================================================================
+// EXPORT LOADING OVERLAY
+// ================================================================
+(function () {
+    const COOKIE_NAME = 'export_done';
+    const overlay     = document.getElementById('exportLoadingOverlay');
+    const progressBar = document.getElementById('exportProgressBar');
+    const stepEl      = document.getElementById('exportLoadingStep');
+    const titleEl     = document.getElementById('exportLoadingTitle');
+    const subtitleEl  = document.getElementById('exportLoadingSubtitle');
+
+    if (!overlay) return;
+
+    // Các bước giả lập tiến trình
+    const STEPS = [
+        { pct: 8,  text: 'Đang truy vấn dữ liệu...',         delay: 400  },
+        { pct: 20, text: 'Xử lý danh sách đề xuất...',        delay: 900  },
+        { pct: 35, text: 'Tổng hợp tiêu chí...',              delay: 1600 },
+        { pct: 52, text: 'Tạo cấu trúc bảng Word...',         delay: 2600 },
+        { pct: 68, text: 'Điền dữ liệu vào bảng...',          delay: 4000 },
+        { pct: 80, text: 'Định dạng font & layout...',        delay: 5800 },
+        { pct: 90, text: 'Hoàn thiện tài liệu...',            delay: 8000 },
+        { pct: 96, text: 'Chuẩn bị tải xuống...',             delay: 12000 },
+        { pct: 99, text: 'Sắp xong, vui lòng đợi thêm...',   delay: 18000 },
+    ];
+
+    let _stepTimers  = [];
+    let _pollTimer   = null;
+    let _startTime   = null;
+
+    function showOverlay(titleText, subtitleText) {
+        titleEl.textContent    = titleText    || 'Đang tạo file Word...';
+        subtitleEl.textContent = subtitleText || 'Vui lòng đợi, quá trình này có thể mất 10–30 giây';
+        progressBar.style.width = '0%';
+        stepEl.textContent = 'Khởi tạo...';
+        overlay.style.display = 'flex';
+        _startTime = Date.now();
+
+        // Chạy các bước giả lập
+        _stepTimers = STEPS.map(step =>
+            setTimeout(() => {
+                progressBar.style.width = step.pct + '%';
+                stepEl.textContent      = step.text;
+            }, step.delay)
+        );
+
+        // Bắt đầu poll cookie để biết khi nào xong
+        _pollTimer = setInterval(checkDone, 600);
+    }
+
+    function hideOverlay() {
+        // Hoàn thành 100%
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped');
+        progressBar.classList.add('bg-success');
+        stepEl.textContent = '✓ Hoàn thành! Đang tải xuống...';
+
+        _stepTimers.forEach(t => clearTimeout(t));
+        clearInterval(_pollTimer);
+
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            // Reset
+            progressBar.style.width = '0%';
+            progressBar.classList.add('progress-bar-animated', 'progress-bar-striped');
+            progressBar.classList.remove('bg-success');
+            progressBar.classList.add('bg-primary');
+        }, 1200);
+    }
+
+    function checkDone() {
+        // Server set cookie 'export_done=1' khi xong
+        if (document.cookie.split(';').some(c => c.trim().startsWith(COOKIE_NAME + '='))) {
+            // Xóa cookie
+            document.cookie = COOKIE_NAME + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            hideOverlay();
+        }
+        // Timeout an toàn: nếu quá 90s mà không có cookie → tự ẩn
+        if (_startTime && Date.now() - _startTime > 90000) {
+            hideOverlay();
+        }
+    }
+
+    // Bind tất cả link export Word
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest('a[href*="export"][href*="word"], a[href*="export-word"], a[href*="export_word"]');
+        if (!link) return;
+
+        const href = link.getAttribute('href') || '';
+        // Chỉ xử lý link Word (bỏ qua Excel)
+        if (!href.includes('word')) return;
+
+        showOverlay('Đang tạo file Word...', 'Vui lòng đợi, quá trình này có thể mất 10–30 giây');
+    });
+
+    // Bind nút export Word trong toolbar (nếu dùng onclick thay vì href)
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('button[data-export="word"]');
+        if (!btn) return;
+        showOverlay('Đang tạo file Word...', 'Vui lòng đợi, quá trình này có thể mất 10–30 giây');
+    });
+})();
+
 </script>
+{# ===== Export Loading Overlay ===== #}
+<div id="exportLoadingOverlay" style="
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,0.55); backdrop-filter:blur(3px);
+    align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+    <div style="background:#fff; border-radius:16px; padding:32px 40px;
+                text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.25); min-width:280px;">
+        <div class="mb-3">
+            <i class="bi bi-file-earmark-word text-primary" style="font-size:2.5rem;"></i>
+        </div>
+        <div class="fw-semibold mb-2" style="font-size:1rem;" id="exportLoadingTitle">
+            Đang tạo file Word...
+        </div>
+        <div class="text-muted small mb-3" id="exportLoadingSubtitle">
+            Vui lòng đợi, quá trình này có thể mất 10–30 giây
+        </div>
+        <!-- Progress bar giả lập -->
+        <div class="progress mb-3" style="height:8px; border-radius:4px;">
+            <div id="exportProgressBar"
+                 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                 style="width:0%; transition:width 0.4s ease;"></div>
+        </div>
+        <div class="text-muted" style="font-size:0.78rem;" id="exportLoadingStep">
+            Khởi tạo...
+        </div>
+    </div>
+</div>
+
 {% endblock %}

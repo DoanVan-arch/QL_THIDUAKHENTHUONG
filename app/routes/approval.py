@@ -41,20 +41,25 @@ def _auto_finalize_scope_dept(de_xuat_id):
     de_xuat = _DX.query.get(de_xuat_id)
     if not de_xuat:
         return []
+    
     finalized = []
     for phong_val in _SCOPE_LIMITED_PHONGS:
         pd = PheDuyet.query.filter_by(
             de_xuat_id=de_xuat_id,
             phong_duyet=phong_val,
         ).first()
+        
         if not pd or pd.ket_qua == KetQuaDuyet.DONG_Y.value:
             continue  # already done or not created yet
+            
         # Determine scope role for this phong
         scope_role = _PHONG_TO_ROLE.get(phong_val)
         if scope_role is None:
             continue
+            
         # Ensure KetQuaDuyetChiTiet records exist for all chi_tiets
         existing = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
+        
         # 1. Lấy toàn bộ ID chi tiết để truy vấn một lần duy nhất (Tránh N+1 Query)
         chi_tiet_ids = [ct.id for ct in de_xuat.chi_tiets]
 
@@ -75,11 +80,15 @@ def _auto_finalize_scope_dept(de_xuat_id):
             skip_record = False
 
             # --- XÁC ĐỊNH TRẠNG THÁI (KẾT QUẢ) MONG MUỐN ---
-            if ct.doi_tuong is None:
+            if ct.doi_tuong is None or ct.quan_nhan_id is None:
                 if phong_val == PhongDuyet.BAN_SAUDAIHOC.value:
                     target_ket_qua = KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value
+                elif phong_val == PhongDuyet.PHONG_HAUCANKYTHUAT.value:
+                    # Gán chờ duyệt và KHÔNG bỏ qua (skip_record vẫn là False)
+                    target_ket_qua = KetQuaDuyet.CHO_DUYET.value
                 else:
-                    skip_record = True  # skip tập thể cho các phòng khác
+                    # Chỉ bỏ qua (skip) tập thể cho các phòng khác
+                    skip_record = True
                     
             else:
                 # Nếu không phải Phòng HCKT và không phải Ban SĐH
@@ -114,10 +123,7 @@ def _auto_finalize_scope_dept(de_xuat_id):
 
         # 4. Lưu tất cả thay đổi xuống database trong 1 lần duy nhất
         db.session.flush() 
-# Lưu ý: Tuỳ luồng xử lý bên ngoài, bạn có thể cân nhắc dùng db.session.commit() nếu đây là cuối tiến trình.
-            
         
-           
         # Re-check: if no CHO_DUYET remains among ACTIVE items → auto-finalize
         pending = KetQuaDuyetChiTiet.query.filter_by(
             phe_duyet_id=pd.id,
@@ -125,11 +131,13 @@ def _auto_finalize_scope_dept(de_xuat_id):
         ).join(DeXuatChiTiet, KetQuaDuyetChiTiet.chi_tiet_id == DeXuatChiTiet.id).filter(
             DeXuatChiTiet.bi_loai == False
         ).count()
+        
         if pending == 0:
             pd.ket_qua = KetQuaDuyet.DONG_Y.value
             pd.ngay_duyet = datetime.utcnow()
             pd.ghi_chu = 'Tự động duyệt (không có đối tượng thuộc phạm vi)'
             finalized.append(phong_val)
+            
     db.session.commit()
     return finalized
 
