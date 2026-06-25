@@ -209,7 +209,10 @@
                                 <div class="name-text">
                                     <span title="{{ ct.quan_nhan.ho_ten }}">{{ ct.quan_nhan.ho_ten }}</span>
                                     {% if has_edit_request %}
-                                    <span class="badge bg-warning text-dark ms-1" title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}"><i class="bi bi-pencil-square"></i></span>
+                                    <span class="badge bg-warning text-dark ms-1 badge-edit-req"
+                                          title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </span>
                                     {% endif %}
                                 </div>
                                 <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
@@ -288,10 +291,9 @@
                                            {% if is_approved %}checked{% endif %}
                                            style="cursor:pointer;width:2.5em;height:1.3em;">
                                 </div>
-                                {# ★ FIX: dùng style display thay vì remove() — luôn render, ẩn/hiện bằng JS #}
                                 <a href="javascript:void(0)" class="reject-link text-danger"
                                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   style="font-size:0.72rem;{% if is_approved or is_rejected %} display:none;{% endif %}">
+                                   style="font-size:0.72rem;{% if is_approved or is_rejected %}display:none;{% endif %}">
                                     Từ chối
                                 </a>
                                 {% if is_rejected %}
@@ -309,20 +311,16 @@
                                    data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tập thể'))|e }}"
                                    data-tap-the="false"
                                    style="font-size:0.68rem;">
-                                    <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
+                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Cập nhật yêu cầu{% else %}Yêu cầu sửa{% endif %}
                                 </a>
                                 {% if is_approved or is_rejected %}
-                                <a href="javascript:void(0)"
-                                   class="revoke-item-link text-warning d-block"
-                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   style="font-size:0.68rem;">
+                                <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.68rem;">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
                                 </a>
                                 {% else %}
-                                <a href="javascript:void(0)"
-                                   class="revoke-item-link text-warning d-block"
-                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   style="font-size:0.68rem;display:none;">
+                                <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.68rem;display:none;">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
                                 </a>
                                 {% endif %}
@@ -352,8 +350,8 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>{# /tbl-scroll #}
-    </div>{# /tbl-outer #}
+        </div>
+    </div>
 </div>
 {% endif %}
 
@@ -424,7 +422,10 @@
                                     <i class="bi bi-building text-secondary me-1"></i>
                                     {{ ct.ten_don_vi_de_xuat or (pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—') }}
                                     {% if has_edit_request %}
-                                    <span class="badge bg-warning text-dark ms-1"><i class="bi bi-pencil-square"></i></span>
+                                    <span class="badge bg-warning text-dark ms-1 badge-edit-req"
+                                          title="Đã yêu cầu sửa: {{ edit_requests_by_ct[ct.id].ly_do }}">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </span>
                                     {% endif %}
                                 </div>
                                 <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
@@ -477,7 +478,7 @@
                                 </div>
                                 <a href="javascript:void(0)" class="reject-link text-danger"
                                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   style="font-size:0.72rem;{% if is_approved or is_rejected %} display:none;{% endif %}">
+                                   style="font-size:0.72rem;{% if is_approved or is_rejected %}display:none;{% endif %}">
                                     Từ chối
                                 </a>
                                 {% if is_rejected %}
@@ -495,20 +496,16 @@
                                    data-name="{{ (ct.ten_don_vi_de_xuat or 'Tập thể')|e }}"
                                    data-tap-the="true"
                                    style="font-size:0.68rem;">
-                                    <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
+                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Cập nhật yêu cầu{% else %}Yêu cầu sửa{% endif %}
                                 </a>
                                 {% if is_approved or is_rejected %}
-                                <a href="javascript:void(0)"
-                                   class="revoke-item-link text-warning d-block"
-                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   style="font-size:0.68rem;">
+                                <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.68rem;">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
                                 </a>
                                 {% else %}
-                                <a href="javascript:void(0)"
-                                   class="revoke-item-link text-warning d-block"
-                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   style="font-size:0.68rem;display:none;">
+                                <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"
+                                   data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}" style="font-size:0.68rem;display:none;">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i>Thu hồi
                                 </a>
                                 {% endif %}
@@ -538,8 +535,8 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>{# /tbl-scroll #}
-    </div>{# /tbl-outer ← ĐÃ SỬA: đóng đúng chỗ #}
+        </div>
+    </div>
 </div>
 {% endif %}
 
@@ -581,7 +578,7 @@
     </div></div>
 </div>
 
-<!-- ★ Request edit modal — CHỈ 1 lần khai báo -->
+<!-- Request edit modal — CHỈ 1 lần khai báo -->
 <div class="modal fade" id="requestEditModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-header modal-header-navy">
@@ -614,6 +611,20 @@
     </div></div>
 </div>
 
+<!-- Detail Modal — CHỈ 1 lần khai báo -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header py-2">
+            <h6 class="modal-title fw-semibold"><i class="bi bi-person-lines-fill me-1"></i>Chi tiết</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detailModalBody" style="font-size:0.85rem;"></div>
+        <div class="modal-footer py-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+    </div></div>
+</div>
+
 <script type="application/json" id="reqEditFieldData">
 {
   "ca_nhan": [{% for f in table_columns %}{"ma_truong": {{ f|tojson }}, "ten": {{ (field_labels.get(f, f))|tojson }}}{{ "," if not loop.last }}{% endfor %}],
@@ -633,38 +644,25 @@
 </div>
 {% endif %}
 
+{% endif %}{# end nam_hoc_filter #}
+
+<div class="print-timestamp">
+    Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
+    {% if nam_hoc_filter %} | Năm học: <strong>{{ nam_hoc_filter }}</strong>{% endif %}
+</div>
+
 <style>
-.toolbar-wrapper {
-    display:block; position:sticky; top:0; z-index:100;
-    background:#fff; border-bottom:1px solid #dee2e6;
-    padding:6px 0; margin-bottom:12px;
-    box-shadow:0 2px 6px rgba(0,0,0,.07); width:100%;
-}
-.toolbar-inner {
-    display:flex; align-items:center; gap:8px;
-    flex-wrap:nowrap; overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none; padding:0 4px;
-}
+.toolbar-wrapper { display:block; position:sticky; top:0; z-index:100; background:#fff; border-bottom:1px solid #dee2e6; padding:6px 0; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,.07); width:100%; }
+.toolbar-inner { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:0 4px; }
 .toolbar-inner::-webkit-scrollbar { display:none; }
 .toolbar-inner > * { flex-shrink:0; }
-.stat-mini {
-    display:flex; align-items:center; gap:.4rem;
-    background:#fff; border:1px solid var(--border-color);
-    border-radius:8px; padding:.4rem .75rem; font-size:.82rem;
-}
+.stat-mini { display:flex; align-items:center; gap:.4rem; background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:.4rem .75rem; font-size:.82rem; }
 .tbl-outer { width:100%; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; }
 .tbl-scroll { display:block; }
 .tbl-mirror { overflow-x:scroll; overflow-y:hidden; height:14px; background:#f8f9fa; border-bottom:1px solid #dee2e6; }
 .tbl-mirror > div { height:1px; }
-.tbl-scroll table {
-    border-collapse:separate !important; border-spacing:0 !important;
-    table-layout:auto !important; width:max-content !important; font-size:0.82rem;
-}
-.tbl-scroll th, .tbl-scroll td {
-    border-bottom:1px solid #dee2e6; border-right:1px solid #dee2e6;
-    padding:4px 8px !important; vertical-align:middle; box-sizing:border-box;
-}
+.tbl-scroll table { border-collapse:separate !important; border-spacing:0 !important; table-layout:auto !important; width:max-content !important; font-size:0.82rem; }
+.tbl-scroll th, .tbl-scroll td { border-bottom:1px solid #dee2e6; border-right:1px solid #dee2e6; padding:4px 8px !important; vertical-align:middle; box-sizing:border-box; }
 .tbl-scroll th:first-child, .tbl-scroll td:first-child { border-left:1px solid #dee2e6; }
 .tbl-scroll thead th { border-top:1px solid #dee2e6; white-space:normal !important; word-break:break-word; vertical-align:bottom; line-height:1.3; text-align:center; }
 .tbl-scroll thead .sticky-stt, .tbl-scroll thead .sticky-name, .tbl-scroll thead .col-pending { white-space:nowrap !important; }
@@ -679,42 +677,17 @@
 .tbl-scroll .col-managed   { width:80px;  min-width:74px;  }
 .tbl-scroll .col-pending   { width:110px; min-width:110px; }
 .tbl-scroll .col-lop       { width:70px;  min-width:70px;  }
-/* Sticky STT */
-.tbl-scroll .sticky-stt {
-    position:sticky !important; left:0 !important; z-index:2;
-    width:34px; min-width:34px; max-width:34px;
-    background:#fff; border-right:2px solid #b0bec5 !important;
-}
+.tbl-scroll .sticky-stt { position:sticky !important; left:0 !important; z-index:2; width:34px; min-width:34px; max-width:34px; background:#fff; border-right:2px solid #b0bec5 !important; }
 .tbl-scroll thead .sticky-stt { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
-/* Sticky Họ tên */
-.tbl-scroll .sticky-name {
-    position:sticky !important; left:34px !important; z-index:2;
-    width:190px; min-width:190px; max-width:190px;
-    background:#fff; box-shadow:3px 0 6px rgba(0,0,0,.12); overflow:hidden;
-}
+.tbl-scroll .sticky-name { position:sticky !important; left:34px !important; z-index:2; width:190px; min-width:190px; max-width:190px; background:#fff; box-shadow:3px 0 6px rgba(0,0,0,.12); overflow:hidden; }
 .tbl-scroll thead .sticky-name { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
-/* Sticky Đang chờ */
-.tbl-scroll .col-pending {
-    position:sticky !important; right:0 !important; z-index:2;
-    background:#fff; box-shadow:-3px 0 6px rgba(0,0,0,.10);
-}
-/* Warning row sticky cells */
-.tbl-scroll tr.table-warning-custom .sticky-stt,
-.tbl-scroll tr.table-warning-custom .sticky-name,
-.tbl-scroll tr.table-warning-custom .col-pending { background: #fff3cd !important; }
-.table-warning-custom { background-color: #fff3cd !important; }
+.tbl-scroll .col-pending { position:sticky !important; right:0 !important; z-index:2; background:#fff; box-shadow:-3px 0 6px rgba(0,0,0,.10); }
 .tbl-scroll thead .col-pending { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
-/* Row state backgrounds */
-.tbl-scroll tr.table-success .sticky-stt,
-.tbl-scroll tr.table-success .sticky-name,
-.tbl-scroll tr.table-success .col-pending { background:#d1e7dd !important; }
-.tbl-scroll tr.table-danger  .sticky-stt,
-.tbl-scroll tr.table-danger  .sticky-name,
-.tbl-scroll tr.table-danger  .col-pending { background:#f8d7da !important; }
-.tbl-scroll tbody tr:hover   .sticky-stt,
-.tbl-scroll tbody tr:hover   .sticky-name,
-.tbl-scroll tbody tr:hover   .col-pending { background:#f0f4f8 !important; }
-/* Misc */
+.tbl-scroll tr.table-success .sticky-stt, .tbl-scroll tr.table-success .sticky-name, .tbl-scroll tr.table-success .col-pending { background:#d1e7dd !important; }
+.tbl-scroll tr.table-danger  .sticky-stt, .tbl-scroll tr.table-danger  .sticky-name, .tbl-scroll tr.table-danger  .col-pending { background:#f8d7da !important; }
+.tbl-scroll tr.table-warning-custom .sticky-stt, .tbl-scroll tr.table-warning-custom .sticky-name, .tbl-scroll tr.table-warning-custom .col-pending { background:#fff3cd !important; }
+.table-warning-custom { background-color:#fff3cd !important; }
+.tbl-scroll tbody tr:hover .sticky-stt, .tbl-scroll tbody tr:hover .sticky-name, .tbl-scroll tbody tr:hover .col-pending { background:#f0f4f8 !important; }
 .name-btn-group { display:flex; align-items:flex-start; gap:4px; }
 .name-btn-group .name-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .toggle-approval:checked { background-color:#198754; border-color:#198754; }
@@ -726,38 +699,66 @@
 .btn-outline-navy:hover { background:var(--navy-primary); color:#fff; }
 .view-compact .col-criteria, .view-compact .col-evidence, .view-compact .col-gate-criteria { display:none !important; }
 #viewModeGroup .btn.active { background:var(--navy-primary); color:#fff; border-color:var(--navy-primary); }
-.card-section, .card-body-custom, .card-body,
-.main-content, .content-wrapper, .content-area,
-.page-content, .main-panel, .wrapper { overflow:visible !important; }
+.card-section, .card-body-custom, .card-body, .main-content, .content-wrapper, .content-area, .page-content, .main-panel, .wrapper { overflow:visible !important; }
 .print-timestamp { display:none; font-size:0.82rem; color:#666; margin-bottom:8px; }
 @media print {
-    .sidebar, .toolbar-wrapper, #filterBar, #globalStats,
-    .toggle-approval, .reject-link, .reject-reason-row, .btn, button { display:none !important; }
+    .sidebar, .toolbar-wrapper, #filterBar, #globalStats, .toggle-approval, .reject-link, .reject-reason-row, .btn, button { display:none !important; }
     .card-section { border:none !important; box-shadow:none !important; }
     .print-timestamp { display:block !important; }
     .col-gate-criteria, .col-evidence, .col-pending { display:none !important; }
 }
 </style>
 
+{# ══ SHARED NĂM HỌC — CHỈ 1 LẦN ══ #}
+<script>
+(function () {
+    var LS_KEY = 'sharedNamHoc';
+    var cur    = '{{ nam_hoc_filter }}';
+    if (!cur) {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            var urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.get('nam_hoc')) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('nam_hoc', saved);
+                window.location.replace(url.toString());
+                return;
+            } else {
+                localStorage.removeItem(LS_KEY); // tránh loop
+            }
+        }
+    } else {
+        localStorage.setItem(LS_KEY, cur);
+    }
+})();
+
+function onNamHocChange(sel) {
+    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
+    else           localStorage.removeItem('sharedNamHoc');
+    sel.form.submit();
+}
+</script>
+
+{# ══ MAIN SCRIPT — CHỈ 1 DOMContentLoaded ══ #}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-    // ══════════════════════════════════════════════════════════
-    // VIEW MODE
-    // ══════════════════════════════════════════════════════════
-    const VM_KEY = 'pendingListViewMode';
-    const tableCN  = document.getElementById('tableCaNhan');
-    const tableTT  = document.getElementById('tableTapThe');
-    const btnC     = document.getElementById('btnViewCompact');
-    const btnF     = document.getElementById('btnViewFull');
+    // ── Print timestamp ──────────────────────────────────────
+    const _pts = document.getElementById('printTimestamp');
+    if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
+
+    // ── VIEW MODE ────────────────────────────────────────────
+    const VM_KEY  = 'pendingListViewMode';
+    const tableCN = document.getElementById('tableCaNhan');
+    const tableTT = document.getElementById('tableTapThe');
+    const btnC    = document.getElementById('btnViewCompact');
+    const btnF    = document.getElementById('btnViewFull');
 
     function applyViewMode(mode) {
-        [tableCN, tableTT].forEach(t => {
-            if (!t) return;
-            t.classList.toggle('view-compact', mode === 'compact');
-        });
-        btnC && btnC.classList.toggle('active', mode === 'compact');
+        [tableCN, tableTT].forEach(t => { if (!t) return; t.classList.toggle('view-compact', mode === 'compact'); });
+        
+              btnC && btnC.classList.toggle('active', mode === 'compact');
         btnF && btnF.classList.toggle('active', mode !== 'compact');
         try { localStorage.setItem(VM_KEY, mode); } catch(e) {}
     }
@@ -767,27 +768,23 @@ document.addEventListener('DOMContentLoaded', function () {
     btnC && btnC.addEventListener('click', () => applyViewMode('compact'));
     btnF && btnF.addEventListener('click', () => applyViewMode('full'));
 
-    // ══════════════════════════════════════════════════════════
-    // FILTERS
-    // ══════════════════════════════════════════════════════════
-    const unitFilter    = document.getElementById('unitFilter');
-    const danhHieuFilter= document.getElementById('danhHieuFilter');
-    const searchInput   = document.getElementById('searchInput');
-    const scopeFilter   = document.getElementById('scopeFilter');
-    const BAN_QUANLUC   = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Hạ sĩ quan, chiến sĩ'];
-
-    
+    // ── FILTERS ──────────────────────────────────────────────
+    const unitFilter     = document.getElementById('unitFilter');
+    const danhHieuFilter = document.getElementById('danhHieuFilter');
+    const searchInput    = document.getElementById('searchInput');
+    const scopeFilter    = document.getElementById('scopeFilter');
+    const BAN_QUANLUC    = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Hạ sĩ quan, chiến sĩ'];
 
     function applyFilters() {
-        const selUnit  = unitFilter    ? unitFilter.value    : '';
-        const selDH    = danhHieuFilter? danhHieuFilter.value: '';
-        const search   = searchInput   ? searchInput.value.toLowerCase().trim() : '';
-        const selScope = scopeFilter   ? scopeFilter.value   : '';
+        const selUnit  = unitFilter     ? unitFilter.value     : '';
+        const selDH    = danhHieuFilter ? danhHieuFilter.value : '';
+        const search   = searchInput    ? searchInput.value.toLowerCase().trim() : '';
+        const selScope = scopeFilter    ? scopeFilter.value    : '';
         document.querySelectorAll('.ct-row').forEach(row => {
             let vis = true;
-            if (selUnit  && row.dataset.unitName  !== selUnit)  vis = false;
-            if (vis && selDH    && row.dataset.danhHieu  !== selDH)    vis = false;
-            if (vis && search   && !row.dataset.hoTen.includes(search)) vis = false;
+            if (selUnit  && row.dataset.unitName !== selUnit)           vis = false;
+            if (vis && selDH   && row.dataset.danhHieu !== selDH)       vis = false;
+            if (vis && search  && !row.dataset.hoTen.includes(search))  vis = false;
             if (vis && selScope) {
                 const isQL = BAN_QUANLUC.includes(row.dataset.doiTuong || '');
                 if (selScope === 'quan_luc' && !isQL) vis = false;
@@ -804,16 +801,11 @@ document.addEventListener('DOMContentLoaded', function () {
     [unitFilter, danhHieuFilter, scopeFilter].forEach(el => el && el.addEventListener('change', applyFilters));
     searchInput && searchInput.addEventListener('input', applyFilters);
 
-    // ══════════════════════════════════════════════════════════
-    // TOGGLE SWITCHES
-    // ══════════════════════════════════════════════════════════
+    // ── TOGGLE SWITCHES ──────────────────────────────────────
     document.querySelectorAll('.toggle-approval').forEach(sw => {
         sw.addEventListener('change', function () {
-            if (this.checked) {
-                saveToggle(this.dataset.pdId, this.dataset.ctId, true, '');
-            } else {
-                showRejectRow(this.dataset.pdId, this.dataset.ctId);
-            }
+            if (this.checked) saveToggle(this.dataset.pdId, this.dataset.ctId, true, '');
+            else              showRejectRow(this.dataset.pdId, this.dataset.ctId);
         });
     });
 
@@ -837,7 +829,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.cancel-reject-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             hideRejectRow(this.dataset.pdId, this.dataset.ctId);
-            // ★ FIX: khi hủy, revert switch về trạng thái cũ
             const sw = document.getElementById(`switch-${this.dataset.pdId}-${this.dataset.ctId}`);
             if (sw) sw.checked = false;
         });
@@ -852,9 +843,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ══════════════════════════════════════════════════════════
-    // REVOKE ITEM
-    // ══════════════════════════════════════════════════════════
+    // ── REVOKE ITEM ──────────────────────────────────────────
     document.querySelectorAll('.revoke-item-link').forEach(link => {
         link.addEventListener('click', function () {
             const pdId = this.dataset.pdId, ctId = this.dataset.ctId;
@@ -868,16 +857,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.success) {
                     const row = document.getElementById(`row-${pdId}-${ctId}`);
                     row.classList.remove('table-success', 'table-danger');
-                    // Reset switch
                     const sw = document.getElementById(`switch-${pdId}-${ctId}`);
                     if (sw) sw.checked = false;
-                    // ★ FIX: hiện lại reject-link (không xóa, chỉ show)
                     const rl = row.querySelector('.reject-link');
                     if (rl) rl.style.display = '';
-                    // Ẩn reason-text
                     const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
                     if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
-                    // Ẩn revoke-link
                     this.style.display = 'none';
                     updateGlobalStats();
                 } else {
@@ -888,22 +873,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ══════════════════════════════════════════════════════════
-    // ★ REQUEST EDIT MODAL — CHỈ 1 INSTANCE, khai báo 1 lần
-    // ══════════════════════════════════════════════════════════
+    // ── REQUEST EDIT MODAL ───────────────────────────────────
     let reqEditFieldData = { ca_nhan: [], tap_the: [] };
     try {
-        reqEditFieldData = JSON.parse(
-            document.getElementById('reqEditFieldData').textContent
-        );
+        reqEditFieldData = JSON.parse(document.getElementById('reqEditFieldData').textContent);
     } catch(e) {}
 
-    // ★ Instance modal duy nhất
     const _reqEditModalEl = document.getElementById('requestEditModal');
     const _reqEditModal   = _reqEditModalEl ? new bootstrap.Modal(_reqEditModalEl) : null;
     let   _reqEditCtx     = { pdId: null, ctId: null };
 
-    // Hàm cập nhật bộ đếm
     function _reqEditUpdateCount() {
         const total   = document.querySelectorAll('#reqEditFields .req-edit-field').length;
         const checked = document.querySelectorAll('#reqEditFields .req-edit-field:checked').length;
@@ -911,30 +890,33 @@ document.addEventListener('DOMContentLoaded', function () {
         if (el) el.textContent = `${checked} / ${total}`;
     }
 
-    // Event delegation trên container — bind 1 lần, không cần re-bind
+    // Event delegation — bind 1 lần duy nhất
+    document.getElementById('reqEditFields') &&
     document.getElementById('reqEditFields').addEventListener('change', function (e) {
         if (e.target.classList.contains('req-edit-field')) _reqEditUpdateCount();
     });
 
-    // Chọn tất cả / Bỏ chọn
+    document.getElementById('reqEditSelectAll') &&
     document.getElementById('reqEditSelectAll').addEventListener('click', function () {
         document.querySelectorAll('#reqEditFields .req-edit-field').forEach(cb => cb.checked = true);
         _reqEditUpdateCount();
     });
+
+    document.getElementById('reqEditDeselectAll') &&
     document.getElementById('reqEditDeselectAll').addEventListener('click', function () {
         document.querySelectorAll('#reqEditFields .req-edit-field').forEach(cb => cb.checked = false);
         _reqEditUpdateCount();
     });
 
-    // Mở modal khi click "Yêu cầu sửa"
+    // Mở modal
     document.querySelectorAll('.request-edit-link').forEach(link => {
         link.addEventListener('click', function () {
             _reqEditCtx.pdId = this.dataset.pdId;
             _reqEditCtx.ctId = this.dataset.ctId;
             const isTapThe   = this.dataset.tapThe === 'true';
 
-            document.getElementById('reqEditName').textContent   = this.dataset.name || '';
-            document.getElementById('reqEditReason').value       = '';
+            document.getElementById('reqEditName').textContent = this.dataset.name || '';
+            document.getElementById('reqEditReason').value     = '';
 
             const fields    = isTapThe ? reqEditFieldData.tap_the : reqEditFieldData.ca_nhan;
             const container = document.getElementById('reqEditFields');
@@ -958,8 +940,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Submit yêu cầu sửa
-    // Submit yêu cầu sửa — KHÔNG reload trang
+    // ★ Submit yêu cầu sửa — KHÔNG reload trang
+    document.getElementById('reqEditSubmit') &&
     document.getElementById('reqEditSubmit').addEventListener('click', function () {
         const checked = [...new Set(
             Array.from(document.querySelectorAll('#reqEditFields .req-edit-field:checked'))
@@ -986,7 +968,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (_reqEditModal) _reqEditModal.hide();
                 showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
 
-                // ── Cập nhật DOM không reload ──
+                // ★ Cập nhật DOM — KHÔNG reload trang
                 const pdId = _reqEditCtx.pdId;
                 const ctId = _reqEditCtx.ctId;
                 const row  = document.getElementById(`row-${pdId}-${ctId}`);
@@ -995,38 +977,31 @@ document.addEventListener('DOMContentLoaded', function () {
                     row.classList.remove('table-success', 'table-danger');
                     row.classList.add('table-warning-custom');
 
-                    // 2. Thêm badge "đã yêu cầu sửa" vào ô tên (nếu chưa có)
+                    // 2. Thêm/cập nhật badge trong ô tên
                     const nameText = row.querySelector('.name-text');
-                    if (nameText && !nameText.querySelector('.badge-edit-req')) {
-                        const badge = document.createElement('span');
-                        badge.className = 'badge bg-warning text-dark ms-1 badge-edit-req';
+                    if (nameText) {
+                        let badge = nameText.querySelector('.badge-edit-req');
+                        if (!badge) {
+                            badge = document.createElement('span');
+                            badge.className = 'badge bg-warning text-dark ms-1 badge-edit-req';
+                            badge.innerHTML = '<i class="bi bi-pencil-square"></i>';
+                            nameText.appendChild(badge);
+                        }
                         badge.title = `Đã yêu cầu sửa: ${reason || ''}`;
-                        badge.innerHTML = '<i class="bi bi-pencil-square"></i>';
-                        nameText.appendChild(badge);
-                    } else if (nameText) {
-                        // Cập nhật tooltip nếu badge đã tồn tại
-                        const existing = nameText.querySelector('.badge-edit-req');
-                        if (existing) existing.title = `Đã yêu cầu sửa: ${reason || ''}`;
                     }
 
-                    // 3. Đổi link "Yêu cầu sửa" → "Cập nhật yêu cầu"
+                    // 3. Đổi text link → "Cập nhật yêu cầu"
                     const editLink = row.querySelector('.request-edit-link');
                     if (editLink) {
                         editLink.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Cập nhật yêu cầu';
                     }
 
-                    // 4. Cập nhật sticky cells (nếu row là warning, sticky cũng cần đổi)
+                    // 4. Reset inline background để CSS class tự xử lý sticky cells
                     [row.querySelector('.sticky-stt'),
-                    row.querySelector('.sticky-name'),
-                    row.querySelector('.col-pending')
-                    ].forEach(cell => {
-                        if (cell) cell.style.background = '';  // reset inline → CSS class tự xử lý
-                    });
+                     row.querySelector('.sticky-name'),
+                     row.querySelector('.col-pending')
+                    ].forEach(cell => { if (cell) cell.style.background = ''; });
                 }
-
-                // 5. Cập nhật data-attribute để filter biết trạng thái
-                if (row) row.dataset.hasEditRequest = 'true';
-
             } else {
                 alert(data.message || 'Không thể gửi yêu cầu.');
             }
@@ -1038,10 +1013,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-
-    // ══════════════════════════════════════════════════════════
-    // BATCH APPROVE
-    // ══════════════════════════════════════════════════════════
+    // ── BATCH APPROVE ────────────────────────────────────────
     let batchPendingData = null;
 
     ['btnApproveAllCN', 'btnApproveAllTT'].forEach(btnId => {
@@ -1073,6 +1045,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    document.getElementById('batchApproveConfirm') &&
     document.getElementById('batchApproveConfirm').addEventListener('click', async function () {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
@@ -1092,9 +1065,22 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ══════════════════════════════════════════════════════════
+    // ── FILTER BAR TOGGLE ────────────────────────────────────
+    const toggleFilterBar = document.getElementById('toggleFilterBar');
+    const filterBar       = document.getElementById('filterBar');
+    if (toggleFilterBar && filterBar) {
+        toggleFilterBar.addEventListener('click', () => filterBar.classList.toggle('d-none'));
+    }
+
+    // ── INIT HELPERS ─────────────────────────────────────────
+    initColToggle('tableCaNhan', 'btnColToggleCN');
+    initColToggle('tableTapThe', 'btnColToggleTT');
+    initMirrorScroll('mirrorCN', 'tblOuterCN');
+    initMirrorScroll('mirrorTT', 'tblOuterTT');
+
+    // ════════════════════════════════════════════════════════
     // HELPER FUNCTIONS
-    // ══════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     async function doBatchApprove(pdId, ctIds) {
         const res  = await fetch('/approval/batch-approve', {
             method: 'POST',
@@ -1108,15 +1094,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const row = document.getElementById(`row-${pdId}-${ctId}`);
             if (!sw || !row) return;
             sw.checked = true;
-            row.classList.remove('table-danger');
+            row.classList.remove('table-danger', 'table-warning-custom');
             row.classList.add('table-success');
-            // ★ FIX: ẩn reject-link, không xóa
             const rl = row.querySelector('.reject-link');
             if (rl) rl.style.display = 'none';
-            // Ẩn reason-text
             const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
             if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
-            // Hiện revoke-link
             const rv = row.querySelector('.revoke-item-link');
             if (rv) rv.style.display = '';
         });
@@ -1151,40 +1134,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (sw) sw.checked = !sw.checked;
                 return;
             }
-
             const row = document.getElementById(`row-${pdId}-${ctId}`);
             row.classList.remove('table-success', 'table-danger');
             hideRejectRow(pdId, ctId);
-
-            const rl  = row.querySelector('.reject-link');
-            const rt  = document.getElementById(`reason-text-${pdId}-${ctId}`);
-            const rv  = row.querySelector('.revoke-item-link');
-
+            const rl = row.querySelector('.reject-link');
+            const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
+            const rv = row.querySelector('.revoke-item-link');
             if (approved) {
                 row.classList.add('table-success');
                 if (sw) sw.checked = true;
-                // ★ FIX: ẩn reject-link (không xóa)
                 if (rl) rl.style.display = 'none';
-                // Ẩn reason-text
                 if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
-                // Hiện revoke-link
                 if (rv) rv.style.display = '';
             } else {
                 row.classList.add('table-danger');
                 if (sw) sw.checked = false;
-                // Ẩn reject-link
                 if (rl) rl.style.display = 'none';
-                // Hiện reason-text
                 const short = lyDo.length > 20 ? lyDo.substring(0, 20) + '...' : lyDo;
-                if (rt) {
-                    rt.textContent   = short;
-                    rt.title         = lyDo;
-                    rt.style.display = '';
-                }
-                // Hiện revoke-link
+                if (rt) { rt.textContent = short; rt.title = lyDo; rt.style.display = ''; }
                 if (rv) rv.style.display = '';
             }
-
             updateGlobalStats();
             if (data.auto_finalized) showToast('Đã tự động hoàn tất duyệt cho đơn vị này.', 'success');
         } catch(err) {
@@ -1211,32 +1180,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showToast(message, type) {
         const container = document.querySelector('.content-area')
-                       || document.querySelector('.page-header').parentNode;
+                       || (document.querySelector('.page-header') && document.querySelector('.page-header').parentNode)
+                       || document.body;
         const div = document.createElement('div');
         div.className = `alert alert-${type} alert-dismissible fade show`;
-        div.style.fontSize = '0.85rem';
+        div.style.cssText = 'font-size:0.85rem;position:fixed;top:16px;right:16px;z-index:9999;min-width:280px;';
         div.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-        container.insertBefore(div, container.firstChild);
+        document.body.appendChild(div);
         setTimeout(() => div.remove(), 4000);
     }
 
-    // Filter bar toggle
-    const toggleFilterBar = document.getElementById('toggleFilterBar');
-    const filterBar       = document.getElementById('filterBar');
-    if (toggleFilterBar && filterBar) {
-        toggleFilterBar.addEventListener('click', () => filterBar.classList.toggle('d-none'));
-    }
-
-    // Init helpers
-    initColToggle('tableCaNhan', 'btnColToggleCN');
-    initColToggle('tableTapThe', 'btnColToggleTT');
-    initMirrorScroll('mirrorCN', 'tblOuterCN');
-    initMirrorScroll('mirrorTT', 'tblOuterTT');
 }); // end DOMContentLoaded
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // MIRROR SCROLLBAR
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function initMirrorScroll(mirrorId, outerId) {
     const mirror = document.getElementById(mirrorId);
     const outer  = document.getElementById(outerId);
@@ -1253,9 +1211,9 @@ function initMirrorScroll(mirrorId, outerId) {
     outer.addEventListener('scroll',  () => { if (lock) return; lock = true; mirror.scrollLeft = outer.scrollLeft; lock = false; });
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // COLUMN TOGGLE
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function initColToggle(tableId, btnId) {
     const table = document.getElementById(tableId);
     const btn   = document.getElementById(btnId);
@@ -1340,54 +1298,10 @@ function setAllColToggle(tableId, storageKey, visible) {
     });
     applyColToggle(tableId, storageKey);
 }
-</script>
 
-<!-- Shared năm học -->
-<script>
-(function() {
-    const LS_KEY = 'sharedNamHoc';
-    const cur    = '{{ nam_hoc_filter }}';
-    if (!cur) {
-        const saved = localStorage.getItem(LS_KEY);
-        if (saved) {
-            // Kiểm tra tránh loop: nếu URL đã có nam_hoc thì không redirect nữa
-            const urlParams = new URLSearchParams(window.location.search);
-            if (!urlParams.get('nam_hoc')) {
-                const url = new URL(window.location.href);
-                url.searchParams.set('nam_hoc', saved);
-                window.location.replace(url.toString());
-                return;
-            } else {
-                // URL có nam_hoc nhưng backend không nhận → xóa localStorage tránh loop
-                localStorage.removeItem(LS_KEY);
-            }
-        }
-    } else {
-        localStorage.setItem(LS_KEY, cur);
-    }
-})();
-function onNamHocChange(sel) {
-    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
-    else           localStorage.removeItem('sharedNamHoc');
-    sel.form.submit();
-}
-</script>
-
-<!-- Detail Modal -->
-<div class="modal fade" id="detailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
-        <div class="modal-header py-2">
-            <h6 class="modal-title fw-semibold"><i class="bi bi-person-lines-fill me-1"></i>Chi tiết</h6>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body" id="detailModalBody" style="font-size:0.85rem;"></div>
-        <div class="modal-footer py-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-        </div>
-    </div></div>
-</div>
-
-<script>
+// ════════════════════════════════════════════════════════
+// DETAIL MODAL
+// ════════════════════════════════════════════════════════
 function openDetailModal(ctId) {
     const modal = new bootstrap.Modal(document.getElementById('detailModal'));
     const body  = document.getElementById('detailModalBody');
@@ -1441,9 +1355,10 @@ function openDetailModal(ctId) {
                             <div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div>
                         </div>`;
                     } else {
-                        html += `<a href="${mc.url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;">
-                            <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
-                        </a>`;
+                        html += `<a href="${mc.url}" target="_blank" rel="noopener"
+                                    class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;">
+                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
+                                 </a>`;
                     }
                 });
                 html += '</div>';
@@ -1480,34 +1395,5 @@ function openDetailModal(ctId) {
 }
 </script>
 
-<!-- <div class="print-timestamp">
-    Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
-    {% if nam_hoc_filter %} | Năm học: <strong>{{ nam_hoc_filter }}</strong>{% endif %}
-</div>
-<script>
-const _pts = document.getElementById('printTimestamp');
-if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
-</script> -->
-
-{# Đây là phần cuối file, sau {% endif %} của nam_hoc_filter #}
-
-{% endif %}{# end nam_hoc_filter #}
-
-<div class="print-timestamp">
-    Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
-    {% if nam_hoc_filter %} | Năm học: <strong>{{ nam_hoc_filter }}</strong>{% endif %}
-</div>
-
-<script>
-// Print timestamp — chỉ cần 1 dòng này
-(function() {
-    var el = document.getElementById('printTimestamp');
-    if (el) el.textContent = new Date().toLocaleString('vi-VN');
-})();
-// KHÔNG có sharedNamHoc ở đây
-// KHÔNG có onNamHocChange ở đây
-// KHÔNG có updateReqEditCount ở đây
-// Tất cả đã được khai báo ở block script phía trên rồi
-</script>
-
 {% endblock %}
+

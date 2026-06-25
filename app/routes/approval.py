@@ -571,6 +571,88 @@ def _recompute_chi_tiet_status(de_xuat):
         elif dx_tt == TrangThaiDeXuat.PHE_DUYET_CUOI.value:
             ct.trang_thai = TrangThaiChiTiet.HOI_DONG.value
 
+def _auto_prepare_pending(phong_name, nam_hoc_filter):
+    """Tạo KetQuaDuyetChiTiet còn thiếu và auto-finalize nếu đủ điều kiện.
+    Commit 1 lần duy nhất. Không trả về gì."""
+    from app.models.nomination import DeXuat as _DeXuat
+
+    pds = PheDuyet.query.filter_by(
+        phong_duyet=phong_name,
+        ket_qua=KetQuaDuyet.CHO_DUYET.value
+    ).options(
+        subqueryload(PheDuyet.chi_tiet_duyet),
+        joinedload(PheDuyet.de_xuat).subqueryload(_DeXuat.chi_tiets),
+    ).join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id)\
+     .filter(_DeXuat.nam_hoc == nam_hoc_filter).all()
+
+    new_kq_list = []
+    is_auto_dept = phong_name in (
+        PhongDuyet.PHONG_HAUCANKYTHUAT.value,
+        PhongDuyet.BAN_SAUDAIHOC.value,
+    )
+
+    for pd in pds:
+        existing_ct_ids = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
+        for ct in pd.de_xuat.chi_tiets:
+            if ct.bi_loai or ct.id in existing_ct_ids:
+                continue
+            in_scope = _is_in_dept_scope(
+                next(r for r, p in ROLE_TO_PHONG.items() if p == phong_name),
+                ct.doi_tuong
+            )
+            ket_qua_val = (
+                KetQuaDuyet.DONG_Y.value
+                if (is_auto_dept or not in_scope)
+                else KetQuaDuyet.CHO_DUYET.value
+            )
+            new_kq_list.append(KetQuaDuyetChiTiet(
+                phe_duyet_id=pd.id,
+                chi_tiet_id=ct.id,
+                ket_qua=ket_qua_val,
+            ))
+
+    if new_kq_list:
+        db.session.add_all(new_kq_list)
+        db.session.flush()
+
+    need_commit = bool(new_kq_list)
+
+    for pd in pds:
+        if pd.ket_qua != KetQuaDuyet.CHO_DUYET.value:
+            continue
+        active_ct_ids = {ct.id for ct in pd.de_xuat.chi_tiets if not ct.bi_loai}
+        if not active_ct_ids:
+            continue
+        all_kq = list(pd.chi_tiet_duyet) + [
+            kq for kq in new_kq_list if kq.phe_duyet_id == pd.id
+        ]
+        kq_map = {kq.chi_tiet_id: kq.ket_qua for kq in all_kq}
+        if any(kq_map.get(ct_id) == KetQuaDuyet.CHO_DUYET.value for ct_id in active_ct_ids):
+            continue
+        pd.ket_qua        = KetQuaDuyet.DONG_Y.value
+        pd.nguoi_duyet_id = None
+        pd.ngay_duyet     = datetime.utcnow()
+        pd.ghi_chu        = 'Tự động duyệt (không có đối tượng thuộc phạm vi)'
+        need_commit       = True
+        de_xuat  = pd.de_xuat
+        all_dept = PheDuyet.query.filter_by(de_xuat_id=de_xuat.id).filter(
+            PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
+        ).all()
+        if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept):
+            de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
+            if not PheDuyet.query.filter_by(
+                de_xuat_id=de_xuat.id,
+                phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
+            ).first():
+                db.session.add(PheDuyet(
+                    de_xuat_id=de_xuat.id,
+                    phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
+                    ket_qua=KetQuaDuyet.CHO_DUYET.value,
+                ))
+
+    if need_commit:
+        db.session.commit()
+
 @approval_bp.route('/pending')
 @login_required
 @department_required
@@ -811,7 +893,6 @@ def pending_list():
                            tt_criteria_fields=tt_criteria_fields,
                            tt_field_labels=tt_field_labels_map,
                            edit_requests_by_ct=edit_requests_by_ct)
-
 
 @approval_bp.route('/review/<int:id>', methods=['GET'])
 @login_required
