@@ -1428,8 +1428,8 @@ if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
 <script>
 (function() {
     var LS_KEY = 'sharedNamHoc';
-    var currentNamHoc = '{{ nam_hoc_filter }}';
-    if (!currentNamHoc) {
+    var cur    = '{{ nam_hoc_filter }}';
+    if (!cur) {
         var saved = localStorage.getItem(LS_KEY);
         if (saved) {
             var url = new URL(window.location.href);
@@ -1437,158 +1437,23 @@ if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
             window.location.replace(url.toString());
             return;
         }
-    } else {
-        localStorage.setItem(LS_KEY, currentNamHoc);
-    }
+    } else { localStorage.setItem(LS_KEY, cur); }
 })();
+
 function onNamHocChange(sel) {
-    if (sel.value) { localStorage.setItem('sharedNamHoc', sel.value); }
-    else { localStorage.removeItem('sharedNamHoc'); }
+    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
+    else           localStorage.removeItem('sharedNamHoc');
     sel.form.submit();
 }
-// ── Hàm cập nhật bộ đếm số tiêu chí đã chọn ──────────────────────────────
-function updateReqEditCount() {
-    const total   = document.querySelectorAll('.req-edit-field').length;
-    const checked = document.querySelectorAll('.req-edit-field:checked').length;
-    const el = document.getElementById('reqEditSelectedCount');
-    if (el) el.textContent = checked + ' / ' + total;
-}
 
-// ── Nút "Chọn tất cả" ─────────────────────────────────────────────────────
-const btnSelectAll = document.getElementById('reqEditSelectAll');
-if (btnSelectAll) {
-    btnSelectAll.addEventListener('click', function () {
-        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = true);
-        updateReqEditCount();
-    });
-}
 
-// ── Nút "Bỏ chọn tất cả" ─────────────────────────────────────────────────
-const btnDeselectAll = document.getElementById('reqEditDeselectAll');
-if (btnDeselectAll) {
-    btnDeselectAll.addEventListener('click', function () {
-        document.querySelectorAll('.req-edit-field').forEach(cb => cb.checked = false);
-        updateReqEditCount();
-    });
-}
+
 
 // ── Cập nhật bộ đếm mỗi khi checkbox thay đổi (dùng event delegation) ────
-document.getElementById('reqEditFields').addEventListener('change', function (e) {
-    if (e.target.classList.contains('req-edit-field')) {
-        updateReqEditCount();
-    }
-});
+
 </script>
 
-<!-- Detail Modal alo -->
-<div class="modal fade" id="detailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h6 class="modal-title fw-semibold"><i class="bi bi-person-lines-fill me-1"></i>Chi tiết</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="detailModalBody" style="font-size:0.85rem;"></div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<script>
-function openDetailModal(ctId) {
-    const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-    const body = document.getElementById('detailModalBody');
-    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
-    modal.show();
-    fetch('/admin/api/chi-tiet/' + ctId + '?dept_only=1')
-        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(d => {
-            const p = d.personal || {}, n = d.nomination || {};
-            const badges = [
-                p.la_chi_huy ? '<span class="badge bg-danger">Cấp trưởng</span>' : '',
-                p.la_bi_thu  ? '<span class="badge bg-primary">Bí thư</span>' : '',
-                p.la_doan_vien ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
-                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>' : '',
-            ].filter(Boolean).join(' ');
-            let html = `<div class="row g-2 mb-2">
-              <div class="col-12"><h6 class="fw-bold mb-1">${p.ho_ten||'—'}</h6>${badges}</div>
-              <div class="col-6"><small class="text-muted d-block">Đơn vị</small>${n.don_vi||'—'}</div>
-              <div class="col-6"><small class="text-muted d-block">Năm học</small>${n.nam_hoc||'—'}</div>
-              <div class="col-6"><small class="text-muted d-block">Cấp bậc</small>${p.cap_bac||'—'}</div>
-              <div class="col-6"><small class="text-muted d-block">Chức vụ</small>${p.chuc_vu||'—'}</div>
-              <div class="col-6"><small class="text-muted d-block">Đối tượng</small>${p.doi_tuong||'—'}</div>
-              <div class="col-6"><small class="text-muted d-block">Danh hiệu</small>${n.loai_danh_hieu||'—'}</div>
-              <div class="col-6"><small class="text-muted d-block">Học hàm/vị</small>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div>
-              <div class="col-6"><small class="text-muted d-block">Trạng thái</small>${n.trang_thai||'—'}</div>
-            </div>`;
-            // Tiêu chí — show ALL, highlight filled ones
-            if (d.criteria && d.criteria.length) {
-                const filled = d.criteria.filter(c => c.value && c.value !== 'None');
-                const empty  = d.criteria.filter(c => !c.value || c.value === 'None');
-                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.criteria.length + '</span></h6>';
-                html += '<table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
-                filled.forEach(c => {
-                    html += `<tr><td class="text-muted" style="width:52%">${c.label}</td><td class="fw-semibold">${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`;
-                });
-                if (empty.length) {
-                    html += `<tr class="table-light"><td colspan="2" class="text-muted small py-1 px-2">Chưa nhập (${empty.length} tiêu chí): ${empty.map(c=>c.label).join(', ')}</td></tr>`;
-                }
-                html += '</table>';
-            }
-            // Minh chứng — clickable links + image preview
-            if (d.minh_chungs && d.minh_chungs.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng đính kèm <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.minh_chungs.length + '</span></h6>';
-                html += '<div class="d-flex flex-wrap gap-2 mb-2">';
-                d.minh_chungs.forEach(mc => {
-                    if (mc.is_image) {
-                        html += `<div class="text-center" style="max-width:120px;">
-                            <a href="${mc.url}" target="_blank" rel="noopener">
-                                <img src="${mc.url}" alt="${mc.ten_file}"
-                                     onerror="this.onerror=null;this.parentNode.innerHTML='<span class=\'text-muted small\'><i class=\'bi bi-image text-muted\'></i><br>Không tìm thấy</span>'"
-                                     style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;">
-                            </a>
-                            <div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div>
-                        </div>`;
-                    } else {
-                        html += `<a href="${mc.url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;" title="${mc.ten_file}">
-                            <i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}
-                        </a>`;
-                    }
-                });
-                html += '</div>';
-            }
-            // Dept approvals
-            const deptActed = (d.dept_results || []).filter(r => r.ket_qua && r.ket_qua !== 'auto');
-            const deptPending = (d.dept_results || []).filter(r => !r.ket_qua);
-           if (deptActed.length) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Phê duyệt cơ quan</h6><table class="table table-sm table-bordered mb-1" style="font-size:.8rem;">';
-                deptActed.forEach(r => {
-                    const badgeMap = {
-                    'Đồng ý': '<span class="badge bg-success">Đồng ý</span>',
-                    'Chờ duyệt': '<span class="badge bg-warning text-dark">Chờ duyệt</span>',
-                    'Từ chối': '<span class="badge bg-danger">Từ chối</span>'
-                };
 
-                // Nếu r.ket_qua không khớp với cái nào ở trên, mặc định sẽ lấy 'Từ chối' (hoặc bạn có thể đổi tùy ý)
-                const badge = badgeMap[r.ket_qua] || '<span class="badge bg-danger">Từ chối</span>';
-                    html += `<tr><td style="width:42%">${r.dept}</td><td>${badge}</td><td class="text-muted" style="font-size:.75rem;">${r.ngay_duyet?'<i class="bi bi-clock me-1"></i>'+r.ngay_duyet:''}</td><td class="text-muted" style="font-size:.75rem;">${r.ghi_chu||''}</td></tr>`;
-                });
-                html += '</table>';
-                if (deptPending.length) html += `<p class="text-muted mb-2" style="font-size:.75rem;"><i class="bi bi-hourglass-split me-1"></i>Chờ: ${deptPending.map(r=>r.dept).join(', ')}</p>`;
-            }
-            if (d.votes && d.votes.some(v => v.ket_qua)) {
-                html += '<hr class="my-2"><h6 class="fw-semibold">Biểu quyết Hội đồng</h6><table class="table table-sm mb-0" style="font-size:.8rem;">';
-                d.votes.filter(v => v.ket_qua).forEach(v => {
-                    const cls = v.ket_qua === 'Đồng ý' ? 'text-success' : 'text-danger';
-                    html += `<tr><td>${v.vai_tro}</td><td class="${cls} fw-semibold">${v.ket_qua}</td><td class="text-muted">${v.ghi_chu||''}</td></tr>`;
-                });
-                html += '</table>';
-            }
-            body.innerHTML = html;
-        })
-        .catch(e => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu: ' + e.message + '</div>'; });
-}
-</script>
+
 {% endblock %}
