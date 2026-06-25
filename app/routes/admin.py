@@ -2873,7 +2873,8 @@ def export_tracking_word():
             # Thêm điểm trung bình vào cells[1]
             if quy_scores:
                 diem_tb     = sum(quy_scores) / len(quy_scores)
-                diem_tb_str = f'{diem_tb:2f}'
+                # Thêm dấu chấm trước 2f
+                diem_tb_str = f'{diem_tb:.2f}' 
                 criteria_list_1.append(f'Điểm trung bình các quý: {diem_tb_str}')
 
             # Thêm mức độ hoàn thành + ghi chú vào cells[3]
