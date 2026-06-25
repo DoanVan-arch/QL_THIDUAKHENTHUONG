@@ -544,7 +544,32 @@
         </div>
     </div></div>
 </div>
-
+<div id="exportLoadingOverlay" style="
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,0.55); backdrop-filter:blur(3px);
+    align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+    <div style="background:#fff; border-radius:16px; padding:32px 40px;
+                text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.25); min-width:280px;">
+        <div class="mb-3">
+            <i class="bi bi-file-earmark-word text-primary" style="font-size:2.5rem;"></i>
+        </div>
+        <div class="fw-semibold mb-2" style="font-size:1rem;" id="exportLoadingTitle">
+            Đang tạo file Word...
+        </div>
+        <div class="text-muted small mb-3" id="exportLoadingSubtitle">
+            Vui lòng đợi, quá trình này có thể mất 10–30 giây
+        </div>
+        <!-- Progress bar giả lập -->
+        <div class="progress mb-3" style="height:8px; border-radius:4px;">
+            <div id="exportProgressBar"
+                 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                 style="width:0%; transition:width 0.4s ease;"></div>
+        </div>
+        <div class="text-muted" style="font-size:0.78rem;" id="exportLoadingStep">
+            Khởi tạo...
+        </div>
+    </div>
+</div>
 <script type="application/json" id="nominationData">
 {% if unit_groups %}[{% for ug in unit_groups %}{% for nom_data in ug.nominations %}{% if nom_data.dx.trang_thai == 'Hội đồng' %}{"id":{{ nom_data.dx.id }},"unit":"{{ ug.unit_name }}","name":"{{ ug.unit_name }} - {{ nom_data.dx.nam_hoc }}"},{% endif %}{% endfor %}{% endfor %}]
 {% else %}[]{% endif %}
@@ -1441,15 +1466,13 @@ function submitBatchReject() {
         }
     }
 
-    // Bind tất cả link export Word
+    // Bind tất cả link export Word — selector rộng hơn
     document.addEventListener('click', function (e) {
-        const link = e.target.closest('a[href*="export"][href*="word"], a[href*="export-word"], a[href*="export_word"]');
+        const link = e.target.closest('a[href]');
         if (!link) return;
-
-        const href = link.getAttribute('href') || '';
-        // Chỉ xử lý link Word (bỏ qua Excel)
+        const href = (link.getAttribute('href') || '').toLowerCase();
+        // Bắt tất cả link có "word" trong href (export_tracking_word, export-word, v.v.)
         if (!href.includes('word')) return;
-
         showOverlay('Đang tạo file Word...', 'Vui lòng đợi, quá trình này có thể mất 10–30 giây');
     });
 
@@ -1463,31 +1486,6 @@ function submitBatchReject() {
 
 </script>
 {# ===== Export Loading Overlay ===== #}
-<div id="exportLoadingOverlay" style="
-    display:none; position:fixed; inset:0; z-index:9999;
-    background:rgba(0,0,0,0.55); backdrop-filter:blur(3px);
-    align-items:center; justify-content:center; flex-direction:column; gap:16px;">
-    <div style="background:#fff; border-radius:16px; padding:32px 40px;
-                text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.25); min-width:280px;">
-        <div class="mb-3">
-            <i class="bi bi-file-earmark-word text-primary" style="font-size:2.5rem;"></i>
-        </div>
-        <div class="fw-semibold mb-2" style="font-size:1rem;" id="exportLoadingTitle">
-            Đang tạo file Word...
-        </div>
-        <div class="text-muted small mb-3" id="exportLoadingSubtitle">
-            Vui lòng đợi, quá trình này có thể mất 10–30 giây
-        </div>
-        <!-- Progress bar giả lập -->
-        <div class="progress mb-3" style="height:8px; border-radius:4px;">
-            <div id="exportProgressBar"
-                 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                 style="width:0%; transition:width 0.4s ease;"></div>
-        </div>
-        <div class="text-muted" style="font-size:0.78rem;" id="exportLoadingStep">
-            Khởi tạo...
-        </div>
-    </div>
-</div>
+
 
 {% endblock %}
