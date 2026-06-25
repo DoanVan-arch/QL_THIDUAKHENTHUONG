@@ -1425,35 +1425,22 @@ if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
 </script>
 
 {% endif %}{# end nam_hoc_filter #}
+
+<div class="print-timestamp">
+    Xuất lúc: <strong id="printTimestamp"></strong> | Ban: <strong>{{ phong_name }}</strong>
+    {% if nam_hoc_filter %} | Năm học: <strong>{{ nam_hoc_filter }}</strong>{% endif %}
+</div>
+
 <script>
+// Print timestamp — chỉ cần 1 dòng này
 (function() {
-    var LS_KEY = 'sharedNamHoc';
-    var cur    = '{{ nam_hoc_filter }}';
-    if (!cur) {
-        var saved = localStorage.getItem(LS_KEY);
-        if (saved) {
-            var url = new URL(window.location.href);
-            url.searchParams.set('nam_hoc', saved);
-            window.location.replace(url.toString());
-            return;
-        }
-    } else { localStorage.setItem(LS_KEY, cur); }
+    var el = document.getElementById('printTimestamp');
+    if (el) el.textContent = new Date().toLocaleString('vi-VN');
 })();
-
-function onNamHocChange(sel) {
-    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
-    else           localStorage.removeItem('sharedNamHoc');
-    sel.form.submit();
-}
-
-
-
-
-// ── Cập nhật bộ đếm mỗi khi checkbox thay đổi (dùng event delegation) ────
-
+// KHÔNG có sharedNamHoc ở đây
+// KHÔNG có onNamHocChange ở đây
+// KHÔNG có updateReqEditCount ở đây
+// Tất cả đã được khai báo ở block script phía trên rồi
 </script>
-
-
-
 
 {% endblock %}
