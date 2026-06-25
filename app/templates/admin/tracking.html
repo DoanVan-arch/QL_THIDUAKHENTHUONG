@@ -137,7 +137,7 @@
                         <th class="col-doituong">Đối tượng</th>
                         <th class="col-lop">Lớp</th>
                         
-                        <th class="col-namhoc detail-only-col">Năm học</th>
+                        <th class="col-namhoc detail-only-col" data-col-key="cn_namhoc" data-col-label="Năm học">Năm học</th>
                         {% for field in all_fields %}
                         <th class="col-detail detail-only-col"
                             data-col-key="cn_{{ field }}"
@@ -203,11 +203,12 @@
                         <td class="col-lop"><small>{{ ct.quan_nhan.lop if ct.quan_nhan and ct.quan_nhan.lop else '-' }}</small></td>
                         
                         <td class="col-namhoc detail-only-col"><small>{{ dx.nam_hoc }}</small></td>
+                        {% set fd = ct_data.fields_dict %}
                         {% for field in all_fields %}
                         <td class="col-detail detail-only-col text-center" data-col-key="cn_{{ field }}">
-                            {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
-                            {% if val is not none and val != '' and val != 0 %}
-                                {% if field in ('nckh_noi_dung','thanh_tich_ca_nhan_khac') %}
+                            {% set val = fd.get(field) %}
+                            {% if val %}
+                                {% if field in ('nckh_noi_dung', 'thanh_tich_ca_nhan_khac') %}
                                 <span class="d-block text-truncate" style="max-width:130px;" title="{{ val }}">{{ val }}</span>
                                 {% else %}{{ val }}{% endif %}
                             {% else %}<span class="text-muted">-</span>{% endif %}
@@ -777,7 +778,13 @@
 .btn-outline-navy:hover { background:var(--navy-primary); color:#fff; }
 .unit-card.filtered-out { display:none !important; }
 .detail-only-col { display: table-cell; }
+/* Compact mode (mặc định): ẩn detail cols */
+.view-compact .detail-only-col { display: none !important; }
+/* Detail mode: hiện detail cols */
+.view-detail  .detail-only-col { display: table-cell !important; }
 
+/* Mặc định khi chưa có class → compact */
+.tbl-scroll .detail-only-col { display: none; }
 /* Bỏ overflow:hidden từ base.html */
 .card-section, .card-body-custom, .card-body,
 .main-content, .content-wrapper, .content-area,
@@ -804,28 +811,66 @@
 /* ---- View mode toggle ---- */
 function setViewMode(mode) {
     const isDetail = mode === 'detail';
-    document.querySelectorAll('.detail-only-col').forEach(el => {
-        el.style.display = isDetail ? '' : 'none';
+
+    // ★ Toggle class trên từng card-section chứa bảng
+    // Thay vì querySelectorAll('.detail-only-col').forEach → loop 6000 elements
+    ['tblOuterCN', 'tblOuterTT'].forEach(outerId => {
+        const outer = document.getElementById(outerId);
+        if (!outer) return;
+        const section = outer.closest('.card-section');
+        if (section) {
+            section.classList.toggle('view-detail',  isDetail);
+            section.classList.toggle('view-compact', !isDetail);
+        }
     });
+
+    // Cập nhật nút toolbar
     const btnC = document.getElementById('btnViewCompact');
     const btnD = document.getElementById('btnViewDetail');
     if (btnC) { btnC.classList.toggle('btn-navy', !isDetail); btnC.classList.toggle('btn-outline-navy', isDetail); }
     if (btnD) { btnD.classList.toggle('btn-navy', isDetail); btnD.classList.toggle('btn-outline-navy', !isDetail); }
+
+    // Cập nhật URL + hidden input
     const url = new URL(window.location.href);
     url.searchParams.set('view', mode);
-    history.pushState({view: mode}, '', url.toString());
-    ['tblOuterCN','tblOuterTT'].forEach(outerId => {
-        const outer = document.getElementById(outerId);
-        if (!outer) return;
-        const mirrorId = outerId.replace('tblOuter','mirror');
-        const mirror   = document.getElementById(mirrorId);
-        if (!mirror) return;
-        const inner = mirror.querySelector('div');
-        if (inner) inner.style.width = outer.scrollWidth + 'px';
+    history.pushState({ view: mode }, '', url.toString());
+    const hiddenView = document.querySelector('input[name="view"]');
+    if (hiddenView) hiddenView.value = mode;
+
+    // Sync mirror width sau khi cột thay đổi
+    requestAnimationFrame(() => {
+        ['tblOuterCN', 'tblOuterTT'].forEach(outerId => {
+            const outer = document.getElementById(outerId);
+            if (!outer) return;
+            const mirrorId = outerId.replace('tblOuter', 'mirror');
+            const mirror   = document.getElementById(mirrorId);
+            if (!mirror) return;
+            const tbl   = outer.querySelector('table');
+            const inner = mirror.querySelector('div');
+            if (inner && tbl) inner.style.width = tbl.offsetWidth + 'px';
+        });
     });
 }
 
+
 document.addEventListener('DOMContentLoaded', function () {
+    const initMode = '{{ view_mode }}' || 'compact';
+    ['tblOuterCN', 'tblOuterTT'].forEach(outerId => {
+        const outer = document.getElementById(outerId);
+        if (!outer) return;
+        const section = outer.closest('.card-section');
+        if (section) {
+            section.classList.add(initMode === 'detail' ? 'view-detail' : 'view-compact');
+        }
+    });
+
+    // ★ Mirror scroll: dùng debounce để tránh trigger liên tục
+    initMirrorScroll('mirrorCN', 'tblOuterCN');
+    initMirrorScroll('mirrorTT', 'tblOuterTT');
+
+    // ★ ColToggle: chỉ init khi bảng tồn tại
+    if (document.getElementById('tableCaNhan')) initColToggle('tableCaNhan', 'btnColToggleCN');
+    if (document.getElementById('tableTapThe')) initColToggle('tableTapThe', 'btnColToggleTT');
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     let nominations = [];
     try {
@@ -914,22 +959,33 @@ function initMirrorScroll(mirrorId, outerId) {
     const mirror = document.getElementById(mirrorId);
     const outer  = document.getElementById(outerId);
     if (!mirror || !outer) return;
-    const inner  = mirror.firstElementChild;
+    const inner = mirror.firstElementChild;
 
     function syncWidth() {
-        /* ★ FIX: đo scrollWidth của bảng bên trong, không phải outer */
         const tbl = outer.querySelector('table');
-        inner.style.width = (tbl ? tbl.offsetWidth : outer.scrollWidth) + 'px';
+        if (inner) inner.style.width = (tbl ? tbl.offsetWidth : outer.scrollWidth) + 'px';
+    }
+
+    // ★ Debounce ResizeObserver — tránh trigger quá nhiều lần
+    let resizeTimer;
+    if (window.ResizeObserver) {
+        new ResizeObserver(() => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(syncWidth, 100);
+        }).observe(outer);
     }
     syncWidth();
-    if (window.ResizeObserver) new ResizeObserver(syncWidth).observe(outer);
 
     let lock = false;
     mirror.addEventListener('scroll', function () {
-        if (lock) return; lock = true; outer.scrollLeft = mirror.scrollLeft; lock = false;
+        if (lock) return; lock = true;
+        outer.scrollLeft = mirror.scrollLeft;
+        requestAnimationFrame(() => { lock = false; });
     });
     outer.addEventListener('scroll', function () {
-        if (lock) return; lock = true; mirror.scrollLeft = outer.scrollLeft; lock = false;
+        if (lock) return; lock = true;
+        mirror.scrollLeft = outer.scrollLeft;
+        requestAnimationFrame(() => { lock = false; });
     });
 }
 

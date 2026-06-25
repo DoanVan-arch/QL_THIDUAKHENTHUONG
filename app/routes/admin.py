@@ -276,25 +276,15 @@ def approval_tracking():
     nam_hoc_filter   = request.args.get('nam_hoc', '')
 
     # ════════════════════════════════════════════════════════
-    # 1. QUERY ĐỀ XUẤT — eager load tất cả quan hệ cần thiết
-    #    Chỉ 1 query thay vì N lazy queries
+    # 1. QUERY ĐỀ XUẤT — eager load
     # ════════════════════════════════════════════════════════
     query = DeXuat.query.filter(
         DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value,
         DeXuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value,
     ).options(
-        # ★ Eager load DonVi (tránh N lazy queries dx.don_vi)
         joinedload(DeXuat.don_vi),
-
-        # ★ Eager load chi_tiets + quan_nhan trong 1 subquery
         subqueryload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
-
-        # ★ Eager load minh_chungs nếu template dùng ct.minh_chungs
         subqueryload(DeXuat.chi_tiets).subqueryload(DeXuatChiTiet.minh_chungs),
-
-        # ★ Eager load phe_duyets + chi_tiet_duyet trong 1 subquery
-        #   Thay vì: for pd in dx.phe_duyets → lazy
-        #            for kq in pd.chi_tiet_duyet → lazy (N×M queries)
         subqueryload(DeXuat.phe_duyets).subqueryload(PheDuyet.chi_tiet_duyet),
     )
 
@@ -312,11 +302,10 @@ def approval_tracking():
         DeXuat.nam_hoc.desc(),
         DeXuat.ngay_gui.desc()
     )
-
     nominations = query.all()
 
     # ════════════════════════════════════════════════════════
-    # 2. STATS — 1 query GROUP BY thay vì 6 .count() riêng
+    # 2. STATS — 1 query GROUP BY
     # ════════════════════════════════════════════════════════
     stats_rows = db.session.query(
         DeXuat.trang_thai,
@@ -327,126 +316,127 @@ def approval_tracking():
 
     stats_map = {row.trang_thai: row.cnt for row in stats_rows}
     stats = {
-        'total':         sum(stats_map.values()),
-        'pending':       stats_map.get(TrangThaiDeXuat.CHO_DUYET.value, 0),
-        'reviewing':     stats_map.get(TrangThaiDeXuat.DANG_DUYET.value, 0),
-        'dept_approved': stats_map.get(TrangThaiDeXuat.HOI_DONG.value, 0),
-        'final_approved':stats_map.get(TrangThaiDeXuat.PHE_DUYET_CUOI.value, 0),
-        'rejected':      stats_map.get(TrangThaiDeXuat.TU_CHOI.value, 0),
+        'total':          sum(stats_map.values()),
+        'pending':        stats_map.get(TrangThaiDeXuat.CHO_DUYET.value, 0),
+        'reviewing':      stats_map.get(TrangThaiDeXuat.DANG_DUYET.value, 0),
+        'dept_approved':  stats_map.get(TrangThaiDeXuat.HOI_DONG.value, 0),
+        'final_approved': stats_map.get(TrangThaiDeXuat.PHE_DUYET_CUOI.value, 0),
+        'rejected':       stats_map.get(TrangThaiDeXuat.TU_CHOI.value, 0),
     }
 
     # ════════════════════════════════════════════════════════
-    # 3. APPROVED CT IDS — chỉ lấy ids, không load toàn bộ record
+    # 3. APPROVED CT IDS
     # ════════════════════════════════════════════════════════
     approved_ct_ids = set(
         row[0] for row in db.session.query(KhenThuong.chi_tiet_id).all()
     )
 
     # ════════════════════════════════════════════════════════
-    # 4. NAM HOC LIST — 1 query
+    # 4. NAM HOC LIST
     # ════════════════════════════════════════════════════════
     nam_hoc_list = [
         n[0] for n in db.session.query(DeXuat.nam_hoc)
         .filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
-        .distinct()
-        .order_by(DeXuat.nam_hoc.desc())
-        .all()
+        .distinct().order_by(DeXuat.nam_hoc.desc()).all()
     ]
 
     # ════════════════════════════════════════════════════════
-    # 5. UNIT NAMES — 1 query
+    # 5. UNIT NAMES
     # ════════════════════════════════════════════════════════
     unit_names = [
         u[0] for u in db.session.query(DonVi.ten_don_vi, DonVi.thu_tu)
         .join(DeXuat, DeXuat.don_vi_id == DonVi.id)
         .filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
         .distinct()
-        .order_by(DonVi.thu_tu.asc(), DonVi.ten_don_vi.asc())
-        .all()
+        .order_by(DonVi.thu_tu.asc(), DonVi.ten_don_vi.asc()).all()
     ]
 
     # ════════════════════════════════════════════════════════
-    # 6. BUILD DEPT LOOKUP — từ data đã eager load (0 queries)
-    #    Trước: for pd in dx.phe_duyets → lazy load
-    #           for kq in pd.chi_tiet_duyet → lazy load
-    #    Sau:   dùng dict đã build sẵn
+    # 6. PRE-BUILD TTR GATE MAP — bulk load 1 lần, tra cứu O(1)
+    #    Tránh _is_thu_truong_gate_all_approved() query trong loop
+    # ════════════════════════════════════════════════════════
+    ttr_gate_map = {}   # (ct_id, dept_name) -> bool
+    if _TTR_GATE_COLUMNS:
+        # Thu thập tất cả ct_ids từ nominations đã load
+        all_ct_ids_for_gate = [
+            ct.id
+            for dx in nominations
+            for ct in dx.chi_tiets
+            if not ct.bi_loai and ct.id not in approved_ct_ids
+        ]
+        if all_ct_ids_for_gate:
+            # 1 query duy nhất thay vì N×M queries trong loop
+            from app.models import KetQuaDuyetChiTiet as _KQ
+            gate_rows = _KQ.query.filter(
+                _KQ.chi_tiet_id.in_(all_ct_ids_for_gate),
+                _KQ.phong_ban.in_(list(_TTR_GATE_COLUMNS))
+            ).all()
+
+            # Group: (ct_id, dept_name) -> list of ket_qua
+            from collections import defaultdict
+            gate_raw = defaultdict(list)
+            for row in gate_rows:
+                gate_raw[(row.chi_tiet_id, row.phong_ban)].append(row.ket_qua)
+
+            # Build bool map: True nếu tất cả kết quả đều Đồng ý
+            for (ct_id, dept_name), results in gate_raw.items():
+                ttr_gate_map[(ct_id, dept_name)] = (
+                    len(results) > 0 and
+                    all(r == KetQuaDuyet.DONG_Y.value for r in results)
+                )
+
+    # ════════════════════════════════════════════════════════
+    # 7. PROCESS NOMINATIONS
     # ════════════════════════════════════════════════════════
     tracking_dept_names = [c['key'] for c in TRACKING_DEPT_COLUMNS]
-
-    # ════════════════════════════════════════════════════════
-    # 7. PROCESS NOMINATIONS — không có thêm query nào
-    # ════════════════════════════════════════════════════════
-    unit_groups_dict = {}
-    total_individuals = 0
+    unit_groups_dict    = {}
+    total_individuals   = 0
 
     for dx in nominations:
-        unit_name = dx.don_vi.ten_don_vi  # đã eager load → 0 query
-
-        # Build dept_lookup từ data đã eager load
-        # dx.phe_duyets đã được subqueryload → không lazy load
-        # pd.chi_tiet_duyet đã được subqueryload → không lazy load
+        unit_name  = dx.don_vi.ten_don_vi
         dept_lookup = {}
-        for pd in dx.phe_duyets:  # ← 0 query (đã eager load)
+        for pd in dx.phe_duyets:
             dept_lookup[pd.phong_duyet] = {
                 'phe_duyet': pd,
-                'items': {
-                    kq.chi_tiet_id: kq
-                    for kq in pd.chi_tiet_duyet  # ← 0 query (đã eager load)
-                },
+                'items': {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet},
             }
 
         chi_tiets_data    = []
         tap_the_data_list = []
 
-        for ct in dx.chi_tiets:  # ← 0 query (đã eager load)
+        for ct in dx.chi_tiets:
             is_tap_the = ct.ten_don_vi_de_xuat is not None or ct.quan_nhan_id is None
 
-            if ct.bi_loai:
-                continue
-            if ct.id in approved_ct_ids:
-                continue
-            if ct.admin_approved:
-                continue
-            if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter:
-                continue
+            if ct.bi_loai:                                          continue
+            if ct.id in approved_ct_ids:                           continue
+            if ct.admin_approved:                                   continue
+            if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter: continue
 
             if not is_tap_the:
-                if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG:
-                    continue
-                if scope_filter == 'can_bo' and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG:
-                    continue
+                if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG: continue
+                if scope_filter == 'can_bo'   and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG:     continue
 
             if search_query:
-                # ct.quan_nhan đã eager load → 0 query
                 name_val = (ct.quan_nhan.ho_ten if ct.quan_nhan else '') or (ct.ten_don_vi_de_xuat or '')
-                if search_query.lower() not in name_val.lower():
-                    continue
+                if search_query.lower() not in name_val.lower():   continue
 
-            # Build dept results (0 queries — dùng dept_lookup đã build)
+            # ── Build dept results (0 queries) ──────────────────
             ct_dept_results = {}
-            all_dept_ok = True
+            all_dept_ok     = True
 
             for dept_name in tracking_dept_names:
-                dept_data = dept_lookup.get(dept_name)
-                is_auto   = _is_auto_scope_approved(dept_name, ct.doi_tuong)
-
-                is_ttr_gate_ok = False
-                if dept_name in _TTR_GATE_COLUMNS:
-                    # ★ Hàm này cần được tối ưu riêng nếu có query bên trong
-                    is_ttr_gate_ok = _is_thu_truong_gate_all_approved(dx.id, ct, dept_name)
+                dept_data      = dept_lookup.get(dept_name)
+                is_auto        = _is_auto_scope_approved(dept_name, ct.doi_tuong)
+                # ★ Tra cứu O(1) từ ttr_gate_map thay vì gọi hàm query
+                is_ttr_gate_ok = ttr_gate_map.get((ct.id, dept_name), False) \
+                                 if dept_name in _TTR_GATE_COLUMNS else False
 
                 if dept_data:
                     kq = dept_data['items'].get(ct.id)
                     if dept_data['phe_duyet'].ket_qua == KetQuaDuyet.DONG_Y.value:
-                        ct_dept_results[dept_name] = {
-                            'ket_qua': KetQuaDuyet.DONG_Y.value,
-                            'auto': is_auto,
-                        }
+                        ct_dept_results[dept_name] = {'ket_qua': KetQuaDuyet.DONG_Y.value, 'auto': is_auto}
                     elif kq:
-                        ct_dept_results[dept_name] = {
-                            'ket_qua': kq.ket_qua,
-                            'auto': is_auto,
-                        }
+                        ct_dept_results[dept_name] = {'ket_qua': kq.ket_qua, 'auto': is_auto}
                     elif is_auto or is_ttr_gate_ok:
                         ct_dept_results[dept_name] = {
                             'ket_qua': KetQuaDuyet.DONG_Y.value,
@@ -473,11 +463,20 @@ def approval_tracking():
 
             ct_can_approve = all_dept_ok and not ct.admin_approved
 
+            # ★ BUILD fields_dict — thay vì Jinja dùng ct|attr(field) chậm
+            # getattr() ở Python nhanh hơn Jinja attr filter ~10x
+            fields_dict = {}
+            for field in ALL_FIELDS:
+                val = getattr(ct, field, None)
+                if val is not None and val != '' and val != 0:
+                    fields_dict[field] = str(val)
+
             ct_entry = {
-                'ct': ct,
-                'dept_results': ct_dept_results,
+                'ct':               ct,
+                'dept_results':     ct_dept_results,
                 'can_final_approve': ct_can_approve,
-                'dx_id': dx.id,
+                'dx_id':            dx.id,
+                'fields_dict':      fields_dict,   # ★ THÊM
             }
 
             if is_tap_the:
@@ -490,15 +489,15 @@ def approval_tracking():
             if unit_name not in unit_groups_dict:
                 unit_groups_dict[unit_name] = []
             unit_groups_dict[unit_name].append({
-                'dx': dx,
-                'chi_tiets': chi_tiets_data,
+                'dx':               dx,
+                'chi_tiets':        chi_tiets_data,
                 'tap_the_chi_tiets': tap_the_data_list,
             })
 
     # ════════════════════════════════════════════════════════
     # 8. BUILD UNIT GROUPS + FLAT LISTS
     # ════════════════════════════════════════════════════════
-    unit_groups = []
+    unit_groups  = []
     flat_ca_nhan = []
     flat_tap_the = []
 
@@ -511,39 +510,39 @@ def approval_tracking():
         tap_the_count    = 0
 
         for nom_data in nom_list:
-            dx = nom_data['dx']
+            dx          = nom_data['dx']
             don_vi_name = dx.don_vi.ten_don_vi if dx.don_vi else ''
 
             for ct_entry in nom_data['chi_tiets']:
                 flat_ca_nhan.append({
                     **ct_entry,
-                    'don_vi': don_vi_name,
+                    'don_vi':        don_vi_name,
                     'loai_danh_hieu': ct_entry['ct'].loai_danh_hieu or '',
-                    'dx': dx,
+                    'dx':            dx,
                 })
                 individual_count += 1
 
             for ct_entry in nom_data['tap_the_chi_tiets']:
                 flat_tap_the.append({
                     **ct_entry,
-                    'don_vi': don_vi_name,
+                    'don_vi':        don_vi_name,
                     'loai_danh_hieu': ct_entry['ct'].loai_danh_hieu or '',
-                    'dx': dx,
+                    'dx':            dx,
                 })
                 tap_the_count += 1
 
         unit_groups.append({
-            'unit_name': unit_name,
-            'nominations': nom_list,
+            'unit_name':       unit_name,
+            'nominations':     nom_list,
             'individual_count': individual_count,
-            'tap_the_count': tap_the_count,
+            'tap_the_count':   tap_the_count,
         })
 
     flat_ca_nhan.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
     flat_tap_the.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
 
     # ════════════════════════════════════════════════════════
-    # 9. TT CRITERIA — tối ưu: chỉ query khi có flat_tap_the
+    # 9. TT CRITERIA — chỉ query khi có flat_tap_the
     # ════════════════════════════════════════════════════════
     tt_criteria_fields = []
     tt_field_labels    = {}
@@ -551,19 +550,15 @@ def approval_tracking():
     if flat_tap_the:
         from app.models.nomination import TieuChi as _TieuChi, DanhHieu as _DanhHieu
 
-        # Lấy keys từ DanhHieu (1 query)
         tt_all_keys = set()
         for dh in _DanhHieu.query.filter_by(pham_vi='Đơn vị', is_active=True).all():
             for ma_truong in (dh.tieu_chi or []):
                 tt_all_keys.add(ma_truong)
 
-        # Lấy keys từ actual data (0 queries — dùng flat_tap_the đã có)
         for item in flat_tap_the:
-            td = item['ct'].tap_the_dict or {}
-            tt_all_keys.update(td.keys())
+            tt_all_keys.update((item['ct'].tap_the_dict or {}).keys())
 
         if tt_all_keys:
-            # 1 query lấy tất cả TieuChi cần thiết
             tt_tieu_chi_rows = _TieuChi.query.filter(
                 _TieuChi.ma_truong.in_(list(tt_all_keys)),
                 _TieuChi.is_active == True
@@ -571,8 +566,6 @@ def approval_tracking():
 
             tt_criteria_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
             tt_field_labels    = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
-
-            # Thêm keys chưa có label
             for k in tt_all_keys:
                 if k not in tt_field_labels:
                     tt_criteria_fields.append(k)
@@ -581,7 +574,7 @@ def approval_tracking():
     # ════════════════════════════════════════════════════════
     # 10. MISC
     # ════════════════════════════════════════════════════════
-    status_list   = [e.value for e in TrangThaiDeXuat if e != TrangThaiDeXuat.NHAP]
+    status_list    = [e.value for e in TrangThaiDeXuat if e != TrangThaiDeXuat.NHAP]
     danh_hieu_list = [e.value for e in LoaiDanhHieu]
 
     return render_template(
