@@ -424,7 +424,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                     class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
                                     style="font-size:0.75rem;"
                                     title="Biểu quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
-                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.quan_nhan.ho_ten | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}')">
+                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}')">
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
                             </button>
                             {% endif %}
@@ -442,10 +442,10 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                             </button>
                             {# ★ NÚT HẠ DANH HIỆU — chỉ hiện khi có thể hạ cấp #}
                             {% if ct.loai_danh_hieu in ('Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
-                            <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
+                           <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
                                     onclick="openDowngradeModal(
                                         {{ ct.id }},
-                                        '{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat)|e }}',
+                                        '{{ ct.ten_don_vi_de_xuat|e }}',
                                         '{{ ct.loai_danh_hieu }}',
                                         '{{ 'Chiến sĩ tiên tiến' if ct.loai_danh_hieu == 'Chiến sĩ thi đua' else 'Đơn vị tiên tiến' }}',
                                         'ct'
