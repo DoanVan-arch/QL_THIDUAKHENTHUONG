@@ -698,6 +698,11 @@
     position:sticky !important; right:0 !important; z-index:2;
     background:#fff; box-shadow:-3px 0 6px rgba(0,0,0,.10);
 }
+/* Warning row sticky cells */
+.tbl-scroll tr.table-warning-custom .sticky-stt,
+.tbl-scroll tr.table-warning-custom .sticky-name,
+.tbl-scroll tr.table-warning-custom .col-pending { background: #fff3cd !important; }
+.table-warning-custom { background-color: #fff3cd !important; }
 .tbl-scroll thead .col-pending { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
 /* Row state backgrounds */
 .tbl-scroll tr.table-success .sticky-stt,
@@ -954,16 +959,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Submit yêu cầu sửa
+    // Submit yêu cầu sửa — KHÔNG reload trang
     document.getElementById('reqEditSubmit').addEventListener('click', function () {
         const checked = [...new Set(
             Array.from(document.querySelectorAll('#reqEditFields .req-edit-field:checked'))
-                 .map(c => c.value)
+                .map(c => c.value)
         )];
         const reason = document.getElementById('reqEditReason').value.trim();
         if (!checked.length) { alert('Vui lòng chọn ít nhất một tiêu chí.'); return; }
 
-        this.disabled = true;
         const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi...';
+
         fetch(`/approval/request-edit/${_reqEditCtx.pdId}/${_reqEditCtx.ctId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
@@ -972,16 +980,64 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(r => r.json())
         .then(data => {
             btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send me-1"></i>Gửi yêu cầu';
+
             if (data.success) {
                 if (_reqEditModal) _reqEditModal.hide();
                 showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
-                setTimeout(() => location.reload(), 1000);
+
+                // ── Cập nhật DOM không reload ──
+                const pdId = _reqEditCtx.pdId;
+                const ctId = _reqEditCtx.ctId;
+                const row  = document.getElementById(`row-${pdId}-${ctId}`);
+                if (row) {
+                    // 1. Đổi màu row → warning
+                    row.classList.remove('table-success', 'table-danger');
+                    row.classList.add('table-warning-custom');
+
+                    // 2. Thêm badge "đã yêu cầu sửa" vào ô tên (nếu chưa có)
+                    const nameText = row.querySelector('.name-text');
+                    if (nameText && !nameText.querySelector('.badge-edit-req')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge bg-warning text-dark ms-1 badge-edit-req';
+                        badge.title = `Đã yêu cầu sửa: ${reason || ''}`;
+                        badge.innerHTML = '<i class="bi bi-pencil-square"></i>';
+                        nameText.appendChild(badge);
+                    } else if (nameText) {
+                        // Cập nhật tooltip nếu badge đã tồn tại
+                        const existing = nameText.querySelector('.badge-edit-req');
+                        if (existing) existing.title = `Đã yêu cầu sửa: ${reason || ''}`;
+                    }
+
+                    // 3. Đổi link "Yêu cầu sửa" → "Cập nhật yêu cầu"
+                    const editLink = row.querySelector('.request-edit-link');
+                    if (editLink) {
+                        editLink.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Cập nhật yêu cầu';
+                    }
+
+                    // 4. Cập nhật sticky cells (nếu row là warning, sticky cũng cần đổi)
+                    [row.querySelector('.sticky-stt'),
+                    row.querySelector('.sticky-name'),
+                    row.querySelector('.col-pending')
+                    ].forEach(cell => {
+                        if (cell) cell.style.background = '';  // reset inline → CSS class tự xử lý
+                    });
+                }
+
+                // 5. Cập nhật data-attribute để filter biết trạng thái
+                if (row) row.dataset.hasEditRequest = 'true';
+
             } else {
                 alert(data.message || 'Không thể gửi yêu cầu.');
             }
         })
-        .catch(() => { btn.disabled = false; alert('Lỗi kết nối.'); });
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send me-1"></i>Gửi yêu cầu';
+            alert('Lỗi kết nối.');
+        });
     });
+
 
     // ══════════════════════════════════════════════════════════
     // BATCH APPROVE
