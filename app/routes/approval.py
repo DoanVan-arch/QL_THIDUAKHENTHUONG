@@ -11,6 +11,7 @@ from app.utils.decorators import department_required
 from app.utils.activity_logger import log_action
 from datetime import datetime
 from io import BytesIO
+from sqlalchemy.orm import joinedload, subqueryload
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Pt, Cm, RGBColor

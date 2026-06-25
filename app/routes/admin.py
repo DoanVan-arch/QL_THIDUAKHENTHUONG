@@ -24,6 +24,7 @@ from datetime import datetime
 from html import escape
 from sqlalchemy import case
 from sqlalchemy.exc import ProgrammingError, OperationalError
+
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Pt, Cm, RGBColor
