@@ -2651,6 +2651,11 @@ def export_tracking_word():
             if ct.muc_do_hoan_thanh:    parts.append(ct.muc_do_hoan_thanh)
             if ct.diem_tong_ket:        parts.append(f'Kết quả HT: {ct.diem_tong_ket}')
             if ct.ket_qua_ren_luyen:    parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+            if ct.mo_ta_khoa_hoc:     parts.append(f'Khoa học: {ct.mo_ta_khoa_hoc}')
+            if ct.diem_tn_ctd :    parts.append(f'điểm tốt nghiệp công tác đảng: {ct.diem_tn_ctd}')
+            if ct.diem_tn_ct:    parts.append(f'điểm tốt nghiệp chiến thuật: {ct.diem_tn_ct}')
+            if ct.diem_tn_ta :    parts.append(f'điểm tốt nghiệp tiếng anh: {ct.diem_tn_ta}')
+            if ct.diem_tn_mon4 :    parts.append(f'điểm tốt nghiệp môn thứ 4: {ct.diem_tn_mon4}')
             if ct.thanh_tich_ca_nhan_khac: parts.append(ct.thanh_tich_ca_nhan_khac)
 
             cell_tt = row.cells[5]
@@ -2771,7 +2776,7 @@ def export_tracking_word():
             # Thêm điểm trung bình vào cells[1]
             if quy_scores:
                 diem_tb     = sum(quy_scores) / len(quy_scores)
-                diem_tb_str = f'{diem_tb:g}'
+                diem_tb_str = f'{diem_tb:2f}'
                 criteria_list_1.append(f'Điểm trung bình các quý: {diem_tb_str}')
 
             # Thêm mức độ hoàn thành + ghi chú vào cells[3]
