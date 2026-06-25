@@ -2694,7 +2694,7 @@ def export_tracking_word():
 
         col_widths  = [0.8, 4.2, 2.5, 9.0]
         
-        headers_txt = ['STT', 'Tên đơn vị', 'Đề xuất đơn vị',
+        headers_txt = ['STT', 'Tên đơn vị', 'Đề xuất của đơn vị',
                         'Ghi chú']
 
         tbl = doc.add_table(rows=1, cols=len(col_widths))
@@ -2721,16 +2721,17 @@ def export_tracking_word():
 
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
-            add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-')
-
+            add_cell(row.cells[2], ct.ten_don_vi_de_xuat or '-', align=WD_ALIGN_PARAGRAPH.CENTER)
+            add_cell(row.cells[1], dx.don_vi.ten_don_vi if dx.don_vi else '', align=WD_ALIGN_PARAGRAPH.CENTER)
             # ── Cột 1: Tên đơn vị (cells[1]) ──────────────────────────────
-            cell_donvi = row.cells[1]
+            cell_donvi = row.cells[2]
             cell_donvi.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             p_donvi = cell_donvi.paragraphs[0]
             p_donvi.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p_donvi.paragraph_format.space_before = Pt(1)
             p_donvi.paragraph_format.space_after  = Pt(1)
-            run_donvi = p_donvi.add_run(dx.don_vi.ten_don_vi if dx.don_vi else '')
+        
+            run_donvi = p_donvi.add_run(ct.ten_don_vi_de_xuat or '-')
             set_font(run_donvi, size=10, bold=True)
 
             # ── Cột 3: Ghi chú (cells[3]) ─────────────────────────────────
@@ -2788,7 +2789,7 @@ def export_tracking_word():
             # ── Ghi điểm các quý vào cells[1] (dưới tên đơn vị) ──────────
             for item in criteria_list_1:
                 p = cell_donvi.add_paragraph()
-                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                 p.paragraph_format.space_before = Pt(1)
                 p.paragraph_format.space_after  = Pt(1)
                 run = p.add_run(f'- {item}')
@@ -2803,7 +2804,7 @@ def export_tracking_word():
                         first = False
                     else:
                         p_cur = cell_ghichu.add_paragraph()
-                        p_cur.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        p_cur.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                         p_cur.paragraph_format.space_before = Pt(1)
                         p_cur.paragraph_format.space_after  = Pt(1)
                     run = p_cur.add_run(f'- {item}')
@@ -2813,10 +2814,10 @@ def export_tracking_word():
                 set_font(run, size=10)
 
     # ── Xuất các phần ────────────────────────────────────────────────────────
-    add_unit_section('I. Danh hiệu Đơn vị quyết thắng',  ds_quyet_thang)
-    add_unit_section('II. Danh hiệu Đơn vị tiên tiến',   ds_tien_tien_dv)
-    add_personnel_section('III. Danh hiệu Chiến sĩ thi đua cơ sở', ds_chien_si_tdcs)
-    add_personnel_section('IV. Danh hiệu Chiến sĩ tiên tiến',      ds_chien_si_tt)
+    add_unit_section('I. DANH HIỆU ĐƠN VỊ QUYẾT THẮNG',  ds_quyet_thang)
+    add_unit_section('II. DANH HIỆU ĐƠN VỊ TIÊN TIẾN',   ds_tien_tien_dv)
+    add_personnel_section('III. DANH HIỆU CHIẾN SĨ THI ĐUA CƠ SỞ', ds_chien_si_tdcs)
+    add_personnel_section('IV. DANH HIỆU CHIẾN SĨ TIÊN TIẾN',      ds_chien_si_tt)
 
     roman = ['V','VI','VII','VIII','IX','X']
     for idx, (dh_name, items) in enumerate(ds_khac.items()):

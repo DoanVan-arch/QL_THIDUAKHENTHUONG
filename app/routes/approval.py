@@ -2391,16 +2391,16 @@ def export_word():
     # 4 MỤC THEO DANH HIỆU
     # ═══════════════════════════════════════════════════════════════════════════
     add_unit_table(doc, ds_don_vi_qt,
-                   'I. Danh hiệu Đơn vị quyết thắng')
+                   'I. DANH HIỆU ĐƠN VỊ QUYẾT THẮNG')
 
     add_unit_table(doc, ds_don_vi_tt,
-                   'II. Danh hiệu Đơn vị tiên tiến')
+                   'II. DANH HIỆU ĐƠN VỊ TIÊN TIẾN')
 
     add_personnel_table(doc, ds_ca_nhan_td,
-                        'III. Danh hiệu Chiến sĩ thi đua')
+                        'III. DANH HIỆU CHIẾN SĨ THI ĐUA')
 
     add_personnel_table(doc, ds_ca_nhan_tt,
-                        'IV. Danh hiệu Chiến sĩ tiên tiến')
+                        'IV. DANH HIỆU CHIẾN SĨ TIÊN TIẾN')
 
     # ── Footer ────────────────────────────────────────────────────────────────
     p_foot = doc.add_paragraph()
