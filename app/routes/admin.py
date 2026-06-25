@@ -355,30 +355,39 @@ def approval_tracking():
     # 6. PRE-BUILD TTR GATE MAP — bulk load 1 lần, tra cứu O(1)
     #    Tránh _is_thu_truong_gate_all_approved() query trong loop
     # ════════════════════════════════════════════════════════
-    ttr_gate_map = {}   # (ct_id, dept_name) -> bool
+    ttr_gate_map = {}
+
     if _TTR_GATE_COLUMNS:
-        # Thu thập tất cả ct_ids từ nominations đã load
         all_ct_ids_for_gate = [
             ct.id
             for dx in nominations
             for ct in dx.chi_tiets
             if not ct.bi_loai and ct.id not in approved_ct_ids
         ]
-        if all_ct_ids_for_gate:
-            # 1 query duy nhất thay vì N×M queries trong loop
-            from app.models import KetQuaDuyetChiTiet as _KQ
-            gate_rows = _KQ.query.filter(
-                _KQ.chi_tiet_id.in_(all_ct_ids_for_gate),
-                _KQ.phong_ban.in_(list(_TTR_GATE_COLUMNS))
-            ).all()
 
-            # Group: (ct_id, dept_name) -> list of ket_qua
+        if all_ct_ids_for_gate:
+            from app.models import KetQuaDuyetChiTiet as _KQ
+
+            # ★ Join PheDuyet để lấy phong_duyet
+            gate_rows = (
+                db.session.query(
+                    _KQ.chi_tiet_id,
+                    PheDuyet.phong_duyet,
+                    _KQ.ket_qua,
+                )
+                .join(PheDuyet, _KQ.phe_duyet_id == PheDuyet.id)
+                .filter(
+                    _KQ.chi_tiet_id.in_(all_ct_ids_for_gate),
+                    PheDuyet.phong_duyet.in_(list(_TTR_GATE_COLUMNS)),
+                )
+                .all()
+            )
+
             from collections import defaultdict
             gate_raw = defaultdict(list)
             for row in gate_rows:
-                gate_raw[(row.chi_tiet_id, row.phong_ban)].append(row.ket_qua)
+                gate_raw[(row.chi_tiet_id, row.phong_duyet)].append(row.ket_qua)
 
-            # Build bool map: True nếu tất cả kết quả đều Đồng ý
             for (ct_id, dept_name), results in gate_raw.items():
                 ttr_gate_map[(ct_id, dept_name)] = (
                     len(results) > 0 and
