@@ -347,7 +347,7 @@ def _all_criteria_columns():
         'id', 'de_xuat_id', 'quan_nhan_id', 'loai_danh_hieu',
         'doi_tuong', 'ten_don_vi_de_xuat', 'ghi_chu',
         'bi_loai', 'trang_thai', 'ly_do_tu_choi',
-        'created_at', 'updated_at', 'tap_the_data','ly_do_loai','diem_nckh','xep_loai_tong_ket','diem_tot_nghiep','xep_loai_doan_vien','diem_the_luc','ngay_loai','admin_approved',
+        'created_at', 'updated_at', 'tap_the_data','ly_do_loai','diem_nckh','xep_loai_tong_ket','diem_tot_nghiep','xep_loai_doan_vien','diem_the_luc','ngay_loai','admin_approved','phong_loai','diem_kiem_tra_tin_hoc','nam_hoc','ly_do_loai',
     }
 
    
