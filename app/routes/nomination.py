@@ -349,7 +349,7 @@ def edit_nomination(id):
         DeXuatChiTiet.quan_nhan_id.isnot(None),
         DeXuat.id != de_xuat.id,
         DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value,
-        DeXuatChiTiet.trang_thai != TrangThaiChiTiet.TU_CHOI.values,
+        DeXuatChiTiet.trang_thai != TrangThaiChiTiet.TU_CHOI.value,
     ).all()
     already_in_other = set(row[0] for row in already_in_other_q)
 
