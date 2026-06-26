@@ -248,7 +248,7 @@ def create_nomination():
 
     return render_template('nomination/create.html', nam_hoc_options=_get_nam_hoc_options())
 
-
+import json as _json
 @nomination_bp.route('/<int:id>')
 @login_required
 def detail_nomination(id):
