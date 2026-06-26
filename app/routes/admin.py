@@ -4884,7 +4884,11 @@ def all_personnel():
     from sqlalchemy import case as _case
     from app.models.catalog import ChucVuOption as _ChucVuOption
     _chuc_vu_alias = db.aliased(_ChucVuOption)
-    base_q = QuanNhan.query.filter_by(is_active=True)
+    base_q = QuanNhan.query.filter(
+    QuanNhan.is_active == True,
+    QuanNhan.is_deleted == False,
+    db.or_(QuanNhan.is_chuyen_vung.is_(None), QuanNhan.is_chuyen_vung == False)  # ★
+)
     try:
         base_q = base_q.filter(QuanNhan.is_deleted == False)
     except Exception:
