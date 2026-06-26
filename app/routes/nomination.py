@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.user import User
 from app.models.personnel import QuanNhan, DoiTuong
-from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi
+from app.models.nomination import DeXuat, DeXuatChiTiet, MinhChung, LoaiDanhHieu, TrangThaiDeXuat, DanhHieu, TieuChi, TrangThaiChiTiet
 from app.models.evaluation import NhomTieuChi, DanhGiaHangNam
 from app.models.evaluation import DiemQuyDinhDanhHieu
 from app.models.approval import PheDuyet, PhongDuyet, KetQuaDuyet, KetQuaDuyetChiTiet
@@ -349,7 +349,7 @@ def edit_nomination(id):
         DeXuatChiTiet.quan_nhan_id.isnot(None),
         DeXuat.id != de_xuat.id,
         DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value,
-        DeXuatChiTiet.trang_thai != DeXuatChiTiet.TU_CHOI.values,
+        DeXuatChiTiet.trang_thai != TrangThaiChiTiet.TU_CHOI.values,
     ).all()
     already_in_other = set(row[0] for row in already_in_other_q)
 
