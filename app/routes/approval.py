@@ -687,8 +687,8 @@ def pending_list():
     ).distinct().order_by(_DeXuat.nam_hoc.desc()).all()]
 
     q = PheDuyet.query.filter_by(
-        phong_duyet=phong_name,
-        ket_qua=KetQuaDuyet.CHO_DUYET.value
+        phong_duyet=phong_name
+        # ket_qua=KetQuaDuyet.CHO_DUYET.value
     )
     if nam_hoc_filter:
         q = q.join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id).filter(
@@ -714,7 +714,7 @@ def pending_list():
     for pd in pending_reviews:
         existing_ct_ids = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
         for ct in pd.de_xuat.chi_tiets:
-            if ct.bi_loai:
+            if ct.bi_loai or ct.trang_thai == TrangThaiChiTiet.TU_CHOI.value:
                 continue
             if ct.id not in existing_ct_ids:
                 in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
