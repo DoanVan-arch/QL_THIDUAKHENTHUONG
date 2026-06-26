@@ -329,29 +329,39 @@ _VIEW_ALL_CRITERIA_ROLES = {
     Role.BAN_CTCQ,
     Role.BAN_BAOVE_ANNINH,
     Role.BAN_TOCHUC,
+    Role.BAN_TUYENHUAN,
 }
 
 
 def _all_criteria_columns():
-    """Return list of all ca_nhan criteria fields (excluding long text/file fields)."""
-    from app.models.nomination import DeXuatChiTiet as _DX
+    """Return list of all ca_nhan criteria fields — lấy động từ bảng TieuChi,
+    chỉ giữ các field thực sự tồn tại trên DeXuatChiTiet.
+    Bao gồm cả long-text và file fields (không loại trừ nữa)."""
+    from app.models.nomination import DeXuatChiTiet as _DX, TieuChi
+
+    # Tập hợp tất cả cột thực tế trên bảng DeXuatChiTiet
     _all_cols = {c.name for c in _DX.__table__.columns}
-    _ALL_CRITERIA = [
-        'muc_do_hoan_thanh', 'phieu_tin_nhiem',
-        'kiem_tra_chinh_tri', 'kiem_tra_dieu_lenh', 'kiem_tra_tin_hoc',
-        'dia_ly_quan_su', 'ban_sung', 'the_luc',
-        'xep_loai_dang_vien', 'ket_qua_doan_the', 'xep_loai_doan_vien',
-        'hinh_thuc_khen_thuong_qc', 'ket_qua_phu_nu', 'hinh_thuc_khen_thuong_pn',
-        'chu_tri_don_vi_danh_hieu',
-        'danh_hieu_gv_gioi', 'dinh_muc_giang_day', 'ket_qua_kiem_tra_giang',
-        'tien_do_pgs', 'thoi_gian_lao_dong_kh',
-        'danh_hieu_hv_gioi', 'diem_tong_ket', 'ket_qua_thuc_hanh', 'ket_qua_ren_luyen',
-        'hinh_thuc_tot_nghiep',
-        'diem_tn_ctd', 'diem_tn_ct', 'diem_tn_ta', 'diem_tn_mon4',
-        'diem_tn_chuyennganh', 'diem_tn_baove',
-        'diem_nckh', 'mo_ta_khoa_hoc', 'diem_tot_nghiep',
-    ]
-    return [f for f in _ALL_CRITERIA if f in _all_cols and f not in _LONG_TEXT_FIELDS]
+
+    # Các field hệ thống — không phải tiêu chí, luôn loại trừ
+    _SYSTEM_FIELDS = {
+        'id', 'de_xuat_id', 'quan_nhan_id', 'loai_danh_hieu',
+        'doi_tuong', 'ten_don_vi_de_xuat', 'ghi_chu',
+        'bi_loai', 'trang_thai', 'ly_do_tu_choi',
+        'created_at', 'updated_at', 'tap_the_data'
+    }
+
+   
+
+    # Fallback nếu TieuChi chưa có dữ liệu
+   
+
+    # Chỉ loại trừ field hệ thống, giữ lại tất cả tiêu chí kể cả long-text/file
+    return [f for f  in _all_cols if f not in _SYSTEM_FIELDS]
+
+
+
+
+
 
 
 def _load_phong_fields_from_db():
@@ -1205,15 +1215,61 @@ def _reviewable_fields_for_role(role, ct):
     """Return the set of ma_truong this department may flag for editing on the
     given chi_tiet (cá nhân or tập thể)."""
     if ct.quan_nhan_id is None:
-        # Tập thể: any criterion present in tap_the_data is reviewable
-        return set((ct.tap_the_dict or {}).keys())
-    # Cá nhân
+        # ★ FIX: Tập thể — trả về TẤT CẢ field tiêu chí tập thể theo config,
+        # KHÔNG chỉ những field đã có giá trị trong tap_the_dict.
+        # Điều này cho phép yêu cầu điền mới field đang rỗng.
+        
+        # ★ Tập thể: lấy từ config động + union với dict hiện có
+        config_fields   = set(_all_tap_the_columns())
+        existing_fields = set((ct.tap_the_dict or {}).keys())
+        return config_fields | existing_fields
+
+    # Cá nhân — giữ nguyên logic cũ
     if role in _VIEW_ALL_CRITERIA_ROLES:
         fields = set(_all_criteria_columns())
     else:
         fields = set(get_phong_table_columns().get(role, []))
         if not fields:
             fields = set(_all_criteria_columns())
+    return fields
+# ── Cache module-level để tránh query DB nhiều lần ──────────────────────────
+
+# Python 3.9 trở xuống — dùng Optional từ typing
+from typing import Optional
+
+_criteria_cache: Optional[dict] = None
+
+def _get_criteria_by_type() -> dict:
+    """Query bảng TieuChi một lần, phân loại theo nhóm:
+    - nhom bắt đầu bằng 'ban_' hoặc 'phong_' → tập thể
+    - còn lại → cá nhân
+    Trả về dict: {'ca_nhan': [...], 'tap_the': [...]}
+    """
+    global _criteria_cache
+    if _criteria_cache is not None:
+        return _criteria_cache
+
+    from app.models.nomination import TieuChi
+
+    all_tc = TieuChi.query.order_by(TieuChi.thu_tu.asc()).all()
+
+    ca_nhan = []
+    tap_the = []
+    for tc in all_tc:
+        if not tc.ma_truong:
+            continue
+        nhom = (tc.nhom or '').strip().lower()
+        if nhom.startswith('ban_') or nhom.startswith('phong_'):
+            tap_the.append(tc.ma_truong)
+        else:
+            ca_nhan.append(tc.ma_truong)
+
+    _criteria_cache = {'ca_nhan': ca_nhan, 'tap_the': tap_the}
+    return _criteria_cache
+
+def _all_tap_the_columns():
+    """Trả về list ma_truong tiêu chí tập thể — lấy động từ TieuChi."""
+    fields = _get_criteria_by_type()['tap_the']
     return fields
 
 
