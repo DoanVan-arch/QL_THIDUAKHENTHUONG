@@ -43,7 +43,7 @@ def list_personnel():
 
     query = QuanNhan.query.filter_by(don_vi_id=current_user.don_vi_id, is_active=True)
     try:
-        query = query.filter(QuanNhan.is_deleted == False)
+        query = query.filter(QuanNhan.is_deleted == False,QuanNhan.is_chuyen_vung==False)
     except Exception:
         pass
     if search:

@@ -4889,7 +4889,10 @@ def all_personnel():
     QuanNhan.is_deleted == False,
     db.or_(QuanNhan.is_chuyen_vung.is_(None), QuanNhan.is_chuyen_vung == False)  # ★
 )
-   
+    # try:
+    #     base_q = base_q.filter(QuanNhan.is_deleted == False,QuanNhan.is_chuyen_vung==False)
+    # except Exception:
+    #     pass
     query = base_q.join(DonVi)\
         .outerjoin(_chuc_vu_alias,
                    _collate(_chuc_vu_alias.ten, 'utf8mb4_unicode_ci') ==
