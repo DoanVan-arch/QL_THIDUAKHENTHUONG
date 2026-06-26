@@ -1115,15 +1115,13 @@ def mark_notifications_read():
 @login_required
 @unit_user_required
 def edit_request(request_id):
-    """Restricted edit screen for the unit: only the criteria flagged by an approving
-    department (via 'Yêu cầu chỉnh sửa') are editable. Everything else stays locked.
-    On submit, only the requesting department must re-review."""
     import json as _json
     from app.models.edit_request import YeuCauChinhSua, TrangThaiYeuCauSua
+    from app.models.nomination import MinhChung  # ★
 
     yc = YeuCauChinhSua.query.get_or_404(request_id)
     chi_tiet = yc.chi_tiet
-    de_xuat = yc.de_xuat
+    de_xuat  = yc.de_xuat
 
     if de_xuat is None or chi_tiet is None or de_xuat.don_vi_id != current_user.don_vi_id:
         flash('Không có quyền thao tác.', 'danger')
@@ -1137,14 +1135,18 @@ def edit_request(request_id):
         flash('Yêu cầu chỉnh sửa này đã được xử lý.', 'info')
         return redirect(url_for('nomination.notifications'))
 
-    flagged = yc.cac_truong or []
+    flagged    = yc.cac_truong or []
     is_tap_the = chi_tiet.quan_nhan_id is None
 
-    # Field metadata for rendering inputs
+    # Field metadata
     tc_rows = TieuChi.query.filter(
-        TieuChi.ma_truong.in_(flagged), TieuChi.is_active == True
+        TieuChi.ma_truong.in_(flagged),
+        TieuChi.is_active == True
     ).all()
     tc_map = {tc.ma_truong: tc for tc in tc_rows}
+
+    # ★ Tập hợp field yêu cầu minh chứng
+    minh_chung_fields = {tc.ma_truong for tc in tc_rows if tc.co_minh_chung}
 
     if request.method == 'POST':
         tap_the_data = {}
@@ -1155,6 +1157,7 @@ def edit_request(request_id):
                 tap_the_data = {}
 
         for field in flagged:
+            # ── Cập nhật giá trị tiêu chí ──
             val = request.form.get(field, '').strip()
             if is_tap_the:
                 if val:
@@ -1164,14 +1167,40 @@ def edit_request(request_id):
             else:
                 setattr(chi_tiet, field, val or None)
 
+            # ── Xử lý minh chứng ──
+            if field in minh_chung_fields:
+                # Xóa các file được tick xóa
+                delete_ids = request.form.getlist(f'xoa_minh_chung_{field}')
+                if delete_ids:
+                    MinhChung.query.filter(
+                        MinhChung.id.in_([int(x) for x in delete_ids if x.isdigit()]),
+                        MinhChung.chi_tiet_id == chi_tiet.id,
+                        MinhChung.loai_minh_chung == field
+                    ).delete(synchronize_session=False)
+
+                # Upload file mới
+                files = request.files.getlist(f'minh_chung_{field}')
+                for f_file in files:
+                    if f_file and f_file.filename:
+                        # ★ Dùng helper save_upload
+                        saved_path = save_upload(f_file, 'evidence')
+                        db.session.add(MinhChung(
+                            chi_tiet_id     = chi_tiet.id,
+                            loai_minh_chung = field,          # ma_truong của tiêu chí
+                            duong_dan       = saved_path,
+                            ten_file_goc    = f_file.filename,
+                            mo_ta           = request.form.get(f'mo_ta_mc_{field}', '').strip() or None,
+                        ))
+
         if is_tap_the:
-            chi_tiet.tap_the_data = _json.dumps(tap_the_data, ensure_ascii=False) if tap_the_data else None
+            chi_tiet.tap_the_data = _json.dumps(
+                tap_the_data, ensure_ascii=False
+            ) if tap_the_data else None
 
         yc.trang_thai = TrangThaiYeuCauSua.DA_SUA.value
-        yc.ngay_sua = datetime.utcnow()
+        yc.ngay_sua   = datetime.utcnow()
 
-        # Reset ONLY the requesting department's result for this item to CHO_DUYET,
-        # so only that department re-reviews; all other departments keep their result.
+        # Reset kết quả duyệt của ban yêu cầu
         phe_duyet = PheDuyet.query.filter_by(
             de_xuat_id=de_xuat.id, phong_duyet=yc.phong_yeu_cau
         ).first()
@@ -1181,16 +1210,15 @@ def edit_request(request_id):
             ).first()
             if kq:
                 kq.ket_qua = KetQuaDuyet.CHO_DUYET.value
-                kq.ly_do = None
+                kq.ly_do   = None
             if phe_duyet.ket_qua == KetQuaDuyet.DONG_Y.value:
-                phe_duyet.ket_qua = KetQuaDuyet.CHO_DUYET.value
+                phe_duyet.ket_qua    = KetQuaDuyet.CHO_DUYET.value
                 phe_duyet.ngay_duyet = None
-            # Keep đề xuất in review state
             if de_xuat.trang_thai not in (TrangThaiDeXuat.DANG_DUYET.value,
                                           TrangThaiDeXuat.HOI_DONG.value):
                 de_xuat.trang_thai = TrangThaiDeXuat.DANG_DUYET.value
 
-        # Notify the requesting department's account(s)
+        # Thông báo cho ban yêu cầu
         from app.routes.approval import _PHONG_TO_ROLE
         req_role = _PHONG_TO_ROLE.get(yc.phong_yeu_cau)
         if req_role:
@@ -1198,20 +1226,20 @@ def edit_request(request_id):
                 name = (chi_tiet.quan_nhan.ho_ten if chi_tiet.quan_nhan else
                         (chi_tiet.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi))
                 db.session.add(ThongBao(
-                    user_id=u.id,
-                    de_xuat_id=de_xuat.id,
-                    chi_tiet_id=chi_tiet.id,
-                    loai='da_sua',
-                    tieu_de=f'Đơn vị đã chỉnh sửa: {name}',
-                    noi_dung=(f'{de_xuat.don_vi.ten_don_vi} đã chỉnh sửa các tiêu chí theo '
-                              f'yêu cầu. Vui lòng duyệt lại.'),
+                    user_id     = u.id,
+                    de_xuat_id  = de_xuat.id,
+                    chi_tiet_id = chi_tiet.id,
+                    loai        = 'da_sua',
+                    tieu_de     = f'Đơn vị đã chỉnh sửa: {name}',
+                    noi_dung    = (f'{de_xuat.don_vi.ten_don_vi} đã chỉnh sửa các tiêu chí '
+                                   f'theo yêu cầu. Vui lòng duyệt lại.'),
                 ))
 
         db.session.commit()
         flash('Đã chỉnh sửa và gửi lại cho ban yêu cầu.', 'success')
         return redirect(url_for('nomination.notifications'))
 
-    # GET: build current values + render metadata for flagged fields only
+    # ── GET ──────────────────────────────────────────────────────────────────
     tap_the_data = {}
     if chi_tiet.tap_the_data:
         try:
@@ -1219,20 +1247,26 @@ def edit_request(request_id):
         except Exception:
             tap_the_data = {}
 
+    # ★ Load minh chứng hiện có, nhóm theo loai_minh_chung (= ma_truong)
+    existing_mc = MinhChung.query.filter_by(chi_tiet_id=chi_tiet.id).all()
+    mc_map = {}  # {ma_truong: [MinhChung, ...]}
+    for mc in existing_mc:
+        mc_map.setdefault(mc.loai_minh_chung, []).append(mc)
+
     fields = []
     for field in flagged:
-        tc = tc_map.get(field)
-        if is_tap_the:
-            cur = tap_the_data.get(field, '')
-        else:
-            cur = getattr(chi_tiet, field, '') or ''
+        tc  = tc_map.get(field)
+        cur = (tap_the_data.get(field, '') if is_tap_the
+               else getattr(chi_tiet, field, '') or '')
         fields.append({
-            'ma_truong': field,
-            'ten': tc.ten if tc else field,
-            'huong_dan': (tc.huong_dan if tc else '') or '',
-            'loai_input': (tc.loai_input if tc else 'textbox') or 'textbox',
-            'gia_tri_chon': (tc.gia_tri_chon if tc else []) or [],
-            'gia_tri': cur,
+            'ma_truong'    : field,
+            'ten'          : tc.ten if tc else field,
+            'huong_dan'    : (tc.huong_dan if tc else '') or '',
+            'loai_input'   : (tc.loai_input if tc else 'textbox') or 'textbox',
+            'gia_tri_chon' : (tc.gia_tri_chon if tc else []) or [],
+            'gia_tri'      : cur,
+            'co_minh_chung': bool(tc and tc.co_minh_chung),   # ★
+            'minh_chungs'  : mc_map.get(field, []),            # ★
         })
 
     ten_hien_thi = (chi_tiet.quan_nhan.ho_ten if chi_tiet.quan_nhan else
@@ -1241,6 +1275,7 @@ def edit_request(request_id):
     return render_template('nomination/edit_request.html',
                            yc=yc, de_xuat=de_xuat, chi_tiet=chi_tiet,
                            fields=fields, ten_hien_thi=ten_hien_thi)
+
 
 
 @nomination_bp.route('/<int:id>/revoke', methods=['POST'])

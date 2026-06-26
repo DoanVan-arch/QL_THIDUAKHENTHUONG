@@ -5,13 +5,17 @@
 <div class="page-header">
     <div>
         <h4><i class="bi bi-pencil-square me-2"></i>Chỉnh sửa theo yêu cầu</h4>
-        <small class="text-muted">{{ de_xuat.don_vi.ten_don_vi if de_xuat.don_vi else '' }} &mdash; Năm học {{ de_xuat.nam_hoc }}</small>
+        <small class="text-muted">
+            {{ de_xuat.don_vi.ten_don_vi if de_xuat.don_vi else '' }}
+            &mdash; Năm học {{ de_xuat.nam_hoc }}
+        </small>
     </div>
     <a href="{{ url_for('nomination.notifications') }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Quay lại
     </a>
 </div>
 
+{# Thông tin yêu cầu #}
 <div class="card-section mb-3">
     <div class="card-body-custom">
         <div class="d-flex flex-wrap gap-3 align-items-center">
@@ -30,55 +34,171 @@
         </div>
         {% if yc.ly_do %}
         <div class="alert alert-warning mt-3 mb-0 py-2">
-            <i class="bi bi-info-circle me-1"></i><strong>Lý do yêu cầu:</strong> {{ yc.ly_do }}
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>Lý do yêu cầu:</strong> {{ yc.ly_do }}
         </div>
         {% endif %}
     </div>
 </div>
 
-<form method="POST">
+{# enctype multipart bắt buộc khi có upload file #}
+<form method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <div class="card-section">
         <div class="card-header-custom">
-            <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Tiêu chí cần chỉnh sửa
+            <h6 class="mb-0">
+                <i class="bi bi-list-check me-2"></i>Tiêu chí cần chỉnh sửa
                 <span class="badge bg-secondary ms-1">{{ fields|length }}</span>
             </h6>
         </div>
         <div class="card-body-custom">
             <p class="text-muted small mb-3">
-                <i class="bi bi-lock me-1"></i>Chỉ các tiêu chí dưới đây được phép chỉnh sửa. Các thông tin khác của đề xuất vẫn được giữ nguyên.
+                <i class="bi bi-lock me-1"></i>
+                Chỉ các tiêu chí dưới đây được phép chỉnh sửa.
             </p>
-            <div class="row g-3">
+
+            <div class="row g-4">
                 {% for f in fields %}
                 <div class="col-md-6">
+
+                    {# ── Nhãn ── #}
                     <label class="form-label fw-semibold" for="fld_{{ f.ma_truong }}">
                         {{ f.ten }}
+                        {% if f.co_minh_chung %}
+                        <span class="badge bg-info text-dark ms-1" style="font-size:.7rem;">
+                            <i class="bi bi-paperclip"></i> Cần minh chứng
+                        </span>
+                        {% endif %}
                         {% if f.huong_dan %}
-                        <i class="bi bi-question-circle text-muted" title="{{ f.huong_dan }}"></i>
+                        <i class="bi bi-question-circle text-muted ms-1"
+                           data-bs-toggle="tooltip" title="{{ f.huong_dan }}"></i>
                         {% endif %}
                     </label>
+
+                    {# ── Input giá trị ── #}
                     {% if f.loai_input == 'combobox' and f.gia_tri_chon %}
                     <select class="form-select" id="fld_{{ f.ma_truong }}" name="{{ f.ma_truong }}">
                         <option value="">-- Chọn --</option>
                         {% for opt in f.gia_tri_chon %}
-                        <option value="{{ opt }}" {{ 'selected' if opt|string == f.gia_tri|string }}>{{ opt }}</option>
+                        <option value="{{ opt }}"
+                            {{ 'selected' if opt|string == f.gia_tri|string }}>
+                            {{ opt }}
+                        </option>
                         {% endfor %}
                     </select>
                     {% else %}
-                    <input type="text" class="form-control" id="fld_{{ f.ma_truong }}"
-                           name="{{ f.ma_truong }}" value="{{ f.gia_tri }}">
+                    <input type="text" class="form-control"
+                           id="fld_{{ f.ma_truong }}" name="{{ f.ma_truong }}"
+                           value="{{ f.gia_tri }}">
                     {% endif %}
+
+                    {# ── Khu vực minh chứng ── #}
+                    {% if f.co_minh_chung %}
+                    <div class="mt-2 rounded border p-2 bg-light">
+
+                        {# Danh sách file hiện có #}
+                        {% if f.minh_chungs %}
+                        <p class="small fw-semibold text-muted mb-1">
+                            <i class="bi bi-files me-1"></i>Minh chứng hiện có
+                            <span class="badge bg-secondary">{{ f.minh_chungs|length }}</span>
+                        </p>
+                        <ul class="list-unstyled mb-2 ps-1">
+                            {% for mc in f.minh_chungs %}
+                            <li class="d-flex align-items-center gap-2 mb-1 py-1
+                                        border-bottom border-light-subtle">
+                                <i class="bi bi-file-earmark-text text-primary flex-shrink-0"></i>
+                                <a href="{{ url_for('static', filename=mc.duong_dan) }}"
+                                   target="_blank"
+                                   class="small text-truncate flex-grow-1"
+                                   style="max-width:180px;"
+                                   title="{{ mc.ten_file_goc }}">
+                                    {{ mc.ten_file_goc }}
+                                </a>
+                                {% if mc.mo_ta %}
+                                <span class="text-muted small fst-italic">{{ mc.mo_ta }}</span>
+                                {% endif %}
+                                {# Checkbox xóa #}
+                                <label class="d-flex align-items-center gap-1 ms-auto
+                                              text-danger small flex-shrink-0">
+                                    <input type="checkbox"
+                                           name="xoa_minh_chung_{{ f.ma_truong }}"
+                                           value="{{ mc.id }}">
+                                    <span>Xóa</span>
+                                </label>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="small text-warning mb-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Chưa có minh chứng.
+                        </p>
+                        {% endif %}
+
+                        {# Upload file mới #}
+                        <label class="form-label small mb-1 fw-semibold">
+                            <i class="bi bi-cloud-upload me-1"></i>Tải lên minh chứng mới:
+                        </label>
+                        <input type="file"
+                               class="form-control form-control-sm file-input"
+                               name="minh_chung_{{ f.ma_truong }}"
+                               multiple
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                        <div class="form-text">PDF, Word, Excel, ảnh — có thể chọn nhiều file.</div>
+
+                        {# Mô tả cho file upload (tùy chọn) #}
+                        <input type="text"
+                               class="form-control form-control-sm mt-1"
+                               name="mo_ta_mc_{{ f.ma_truong }}"
+                               placeholder="Mô tả minh chứng (tùy chọn)">
+
+                        {# Preview tên file đã chọn #}
+                        <div class="file-preview-box mt-1 small text-success d-none"></div>
+                    </div>
+                    {% endif %}
+                    {# ── End minh chứng ── #}
+
                 </div>
                 {% endfor %}
-            </div>
+            </div>{# end .row #}
         </div>
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-3">
-        <a href="{{ url_for('nomination.notifications') }}" class="btn btn-outline-secondary">Hủy</a>
+        <a href="{{ url_for('nomination.notifications') }}"
+           class="btn btn-outline-secondary">Hủy</a>
         <button type="submit" class="btn btn-primary">
             <i class="bi bi-send me-1"></i>Lưu &amp; gửi lại ban yêu cầu
         </button>
     </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Tooltip
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+
+    // Preview tên file đã chọn
+    document.querySelectorAll('input.file-input').forEach(input => {
+        input.addEventListener('change', function () {
+            const box = this.closest('.rounded').querySelector('.file-preview-box');
+            if (!box) return;
+            if (this.files.length === 0) {
+                box.classList.add('d-none');
+                box.innerHTML = '';
+                return;
+            }
+            const names = Array.from(this.files)
+                .map(f => `<i class="bi bi-check2 me-1"></i>${f.name}`)
+                .join('<br>');
+            box.innerHTML = names;
+            box.classList.remove('d-none');
+        });
+    });
+});
+</script>
 {% endblock %}
