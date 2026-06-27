@@ -2219,24 +2219,20 @@ def _get_pending_final_individuals(nam_hoc=None):
 
     pending = []
     for dx in nominations:
-        dx_pd = pd_map.get(dx.id, {})
         for ct in dx.chi_tiets:
-            if ct.admin_approved or ct.bi_loai:
-                continue
             all_approved = True
             for dept_name in DEPT_NAMES:
-                pd = dx_pd.get(dept_name)
-                if not pd:
+                if not _is_individual_dept_approved(dx.id, ct, dept_name):
                     all_approved = False
                     break
-                kq = kq_map.get((pd.id, ct.id))
-                if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
-                    all_approved = False
-                    break
-            if all_approved:
-                pending.append({'dx': dx, 'ct': ct})
-
+            if all_approved == False:
+                continue
+            if ct.admin_approved or ct.bi_loai:
+                continue
+            pending.append({'dx': dx, 'ct': ct})
     return pending
+
+  
 
 
 def _get_phe_duyet_cuoi_items(nam_hoc=None):
