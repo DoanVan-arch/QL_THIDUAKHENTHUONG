@@ -2546,7 +2546,35 @@ def export_tracking_word():
             elif dh == 'Chiến sĩ tiên tiến':   ds_chien_si_tt.append((ct, dx))
             else: ds_khac.setdefault(dh, []).append((ct, dx))
 
+            # Sort từng nhóm
+    _sk = lambda t: _unit_sort_key(t, _sort_map)
+
+    ds_quyet_thang   = sorted(ds_quyet_thang,   key=_sk)
+    ds_tien_tien_dv  = sorted(ds_tien_tien_dv,  key=_sk)
+    ds_chien_si_tdcs = sorted(ds_chien_si_tdcs, key=_sk)
+    ds_chien_si_tt   = sorted(ds_chien_si_tt,   key=_sk)
+    ds_khac          = {dh: sorted(lst, key=_sk) for dh, lst in ds_khac.items()}
+
     title_nam_hoc = nam_hoc_filter or 'TẤT CẢ NĂM HỌC'
+    def _unit_sort_key(ct_dx_tuple, sort_map: dict) -> tuple:
+        ct, dx = ct_dx_tuple
+        don_vi_id = dx.don_vi_id if dx else None
+        base = sort_map.get(don_vi_id, (999, 999, 'zzz'))
+        ho_ten = ''
+        if ct:
+            ho_ten = (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat) or ''
+        return (*base, ho_ten.lower())
+
+
+# Build sort_map 1 lần
+    _sort_map = {}
+    units_by_type = {}
+    for loai in LoaiDonVi:
+        units_by_type[loai] = DonVi.query.filter_by(loai_don_vi=loai)\
+            .order_by(DonVi.thu_tu).all()
+    for loai_idx, (loai, units) in enumerate(units_by_type.items()):
+        for unit in units:
+            _sort_map[unit.id] = (loai_idx, unit.thu_tu or 0, unit.ten_don_vi or '')
 
     # ── Helpers font / cell ───────────────────────────────────────────────────
     def set_font(run, bold=False, size=11, italic=False, color=None):
@@ -2556,7 +2584,27 @@ def export_tracking_word():
         run.font.name  = 'Times New Roman'
         if color:
             run.font.color.rgb = RGBColor(*color)
+    def sort_chi_tiets_by_don_vi(chi_tiets: list, units_by_type: dict) -> list:
+        """
+        Sắp xếp list DeXuatChiTiet theo thứ tự bảng đơn vị.
 
+        units_by_type: {LoaiDonVi: [DonVi, ...]}  (đã order_by thu_tu từ DB)
+        """
+        # Build lookup: don_vi_id → (loai_idx, thu_tu, ten_don_vi)
+        _don_vi_sort_map: dict[int, tuple] = {}
+        for loai_idx, (loai, units) in enumerate(units_by_type.items()):
+            for unit in units:
+                _don_vi_sort_map[unit.id] = (loai_idx, unit.thu_tu or 0, unit.ten_don_vi or '')
+
+        def _sort_key(ct: DeXuatChiTiet):
+            # Lấy don_vi_id qua de_xuat (đã eager load)
+            dx = ct.de_xuat
+            don_vi_id = dx.don_vi_id if dx else None
+            if don_vi_id and don_vi_id in _don_vi_sort_map:
+                return _don_vi_sort_map[don_vi_id]
+            return (999, 999, 'zzz')  # đẩy xuống cuối nếu không tìm thấy
+
+        return sorted(chi_tiets, key=_sort_key)
     def add_cell(cell, text, bold=False, size=10, align=WD_ALIGN_PARAGRAPH.LEFT):
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
