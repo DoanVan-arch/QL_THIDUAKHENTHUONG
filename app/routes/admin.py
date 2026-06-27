@@ -2520,23 +2520,25 @@ def export_tracking_word():
     ds_chien_si_tt   = []
     ds_khac          = {}
     seen_ids         = set()
-    def _unit_sort_key(ct_dx_tuple, sort_map: dict) -> tuple:
+    units_by_type = {}
+    for loai in LoaiDonVi:
+        units_by_type[loai] = DonVi.query.filter_by(loai_don_vi=loai) \
+            .order_by(DonVi.thu_tu).all()
+
+    _sort_map = {}
+    for loai_idx, (loai, units) in enumerate(units_by_type.items()):
+        for unit in units:
+            _sort_map[unit.id] = (loai_idx, unit.thu_tu or 0, unit.ten_don_vi or '')
+
+    # ── Hàm sort key ────────────────────────────────────────────────────────────
+    def _unit_sort_key(ct_dx_tuple):
         ct, dx = ct_dx_tuple
         don_vi_id = dx.don_vi_id if dx else None
-        base = sort_map.get(don_vi_id, (999, 999, 'zzz'))
+        base = _sort_map.get(don_vi_id, (999, 999, 'zzz'))
         ho_ten = ''
         if ct:
             ho_ten = (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat) or ''
         return (*base, ho_ten.lower())
-    # Build sort_map 1 lần
-    _sort_map = {}
-    units_by_type = {}
-    for loai in LoaiDonVi:
-        units_by_type[loai] = DonVi.query.filter_by(loai_don_vi=loai)\
-            .order_by(DonVi.thu_tu).all()
-    for loai_idx, (loai, units) in enumerate(units_by_type.items()):
-        for unit in units:
-            _sort_map[unit.id] = (loai_idx, unit.thu_tu or 0, unit.ten_don_vi or '')
     for dx in nominations:
         for ct in dx.chi_tiets:
             if ct.id in seen_ids:
