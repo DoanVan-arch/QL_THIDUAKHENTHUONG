@@ -2158,7 +2158,7 @@ def _get_pending_final_individuals(nam_hoc=None):
     nomination so the admin can act on them.
     """
     pending = []
-    q = DeXuat.query.filter_by(trang_thai=TrangThaiDeXuat.HOI_DONG.value)
+    q = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
     if nam_hoc:
         q = q.filter(DeXuat.nam_hoc == nam_hoc)
     nominations_waiting = q.order_by(DeXuat.ngay_gui.desc()).all()
@@ -2192,31 +2192,32 @@ def _get_phe_duyet_cuoi_items(nam_hoc=None):
     rows = []
     for dx in nominations:
         for ct in dx.chi_tiets:
-            votes = {}
-            ct_all_dong_y = True
-            ct_all_voted = True
-            for vai_tro in HOI_DONG_VAI_TRO:
-                bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
-                votes[vai_tro] = bq
-                if not bq:
-                    ct_all_dong_y = False
-                    ct_all_voted = False
-                elif bq.ket_qua != KET_QUA_DONG_Y:
-                    ct_all_dong_y = False
-            is_confirmed = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
-            admin_final_vote = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro='admin_final').first()
-            rows.append({
-                'dx': dx,
-                'ct': ct,
-                'votes': votes,
-                'voted_count': sum(1 for bq in votes.values() if bq is not None),
-                'all_voted_dong_y': ct_all_dong_y,
-                'all_voted': ct_all_voted,
-                'is_confirmed': is_confirmed,
-                'admin_final_vote': admin_final_vote,
-                '_sort_award': danh_hieu_order.get(ct.loai_danh_hieu, 999),
-                '_sort_unit': dx.don_vi.ten_don_vi if dx.don_vi else '',
-            })
+            if(ct.admin_approved == True or ct.trang_thai == TrangThaiChiTiet.PHE_DUYET_CUOI.value):
+                votes = {}
+                ct_all_dong_y = True
+                ct_all_voted = True
+                for vai_tro in HOI_DONG_VAI_TRO:
+                    bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+                    votes[vai_tro] = bq
+                    if not bq:
+                        ct_all_dong_y = False
+                        ct_all_voted = False
+                    elif bq.ket_qua != KET_QUA_DONG_Y:
+                        ct_all_dong_y = False
+                is_confirmed = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
+                admin_final_vote = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro='admin_final').first()
+                rows.append({
+                    'dx': dx,
+                    'ct': ct,
+                    'votes': votes,
+                    'voted_count': sum(1 for bq in votes.values() if bq is not None),
+                    'all_voted_dong_y': ct_all_dong_y,
+                    'all_voted': ct_all_voted,
+                    'is_confirmed': is_confirmed,
+                    'admin_final_vote': admin_final_vote,
+                    '_sort_award': danh_hieu_order.get(ct.loai_danh_hieu, 999),
+                    '_sort_unit': dx.don_vi.ten_don_vi if dx.don_vi else '',
+                })
 
     rows.sort(key=lambda r: (r['_sort_award'], r['_sort_unit']))
     return rows
