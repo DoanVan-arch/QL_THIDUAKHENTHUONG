@@ -2006,12 +2006,13 @@ def reward_list():
     danh_hieu_filter = request.args.get('danh_hieu', '')
     search_query = request.args.get('q', '').strip()
 
-    from app.models.nomination import DanhHieu as _DanhHieu
-    from sqlalchemy import text as _text
+    # --- SỬA LỖI 1: Gom và bổ sung đầy đủ các Import cần thiết nội bộ hàm ---
+    from app.models.nomination import DanhHieu as _DanhHieu, DeXuat as _DeXuat, DeXuatChiTiet
+    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_KHONG_DONG_Y, LoaiDanhHieu
+    from app.models.user import QuanNhan  # Hãy điều chỉnh lại đường dẫn import đúng với project của bạn
+    from sqlalchemy import collate as _collate
 
     # Correlated subquery to get thu_tu from DanhHieu for ORDER BY.
-    # Both columns use COLLATE utf8mb4_unicode_ci to avoid collation mismatch error 1267.
-    from sqlalchemy import collate as _collate
     _thu_tu_subq = (
         db.session.query(_DanhHieu.thu_tu)
         .filter(
@@ -2022,6 +2023,7 @@ def reward_list():
         .scalar_subquery()
     )
 
+    # Base query cho Bảng 3
     query = KhenThuong.query.join(DonVi, KhenThuong.don_vi_id == DonVi.id)
 
     if nam_hoc_filter:
@@ -2033,17 +2035,15 @@ def reward_list():
     if search_query:
         query = query.filter(KhenThuong.ho_ten.ilike(f'%{search_query}%'))
 
+    # Thực hiện phân trang cho Bảng 3
     rewards = query.order_by(
         KhenThuong.nam_hoc.desc(),
         _thu_tu_subq,
         DonVi.ten_don_vi,
         KhenThuong.ho_ten.asc(),
-    )\
-        .paginate(page=page, per_page=20, error_out=False)
+    ).paginate(page=page, per_page=20, error_out=False)
 
     # Get filter options — merge year list from both KhenThuong and DeXuat
-    # so the dropdown is not empty when no rewards are finalized yet
-    from app.models.nomination import DeXuat as _DeXuat
     _nh_kt = {n[0] for n in db.session.query(KhenThuong.nam_hoc).distinct().all() if n[0]}
     _nh_dx = {n[0] for n in db.session.query(_DeXuat.nam_hoc).distinct().all() if n[0]}
     nam_hoc_list = sorted(_nh_kt | _nh_dx, reverse=True)
@@ -2056,11 +2056,15 @@ def reward_list():
     danh_hieu_list = db.session.query(KhenThuong.loai_danh_hieu).distinct().all()
     danh_hieu_list = [d[0] for d in danh_hieu_list]
 
-    # Summary stats
-    total_rewards = KhenThuong.query.count()
+    # --- SỬA LỖI 3: Điểu chỉnh thống kê đi theo Năm học đang chọn thay vì tính tổng lịch sử ---
+    base_stats_query = KhenThuong.query
+    if nam_hoc_filter:
+        base_stats_query = base_stats_query.filter(KhenThuong.nam_hoc == nam_hoc_filter)
+
+    total_rewards = base_stats_query.count()
     stats_by_danh_hieu = {}
     for dh in danh_hieu_list:
-        stats_by_danh_hieu[dh] = KhenThuong.query.filter_by(loai_danh_hieu=dh).count()
+        stats_by_danh_hieu[dh] = base_stats_query.filter_by(loai_danh_hieu=dh).count()
 
     # Bảng 1: individuals at HOI_DONG stage, all dept approved, not yet admin_approved
     pending_final_nominations = _get_pending_final_individuals(nam_hoc=nam_hoc_filter)
@@ -2069,11 +2073,11 @@ def reward_list():
     phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter)
 
     # Bảng 3 – Bị từ chối: chi tiết có admin_final = Không đồng ý (bất kể trạng thái DeXuat)
-    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_KHONG_DONG_Y
     _rej_votes = HoiDongBieuQuyet.query.filter_by(vai_tro='admin_final', ket_qua=KET_QUA_KHONG_DONG_Y).all()
     rejected_items = []
     for rv in _rej_votes:
-        ct_r = DeXuatChiTiet.query.get(rv.chi_tiet_id)
+        # --- SỬA LỖI 2: Đổi từ .query.get() sang db.session.get() để tương thích SQLAlchemy mới ---
+        ct_r = db.session.get(DeXuatChiTiet, rv.chi_tiet_id)
         if not ct_r:
             continue
         dx_r = ct_r.de_xuat
@@ -2114,7 +2118,8 @@ def reward_list():
     for qn_id, years in by_person.items():
         if len(years) < 3:
             continue
-        qn = QuanNhan.query.get(qn_id)
+        # --- SỬA LỖI 2: Đổi từ .query.get() sang db.session.get() ---
+        qn = db.session.get(QuanNhan, qn_id)
         if not qn:
             continue
         years_sorted = sorted(list(years), key=_nam_hoc_start)
@@ -2179,14 +2184,15 @@ def _get_pending_final_individuals(nam_hoc=None):
             pending.append({'dx': dx, 'ct': ct})
     return pending
 
+from sqlalchemy import or_
 
 def _get_phe_duyet_cuoi_items(nam_hoc=None):
     """Bảng 2: nominations at PHE_DUYET_CUOI — returns a flat list of per-individual rows,
     sorted by DanhHieu.thu_tu (award type order) then by unit name."""
     from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y
     from app.models.nomination import DanhHieu
-    q = DeXuat.query.filter_by(trang_thai=TrangThaiDeXuat.PHE_DUYET_CUOI.value)\
-        .join(DonVi, DeXuat.don_vi_id == DonVi.id)
+    q = DeXuat.query.filter( DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value
+    ).join(DonVi, DeXuat.don_vi_id == DonVi.id)
     if nam_hoc:
         q = q.filter(DeXuat.nam_hoc == nam_hoc)
     nominations = q.order_by(DonVi.ten_don_vi).all()
