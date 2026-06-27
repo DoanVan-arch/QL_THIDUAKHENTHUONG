@@ -26,7 +26,7 @@ HOI_DONG_VAI_TRO_DISPLAY = {
 
 KET_QUA_DONG_Y = 'Đồng ý'
 KET_QUA_KHONG_DONG_Y = 'Không đồng ý'
-HA_CAP = 'Hạ danh hiệu'
+HA_CAP = 'Xác nhận hạ danh hiệu'
 
 
 class HoiDongBieuQuyet(db.Model):
