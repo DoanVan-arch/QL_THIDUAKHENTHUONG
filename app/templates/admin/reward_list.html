@@ -411,7 +411,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                     class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
                                     style="font-size:0.75rem;"
                                     title="Biểu quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
-                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.quan_nhan.ho_ten | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}')">
+                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.quan_nhan.ho_ten | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}', '{{ ct.loai_danh_hieu.strip() }}')">
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
                             </button>
                             {% endif %}
@@ -429,11 +429,8 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                         data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
                                     <i class="bi bi-x-circle me-1"></i>Không đồng ý
                                 </button>
-                                {% else %}
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
-                                {% endif %}
-
-                                {# ★ NÚT HẠ DANH HIỆU — luôn hiển thị cho Admin với các danh hiệu cao #}
+                                
+                                {# ★ NÚT HẠ DANH HIỆU CỦA ADMIN #}
                                 {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
                                 <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
                                         onclick="openDowngradeModal(
@@ -445,6 +442,10 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                         )">
                                     <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
                                 </button>
+                                {% endif %}
+                                
+                                {% else %}
+                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -544,7 +545,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                     class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
                                     style="font-size:0.75rem;"
                                     title="Biểu quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
-                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}')">
+                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}', '{{ ct.loai_danh_hieu.strip() }}')">
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
                             </button>
                             {% endif %}
@@ -562,11 +563,8 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                         data-bs-toggle="modal" data-bs-target="#kdyModalTT{{ ct.id }}">
                                     <i class="bi bi-x-circle me-1"></i>Không đồng ý
                                 </button>
-                                {% else %}
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
-                                {% endif %}
                                
-                                {# ★ NÚT HẠ DANH HIỆU — dùng ct, KHÔNG phải kt #}
+                                {# ★ NÚT HẠ DANH HIỆU CỦA ADMIN #}
                                 {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
                                 <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
                                         onclick="openDowngradeModal(
@@ -578,6 +576,10 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                                         )">
                                     <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
                                 </button>
+                                {% endif %}
+
+                                {% else %}
+                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -947,6 +949,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 <p class="mb-1 small"><strong id="voteModalName"></strong></p>
                 <p class="mb-2 small text-muted">Ban: <span id="voteModalBan"></span></p>
                 <p class="mb-2 small">Biểu quyết hiện tại: <span id="voteModalCurrent"></span></p>
+                
                 <form id="voteFormDongY" method="POST" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="ket_qua" value="Đồng ý">
@@ -959,6 +962,7 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <i class="bi bi-check-lg me-1"></i>Đồng ý
                     </button>
                 </form>
+                
                 <form id="voteFormKhong" method="POST" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="ket_qua" value="Không đồng ý">
@@ -971,6 +975,12 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                         <i class="bi bi-x-lg me-1"></i>Không đồng ý
                     </button>
                 </form>
+
+                {# NÚT HẠ DANH HIỆU SẼ ĐƯỢC JS HIỂN THỊ NẾU ĐẠT ĐIỀU KIỆN #}
+                <hr class="my-3">
+                <button type="button" id="btnVoteDowngrade" class="btn btn-warning w-100 text-dark" style="display:none;">
+                    <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
+                </button>
             </div>
         </div>
     </div>
@@ -1173,7 +1183,8 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
 <script>
 // ===== Vote Modal =====
 var VOTE_URL = '{{ url_for("admin.hoi_dong_vote_ct", ct_id=0) }}'.replace('/0', '/');
-function openVoteModal(ctId, name, ban, currentVote) {
+
+function openVoteModal(ctId, name, ban, currentVote, oldDH) {
     document.getElementById('voteModalName').textContent = name;
     document.getElementById('voteModalBan').textContent = ban;
     var cur = currentVote ? currentVote : 'Chưa biểu quyết';
@@ -1183,10 +1194,34 @@ function openVoteModal(ctId, name, ban, currentVote) {
     document.getElementById('voteFormKhong').action = url;
     document.getElementById('voteNoteY').value = '';
     document.getElementById('voteNoteK').value = '';
+    
+    // Kiểm tra để hiện diện tích nút Hạ danh hiệu trong Modal Biểu quyết
+    var oldDH_clean = oldDH ? oldDH.trim() : '';
+    var canDowngrade = ['Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng'].indexOf(oldDH_clean) !== -1;
+    var btnDowngrade = document.getElementById('btnVoteDowngrade');
+    
+    if (canDowngrade) {
+        btnDowngrade.style.display = 'block';
+        var newDH = (oldDH_clean.indexOf('thi đua') !== -1) ? 'Chiến sĩ tiên tiến' : 'Đơn vị tiên tiến';
+        
+        btnDowngrade.onclick = function() {
+            // Đóng Vote Modal
+            var vmElement = document.getElementById('voteModal');
+            var vmInstance = bootstrap.Modal.getInstance(vmElement);
+            if (vmInstance) vmInstance.hide();
+            
+            // Mở Downgrade Modal thay thế
+            openDowngradeModal(ctId, name, oldDH_clean, newDH, 'ct');
+        };
+    } else {
+        btnDowngrade.style.display = 'none';
+    }
+
     new bootstrap.Modal(document.getElementById('voteModal')).show();
 }
+
 function openVoteModalKhong(ctId, name) {
-    openVoteModal(ctId, name, 'Admin', '');
+    openVoteModal(ctId, name, 'Admin', '', '');
     // After modal opens, scroll to Không đồng ý form
     setTimeout(function() {
         var el = document.getElementById('voteNoteK');
