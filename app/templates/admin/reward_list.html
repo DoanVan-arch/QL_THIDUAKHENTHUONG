@@ -977,18 +977,10 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
                 </form>
 
                 {# NÚT HẠ DANH HIỆU SẼ ĐƯỢC JS HIỂN THỊ NẾU ĐẠT ĐIỀU KIỆN #}
-                <form id="voteFormHa" method="POST" action="">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="ket_qua" value="Đồng ý">
-                    <input type="hidden" name="vai_tro" id="voteFormVaiTro" value="admin">
-                    <div class="mb-2">
-                        <label class="form-label small mb-1">Ghi chú (tuỳ chọn)</label>
-                        <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteY" placeholder="Ghi chú...">
-                    </div>
-                    <button type="submit" class="btn btn-success w-100 mb-2">
-                        <i class="bi bi-check-lg me-1"></i>Đồng ý
-                    </button>
-                </form>
+                <hr class="my-3">
+                <button type="button" id="btnVoteDowngrade" class="btn btn-warning w-100 text-dark" style="display:none;">
+                    <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
+                </button>
             </div>
         </div>
     </div>
@@ -1200,7 +1192,7 @@ function openVoteModal(ctId, name, ban, currentVote, oldDH) {
     var url = VOTE_URL + ctId;
     document.getElementById('voteFormDongY').action = url;
     document.getElementById('voteFormKhong').action = url;
-    document.getElementById('voteFormHa').action = url;
+    
     document.getElementById('voteNoteY').value = '';
     document.getElementById('voteNoteK').value = '';
     
@@ -1450,7 +1442,9 @@ var _BADGE_MAP = {
 
 function openDowngradeModal(id, name, oldDH, newDH, type) {
     // Đặt action URL
-    var url = (type === 'kt' ? DOWNGRADE_KT_URL : DOWNGRADE_CT_URL) + id;
+    var VOTE_URL = '{{ url_for("admin.hoi_dong_vote_ct", ct_id=0) }}'.replace('/0', '/');
+    var url = VOTE_URL + id;
+   // var url = (type === 'kt' ? DOWNGRADE_KT_URL : DOWNGRADE_CT_URL) + id;
     document.getElementById('downgradeForm').action = url;
 
     // Tên
