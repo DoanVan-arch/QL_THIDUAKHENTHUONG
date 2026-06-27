@@ -1254,6 +1254,7 @@ _DOWNGRADE_MAP = {
 
 @admin_bp.route('/reward-list/downgrade-ct/<int:ct_id>', methods=['POST'])
 @login_required
+@admin_required
 def downgrade_danh_hieu_ct(ct_id):
     """
     Hạ danh hiệu cho một chi tiết đề xuất đang ở Bảng 2 (PHE_DUYET_CUOI):
