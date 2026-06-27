@@ -1347,7 +1347,7 @@ def downgrade_khen_thuong(kt_id):
 @login_required
 def hoi_dong_vote_ct(ct_id):
     """Hội đồng member casts a vote (đồng ý / không đồng ý) for one chi_tiet."""
-    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y
+    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y, HA_CAP
     vai_tro = current_user.hoi_dong_vai_tro
     # Admin can vote using the vai_tro submitted in the form (or 'admin' as fallback)
     if not vai_tro:
@@ -1358,12 +1358,12 @@ def hoi_dong_vote_ct(ct_id):
             return redirect(url_for('admin.reward_list'))
 
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
-    if ct.de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+    if ct.de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value and ct.admin_approved != 1:
         flash('Đề xuất không ở giai đoạn biểu quyết của Hội đồng.', 'warning')
         return redirect(url_for('admin.reward_list'))
 
     ket_qua = request.form.get('ket_qua', '').strip()
-    if ket_qua not in (KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y):
+    if ket_qua not in (KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y, HA_CAP):
         flash('Kết quả biểu quyết không hợp lệ.', 'danger')
         return redirect(url_for('admin.reward_list'))
 
