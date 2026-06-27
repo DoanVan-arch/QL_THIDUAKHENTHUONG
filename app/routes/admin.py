@@ -2165,6 +2165,11 @@ def _get_pending_final_individuals(nam_hoc=None):
 
     for dx in nominations_waiting:
         for ct in dx.chi_tiets:
+            all_approved = True
+            for dept_name in DEPT_NAMES:
+                if not _is_individual_dept_approved(dx.id, ct, dept_name):
+                    all_approved = False
+                    continue
             if ct.admin_approved or ct.bi_loai:
                 continue
             pending.append({'dx': dx, 'ct': ct})
