@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.nomination import DeXuat, DeXuatChiTiet, TrangThaiDeXuat
-from app.models.hoi_dong import HoiDongBieuQuyet, HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y
+from app.models.hoi_dong import HoiDongBieuQuyet, HOI_DONG_VAI_TRO, HOI_DONG_VAI_TRO_DISPLAY, KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y,HA_CAP
 from app.utils.decorators import hoi_dong_required
 from datetime import datetime
 
@@ -128,7 +128,7 @@ def cast_vote(id, ct_id):
     ket_qua = request.form.get('ket_qua', '').strip()
     ghi_chu = request.form.get('ghi_chu', '').strip() or None
 
-    if ket_qua not in (KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y):
+    if ket_qua not in (KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y, HA_CAP):
         flash('Kết quả biểu quyết không hợp lệ.', 'danger')
         return redirect(url_for('hoi_dong.detail', id=id))
 
@@ -178,7 +178,7 @@ def cast_vote_all(id):
     ket_qua = request.form.get('ket_qua', '').strip()
     ghi_chu = request.form.get('ghi_chu', '').strip() or None
 
-    if ket_qua not in (KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y):
+    if ket_qua not in (KET_QUA_DONG_Y, KET_QUA_KHONG_DONG_Y, HA_CAP):
         flash('Kết quả biểu quyết không hợp lệ.', 'danger')
         return redirect(url_for('hoi_dong.detail', id=id))
 
