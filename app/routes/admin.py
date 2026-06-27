@@ -2563,13 +2563,14 @@ def export_tracking_word():
             else: ds_khac.setdefault(dh, []).append((ct, dx))
 
             # Sort từng nhóm
-    _sk = lambda t: _unit_sort_key(t, _sort_map)
+   
 
-    ds_quyet_thang   = sorted(ds_quyet_thang,   key=_sk)
-    ds_tien_tien_dv  = sorted(ds_tien_tien_dv,  key=_sk)
-    ds_chien_si_tdcs = sorted(ds_chien_si_tdcs, key=_sk)
-    ds_chien_si_tt   = sorted(ds_chien_si_tt,   key=_sk)
-    ds_khac          = {dh: sorted(lst, key=_sk) for dh, lst in ds_khac.items()}
+    # ── Sort từng nhóm ──────────────────────────────────────────────────────────
+    ds_quyet_thang   = sorted(ds_quyet_thang,   key=_unit_sort_key)
+    ds_tien_tien_dv  = sorted(ds_tien_tien_dv,  key=_unit_sort_key)
+    ds_chien_si_tdcs = sorted(ds_chien_si_tdcs, key=_unit_sort_key)
+    ds_chien_si_tt   = sorted(ds_chien_si_tt,   key=_unit_sort_key)
+    ds_khac          = {dh: sorted(lst, key=_unit_sort_key) for dh, lst in ds_khac.items()}
 
     title_nam_hoc = nam_hoc_filter or 'TẤT CẢ NĂM HỌC'
     
