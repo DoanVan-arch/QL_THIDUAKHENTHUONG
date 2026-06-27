@@ -1995,25 +1995,17 @@ def don_vi_stats():
 @login_required
 @admin_or_reward_viewer_required
 def reward_list():
-    """View award pipeline:
+    from app.models.nomination import DanhHieu as _DanhHieu, DeXuat as _DeXuat
+    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_KHONG_DONG_Y
+    from sqlalchemy import collate as _collate, func
 
-      Bảng 1: HOI_DONG status, all dept approved → Admin pre-approves
-
-      Bảng 2: PHE_DUYET_CUOI status → 6 Hội đồng roles vote, then Admin confirms
-
-      Bảng 3: Finalized KhenThuong records
-    """
-    page = request.args.get('page', 1, type=int)
+    page           = request.args.get('page', 1, type=int)
     nam_hoc_filter = request.args.get('nam_hoc', '')
-    unit_filter = request.args.get('unit', '')
+    unit_filter    = request.args.get('unit', '')
     danh_hieu_filter = request.args.get('danh_hieu', '')
-    search_query = request.args.get('q', '').strip()
-    from app.models.nomination import DanhHieu as _DanhHieu
-    from sqlalchemy import text as _text
-    # Correlated subquery to get thu_tu from DanhHieu for ORDER BY.
+    search_query   = request.args.get('q', '').strip()
 
-    # Both columns use COLLATE utf8mb4_unicode_ci to avoid collation mismatch error 1267.
-    from sqlalchemy import collate as _collate
+    # ── Bảng 3 chính: KhenThuong paginated ──────────────────────────────────
     _thu_tu_subq = (
         db.session.query(_DanhHieu.thu_tu)
         .filter(
@@ -2033,94 +2025,131 @@ def reward_list():
     if search_query:
         query = query.filter(KhenThuong.ho_ten.ilike(f'%{search_query}%'))
     rewards = query.order_by(
-        KhenThuong.nam_hoc.desc(),
-        _thu_tu_subq,
-        DonVi.ten_don_vi,
-        KhenThuong.ho_ten.asc(),
-    )\
-        .paginate(page=page, per_page=20, error_out=False)
-    # Get filter options — merge year list from both KhenThuong and DeXuat
-    # so the dropdown is not empty when no rewards are finalized yet
-    from app.models.nomination import DeXuat as _DeXuat
+        KhenThuong.nam_hoc.desc(), _thu_tu_subq,
+        DonVi.ten_don_vi, KhenThuong.ho_ten.asc(),
+    ).paginate(page=page, per_page=20, error_out=False)
+
+    # ── Filter options ───────────────────────────────────────────────────────
     _nh_kt = {n[0] for n in db.session.query(KhenThuong.nam_hoc).distinct().all() if n[0]}
     _nh_dx = {n[0] for n in db.session.query(_DeXuat.nam_hoc).distinct().all() if n[0]}
     nam_hoc_list = sorted(_nh_kt | _nh_dx, reverse=True)
-    unit_names = db.session.query(DonVi.ten_don_vi).join(
-        KhenThuong, KhenThuong.don_vi_id == DonVi.id
-    ).distinct().order_by(DonVi.ten_don_vi).all()
-    unit_names = [u[0] for u in unit_names]
-    danh_hieu_list = db.session.query(KhenThuong.loai_danh_hieu).distinct().all()
-    danh_hieu_list = [d[0] for d in danh_hieu_list]
-    # Summary stats
-    total_rewards = KhenThuong.query.count()
-    stats_by_danh_hieu = {}
-    for dh in danh_hieu_list:
-        stats_by_danh_hieu[dh] = KhenThuong.query.filter_by(loai_danh_hieu=dh).count()
 
-    # Bảng 1: individuals at HOI_DONG stage, all dept approved, not yet admin_approved
+    unit_names = [u[0] for u in db.session.query(DonVi.ten_don_vi)
+                  .join(KhenThuong, KhenThuong.don_vi_id == DonVi.id)
+                  .distinct().order_by(DonVi.ten_don_vi).all()]
+
+    danh_hieu_list = [d[0] for d in db.session.query(KhenThuong.loai_danh_hieu).distinct().all()]
+
+    # ── Stats: 2 queries thay vì N+1 ────────────────────────────────────────
+    total_rewards = KhenThuong.query.count()
+    stats_by_danh_hieu = {
+        dh: cnt for dh, cnt in
+        db.session.query(KhenThuong.loai_danh_hieu, func.count(KhenThuong.id))
+        .group_by(KhenThuong.loai_danh_hieu).all()
+    }
+
+    # ── Bảng 1 & 2 ──────────────────────────────────────────────────────────
     pending_final_nominations = _get_pending_final_individuals(nam_hoc=nam_hoc_filter)
-    # Bảng 2: nominations at PHE_DUYET_CUOI stage + Hội đồng vote status
-    phe_duyet_cuoi_items = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter)
-    # Bảng 3 – Bị từ chối: chi tiết có admin_final = Không đồng ý (bất kể trạng thái DeXuat)
-    from app.models.hoi_dong import HoiDongBieuQuyet, KET_QUA_KHONG_DONG_Y
-    _rej_votes = HoiDongBieuQuyet.query.filter_by(vai_tro='admin_final', ket_qua=KET_QUA_KHONG_DONG_Y).all()
-    rejected_items = []
-    for rv in _rej_votes:
-        ct_r = DeXuatChiTiet.query.get(rv.chi_tiet_id)
-        if not ct_r:
-            continue
-        dx_r = ct_r.de_xuat
-        if not dx_r:
-            continue
-        if nam_hoc_filter and dx_r.nam_hoc != nam_hoc_filter:
-            continue
-        # Skip if already confirmed as KhenThuong (shouldn't happen but guard)
-        if KhenThuong.query.filter_by(chi_tiet_id=ct_r.id).first():
-            continue
-        rejected_items.append({'ct': ct_r, 'dx': dx_r, 'admin_vote': rv})
-    # Also collect phe_duyet_cuoi items where admin_final = Không đồng ý (still at B2 stage) - avoid duplicates
-    _rej_ct_ids = {r['ct'].id for r in rejected_items}
-    khong_dong_y_items = [r for r in phe_duyet_cuoi_items
-                          if r['admin_final_vote'] is not None
-                          and r['admin_final_vote'].ket_qua == KET_QUA_KHONG_DONG_Y
-                          and r['ct'].id not in _rej_ct_ids]
-    # Statistics: personnel with >=3 CSTD (consecutive / non-consecutive)
+    phe_duyet_cuoi_items      = _get_phe_duyet_cuoi_items(nam_hoc=nam_hoc_filter)
+
+    # ── Bảng 3b: Bị từ chối ─────────────────────────────────────────────────
+    # ★ 1 query lấy tất cả admin_final rejected votes
+    rej_votes = HoiDongBieuQuyet.query.filter_by(
+        vai_tro='admin_final', ket_qua=KET_QUA_KHONG_DONG_Y
+    ).all()
+
+    if rej_votes:
+        rej_ct_ids = [rv.chi_tiet_id for rv in rej_votes]
+
+        # ★ Batch load chi_tiet + eager load de_xuat
+        from sqlalchemy.orm import joinedload
+        rej_ct_map = {
+            ct.id: ct for ct in
+            DeXuatChiTiet.query
+            .filter(DeXuatChiTiet.id.in_(rej_ct_ids))
+            .options(joinedload(DeXuatChiTiet.de_xuat))
+            .all()
+        }
+
+        # ★ Batch check KhenThuong đã confirm
+        confirmed_ct_ids = {
+            r[0] for r in
+            db.session.query(KhenThuong.chi_tiet_id)
+            .filter(KhenThuong.chi_tiet_id.in_(rej_ct_ids))
+            .all()
+        }
+
+        rejected_items = []
+        for rv in rej_votes:
+            ct_r = rej_ct_map.get(rv.chi_tiet_id)
+            if not ct_r:
+                continue
+            dx_r = ct_r.de_xuat
+            if not dx_r:
+                continue
+            if nam_hoc_filter and dx_r.nam_hoc != nam_hoc_filter:
+                continue
+            if rv.chi_tiet_id in confirmed_ct_ids:
+                continue
+            rejected_items.append({'ct': ct_r, 'dx': dx_r, 'admin_vote': rv})
+    else:
+        rejected_items = []
+
+    _rej_ct_ids_set = {r['ct'].id for r in rejected_items}
+    khong_dong_y_items = [
+        r for r in phe_duyet_cuoi_items
+        if r['admin_final_vote'] is not None
+        and r['admin_final_vote'].ket_qua == KET_QUA_KHONG_DONG_Y
+        and r['ct'].id not in _rej_ct_ids_set
+    ]
+
+    # ── CSTD >= 3 năm ────────────────────────────────────────────────────────
     cstd_rows = db.session.query(KhenThuong.quan_nhan_id, KhenThuong.nam_hoc).filter(
         KhenThuong.loai_danh_hieu == LoaiDanhHieu.CHIEN_SI_THI_DUA.value,
         KhenThuong.quan_nhan_id.isnot(None)
     ).all()
+
     by_person = {}
     for qn_id, nam_hoc in cstd_rows:
         by_person.setdefault(qn_id, set()).add(nam_hoc)
+
+    # ★ Batch load QuanNhan — 1 query thay vì N queries
+    eligible_ids = [qn_id for qn_id, years in by_person.items() if len(years) >= 3]
+    qn_map = {}
+    if eligible_ids:
+        qn_map = {
+            qn.id: qn for qn in
+            QuanNhan.query.filter(QuanNhan.id.in_(eligible_ids)).all()
+        }
+
     def _nam_hoc_start(nh):
         try:
             return int(str(nh).split('-')[0])
         except Exception:
             return 0
+
     cstd_non_consecutive = []
-    cstd_consecutive = []
+    cstd_consecutive     = []
+
     for qn_id, years in by_person.items():
         if len(years) < 3:
             continue
-        qn = QuanNhan.query.get(qn_id)
+        qn = qn_map.get(qn_id)
         if not qn:
             continue
         years_sorted = sorted(list(years), key=_nam_hoc_start)
-        cstd_non_consecutive.append({'qn': qn, 'years': years_sorted, 'count': len(years_sorted)})
-        starts = [_nam_hoc_start(y) for y in years_sorted if _nam_hoc_start(y) > 0]
-        starts = sorted(starts)
-        streak = 1
-        max_streak = 1
+        cstd_non_consecutive.append({
+            'qn': qn, 'years': years_sorted, 'count': len(years_sorted)
+        })
+        starts = sorted([s for s in (_nam_hoc_start(y) for y in years_sorted) if s > 0])
+        streak = max_streak = 1
         for i in range(1, len(starts)):
-            if starts[i] == starts[i - 1] + 1:
-                streak += 1
-                max_streak = max(max_streak, streak)
-            else:
-                streak = 1
+            streak = streak + 1 if starts[i] == starts[i - 1] + 1 else 1
+            max_streak = max(max_streak, streak)
         if max_streak >= 3:
-            cstd_consecutive.append({'qn': qn, 'years': years_sorted, 'max_streak': max_streak})
-
-
+            cstd_consecutive.append({
+                'qn': qn, 'years': years_sorted, 'max_streak': max_streak
+            })
 
     return render_template('admin/reward_list.html',
                            rewards=rewards,
@@ -2146,88 +2175,142 @@ def reward_list():
                            cstd_consecutive=cstd_consecutive)
 
 
-
+# ─────────────────────────────────────────────────────────────────────────────
 
 def _get_pending_final_individuals(nam_hoc=None):
-    """Bảng 1: All individuals in HOI_DONG nominations that are not yet admin_approved.
+    """Bảng 1 — Batch load toàn bộ, tránh N×M queries."""
+    from sqlalchemy.orm import joinedload, subqueryload
 
-    A nomination reaching HOI_DONG status has already passed the full departmental
-    review cycle.  Re-checking per-dept PheDuyet votes here is unnecessary and
-    causes items to vanish when a dept account has no vote record yet.  We simply
-    surface every non-rejected, non-admin-approved chi_tiet from every HOI_DONG
-    nomination so the admin can act on them.
-    """
-    pending = []
-    q = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+    q = (DeXuat.query
+         .filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+         .options(
+             subqueryload(DeXuat.chi_tiets)
+         ))
     if nam_hoc:
         q = q.filter(DeXuat.nam_hoc == nam_hoc)
-    nominations_waiting = q.order_by(DeXuat.ngay_gui.desc()).all()
+    nominations = q.order_by(DeXuat.ngay_gui.desc()).all()
 
-    for dx in nominations_waiting:
+    if not nominations:
+        return []
+
+    # ★ Batch load tất cả KetQuaDuyetChiTiet liên quan
+    dx_ids = [dx.id for dx in nominations]
+    ct_ids = [ct.id for dx in nominations for ct in dx.chi_tiets]
+
+    if not ct_ids:
+        return []
+
+    # Lấy tất cả phe_duyet của các dx này
+    phe_duyet_list = PheDuyet.query.filter(PheDuyet.de_xuat_id.in_(dx_ids)).all()
+    pd_map = {}  # {de_xuat_id: {phong_duyet: PheDuyet}}
+    for pd in phe_duyet_list:
+        pd_map.setdefault(pd.de_xuat_id, {})[pd.phong_duyet] = pd
+
+    pd_ids = [pd.id for pd in phe_duyet_list]
+
+    # Batch load KetQuaDuyetChiTiet
+    kq_list = KetQuaDuyetChiTiet.query.filter(
+        KetQuaDuyetChiTiet.phe_duyet_id.in_(pd_ids),
+        KetQuaDuyetChiTiet.chi_tiet_id.in_(ct_ids),
+    ).all() if pd_ids else []
+
+    # Build lookup: {(phe_duyet_id, chi_tiet_id): KetQuaDuyetChiTiet}
+    kq_map = {(kq.phe_duyet_id, kq.chi_tiet_id): kq for kq in kq_list}
+
+    pending = []
+    for dx in nominations:
+        dx_pd = pd_map.get(dx.id, {})
         for ct in dx.chi_tiets:
-            all_approved = True
-            for dept_name in DEPT_NAMES:
-                if not _is_individual_dept_approved(dx.id, ct, dept_name):
-                    all_approved = False
-                    break
-            if all_approved == False:
-                continue
             if ct.admin_approved or ct.bi_loai:
                 continue
-            pending.append({'dx': dx, 'ct': ct})
+            all_approved = True
+            for dept_name in DEPT_NAMES:
+                pd = dx_pd.get(dept_name)
+                if not pd:
+                    all_approved = False
+                    break
+                kq = kq_map.get((pd.id, ct.id))
+                if not kq or kq.ket_qua != KetQuaDuyet.DONG_Y.value:
+                    all_approved = False
+                    break
+            if all_approved:
+                pending.append({'dx': dx, 'ct': ct})
+
     return pending
 
-from sqlalchemy import or_
 
 def _get_phe_duyet_cuoi_items(nam_hoc=None):
-    """Bảng 2: nominations at PHE_DUYET_CUOI — returns a flat list of per-individual rows,
-    sorted by DanhHieu.thu_tu (award type order) then by unit name."""
+    """Bảng 2 — Batch load HoiDongBieuQuyet và KhenThuong."""
     from app.models.hoi_dong import HOI_DONG_VAI_TRO, KET_QUA_DONG_Y
     from app.models.nomination import DanhHieu
-    q = DeXuat.query.filter( DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value
-    ).join(DonVi, DeXuat.don_vi_id == DonVi.id)
+    from sqlalchemy.orm import subqueryload
+
+    q = (DeXuat.query
+         .filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+         .join(DonVi, DeXuat.don_vi_id == DonVi.id)
+         .options(subqueryload(DeXuat.chi_tiets)))
     if nam_hoc:
         q = q.filter(DeXuat.nam_hoc == nam_hoc)
     nominations = q.order_by(DonVi.ten_don_vi).all()
 
-    # Build award-type order map
-    danh_hieu_order = {
-        dh.ten_danh_hieu: dh.thu_tu
-        for dh in DanhHieu.query.all()
+    # Lọc chi_tiets hợp lệ (admin_approved hoặc PHE_DUYET_CUOI)
+    eligible_cts = [
+        ct for dx in nominations for ct in dx.chi_tiets
+        if ct.admin_approved or ct.trang_thai == TrangThaiChiTiet.PHE_DUYET_CUOI.value
+    ]
+    if not eligible_cts:
+        return []
+
+    ct_ids = [ct.id for ct in eligible_cts]
+
+    # ★ Batch load HoiDongBieuQuyet — 1 query
+    bq_list = HoiDongBieuQuyet.query.filter(
+        HoiDongBieuQuyet.chi_tiet_id.in_(ct_ids)
+    ).all()
+    # {chi_tiet_id: {vai_tro: HoiDongBieuQuyet}}
+    bq_map = {}
+    for bq in bq_list:
+        bq_map.setdefault(bq.chi_tiet_id, {})[bq.vai_tro] = bq
+
+    # ★ Batch check KhenThuong đã confirm — 1 query
+    confirmed_ct_ids = {
+        r[0] for r in
+        db.session.query(KhenThuong.chi_tiet_id)
+        .filter(KhenThuong.chi_tiet_id.in_(ct_ids))
+        .all()
     }
 
+    # Award order map
+    danh_hieu_order = {dh.ten_danh_hieu: dh.thu_tu for dh in DanhHieu.query.all()}
+
+    # Build ct → dx map
+    ct_dx_map = {ct.id: dx for dx in nominations for ct in dx.chi_tiets}
+
     rows = []
-    for dx in nominations:
-        for ct in dx.chi_tiets:
-            if(ct.admin_approved == True or ct.trang_thai == TrangThaiChiTiet.PHE_DUYET_CUOI.value):
-                votes = {}
-                ct_all_dong_y = True
-                ct_all_voted = True
-                for vai_tro in HOI_DONG_VAI_TRO:
-                    bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
-                    votes[vai_tro] = bq
-                    if not bq:
-                        ct_all_dong_y = False
-                        ct_all_voted = False
-                    elif bq.ket_qua != KET_QUA_DONG_Y:
-                        ct_all_dong_y = False
-                is_confirmed = KhenThuong.query.filter_by(chi_tiet_id=ct.id).first() is not None
-                admin_final_vote = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro='admin_final').first()
-                rows.append({
-                    'dx': dx,
-                    'ct': ct,
-                    'votes': votes,
-                    'voted_count': sum(1 for bq in votes.values() if bq is not None),
-                    'all_voted_dong_y': ct_all_dong_y,
-                    'all_voted': ct_all_voted,
-                    'is_confirmed': is_confirmed,
-                    'admin_final_vote': admin_final_vote,
-                    '_sort_award': danh_hieu_order.get(ct.loai_danh_hieu, 999),
-                    '_sort_unit': dx.don_vi.ten_don_vi if dx.don_vi else '',
-                })
+    for ct in eligible_cts:
+        dx        = ct_dx_map[ct.id]
+        ct_votes  = bq_map.get(ct.id, {})
+
+        votes         = {vai_tro: ct_votes.get(vai_tro) for vai_tro in HOI_DONG_VAI_TRO}
+        ct_all_dong_y = all(bq and bq.ket_qua == KET_QUA_DONG_Y for bq in votes.values())
+        ct_all_voted  = all(bq is not None for bq in votes.values())
+
+        rows.append({
+            'dx':             dx,
+            'ct':             ct,
+            'votes':          votes,
+            'voted_count':    sum(1 for bq in votes.values() if bq is not None),
+            'all_voted_dong_y': ct_all_dong_y,
+            'all_voted':      ct_all_voted,
+            'is_confirmed':   ct.id in confirmed_ct_ids,
+            'admin_final_vote': ct_votes.get('admin_final'),
+            '_sort_award':    danh_hieu_order.get(ct.loai_danh_hieu, 999),
+            '_sort_unit':     dx.don_vi.ten_don_vi if dx.don_vi else '',
+        })
 
     rows.sort(key=lambda r: (r['_sort_award'], r['_sort_unit']))
     return rows
+
 
 
 
