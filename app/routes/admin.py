@@ -2169,7 +2169,9 @@ def _get_pending_final_individuals(nam_hoc=None):
             for dept_name in DEPT_NAMES:
                 if not _is_individual_dept_approved(dx.id, ct, dept_name):
                     all_approved = False
-                    continue
+                    break
+            if all_approved == False:
+                continue
             if ct.admin_approved or ct.bi_loai:
                 continue
             pending.append({'dx': dx, 'ct': ct})
