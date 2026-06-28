@@ -137,7 +137,7 @@
         <button type="button" id="btnColToggleCN" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0">
             <i class="bi bi-layout-three-columns me-1"></i><small>Chọn cột</small>
         </button>
-        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0"  id="btnApproveAllCN">
+        <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 flex-shrink-0" id="btnApproveAllCN">
             <i class="bi bi-check-all me-1"></i><small>Nhất trí tất cả</small>
         </button>
         <h6 class="mb-0 ms-1"><i class="bi bi-person-fill me-2 text-primary"></i>Danh hiệu cá nhân
@@ -1046,139 +1046,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ── Khi click btnApproveAll ──────────────────────────────────────────────
-const btnApproveAll = document.getElementById('btnApproveAll');
-if (btnApproveAll) {
-    btnApproveAll.addEventListener('click', function () {
-        // Lấy pdId từ dataset của button (hoặc element cha)
-        const pdId = this.dataset.pdId;   // ← đảm bảo btn có data-pd-id="..."
-
-        const pendingCtIds = [];
-        document.querySelectorAll('.toggle-approval').forEach(sw => {
-            if (!sw.checked && !sw.disabled) {
-                const ctId = sw.dataset.ctId;
-                const row = document.getElementById(`row-${pdId}-${ctId}`);
-                if (row && row.dataset.outOfScope === 'true') return;
-                const reasonText = document.getElementById(`reason-text-${pdId}-${ctId}`);
-                if (!reasonText) {
-                    pendingCtIds.push(parseInt(ctId));
-                }
+    document.getElementById('batchApproveConfirm') &&
+    document.getElementById('batchApproveConfirm').addEventListener('click', async function () {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+        try {
+            for (const item of (Array.isArray(batchPendingData) ? batchPendingData : [batchPendingData])) {
+                await doBatchApprove(item.pdId, item.ctIds);
             }
-        });
-
-        if (pendingCtIds.length === 0) {
-            alert('Tất cả đã được duyệt.');
-            return;
+            bootstrap.Modal.getInstance(document.getElementById('batchApproveModal')).hide();
+            showToast('Đã nhất trí thành công!', 'success');
+            setTimeout(() => location.reload(), 800);
+        } catch(err) {
+            console.error(err);
+            showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'danger');
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-check-all me-1"></i>Xác nhận';
         }
-
-        document.getElementById('batchApproveMessage').textContent =
-            `Bạn có chắc muốn nhất trí ${pendingCtIds.length} cá nhân chưa duyệt?`;
-
-        // ── Lưu vào modal để onclick dùng được ──────────────────────
-        const modalEl = document.getElementById('batchApproveModal');
-        modalEl.dataset.pdId      = pdId;
-        modalEl.dataset.ctIds     = JSON.stringify(pendingCtIds);
-        // ─────────────────────────────────────────────────────────────
-
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
     });
-}
 
-// ── Confirm button — đọc từ modal.dataset ───────────────────────────────────
-document.getElementById('batchApproveConfirm').onclick = async function () {
-    this.disabled = true;
-    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
-
-    const errors  = [];
-    const results = [];
-
-    try {
-        // ── Đọc pdId và ctIds từ modal.dataset ──────────────────────
-        const modalEl     = document.getElementById('batchApproveModal');
-        const parsedPdId  = parseInt(modalEl.dataset.pdId);
-        const pendingCtIds = JSON.parse(modalEl.dataset.ctIds || '[]');
-        // ─────────────────────────────────────────────────────────────
-
-        if (!parsedPdId || isNaN(parsedPdId)) {
-            errors.push(`❌ Không xác định được ID phê duyệt (pdId="${modalEl.dataset.pdId}") — bỏ qua.`);
-        } else if (!pendingCtIds || pendingCtIds.length === 0) {
-            errors.push(`❌ Không có cá nhân nào cần duyệt (pd_id=${parsedPdId}) — bỏ qua.`);
-        } else {
-            const payload = { pd_id: parsedPdId, ct_ids: pendingCtIds };
-            console.log('Sending payload:', payload);
-
-            const res  = await fetch('/approval/batch-approve', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                results.push(`✅ Đã duyệt ${data.approved_count} cá nhân.`);
-            } else {
-                errors.push(`❌ pd_id=${parsedPdId}: ${data.message || 'Lỗi không xác định'}`);
-            }
-        }
-    } catch (err) {
-        console.error(err);
-        errors.push(`❌ Lỗi kết nối khi gửi yêu cầu.`);
-    } finally {
-        this.disabled = false;
-        this.innerHTML = '<i class="bi bi-check-all me-1"></i>Xác nhận';
-    }
-
-    bootstrap.Modal.getInstance(document.getElementById('batchApproveModal'))?.hide();
-    _showBatchResult(results, errors);
-};
-
-function _showBatchResult(results, errors) {
-    // Tạo hoặc tái dùng toast container
-    let container = document.getElementById('batchResultContainer');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'batchResultContainer';
-        container.style.cssText = 'position:fixed;top:1rem;right:1rem;z-index:9999;min-width:320px;max-width:480px';
-        document.body.appendChild(container);
-    }
-
-    const hasError   = errors.length > 0;
-    const hasSuccess = results.length > 0;
-
-    const lines = [
-        ...results.map(r => `<div class="text-success">${r}</div>`),
-        ...errors.map(e => `<div class="text-danger">${e}</div>`),
-    ].join('');
-
-    const toastEl = document.createElement('div');
-    toastEl.className = `toast align-items-center border-0 ${hasError ? 'bg-danger-subtle' : 'bg-success-subtle'}`;
-    toastEl.setAttribute('role', 'alert');
-    toastEl.setAttribute('aria-live', 'assertive');
-    toastEl.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${hasSuccess && !hasError ? '<strong>Duyệt thành công!</strong><br>' : ''}
-                ${hasError && !hasSuccess ? '<strong>Có lỗi xảy ra:</strong><br>' : ''}
-                ${hasSuccess && hasError  ? '<strong>Hoàn tất (có lỗi):</strong><br>' : ''}
-                ${lines}
-            </div>
-            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>`;
-    container.appendChild(toastEl);
-
-    const toast = new bootstrap.Toast(toastEl, { delay: hasError ? 8000 : 4000 });
-    toast.show();
-    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-
-    // Reload trang nếu có ít nhất 1 thành công
-    if (hasSuccess) {
-        setTimeout(() => location.reload(), 1500);
-    }
-}
     // ── FILTER BAR TOGGLE ────────────────────────────────────
     const toggleFilterBar = document.getElementById('toggleFilterBar');
     const filterBar       = document.getElementById('filterBar');
