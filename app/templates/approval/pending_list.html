@@ -1089,7 +1089,16 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({ pd_id: parseInt(pdId), ct_ids: ctIds }),
         });
         const data = await res.json();
-        if (!data.success) throw new Error(data.message || 'Batch approve failed');
+
+        // ── Bỏ qua lỗi "Đã hoàn tất duyệt" — vẫn update DOM ────────────────
+        if (!data.success && data.message && data.message.includes('Đã hoàn tất')) {
+            console.warn(`pd_id=${pdId}: ${data.message} — bỏ qua`);
+            // Vẫn update DOM cho các ctId này
+        } else if (!data.success) {
+            throw new Error(`pd_id=${pdId}: ${data.message || 'Batch approve failed'}`);
+        }
+
+        // Update DOM
         ctIds.forEach(ctId => {
             const sw  = document.getElementById(`switch-${pdId}-${ctId}`);
             const row = document.getElementById(`row-${pdId}-${ctId}`);
@@ -1104,9 +1113,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const rv = row.querySelector('.revoke-item-link');
             if (rv) rv.style.display = '';
         });
+
         updateGlobalStats();
         return data;
     }
+
 
     function showRejectRow(pdId, ctId) {
         const row = document.getElementById(`reject-row-${pdId}-${ctId}`);

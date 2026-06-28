@@ -1416,18 +1416,25 @@ def revoke_item(pd_id, ct_id):
 @login_required
 @department_required
 def batch_approve():
-    """Batch approve multiple items at once (by unit or all)."""
     phong_name = ROLE_TO_PHONG.get(current_user.role, '')
-    data = request.get_json()
-    pd_id = data.get('pd_id')
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'success': False, 'message': 'Không parse được JSON'}), 400
+
+    pd_id  = data.get('pd_id')
     ct_ids = data.get('ct_ids', [])
 
     if not pd_id or not ct_ids:
-        return jsonify({'success': False, 'message': 'Thiếu dữ liệu'}), 400
+        return jsonify({'success': False, 'message': f'Thiếu dữ liệu — pd_id={pd_id!r}, ct_ids={ct_ids!r}'}), 400
 
     phe_duyet = PheDuyet.query.filter_by(
         id=pd_id, phong_duyet=phong_name
     ).first_or_404()
+
+    # ── FIX 1: Cho phép duyệt tiếp dù đã auto-finalize trước đó ──────────
+    # Bỏ check cứng, chỉ skip nếu đã TỪ CHỐI hoàn toàn
+    if phe_duyet.ket_qua == KetQuaDuyet.TU_CHOI.value:
+        return jsonify({'success': False, 'message': 'Đề xuất đã bị từ chối, không thể duyệt.'}), 400
 
     if current_user.role in _GROUP_CONFIRMATION:
         blocked_ids = []
@@ -1436,66 +1443,75 @@ def batch_approve():
             if not ct_gate['can_review']:
                 blocked_ids.append(ct_id)
         if blocked_ids:
-            return jsonify({'success': False, 'message': f'Có {len(blocked_ids)} cá nhân chưa đủ điều kiện phê duyệt của nhóm ban liên quan.'}), 403
+            return jsonify({'success': False, 'message': f'Có {len(blocked_ids)} cá nhân chưa đủ điều kiện phê duyệt.'}), 403
 
-    if phe_duyet.ket_qua != KetQuaDuyet.CHO_DUYET.value:
-        return jsonify({'success': False, 'message': 'Đã hoàn tất duyệt'}), 400
+    # ── FIX 2: Batch load ct và kq thay vì query từng cái trong loop ──────
+    ct_map = {
+        ct.id: ct for ct in
+        DeXuatChiTiet.query.filter(DeXuatChiTiet.id.in_(ct_ids)).all()
+    }
+    kq_map = {
+        kq.chi_tiet_id: kq for kq in
+        KetQuaDuyetChiTiet.query.filter_by(phe_duyet_id=phe_duyet.id)
+        .filter(KetQuaDuyetChiTiet.chi_tiet_id.in_(ct_ids)).all()
+    }
 
     approved_names = []
     for ct_id in ct_ids:
-        # Skip out-of-scope items for BAN_QUANLUC/BAN_CANBO
-        ct = DeXuatChiTiet.query.get(ct_id)
-        if ct and not _is_in_dept_scope(current_user.role, ct.doi_tuong):
+        chi_tiet = ct_map.get(ct_id)
+        if not chi_tiet:
             continue
-        kq = KetQuaDuyetChiTiet.query.filter_by(
-            phe_duyet_id=phe_duyet.id, chi_tiet_id=ct_id
-        ).first()
+        if not _is_in_dept_scope(current_user.role, chi_tiet.doi_tuong):
+            continue
+        kq = kq_map.get(ct_id)
         if kq and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value:
             kq.ket_qua = KetQuaDuyet.DONG_Y.value
-            kq.ly_do = None
-            name = ct.quan_nhan.ho_ten if ct and ct.quan_nhan else 'Đơn vị'
+            kq.ly_do   = None
+            name = chi_tiet.quan_nhan.ho_ten if chi_tiet.quan_nhan else 'Đơn vị'
             approved_names.append(name)
 
     db.session.commit()
 
     de_xuat = phe_duyet.de_xuat
 
-    # Auto-finalize once none of the ACTIVE (non-removed) items remain pending.
-    active_ct_ids = {ct.id for ct in de_xuat.chi_tiets if not ct.bi_loai}
-    pending_count = KetQuaDuyetChiTiet.query.filter_by(
-        phe_duyet_id=phe_duyet.id,
-        ket_qua=KetQuaDuyet.CHO_DUYET.value
-    ).join(DeXuatChiTiet, KetQuaDuyetChiTiet.chi_tiet_id == DeXuatChiTiet.id).filter(
-        DeXuatChiTiet.bi_loai == False
-    ).count()
+    # ── FIX 3: Đổi tên biến tránh shadow 'ct' ────────────────────────────
+    active_ct_ids = {item.id for item in de_xuat.chi_tiets if not item.bi_loai}
+
+    pending_count = (
+        KetQuaDuyetChiTiet.query
+        .filter_by(phe_duyet_id=phe_duyet.id, ket_qua=KetQuaDuyet.CHO_DUYET.value)
+        .join(DeXuatChiTiet, KetQuaDuyetChiTiet.chi_tiet_id == DeXuatChiTiet.id)
+        .filter(DeXuatChiTiet.bi_loai == False)
+        .count()
+    )
 
     auto_finalized = False
     if pending_count == 0 and active_ct_ids:
-        if phe_duyet.ket_qua != KetQuaDuyet.DONG_Y.value:
-            phe_duyet.ket_qua = KetQuaDuyet.DONG_Y.value
-            phe_duyet.nguoi_duyet_id = current_user.id
-            phe_duyet.ngay_duyet = datetime.utcnow()
+        phe_duyet.ket_qua        = KetQuaDuyet.DONG_Y.value
+        phe_duyet.nguoi_duyet_id = current_user.id
+        phe_duyet.ngay_duyet     = datetime.utcnow()
         _recompute_de_xuat_status(de_xuat)
         db.session.commit()
         auto_finalized = True
 
-    # Build stats over ACTIVE items only
-    all_kq = [k for k in phe_duyet.chi_tiet_duyet if not k.chi_tiet.bi_loai]
-    total = len(all_kq)
+    # Build stats
+    all_kq         = [k for k in phe_duyet.chi_tiet_duyet if not k.chi_tiet.bi_loai]
+    total          = len(all_kq)
     approved_count = sum(1 for k in all_kq if k.ket_qua == KetQuaDuyet.DONG_Y.value)
     rejected_count = sum(1 for k in all_kq if k.ket_qua == KetQuaDuyet.TU_CHOI.value)
 
     return jsonify({
-        'success': True,
+        'success':        True,
         'approved_count': len(approved_names),
         'auto_finalized': auto_finalized,
         'stats': {
-            'total': total,
+            'total':    total,
             'reviewed': approved_count + rejected_count,
             'approved': approved_count,
             'rejected': rejected_count,
         }
     })
+
 
 
 @approval_bp.route('/history')
