@@ -590,7 +590,7 @@ def approval_tracking():
         u.ten_don_vi for u in
         DonVi.query
         .filter(
-            DonVi.id.in_(_active_dv_ids),
+          
             DonVi.is_active == True
         )
         .order_by(DonVi.thu_tu.asc(), DonVi.ten_don_vi.asc())
