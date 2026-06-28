@@ -1046,25 +1046,54 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    document.getElementById('batchApproveConfirm') &&
-    document.getElementById('batchApproveConfirm').addEventListener('click', async function () {
+    document.getElementById('batchApproveConfirm').onclick = async function () {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+
+        // ── Validate ────────────────────────────────────────────────
+        const parsedPdId = parseInt(pdId);
+        if (!parsedPdId || isNaN(parsedPdId)) {
+            alert('Lỗi: Không xác định được ID phê duyệt (pdId=' + pdId + ')');
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-check-all me-1"></i>Xác nhận';
+            return;
+        }
+        if (!pendingCtIds || pendingCtIds.length === 0) {
+            alert('Lỗi: Không có ct_ids nào');
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-check-all me-1"></i>Xác nhận';
+            return;
+        }
+        // ────────────────────────────────────────────────────────────
+
         try {
-            for (const item of (Array.isArray(batchPendingData) ? batchPendingData : [batchPendingData])) {
-                await doBatchApprove(item.pdId, item.ctIds);
+            const payload = { pd_id: parsedPdId, ct_ids: pendingCtIds };
+            console.log('Sending payload:', payload); // debug
+
+            const res = await fetch('/approval/batch-approve', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (data.success) {
+                modal.hide();
+                setTimeout(() => location.reload(), 500);
+            } else {
+                alert(data.message || 'Có lỗi xảy ra');
             }
-            bootstrap.Modal.getInstance(document.getElementById('batchApproveModal')).hide();
-            showToast('Đã nhất trí thành công!', 'success');
-            setTimeout(() => location.reload(), 800);
-        } catch(err) {
+        } catch (err) {
             console.error(err);
-            showToast('Có lỗi xảy ra. Vui lòng thử lại.', 'danger');
+            alert('Lỗi kết nối. Vui lòng thử lại.');
         } finally {
             this.disabled = false;
             this.innerHTML = '<i class="bi bi-check-all me-1"></i>Xác nhận';
         }
-    });
+    };
+
 
     // ── FILTER BAR TOGGLE ────────────────────────────────────
     const toggleFilterBar = document.getElementById('toggleFilterBar');
