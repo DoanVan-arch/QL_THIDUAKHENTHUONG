@@ -548,8 +548,8 @@ def approval_tracking():
             'tap_the_count':   tap_the_count,
         })
 
-    flat_ca_nhan.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
-    flat_tap_the.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
+    # flat_ca_nhan.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
+    # flat_tap_the.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
 
     # ════════════════════════════════════════════════════════
     # 9. TT CRITERIA — chỉ query khi có flat_tap_the
