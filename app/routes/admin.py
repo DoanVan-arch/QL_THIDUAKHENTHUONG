@@ -548,8 +548,7 @@ def approval_tracking():
             'tap_the_count':   tap_the_count,
         })
 
-    # flat_ca_nhan.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
-    # flat_tap_the.sort(key=lambda x: (x['don_vi'], x['loai_danh_hieu']))
+   
 
     # ════════════════════════════════════════════════════════
     # 9. TT CRITERIA — chỉ query khi có flat_tap_the
@@ -586,7 +585,35 @@ def approval_tracking():
     # ════════════════════════════════════════════════════════
     status_list    = [e.value for e in TrangThaiDeXuat if e != TrangThaiDeXuat.NHAP]
     danh_hieu_list = [e.value for e in LoaiDanhHieu]
+    # 1. Lấy danh sách unit_names đã được sắp xếp chuẩn theo thu_tu và ten_don_vi
+    unit_names = [
+        u.ten_don_vi for u in
+        DonVi.query
+        .filter(
+            DonVi.id.in_(_active_dv_ids),
+            DonVi.is_active == True
+        )
+        .order_by(DonVi.thu_tu.asc(), DonVi.ten_don_vi.asc())
+        .all()
+    ]
 
+# 2. Tạo một dictionary map vị trí (index) của từng đơn vị
+# Đơn vị nào đứng trước trong unit_names sẽ có index nhỏ hơn
+    unit_order_map = {name: index for index, name in enumerate(unit_names)}
+
+    # 3. Apply vào lambda sort
+    # Nếu có đơn vị cũ (is_active=False) không nằm trong map, nó sẽ nhận giá trị 9999 và bị đẩy xuống cuối
+    flat_ca_nhan.sort(key=lambda x: (
+        unit_order_map.get(x['don_vi'], 9999),  # Ưu tiên 1: Sắp xếp theo vị trí thu_tu
+        x['don_vi'],                            # Ưu tiên 2: Cùng thu_tu thì sắp theo Tên đơn vị
+        x['loai_danh_hieu']                     # Ưu tiên 3: Sắp xếp theo Danh hiệu
+    ))
+
+    flat_tap_the.sort(key=lambda x: (
+        unit_order_map.get(x['don_vi'], 9999), 
+        x['don_vi'], 
+        x['loai_danh_hieu']
+    ))
     return render_template(
         'admin/tracking.html',
         unit_groups=unit_groups,
