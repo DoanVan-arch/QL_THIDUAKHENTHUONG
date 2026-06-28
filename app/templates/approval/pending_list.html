@@ -380,8 +380,9 @@
                     <tr>
                         <th class="sticky-stt">STT</th>
                         <th class="sticky-name">Tên tập thể</th>
-                        <th class="col-don-vi">Đơn vị</th>
                         <th class="col-danhhieu-sticky">Danh hiệu</th>
+                        <th class="col-don-vi">Đơn vị</th>
+                        
                         <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                         <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
                         {% for f in tt_criteria_fields %}
@@ -435,12 +436,13 @@
                                    class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
                         </td>
-                        <td class="col-don-vi"><small>{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                        <td class="col-danh-hieu">
+                        <td class="col-danhhieu-sticky">
                             {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
                             {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
                             {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
                         </td>
+                        <td class="col-don-vi"><small>{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
+                        
                         <td class="col-criteria"><small>{{ ct.muc_do_hoan_thanh or '-' }}</small></td>
                         <td class="col-criteria"><small>{{ ct.chu_tri_don_vi_danh_hieu or '-' }}</small></td>
                         {% set ttd = ct.tap_the_dict or {} %}
@@ -656,19 +658,72 @@
 
 <style>
 /* Danh hiệu (chỉ bảng cá nhân) */
-.tbl-scroll .col-danhhieu-sticky {
+/* ── Sticky columns — tính chính xác ───────────────────────── */
+.tbl-scroll .sticky-stt {
     position: sticky !important;
-    left: 288px !important;  /* 36 + 42 + 210 */
-    z-index: 3;
-    width: 60px; min-width: 60px; max-width: 60px;
+    left: 0 !important;
+    z-index: 2;
+    width: 34px; min-width: 34px; max-width: 34px;
     background: #fff;
-    box-shadow: 3px 0 6px rgba(0,0,0,.10);
+    border-right: 2px solid #b0bec5 !important;
 }
-.tbl-scroll thead .col-danhhieu-sticky {
-    z-index: 5;
+.tbl-scroll thead .sticky-stt {
+    z-index: 4 !important;
     background: var(--navy-primary, #1a3a5c) !important;
     color: #fff !important;
 }
+
+.tbl-scroll .sticky-name {
+    position: sticky !important;
+    left: 34px !important;
+    z-index: 2;
+    width: 190px; min-width: 190px; max-width: 190px;
+    background: #fff;
+    overflow: hidden;
+    /* Bỏ box-shadow ở đây — để col-danhhieu-sticky tự có shadow */
+}
+.tbl-scroll thead .sticky-name {
+    z-index: 4 !important;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
+
+/* ── Danh hiệu sticky — left = stt(34) + name(190) = 224px ─── */
+.tbl-scroll .col-danhhieu-sticky {
+    position: sticky !important;
+    left: 224px !important;   /* ← sửa từ 288 → 224 */
+    z-index: 2;
+    width: 68px; min-width: 68px; max-width: 68px;
+    background: #fff;
+    box-shadow: 3px 0 6px rgba(0, 0, 0, .12); /* shadow chuyển sang đây */
+}
+.tbl-scroll thead .col-danhhieu-sticky {
+    z-index: 4 !important;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
+
+/* ── Màu nền sticky cells theo trạng thái row ───────────────── */
+.tbl-scroll tr.table-success .sticky-stt,
+.tbl-scroll tr.table-success .sticky-name,
+.tbl-scroll tr.table-success .col-danhhieu-sticky,
+.tbl-scroll tr.table-success .col-pending  { background: #d1e7dd !important; }
+
+.tbl-scroll tr.table-danger .sticky-stt,
+.tbl-scroll tr.table-danger .sticky-name,
+.tbl-scroll tr.table-danger .col-danhhieu-sticky,
+.tbl-scroll tr.table-danger .col-pending   { background: #f8d7da !important; }
+
+.tbl-scroll tr.table-warning-custom .sticky-stt,
+.tbl-scroll tr.table-warning-custom .sticky-name,
+.tbl-scroll tr.table-warning-custom .col-danhhieu-sticky,
+.tbl-scroll tr.table-warning-custom .col-pending { background: #fff3cd !important; }
+
+.tbl-scroll tbody tr:hover .sticky-stt,
+.tbl-scroll tbody tr:hover .sticky-name,
+.tbl-scroll tbody tr:hover .col-danhhieu-sticky,
+.tbl-scroll tbody tr:hover .col-pending    { background: #f0f4f8 !important; }
+
 .toolbar-wrapper { display:block; position:sticky; top:0; z-index:100; background:#fff; border-bottom:1px solid #dee2e6; padding:6px 0; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,.07); width:100%; }
 .toolbar-inner { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:0 4px; }
 .toolbar-inner::-webkit-scrollbar { display:none; }
