@@ -344,13 +344,24 @@ def approval_tracking():
     # ════════════════════════════════════════════════════════
     # 5. UNIT NAMES
     # ════════════════════════════════════════════════════════
-    unit_names = [
-        u[0] for u in db.session.query(DonVi.ten_don_vi, DonVi.thu_tu)
-        .join(DeXuat, DeXuat.don_vi_id == DonVi.id)
-        .filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
-        .distinct()
-        .order_by(DonVi.thu_tu.asc(), DonVi.ten_don_vi.asc()).all()
-    ]
+ 
+    # ── Lấy don_vi_id có đề xuất, sắp xếp theo thu_tu ──────────────────────────
+    _active_dv_rows = (
+        DonVi.query
+        .filter(
+            DonVi.id.in_(
+                db.session.query(DeXuat.don_vi_id)
+                .filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+                .distinct()
+            ),
+            DonVi.is_active == True
+        )
+        .order_by(DonVi.thu_tu.asc(), DonVi.ten_don_vi.asc())
+        .all()
+    )
+
+            
+    unit_names     = [u.ten_don_vi for u in _active_dv_rows]   # tái dùng luôn, không query thêm
 
     # ════════════════════════════════════════════════════════
     # 6. PRE-BUILD TTR GATE MAP — bulk load 1 lần, tra cứu O(1)
@@ -365,7 +376,7 @@ def approval_tracking():
             for ct in dx.chi_tiets
             if not ct.bi_loai and ct.id not in approved_ct_ids
         ]
-
+        all_ct_ids_for_gate = [u.id for u in _active_dv_rows]
         if all_ct_ids_for_gate:
             from app.models import KetQuaDuyetChiTiet as _KQ
 
