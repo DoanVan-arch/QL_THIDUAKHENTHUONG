@@ -131,8 +131,9 @@
                         </th>
                         <th class="col-stt">STT</th>
                         <th class="col-name">Họ tên</th>
-                        <th class="col-donvi">Đơn vị</th>
                         <th class="col-danhhieu-sticky">Danh hiệu</th>
+                        <th class="col-donvi">Đơn vị</th>
+                        
                         <th class="col-capbac">Cấp bậc / Chức vụ</th>
                         <th class="col-doituong">Đối tượng</th>
                         <th class="col-lop">Lớp</th>
@@ -283,8 +284,9 @@
                         </th>
                         <th class="col-stt">STT</th>
                         <th class="col-name">Tên tập thể</th>
+                        <th class="col-danhhieu-sticky">Danh hiệu</th>
                         <th class="col-donvi">Đơn vị đề xuất</th>
-                        <th class="col-danhhieu">Danh hiệu</th>
+                        
                         <th class="col-namhoc">Năm học</th>
                         <th class="col-normal text-center">Mức độ HTNV</th>
                         <th class="col-normal text-center">Chủ trì ĐV</th>
@@ -327,12 +329,13 @@
                                    class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
                         </td>
-                        <td class="col-donvi" title="{{ item.don_vi }}"><small>{{ item.don_vi }}</small></td>
-                        <td class="col-danhhieu" title="{{ ct.loai_danh_hieu or '-' }}">
+                        <td class="col-danhhieu-sticky" title="{{ ct.loai_danh_hieu or '-' }}">
                             {% if ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
                             {% elif ct.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
                             {% else %}<span class="badge bg-secondary" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;display:block;">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
                         </td>
+                        <td class="col-donvi" title="{{ item.don_vi }}"><small>{{ item.don_vi }}</small></td>
+                      
                         <td class="col-namhoc"><small>{{ dx_tt.nam_hoc }}</small></td>
                         <td class="col-normal text-center">
                             {% if ct.muc_do_hoan_thanh %}<span class="badge bg-secondary">{{ ct.muc_do_hoan_thanh }}</span>
