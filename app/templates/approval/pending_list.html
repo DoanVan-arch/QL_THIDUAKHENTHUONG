@@ -152,11 +152,12 @@
                     <tr>
                         <th class="sticky-stt">STT</th>
                         <th class="sticky-name">Họ tên</th>
+                        <th class="col-danhhieu-sticky">Danh hiệu</th>
                         <th class="col-don-vi">Đơn vị</th>
                         <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
                         <th class="col-doi-tuong">Đối tượng</th>
                         <th class="col-lop">Lớp</th>
-                        <th class="col-danh-hieu">Danh hiệu</th>
+                        
                         {% for field in display_fields %}
                         <th class="col-criteria" data-col-key="cn_{{ field }}" data-col-label="{{ field_labels[field] if field in field_labels else field }}">
                             <small>{{ field_labels[field] if field in field_labels else field }}</small>
@@ -220,18 +221,19 @@
                                    class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
                         </td>
+                        <td class="col-danhhieu-sticky">
+                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
+                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                            {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                            {% else %}<span class="badge bg-secondary">ĐVTT</span>{% endif %}
+                        </td>
                         <td class="col-don-vi"><small>{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
                         <td class="col-cap-bac">
                             <small>{{ ct.quan_nhan.cap_bac or '' }}{% if ct.quan_nhan.chuc_vu %} / {{ ct.quan_nhan.chuc_vu }}{% endif %}</small>
                         </td>
                         <td class="col-doi-tuong"><small>{{ ct.doi_tuong or '-' }}</small></td>
                         <td class="col-lop"><small>{{ ct.quan_nhan.lop or '-' }}</small></td>
-                        <td class="col-danh-hieu">
-                            {% if ct.loai_danh_hieu == 'Chiến sĩ thi đua' %}<span class="badge bg-warning text-dark">CSTĐ</span>
-                            {% elif ct.loai_danh_hieu == 'Chiến sĩ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
-                            {% elif ct.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                            {% else %}<span class="badge bg-secondary">ĐVTT</span>{% endif %}
-                        </td>
+                        
                         {% for field in display_fields %}
                         <td class="col-criteria" data-col-key="cn_{{ field }}">
                             {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}<small class="text-muted">-</small>
@@ -379,7 +381,7 @@
                         <th class="sticky-stt">STT</th>
                         <th class="sticky-name">Tên tập thể</th>
                         <th class="col-don-vi">Đơn vị</th>
-                        <th class="col-danh-hieu">Danh hiệu</th>
+                        <th class="col-danhhieu-sticky">Danh hiệu</th>
                         <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                         <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
                         {% for f in tt_criteria_fields %}
@@ -653,6 +655,20 @@
 </div>
 
 <style>
+/* Danh hiệu (chỉ bảng cá nhân) */
+.tbl-scroll .col-danhhieu-sticky {
+    position: sticky !important;
+    left: 288px !important;  /* 36 + 42 + 210 */
+    z-index: 3;
+    width: 60px; min-width: 60px; max-width: 60px;
+    background: #fff;
+    box-shadow: 3px 0 6px rgba(0,0,0,.10);
+}
+.tbl-scroll thead .col-danhhieu-sticky {
+    z-index: 5;
+    background: var(--navy-primary, #1a3a5c) !important;
+    color: #fff !important;
+}
 .toolbar-wrapper { display:block; position:sticky; top:0; z-index:100; background:#fff; border-bottom:1px solid #dee2e6; padding:6px 0; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,.07); width:100%; }
 .toolbar-inner { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:0 4px; }
 .toolbar-inner::-webkit-scrollbar { display:none; }
