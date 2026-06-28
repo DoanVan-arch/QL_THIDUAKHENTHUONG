@@ -1136,7 +1136,49 @@ document.getElementById('batchApproveConfirm').onclick = async function () {
     _showBatchResult(results, errors);
 };
 
+function _showBatchResult(results, errors) {
+    // Tạo hoặc tái dùng toast container
+    let container = document.getElementById('batchResultContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'batchResultContainer';
+        container.style.cssText = 'position:fixed;top:1rem;right:1rem;z-index:9999;min-width:320px;max-width:480px';
+        document.body.appendChild(container);
+    }
 
+    const hasError   = errors.length > 0;
+    const hasSuccess = results.length > 0;
+
+    const lines = [
+        ...results.map(r => `<div class="text-success">${r}</div>`),
+        ...errors.map(e => `<div class="text-danger">${e}</div>`),
+    ].join('');
+
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast align-items-center border-0 ${hasError ? 'bg-danger-subtle' : 'bg-success-subtle'}`;
+    toastEl.setAttribute('role', 'alert');
+    toastEl.setAttribute('aria-live', 'assertive');
+    toastEl.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${hasSuccess && !hasError ? '<strong>Duyệt thành công!</strong><br>' : ''}
+                ${hasError && !hasSuccess ? '<strong>Có lỗi xảy ra:</strong><br>' : ''}
+                ${hasSuccess && hasError  ? '<strong>Hoàn tất (có lỗi):</strong><br>' : ''}
+                ${lines}
+            </div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>`;
+    container.appendChild(toastEl);
+
+    const toast = new bootstrap.Toast(toastEl, { delay: hasError ? 8000 : 4000 });
+    toast.show();
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+
+    // Reload trang nếu có ít nhất 1 thành công
+    if (hasSuccess) {
+        setTimeout(() => location.reload(), 1500);
+    }
+}
     // ── FILTER BAR TOGGLE ────────────────────────────────────
     const toggleFilterBar = document.getElementById('toggleFilterBar');
     const filterBar       = document.getElementById('filterBar');
