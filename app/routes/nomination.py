@@ -534,6 +534,7 @@ def add_nomination_item(id):
             DeXuatChiTiet.nam_hoc == de_xuat.nam_hoc,
             DeXuat.id != de_xuat.id,
             DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value,
+            DeXuatChiTiet.trang_thai != TrangThaiChiTiet.TU_CHOI.value,
         ).first()
         if existing_other:
             qn_name = QuanNhan.query.get(quan_nhan_id)
