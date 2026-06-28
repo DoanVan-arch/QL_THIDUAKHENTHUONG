@@ -130,7 +130,7 @@
                                    title="Chọn tất cả cá nhân" onchange="toggleCheckAll('CN',this.checked)">
                         </th>
                         <th class="col-stt">STT</th>
-                        <th class="col-name fw-semibold">Họ tên</th>
+                        <th class="col-name">Họ tên</th>
                         <th class="col-danhhieu-sticky">Danh hiệu</th>
                         <th class="col-donvi">Đơn vị</th>
                         
@@ -175,6 +175,7 @@
                         <td class="col-name fw-semibold">
                             <div class="name-btn-group">
                                 <div class="name-text">
+                                    <i class="bi bi-person-circle text-primary me-1"></i>
                                     {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
                                     {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
                                     <div class="d-flex flex-wrap gap-1 mt-1">
