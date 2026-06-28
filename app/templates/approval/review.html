@@ -630,29 +630,50 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.disabled = true;
                 this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
 
+                const errors  = [];
+                const results = [];
+
                 try {
-                    const res = await fetch('/approval/batch-approve', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken,
-                        },
-                        body: JSON.stringify({ pd_id: parseInt(pdId), ct_ids: pendingCtIds }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        modal.hide();
-                        setTimeout(() => location.reload(), 500);
+                    // ── Đọc pdId và ctIds từ modal.dataset ──────────────────────
+                    const modalEl     = document.getElementById('batchApproveModal');
+                    const parsedPdId  = parseInt(modalEl.dataset.pdId);
+                    const pendingCtIds = JSON.parse(modalEl.dataset.ctIds || '[]');
+                    // ─────────────────────────────────────────────────────────────
+
+                    if (!parsedPdId || isNaN(parsedPdId)) {
+                        errors.push(`❌ Không xác định được ID phê duyệt (pdId="${modalEl.dataset.pdId}") — bỏ qua.`);
+                    } else if (!pendingCtIds || pendingCtIds.length === 0) {
+                        errors.push(`❌ Không có cá nhân nào cần duyệt (pd_id=${parsedPdId}) — bỏ qua.`);
                     } else {
-                        alert(data.message || 'Có lỗi xảy ra');
+                        const payload = { pd_id: parsedPdId, ct_ids: pendingCtIds };
+                        console.log('Sending payload:', payload);
+
+                        const res  = await fetch('/approval/batch-approve', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken,
+                            },
+                            body: JSON.stringify(payload),
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            results.push(`✅ Đã duyệt ${data.approved_count} cá nhân.`);
+                        } else {
+                            errors.push(`❌ pd_id=${parsedPdId}: ${data.message || 'Lỗi không xác định'}`);
+                        }
                     }
                 } catch (err) {
                     console.error(err);
-                    alert('Lỗi kết nối. Vui lòng thử lại.');
+                    errors.push(`❌ Lỗi kết nối khi gửi yêu cầu.`);
                 } finally {
                     this.disabled = false;
                     this.innerHTML = '<i class="bi bi-check-all me-1"></i>Xác nhận';
                 }
+
+                bootstrap.Modal.getInstance(document.getElementById('batchApproveModal'))?.hide();
+                _showBatchResult(results, errors);
             };
         });
     }
