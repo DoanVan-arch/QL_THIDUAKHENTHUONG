@@ -671,7 +671,7 @@ def _auto_prepare_pending(phong_name, nam_hoc_filter):
     if need_commit:
         db.session.commit()
 
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, contains_eager
 
 @approval_bp.route('/pending')
 @login_required
@@ -680,84 +680,120 @@ def pending_list():
     phong_name = ROLE_TO_PHONG.get(current_user.role, '')
     nam_hoc_filter = request.args.get('nam_hoc', '')
 
-    # 1. Get available nam_hoc options
-    from app.models.nomination import DeXuat as _DeXuat
+    from app.models.nomination import DeXuat as _DeXuat, DanhHieu as _DanhHieu
+    from app.models.unit import DonVi
+
+    # ── 1. Nam học dropdown ──────────────────────────────────────────────────
     nam_hoc_list = [n[0] for n in db.session.query(_DeXuat.nam_hoc).join(
         PheDuyet, PheDuyet.de_xuat_id == _DeXuat.id
     ).filter(
         PheDuyet.phong_duyet == phong_name,
     ).distinct().order_by(_DeXuat.nam_hoc.desc()).all()]
 
-    # 2. Main Query với EAGER LOADING (Giải quyết triệt để N+1 Query)
-    q = PheDuyet.query.filter_by(phong_duyet=phong_name)
-    if nam_hoc_filter:
-        q = q.join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id).filter(_DeXuat.nam_hoc == nam_hoc_filter)
-    else:
-        q = q.join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id)
-    
-    from app.models.unit import DonVi
-    q = q.join(DonVi, _DeXuat.don_vi_id == DonVi.id)
-    
-    # Kỹ thuật load sẵn các bảng liên quan vào bộ nhớ trong 1 câu query
-    q = q.options(
-        joinedload(PheDuyet.de_xuat).joinedload(_DeXuat.don_vi),
-        joinedload(PheDuyet.de_xuat).selectinload(_DeXuat.chi_tiets),
-        selectinload(PheDuyet.chi_tiet_duyet)
+    # ── 2. Query chính — EAGER LOAD toàn bộ quan hệ cần thiết ───────────────
+    q = (
+        db.session.query(PheDuyet)
+        .join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id)   # join 1 lần duy nhất
+        .join(DonVi, _DeXuat.don_vi_id == DonVi.id)
+        .filter(PheDuyet.phong_duyet == phong_name)
+        .options(
+            # Eager load toàn bộ chuỗi quan hệ
+            contains_eager(PheDuyet.de_xuat)
+                .contains_eager(_DeXuat.don_vi),
+            selectinload(PheDuyet.de_xuat)
+                .selectinload(_DeXuat.chi_tiets),
+            selectinload(PheDuyet.chi_tiet_duyet),
+        )
+        .order_by(DonVi.thu_tu.asc(), _DeXuat.ngay_gui.desc())
     )
-    raw_pending_reviews = q.order_by(DonVi.thu_tu.asc(), _DeXuat.ngay_gui.desc()).all()
 
-    # 3. Lọc DeXuat hợp lệ & Chuẩn bị dữ liệu KetQuaDuyetChiTiet mới (Batch Insert)
-    pending_reviews = []
-    new_ket_qua_list = []
-    
-    for pd in raw_pending_reviews:
-        if pd.de_xuat is None:
-            continue
-            
-        active_cts = [ct for ct in pd.de_xuat.chi_tiets if not ct.bi_loai]
-        if not active_cts:
-            continue
-            
-        pending_reviews.append(pd)
+    if nam_hoc_filter:
+        q = q.filter(_DeXuat.nam_hoc == nam_hoc_filter)
 
+    pending_reviews_raw = q.all()
+
+    # ── 3. Lọc orphan & all-bi_loai (không cần query thêm) ──────────────────
+    pending_reviews = [
+        pd for pd in pending_reviews_raw
+        if pd.de_xuat is not None
+        and any(not ct.bi_loai for ct in pd.de_xuat.chi_tiets)
+    ]
+
+    # ── 4. Tạo KetQuaDuyetChiTiet còn thiếu — batch insert ──────────────────
+    new_records = []
+    for pd in pending_reviews:
         existing_ct_ids = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
         for ct in pd.de_xuat.chi_tiets:
             if ct.phong_loai == "Tuyên huấn":
                 continue
-            if ct.id not in existing_ct_ids:
-                in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
-                if phong_name not in (PhongDuyet.PHONG_HAUCANKYTHUAT.value, PhongDuyet.BAN_SAUDAIHOC.value):
-                    kq_val = KetQuaDuyet.CHO_DUYET.value if in_scope else KetQuaDuyet.DONG_Y.value
-                else:
-                    kq_val = KetQuaDuyet.DONG_Y.value
+            if ct.id in existing_ct_ids:
+                continue
 
-                new_kq = KetQuaDuyetChiTiet(
-                    phe_duyet_id=pd.id,
-                    chi_tiet_id=ct.id,
-                    ket_qua=kq_val,
-                )
-                new_ket_qua_list.append(new_kq)
-                # Đưa vào list của object để cập nhật bộ nhớ ngay lập tức (không cần db.refresh)
-                pd.chi_tiet_duyet.append(new_kq) 
+            in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
+            is_special_phong = phong_name in (
+                PhongDuyet.PHONG_HAUCANKYTHUAT.value,
+                PhongDuyet.BAN_SAUDAIHOC.value,
+            )
+            ket_qua_val = (
+                KetQuaDuyet.DONG_Y.value
+                if is_special_phong or not in_scope
+                else KetQuaDuyet.CHO_DUYET.value
+            )
+            new_records.append(KetQuaDuyetChiTiet(
+                phe_duyet_id=pd.id,
+                chi_tiet_id=ct.id,
+                ket_qua=ket_qua_val,
+            ))
 
-    if new_ket_qua_list:
-        db.session.add_all(new_ket_qua_list)
-        db.session.commit()
+    if new_records:
+        db.session.bulk_save_objects(new_records)  # batch thay vì add_all từng cái
+        db.session.flush()  # flush để các object dưới có thể thấy
 
-    # 4. Auto-finalize (Duyệt tự động)
+    # ── 5. Reload chi_tiet_duyet sau khi insert (chỉ những pd bị thay đổi) ──
+    affected_pd_ids = {r.phe_duyet_id for r in new_records}
+    if affected_pd_ids:
+        # Reload selectin cho các pd bị ảnh hưởng
+        refreshed = (
+            db.session.query(PheDuyet)
+            .filter(PheDuyet.id.in_(affected_pd_ids))
+            .options(selectinload(PheDuyet.chi_tiet_duyet))
+            .all()
+        )
+        refreshed_map = {pd.id: pd for pd in refreshed}
+        pending_reviews = [refreshed_map.get(pd.id, pd) for pd in pending_reviews]
+
+    # ── 6. Auto-finalize — batch query PheDuyet liên quan ───────────────────
     auto_finalized_ids = set()
-    admin_pds_to_add = []
-    
+    de_xuat_ids_to_check = [pd.de_xuat_id for pd in pending_reviews
+                             if pd.ket_qua == KetQuaDuyet.CHO_DUYET.value]
+
+    # Lấy toàn bộ PheDuyet liên quan 1 lần
+    all_related_pd_map: dict[int, list[PheDuyet]] = {}
+    if de_xuat_ids_to_check:
+        related_pds = PheDuyet.query.filter(
+            PheDuyet.de_xuat_id.in_(de_xuat_ids_to_check),
+            PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
+        ).all()
+        for rpd in related_pds:
+            all_related_pd_map.setdefault(rpd.de_xuat_id, []).append(rpd)
+
+        existing_admin_set = {
+            r[0] for r in db.session.query(PheDuyet.de_xuat_id).filter(
+                PheDuyet.de_xuat_id.in_(de_xuat_ids_to_check),
+                PheDuyet.phong_duyet == PhongDuyet.ADMIN_TUYENHUAN.value
+            ).all()
+        }
+
     for pd in pending_reviews:
         if pd.ket_qua != KetQuaDuyet.CHO_DUYET.value:
             continue
-            
+
         active_ct_ids = {ct.id for ct in pd.de_xuat.chi_tiets if not ct.bi_loai}
         pending_in_scope = [
             kq for kq in pd.chi_tiet_duyet
-            if kq.chi_tiet_id in active_ct_ids and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
+            if kq.chi_tiet_id in active_ct_ids
+            and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
         ]
-        
         if not pending_in_scope and active_ct_ids:
             pd.ket_qua = KetQuaDuyet.DONG_Y.value
             pd.nguoi_duyet_id = None
@@ -765,149 +801,150 @@ def pending_list():
             pd.ghi_chu = 'Tự động duyệt (không có đối tượng thuộc phạm vi)'
 
             de_xuat = pd.de_xuat
-            all_dept = PheDuyet.query.filter(
-                PheDuyet.de_xuat_id == de_xuat.id,
-                PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value
-            ).all()
-            
+            all_dept = all_related_pd_map.get(de_xuat.id, [])
             if all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept):
                 de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
-                existing_admin = PheDuyet.query.filter_by(
-                    de_xuat_id=de_xuat.id,
-                    phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
-                ).first()
-                if not existing_admin:
-                    admin_pds_to_add.append(PheDuyet(
+                if de_xuat.id not in existing_admin_set:
+                    db.session.add(PheDuyet(
                         de_xuat_id=de_xuat.id,
                         phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value,
                         ket_qua=KetQuaDuyet.CHO_DUYET.value,
                     ))
-            auto_finalized_ids.add(pd.id)
-            
-    if auto_finalized_ids or admin_pds_to_add:
-        if admin_pds_to_add:
-            db.session.add_all(admin_pds_to_add)
-        db.session.commit()
+                    existing_admin_set.add(de_xuat.id)
 
-    # Loại bỏ các records đã auto-finalize khỏi danh sách hiển thị
+            auto_finalized_ids.add(pd.id)
+
+    db.session.commit()
+
+    # ── 7. Loại bỏ auto-finalized ────────────────────────────────────────────
     pending_reviews = [pd for pd in pending_reviews if pd.id not in auto_finalized_ids]
 
-    # 5. Gộp các vòng lặp tạo Dictionaries & Sets thành 1 vòng lặp duy nhất
-    all_item_results = {}
+    # ── 8. Build all_item_results — không cần refresh ────────────────────────
+    all_item_results = {
+        pd.id: {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet}
+        for pd in pending_reviews
+    }
+
+    # ── 9. Out-of-scope set ───────────────────────────────────────────────────
     out_of_scope_ct_ids = set()
-    unit_names_set = set()
-    all_ct_ids = []
-    tt_all_keys = set()
-    
-    is_scope_restricted = current_user.role in (Role.BAN_QUANLUC, Role.BAN_CANBO)
+    if current_user.role in (Role.BAN_QUANLUC, Role.BAN_CANBO):
+        for pd in pending_reviews:
+            for ct in pd.de_xuat.chi_tiets:
+                if not _is_in_dept_scope(current_user.role, ct.doi_tuong):
+                    out_of_scope_ct_ids.add(ct.id)
 
-    for pd in pending_reviews:
-        all_item_results[pd.id] = {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet}
-        unit_names_set.add(pd.de_xuat.don_vi.ten_don_vi)
-        
-        for ct in pd.de_xuat.chi_tiets:
-            if is_scope_restricted and not _is_in_dept_scope(current_user.role, ct.doi_tuong):
-                out_of_scope_ct_ids.add(ct.id)
-                
-            if not ct.bi_loai:
-                all_ct_ids.append(ct.id)
-                
-            if ct.quan_nhan_id is None:
-                td = ct.tap_the_dict or {}
-                if td:
-                    tt_all_keys.update(td.keys())
-
-    unit_names = list(unit_names_set)
-
-    # 6. Các logic cấu hình cột (Columns)
-    allowed_fields = get_phong_fields().get(current_user.role, [])
-    table_columns = get_phong_table_columns().get(current_user.role, [])
-    field_conditions = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
+    # ── 10. Columns / fields ──────────────────────────────────────────────────
+    allowed_fields     = get_phong_fields().get(current_user.role, [])
+    table_columns      = get_phong_table_columns().get(current_user.role, [])
+    field_conditions   = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
     managed_dept_columns = _managed_gate_columns(current_user.role)
 
     if current_user.role in _VIEW_ALL_CRITERIA_ROLES or not table_columns:
         table_columns = _all_criteria_columns()
 
+    # ── 11. Gate dept fields & group gate ────────────────────────────────────
     gate_dept_fields = []
     if current_user.role in _GROUP_CONFIRMATION:
-        _finalized_de_xuat_ids = set()
-        for pd in pending_reviews:
-            if pd.de_xuat_id not in _finalized_de_xuat_ids:
-                _auto_finalize_scope_dept(pd.de_xuat_id)
-                _finalized_de_xuat_ids.add(pd.de_xuat_id)
+        # Batch auto-finalize scope-limited depts
+        unique_de_xuat_ids = list({pd.de_xuat_id for pd in pending_reviews})
+        for dxid in unique_de_xuat_ids:
+            _auto_finalize_scope_dept(dxid)
 
-        phong_fields_all = get_phong_fields()
+        phong_fields_all  = get_phong_fields()
+        field_labels_all  = get_field_labels()
         for gate_dept_name in managed_dept_columns:
             gate_role = _PHONG_TO_ROLE.get(gate_dept_name)
-            fields = []
             if gate_role:
-                raw_fields = phong_fields_all.get(gate_role, [])
-                fields = [f for f in raw_fields if f not in _LONG_TEXT_FIELDS]
-            if fields:
-                gate_dept_fields.append({'dept': gate_dept_name, 'fields': fields})
+                fields = [f for f in phong_fields_all.get(gate_role, [])
+                          if f not in _LONG_TEXT_FIELDS]
+                if fields:
+                    gate_dept_fields.append({'dept': gate_dept_name, 'fields': fields})
 
+    # ── 12. Group gate — batch ────────────────────────────────────────────────
     group_gate_by_pd = {}
     group_gate_by_ct = {}
     if current_user.role in _GROUP_CONFIRMATION:
         for pd in pending_reviews:
-            group_gate_by_pd[pd.id] = _get_group_gate_for_pd(current_user.role, pd.de_xuat_id)
-            ct_map = {}
-            for ct in pd.de_xuat.chi_tiets:
-                ct_map[ct.id] = _get_group_gate_for_ct(current_user.role, pd.de_xuat_id, ct.id)
-            group_gate_by_ct[pd.id] = ct_map
+            group_gate_by_pd[pd.id] = _get_group_gate_for_pd(
+                current_user.role, pd.de_xuat_id)
+            group_gate_by_ct[pd.id] = {
+                ct.id: _get_group_gate_for_ct(current_user.role, pd.de_xuat_id, ct.id)
+                for ct in pd.de_xuat.chi_tiets
+            }
 
-    # 7. Compute dynamic tap_the criteria columns
-    from app.models.nomination import DanhHieu as _DanhHieu
+    # ── 13. Unit names dropdown ───────────────────────────────────────────────
+    seen = set()
+    unit_names = []
+    for pd in pending_reviews:
+        name = pd.de_xuat.don_vi.ten_don_vi
+        if name not in seen:
+            seen.add(name)
+            unit_names.append(name)
+
+    # ── 14. Tap the criteria columns — batch query ────────────────────────────
+    tt_all_keys = set()
     for dh in _DanhHieu.query.filter_by(pham_vi='Đơn vị', is_active=True).all():
         for ma_truong in (dh.tieu_chi or []):
             tt_all_keys.add(ma_truong)
-            
-    tt_criteria_fields = []
-    tt_field_labels_map = {}
-    
+    for pd in pending_reviews:
+        for ct in pd.de_xuat.chi_tiets:
+            if ct.quan_nhan_id is None:
+                tt_all_keys.update((ct.tap_the_dict or {}).keys())
+
     if tt_all_keys:
         tt_tieu_chi_rows = TieuChi.query.filter(
-            TieuChi.ma_truong.in_(list(tt_all_keys)), TieuChi.is_active == True
+            TieuChi.ma_truong.in_(list(tt_all_keys)),
+            TieuChi.is_active == True
         ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
-        
-        tt_criteria_fields = [tc.ma_truong for tc in tt_tieu_chi_rows]
+        tt_criteria_fields  = [tc.ma_truong for tc in tt_tieu_chi_rows]
         tt_field_labels_map = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
         for k in tt_all_keys:
             if k not in tt_field_labels_map:
                 tt_criteria_fields.append(k)
                 tt_field_labels_map[k] = k
+    else:
+        tt_criteria_fields  = []
+        tt_field_labels_map = {}
 
-    # 8. Yêu cầu chỉnh sửa
+    # ── 15. Edit requests — 1 query duy nhất ─────────────────────────────────
     edit_requests_by_ct = {}
+    all_ct_ids = [
+        ct.id
+        for pd in pending_reviews
+        if pd.de_xuat
+        for ct in pd.de_xuat.chi_tiets
+        if not ct.bi_loai
+    ]
     if all_ct_ids:
-        active_edit_requests = YeuCauChinhSua.query.filter(
+        for req in YeuCauChinhSua.query.filter(
             YeuCauChinhSua.chi_tiet_id.in_(all_ct_ids),
             YeuCauChinhSua.trang_thai == TrangThaiYeuCauSua.CHO_SUA.value,
-            YeuCauChinhSua.phong_yeu_cau == phong_name
-        ).all()
-        
-        for req in active_edit_requests:
+            YeuCauChinhSua.phong_yeu_cau == phong_name,
+        ).all():
             edit_requests_by_ct[req.chi_tiet_id] = req
 
-    return render_template('approval/pending_list.html',
-                           pending_reviews=pending_reviews,
-                           all_item_results=all_item_results,
-                           phong_name=phong_name,
-                           allowed_fields=allowed_fields,
-                           table_columns=table_columns,
-                           field_labels=get_field_labels(),
-                           field_conditions=field_conditions,
-                           unit_names=unit_names,
-                           out_of_scope_ct_ids=out_of_scope_ct_ids,
-                           group_gate_by_pd=group_gate_by_pd,
-                           group_gate_by_ct=group_gate_by_ct,
-                           managed_dept_columns=managed_dept_columns,
-                           gate_dept_fields=gate_dept_fields,
-                           nam_hoc_filter=nam_hoc_filter,
-                           nam_hoc_list=nam_hoc_list,
-                           tt_criteria_fields=tt_criteria_fields,
-                           tt_field_labels=tt_field_labels_map,
-                           edit_requests_by_ct=edit_requests_by_ct)
+    return render_template(
+        'approval/pending_list.html',
+        pending_reviews=pending_reviews,
+        all_item_results=all_item_results,
+        phong_name=phong_name,
+        allowed_fields=allowed_fields,
+        table_columns=table_columns,
+        field_labels=get_field_labels(),
+        field_conditions=field_conditions,
+        unit_names=unit_names,
+        out_of_scope_ct_ids=out_of_scope_ct_ids,
+        group_gate_by_pd=group_gate_by_pd,
+        group_gate_by_ct=group_gate_by_ct,
+        managed_dept_columns=managed_dept_columns,
+        gate_dept_fields=gate_dept_fields,
+        nam_hoc_filter=nam_hoc_filter,
+        nam_hoc_list=nam_hoc_list,
+        tt_criteria_fields=tt_criteria_fields,
+        tt_field_labels=tt_field_labels_map,
+        edit_requests_by_ct=edit_requests_by_ct,
+    )
+
 
 @approval_bp.route('/review/<int:id>', methods=['GET'])
 @login_required
@@ -1888,28 +1925,25 @@ def export_excel():
 @login_required
 @department_required
 def export_word():
-    """Export danh sách phê duyệt khen thưởng ra Word — 4 mục theo danh hiệu (Bản tốc độ cao, tối giản)."""
+    """Export danh sách phê duyệt khen thưởng ra Word — 4 mục theo danh hiệu."""
     from io import BytesIO
     from datetime import date, datetime
     from docx import Document
-    from docx.shared import Cm, Pt
+    from docx.shared import Cm, Pt, RGBColor
     from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
-    from sqlalchemy.orm import joinedload # Gợi ý thêm để chống N+1 query
 
     db.session.expire_all()
 
     phong_name     = ROLE_TO_PHONG.get(current_user.role, '')
     nam_hoc_filter = request.args.get('nam_hoc', '')
 
-    # ── Query (Khuyến nghị thêm joinedload để tăng tốc truy xuất DB) ──────────
+    # ── Query ─────────────────────────────────────────────────────────────────
     q = PheDuyet.query.filter_by(phong_duyet=phong_name, ket_qua=KetQuaDuyet.CHO_DUYET.value)
     if nam_hoc_filter:
         q = q.join(DeXuat, PheDuyet.de_xuat_id == DeXuat.id).filter(DeXuat.nam_hoc == nam_hoc_filter)
-    
-    # Tối ưu DB: Nếu có thể, hãy thêm options(joinedload(PheDuyet.de_xuat)...) vào đây
     pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
 
     # Out-of-scope
@@ -1930,6 +1964,7 @@ def export_word():
     criteria_fields  = phong_fields_map.get(current_user.role, [])
 
     # ── Phân loại chi tiết theo danh hiệu ────────────────────────────────────
+    # Mỗi item: dict {ct, pd, don_vi, kq, ket_qua_str, row_shading, kq_color}
     ds_don_vi_qt  = []   # Đơn vị quyết thắng
     ds_don_vi_tt  = []   # Đơn vị tiên tiến
     ds_ca_nhan_td = []   # Chiến sĩ thi đua
@@ -1939,7 +1974,6 @@ def export_word():
     for pd in pending_reviews:
         results = all_item_results.get(pd.id, {})
         don_vi  = pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else ''
-        
         for ct in pd.de_xuat.chi_tiets:
             if ct.id in out_of_scope_ct_ids or ct.id in seen_ids:
                 continue
@@ -1949,14 +1983,24 @@ def export_word():
             if kq:
                 if kq.ket_qua == KetQuaDuyet.DONG_Y.value:
                     ket_qua_str = 'Nhất trí'
+                    row_shading = 'D4EDDA'
+                    kq_color    = (0x15, 0x57, 0x24)
                 elif kq.ket_qua == KetQuaDuyet.TU_CHOI.value:
                     ket_qua_str = f'Không NT: {kq.ly_do or ""}'
+                    row_shading = 'F8D7DA'
+                    kq_color    = (0x72, 0x1C, 0x24)
                 else:
                     ket_qua_str = 'Chờ duyệt'
+                    row_shading = None
+                    kq_color    = None
             else:
                 ket_qua_str = 'Chờ duyệt'
+                row_shading = None
+                kq_color    = None
 
-            item = dict(ct=ct, pd=pd, don_vi=don_vi, kq=kq, ket_qua_str=ket_qua_str)
+            item = dict(ct=ct, pd=pd, don_vi=don_vi,
+                        kq=kq, ket_qua_str=ket_qua_str,
+                        row_shading=row_shading, kq_color=kq_color)
 
             dh = (ct.loai_danh_hieu or '').strip()
             if dh == 'Đơn vị quyết thắng':
@@ -1967,31 +2011,44 @@ def export_word():
                 ds_ca_nhan_td.append(item)
             elif dh == 'Chiến sĩ tiên tiến':
                 ds_ca_nhan_tt.append(item)
+            # Bỏ qua danh hiệu khác (hoặc thêm ds_khac nếu cần)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPERS
     # ═══════════════════════════════════════════════════════════════════════════
-    def set_font(run, bold=False, size=11, italic=False):
+    def set_font(run, bold=False, size=11, italic=False, color=None):
         run.bold       = bold
         run.italic     = italic
         run.font.size  = Pt(size)
         run.font.name  = 'Times New Roman'
+        if color:
+            run.font.color.rgb = RGBColor(*color)
 
-    def para_font(para, text, bold=False, size=11, align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
+    def para_font(para, text, bold=False, size=11,
+                  align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
         para.alignment = align
         run = para.add_run(text)
         set_font(run, bold=bold, size=size, italic=italic)
         return run
 
-    def add_cell(cell, text, bold=False, size=10, align=WD_ALIGN_PARAGRAPH.LEFT):
+    def add_cell(cell, text, bold=False, size=10,
+                 align=WD_ALIGN_PARAGRAPH.LEFT, color=None):
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
         p.alignment = align
         p.paragraph_format.space_before = Pt(1)
         p.paragraph_format.space_after  = Pt(1)
         run = p.add_run(str(text) if text is not None else '')
-        set_font(run, bold=bold, size=size)
+        set_font(run, bold=bold, size=size, color=color)
         return run
+
+    def set_cell_shading(cell, hex_color):
+        tcPr = cell._tc.get_or_add_tcPr()
+        shd  = OxmlElement('w:shd')
+        shd.set(qn('w:val'),   'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'),  hex_color)
+        tcPr.append(shd)
 
     def set_repeat_table_header(row):
         tr   = row._tr
@@ -2064,10 +2121,14 @@ def export_word():
         return p
 
     def build_tom_tat(ct):
+        """Tóm tắt thành tích — trả về list, mỗi tiêu chí 1 dòng."""
         parts = []
-        if ct.muc_do_hoan_thanh: parts.append(ct.muc_do_hoan_thanh)
-        if ct.diem_tong_ket:     parts.append(f'Kết quả học tập: {ct.diem_tong_ket}')
-        if ct.ket_qua_ren_luyen: parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+        if ct.muc_do_hoan_thanh:
+            parts.append(ct.muc_do_hoan_thanh)
+        if ct.diem_tong_ket:
+            parts.append(f'Kết quả học tập: {ct.diem_tong_ket}')
+        if ct.ket_qua_ren_luyen:
+            parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
         if ct.hinh_thuc_tot_nghiep:
             tn = [f'TN: {ct.hinh_thuc_tot_nghiep}']
             for attr, label in (
@@ -2079,11 +2140,14 @@ def export_word():
                 ('diem_tn_baove',      'Bảo vệ'),
             ):
                 val = getattr(ct, attr, None)
-                if val: tn.append(f'{label}: {val}')
+                if val:
+                    tn.append(f'{label}: {val}')
             parts.append(', '.join(tn))
-        if ct.mo_ta_khoa_hoc:          parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
-        if ct.thanh_tich_ca_nhan_khac: parts.append(ct.thanh_tich_ca_nhan_khac)
-        
+        if ct.mo_ta_khoa_hoc:
+            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
+        if ct.thanh_tich_ca_nhan_khac:
+            parts.append(ct.thanh_tich_ca_nhan_khac)
+        # Tiêu chí động của ban
         for f in criteria_fields:
             val = getattr(ct, f, None) or ''
             if val:
@@ -2093,6 +2157,7 @@ def export_word():
 
     # ── Hàm thêm bảng cá nhân ────────────────────────────────────────────────
     def add_personnel_table(doc, items, section_label, stt_start=1):
+        """Bảng 7 cột: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú"""
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(6)
         p.paragraph_format.space_after  = Pt(2)
@@ -2103,7 +2168,9 @@ def export_word():
             para_font(p2, '(Không có)', size=10, italic=True)
             return stt_start
 
+        # Widths: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú
         widths = [0.7, 3.5, 1.8, 2.2, 2.5, 5.0, 1.5]
+        
         tbl = doc.add_table(rows=1, cols=len(widths))
         set_fixed_table_widths(tbl, widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -2116,6 +2183,7 @@ def export_word():
             tblLayout = OxmlElement('w:tblLayout'); tblPr.append(tblLayout)
         tblLayout.set(qn('w:type'), 'autofit')
 
+        # tblGrid
         tblGrid = tbl._tbl.find(qn('w:tblGrid'))
         if tblGrid is not None:
             tbl._tbl.remove(tblGrid)
@@ -2126,6 +2194,7 @@ def export_word():
             gc.set(qn('w:w'), str(int(Cm(w) / 635)))
             tblGrid.append(gc)
 
+        # Chiều rộng từng cột
         for i, w in enumerate(widths):
             twips = int(Cm(w) / 635)
             tc    = tbl.rows[0].cells[i]._tc
@@ -2135,11 +2204,17 @@ def export_word():
                 tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
             tcW.set(qn('w:w'), str(twips)); tcW.set(qn('w:type'), 'dxa')
 
-        # Header row (Bỏ màu nền, bỏ màu chữ trắng)
-        headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
+        # Header row
+        headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
+                       'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
+        
         hrow = tbl.rows[0]
+
         for i, h in enumerate(headers_txt):
-            add_cell(hrow.cells[i], h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
+            run = add_cell(hrow.cells[i], h, bold=True, size=10,
+                           align=WD_ALIGN_PARAGRAPH.CENTER)
+            set_cell_shading(hrow.cells[i], '1B3A6B')
+            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
         set_repeat_table_header(hrow)
 
         # Data rows
@@ -2148,10 +2223,12 @@ def export_word():
             ct          = item['ct']
             don_vi      = item['don_vi']
             ket_qua_str = item['ket_qua_str']
-            
+            row_shading = item['row_shading']
+            kq_color    = item['kq_color']
+            # if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+            #     continue
             if ct.phong_loai == "Tuyên huấn":
                 continue
-                
             qn_obj  = ct.quan_nhan
             ho_ten  = qn_obj.ho_ten  if qn_obj else (ct.ten_don_vi_de_xuat or don_vi)
             cap_bac = qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else ''
@@ -2164,6 +2241,7 @@ def export_word():
             add_cell(row.cells[3], chuc_vu)
             add_cell(row.cells[4], don_vi)
 
+            # Cột Tóm tắt — mỗi tiêu chí 1 dòng
             tom_tat_list = build_tom_tat(ct)
             cell_tt = row.cells[5]
             cell_tt.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
@@ -2171,7 +2249,6 @@ def export_word():
             p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p_tt.paragraph_format.space_before = Pt(1)
             p_tt.paragraph_format.space_after  = Pt(1)
-            
             if tom_tat_list:
                 for idx_i, item_txt in enumerate(tom_tat_list):
                     if idx_i > 0:
@@ -2183,20 +2260,31 @@ def export_word():
             else:
                 set_font(p_tt.add_run('-'), size=10)
 
-            add_cell(row.cells[6], ket_qua_str, size=9, align=WD_ALIGN_PARAGRAPH.CENTER)
+            # Cột Ghi chú — hiện kết quả duyệt
+            run_kq = add_cell(row.cells[6], ket_qua_str, size=9,
+                              align=WD_ALIGN_PARAGRAPH.CENTER)
+            if kq_color:
+                run_kq.font.color.rgb = RGBColor(*kq_color)
+
+            if row_shading:
+                for c in row.cells:
+                    set_cell_shading(c, row_shading)
+
             stt += 1
 
-        # Dòng tổng (Bỏ màu nền)
+        # Dòng tổng
         sum_row = tbl.add_row()
         merged  = sum_row.cells[0]
         for i in range(1, len(widths)):
             merged = merged.merge(sum_row.cells[i])
         add_cell(merged, f'Tổng cộng: {stt - stt_start} người', bold=True, size=10)
+        set_cell_shading(merged, 'EEF2FF')
 
-        return stt
+        return stt  # trả về stt tiếp theo (nếu cần đánh số liên tục)
 
     # ── Hàm thêm bảng đơn vị ─────────────────────────────────────────────────
     def add_unit_table(doc, items, section_label):
+        """Bảng 3 cột: STT | Tên đơn vị | Ghi chú"""
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(6)
         p.paragraph_format.space_after  = Pt(2)
@@ -2207,7 +2295,8 @@ def export_word():
             para_font(p2, '(Không có)', size=10, italic=True)
             return
 
-        widths = [0.7, 2.5, 3.0, 10.0]
+        widths = [0.7, 2.5,3, 10.0]  # STT | Tên đơn vị | Ghi chú
+        
         tbl = doc.add_table(rows=1, cols=len(widths))
         set_fixed_table_widths(tbl, widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -2242,11 +2331,18 @@ def export_word():
         # Header row
         hrow = tbl.rows[0]
         for i, h in enumerate(['STT', 'Tên đơn vị','Đề xuất của đơn vị', 'Ghi chú']):
-            add_cell(hrow.cells[i], h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
+            run = add_cell(hrow.cells[i], h, bold=True, size=10,
+                           align=WD_ALIGN_PARAGRAPH.CENTER)
+            set_cell_shading(hrow.cells[i], '1B3A6B')
+            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
         set_repeat_table_header(hrow)
 
+        # Data rows
         for idx, item in enumerate(items, 1):
-            ct = item['ct']
+            ct          = item['ct']
+            ket_qua_str = item['ket_qua_str']
+            row_shading = item['row_shading']
+            kq_color    = item['kq_color']
             if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
                 continue
             ten_dv = (ct.ten_don_vi_de_xuat or item['don_vi'] or '-')
@@ -2254,6 +2350,8 @@ def export_word():
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
             add_cell(row.cells[1], ten_dv)
+           
+            
 
             cell = row.cells[2]
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
@@ -2269,7 +2367,9 @@ def export_word():
                 ma_truong_list = list(td.keys())
                 tieu_chi_map = {}
                 if ma_truong_list:
-                    tc_rows = _TieuChi.query.filter(_TieuChi.ma_truong.in_(ma_truong_list)).all()
+                    tc_rows = _TieuChi.query.filter(
+                        _TieuChi.ma_truong.in_(ma_truong_list)
+                    ).all()
                     tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
                 for key, val in td.items():
                     if val and str(val).strip() not in ('', '0', 'None'):
@@ -2282,23 +2382,30 @@ def export_word():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
 
             if criteria_list:
-                for idx_c, criteria_item in enumerate(criteria_list):
+                for idx_c, item in enumerate(criteria_list):
                     if idx_c > 0:
                         p = cell.add_paragraph()
                         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                         p.paragraph_format.space_before = Pt(1)
                         p.paragraph_format.space_after  = Pt(1)
-                    run = p.add_run(f'- {criteria_item}')
+                    run = p.add_run(f'- {item}')
                     set_font(run, size=10)
             else:
                 run = p.add_run('-')
                 set_font(run, size=10)
+                
 
+            if row_shading:
+                for c in row.cells:
+                    set_cell_shading(c, row_shading)
+
+        # Dòng tổng
         sum_row = tbl.add_row()
         merged  = sum_row.cells[0]
         for i in range(1, len(widths)):
             merged = merged.merge(sum_row.cells[i])
         add_cell(merged, f'Tổng cộng: {len(items)} đơn vị', bold=True, size=10)
+        set_cell_shading(merged, 'EEF2FF')
 
     # ═══════════════════════════════════════════════════════════════════════════
     # DOCUMENT SETUP
@@ -2308,9 +2415,9 @@ def export_word():
     PAGE_W_CM     = 21.0
     MARGIN_L      = 3.5
     MARGIN_R      = 1.5
-    PRINT_W_CM    = PAGE_W_CM - MARGIN_L - MARGIN_R
-    HEADER_W_CM   = PAGE_W_CM
-    OVERFLOW_EACH = (HEADER_W_CM - PRINT_W_CM) / 2
+    PRINT_W_CM    = PAGE_W_CM - MARGIN_L - MARGIN_R   # 16.0
+    HEADER_W_CM   = PAGE_W_CM                          # 21.0
+    OVERFLOW_EACH = (HEADER_W_CM - PRINT_W_CM) / 2    # 2.5
     LEFT_CM       = 9.5
     RIGHT_CM      = 11.5
 
@@ -2320,6 +2427,7 @@ def export_word():
         section.left_margin   = Cm(MARGIN_L)
         section.right_margin  = Cm(MARGIN_R)
 
+    # ── Header Quốc hiệu ─────────────────────────────────────────────────────
     tbl_header = doc.add_table(rows=1, cols=2)
     tbl_header.alignment = WD_TABLE_ALIGNMENT.CENTER
     tbl_header.autofit   = False
@@ -2409,18 +2517,27 @@ def export_word():
     # ═══════════════════════════════════════════════════════════════════════════
     # 4 MỤC THEO DANH HIỆU
     # ═══════════════════════════════════════════════════════════════════════════
-    add_unit_table(doc, ds_don_vi_qt, 'I. DANH HIỆU ĐƠN VỊ QUYẾT THẮNG')
-    add_unit_table(doc, ds_don_vi_tt, 'II. DANH HIỆU ĐƠN VỊ TIÊN TIẾN')
-    add_personnel_table(doc, ds_ca_nhan_td, 'III. DANH HIỆU CHIẾN SĨ THI ĐUA')
-    add_personnel_table(doc, ds_ca_nhan_tt, 'IV. DANH HIỆU CHIẾN SĨ TIÊN TIẾN')
+    add_unit_table(doc, ds_don_vi_qt,
+                   'I. DANH HIỆU ĐƠN VỊ QUYẾT THẮNG')
+
+    add_unit_table(doc, ds_don_vi_tt,
+                   'II. DANH HIỆU ĐƠN VỊ TIÊN TIẾN')
+
+    add_personnel_table(doc, ds_ca_nhan_td,
+                        'III. DANH HIỆU CHIẾN SĨ THI ĐUA')
+
+    add_personnel_table(doc, ds_ca_nhan_tt,
+                        'IV. DANH HIỆU CHIẾN SĨ TIÊN TIẾN')
 
     # ── Footer ────────────────────────────────────────────────────────────────
     p_foot = doc.add_paragraph()
     p_foot.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    r_foot = p_foot.add_run(f'(Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})')
-    r_foot.font.size   = Pt(9)
-    r_foot.font.italic = True
-    
+    r_foot = p_foot.add_run(
+        f'(Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})'
+    )
+    r_foot.font.size      = Pt(9)
+    r_foot.font.italic    = True
+    r_foot.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
     # --- Ký tên ---
     doc.add_paragraph()
     tbl_sign = doc.add_table(rows=1, cols=2)
@@ -2437,25 +2554,28 @@ def export_word():
     left_sign = tbl_sign.rows[0].cells[0]
     right_sign = tbl_sign.rows[0].cells[1]
 
+    # Ký xác nhận bên trái
     p_sl = left_sign.paragraphs[0]
     p_sl.alignment = WD_ALIGN_PARAGRAPH.CENTER
+   # para_font(p_sl, 'XÁC NHẬN CỦA CẤP TRÊN', bold=True, size=11)
     left_sign.add_paragraph()
     left_sign.add_paragraph()
     left_sign.add_paragraph()
 
+    # Ký đơn vị bên phải
+    # Ký đơn vị bên phải
     p_sr = right_sign.paragraphs[0]
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
     para_font(p_sr, 'THỦ TRƯỞNG ĐƠN VỊ', bold=True, size=11, align=WD_ALIGN_PARAGRAPH.CENTER)
     
     p_sr2 = right_sign.add_paragraph()
+    # Sửa ở đây: Truyền thẳng tham số align vào para_font
     para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True, align=WD_ALIGN_PARAGRAPH.CENTER)
-    
     try:
         protect_document_formatting_only(doc, 'bth123')
     except Exception:
         pass
-    
     add_corner_logo(doc)
-    
     # ── Xuất file ─────────────────────────────────────────────────────────────
     buf = BytesIO()
     doc.save(buf)

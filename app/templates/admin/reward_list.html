@@ -317,9 +317,10 @@ document.querySelector('[data-bs-target="#bang1Body"]').addEventListener('hidden
             <a href="{{ url_for('admin.export_bang2_excel') }}" class="btn btn-sm btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
-            <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBang2','Bảng 2 – Xét duyệt Hội đồng')">
-                <i class="bi bi-printer me-1"></i>In PDF
-            </button>
+             <a href="{{ url_for('admin.export_bang2_word') }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-excel me-1"></i>Xuất Word
+            </a>
+           
         </div>
     </div>
     <div class="card-body-custom py-2">
