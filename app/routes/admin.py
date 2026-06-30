@@ -2887,7 +2887,9 @@ def export_tracking_word():
         for ct, dx in items:
             qn_obj  = ct.quan_nhan
             trang_thai = dx.trang_thai
-            if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+            # if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+            #     continue
+            if ct.phong_loai == "Tuyên huấn":
                 continue
             if ct.id in approved_ct_ids:
                 trang_thai = 'Đã khen thưởng'
@@ -3548,7 +3550,9 @@ def export_tracking_word_less():
         for ct, dx in items:
             qn_obj  = ct.quan_nhan
             trang_thai = dx.trang_thai
-            if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+            # if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+            #     continue
+            if ct.phong_loai == "Tuyên huấn":
                 continue
             if ct.id in approved_ct_ids:
                 trang_thai = 'Đã khen thưởng'

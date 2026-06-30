@@ -159,7 +159,7 @@ class DeXuat(db.Model):
     def chi_tiets_active(self):
         """Chi_tiets still in the approval process (not removed by a rejecting department)."""
         #return [c for c in self.chi_tiets if not c.bi_loai]
-        return [c for c in self.chi_tiets]
+        return [c for c in self.chi_tiets if  c.phong_loai != 'Tuyên huấn']
    
     @property
     def approval_progress(self):
