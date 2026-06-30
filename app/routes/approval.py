@@ -1893,25 +1893,28 @@ def export_excel():
 @login_required
 @department_required
 def export_word():
-    """Export danh sách phê duyệt khen thưởng ra Word — 4 mục theo danh hiệu."""
+    """Export danh sách phê duyệt khen thưởng ra Word — 4 mục theo danh hiệu (Bản tốc độ cao, tối giản)."""
     from io import BytesIO
     from datetime import date, datetime
     from docx import Document
-    from docx.shared import Cm, Pt, RGBColor
+    from docx.shared import Cm, Pt
     from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
+    from sqlalchemy.orm import joinedload # Gợi ý thêm để chống N+1 query
 
     db.session.expire_all()
 
     phong_name     = ROLE_TO_PHONG.get(current_user.role, '')
     nam_hoc_filter = request.args.get('nam_hoc', '')
 
-    # ── Query ─────────────────────────────────────────────────────────────────
+    # ── Query (Khuyến nghị thêm joinedload để tăng tốc truy xuất DB) ──────────
     q = PheDuyet.query.filter_by(phong_duyet=phong_name, ket_qua=KetQuaDuyet.CHO_DUYET.value)
     if nam_hoc_filter:
         q = q.join(DeXuat, PheDuyet.de_xuat_id == DeXuat.id).filter(DeXuat.nam_hoc == nam_hoc_filter)
+    
+    # Tối ưu DB: Nếu có thể, hãy thêm options(joinedload(PheDuyet.de_xuat)...) vào đây
     pending_reviews = q.order_by(PheDuyet.created_at.desc()).all()
 
     # Out-of-scope
@@ -1932,7 +1935,6 @@ def export_word():
     criteria_fields  = phong_fields_map.get(current_user.role, [])
 
     # ── Phân loại chi tiết theo danh hiệu ────────────────────────────────────
-    # Mỗi item: dict {ct, pd, don_vi, kq, ket_qua_str, row_shading, kq_color}
     ds_don_vi_qt  = []   # Đơn vị quyết thắng
     ds_don_vi_tt  = []   # Đơn vị tiên tiến
     ds_ca_nhan_td = []   # Chiến sĩ thi đua
@@ -1942,6 +1944,7 @@ def export_word():
     for pd in pending_reviews:
         results = all_item_results.get(pd.id, {})
         don_vi  = pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else ''
+        
         for ct in pd.de_xuat.chi_tiets:
             if ct.id in out_of_scope_ct_ids or ct.id in seen_ids:
                 continue
@@ -1951,24 +1954,14 @@ def export_word():
             if kq:
                 if kq.ket_qua == KetQuaDuyet.DONG_Y.value:
                     ket_qua_str = 'Nhất trí'
-                    row_shading = 'D4EDDA'
-                    kq_color    = (0x15, 0x57, 0x24)
                 elif kq.ket_qua == KetQuaDuyet.TU_CHOI.value:
                     ket_qua_str = f'Không NT: {kq.ly_do or ""}'
-                    row_shading = 'F8D7DA'
-                    kq_color    = (0x72, 0x1C, 0x24)
                 else:
                     ket_qua_str = 'Chờ duyệt'
-                    row_shading = None
-                    kq_color    = None
             else:
                 ket_qua_str = 'Chờ duyệt'
-                row_shading = None
-                kq_color    = None
 
-            item = dict(ct=ct, pd=pd, don_vi=don_vi,
-                        kq=kq, ket_qua_str=ket_qua_str,
-                        row_shading=row_shading, kq_color=kq_color)
+            item = dict(ct=ct, pd=pd, don_vi=don_vi, kq=kq, ket_qua_str=ket_qua_str)
 
             dh = (ct.loai_danh_hieu or '').strip()
             if dh == 'Đơn vị quyết thắng':
@@ -1979,44 +1972,31 @@ def export_word():
                 ds_ca_nhan_td.append(item)
             elif dh == 'Chiến sĩ tiên tiến':
                 ds_ca_nhan_tt.append(item)
-            # Bỏ qua danh hiệu khác (hoặc thêm ds_khac nếu cần)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPERS
     # ═══════════════════════════════════════════════════════════════════════════
-    def set_font(run, bold=False, size=11, italic=False, color=None):
+    def set_font(run, bold=False, size=11, italic=False):
         run.bold       = bold
         run.italic     = italic
         run.font.size  = Pt(size)
         run.font.name  = 'Times New Roman'
-        if color:
-            run.font.color.rgb = RGBColor(*color)
 
-    def para_font(para, text, bold=False, size=11,
-                  align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
+    def para_font(para, text, bold=False, size=11, align=WD_ALIGN_PARAGRAPH.LEFT, italic=False):
         para.alignment = align
         run = para.add_run(text)
         set_font(run, bold=bold, size=size, italic=italic)
         return run
 
-    def add_cell(cell, text, bold=False, size=10,
-                 align=WD_ALIGN_PARAGRAPH.LEFT, color=None):
+    def add_cell(cell, text, bold=False, size=10, align=WD_ALIGN_PARAGRAPH.LEFT):
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
         p.alignment = align
         p.paragraph_format.space_before = Pt(1)
         p.paragraph_format.space_after  = Pt(1)
         run = p.add_run(str(text) if text is not None else '')
-        set_font(run, bold=bold, size=size, color=color)
+        set_font(run, bold=bold, size=size)
         return run
-
-    def set_cell_shading(cell, hex_color):
-        tcPr = cell._tc.get_or_add_tcPr()
-        shd  = OxmlElement('w:shd')
-        shd.set(qn('w:val'),   'clear')
-        shd.set(qn('w:color'), 'auto')
-        shd.set(qn('w:fill'),  hex_color)
-        tcPr.append(shd)
 
     def set_repeat_table_header(row):
         tr   = row._tr
@@ -2089,14 +2069,10 @@ def export_word():
         return p
 
     def build_tom_tat(ct):
-        """Tóm tắt thành tích — trả về list, mỗi tiêu chí 1 dòng."""
         parts = []
-        if ct.muc_do_hoan_thanh:
-            parts.append(ct.muc_do_hoan_thanh)
-        if ct.diem_tong_ket:
-            parts.append(f'Kết quả học tập: {ct.diem_tong_ket}')
-        if ct.ket_qua_ren_luyen:
-            parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+        if ct.muc_do_hoan_thanh: parts.append(ct.muc_do_hoan_thanh)
+        if ct.diem_tong_ket:     parts.append(f'Kết quả học tập: {ct.diem_tong_ket}')
+        if ct.ket_qua_ren_luyen: parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
         if ct.hinh_thuc_tot_nghiep:
             tn = [f'TN: {ct.hinh_thuc_tot_nghiep}']
             for attr, label in (
@@ -2108,14 +2084,11 @@ def export_word():
                 ('diem_tn_baove',      'Bảo vệ'),
             ):
                 val = getattr(ct, attr, None)
-                if val:
-                    tn.append(f'{label}: {val}')
+                if val: tn.append(f'{label}: {val}')
             parts.append(', '.join(tn))
-        if ct.mo_ta_khoa_hoc:
-            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
-        if ct.thanh_tich_ca_nhan_khac:
-            parts.append(ct.thanh_tich_ca_nhan_khac)
-        # Tiêu chí động của ban
+        if ct.mo_ta_khoa_hoc:          parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
+        if ct.thanh_tich_ca_nhan_khac: parts.append(ct.thanh_tich_ca_nhan_khac)
+        
         for f in criteria_fields:
             val = getattr(ct, f, None) or ''
             if val:
@@ -2125,7 +2098,6 @@ def export_word():
 
     # ── Hàm thêm bảng cá nhân ────────────────────────────────────────────────
     def add_personnel_table(doc, items, section_label, stt_start=1):
-        """Bảng 7 cột: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú"""
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(6)
         p.paragraph_format.space_after  = Pt(2)
@@ -2136,9 +2108,7 @@ def export_word():
             para_font(p2, '(Không có)', size=10, italic=True)
             return stt_start
 
-        # Widths: STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú
         widths = [0.7, 3.5, 1.8, 2.2, 2.5, 5.0, 1.5]
-        
         tbl = doc.add_table(rows=1, cols=len(widths))
         set_fixed_table_widths(tbl, widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -2151,7 +2121,6 @@ def export_word():
             tblLayout = OxmlElement('w:tblLayout'); tblPr.append(tblLayout)
         tblLayout.set(qn('w:type'), 'autofit')
 
-        # tblGrid
         tblGrid = tbl._tbl.find(qn('w:tblGrid'))
         if tblGrid is not None:
             tbl._tbl.remove(tblGrid)
@@ -2162,7 +2131,6 @@ def export_word():
             gc.set(qn('w:w'), str(int(Cm(w) / 635)))
             tblGrid.append(gc)
 
-        # Chiều rộng từng cột
         for i, w in enumerate(widths):
             twips = int(Cm(w) / 635)
             tc    = tbl.rows[0].cells[i]._tc
@@ -2172,17 +2140,11 @@ def export_word():
                 tcW = OxmlElement('w:tcW'); tcPr.append(tcW)
             tcW.set(qn('w:w'), str(twips)); tcW.set(qn('w:type'), 'dxa')
 
-        # Header row
-        headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
-                       'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
-        
+        # Header row (Bỏ màu nền, bỏ màu chữ trắng)
+        headers_txt = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
         hrow = tbl.rows[0]
-
         for i, h in enumerate(headers_txt):
-            run = add_cell(hrow.cells[i], h, bold=True, size=10,
-                           align=WD_ALIGN_PARAGRAPH.CENTER)
-            set_cell_shading(hrow.cells[i], '1B3A6B')
-            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+            add_cell(hrow.cells[i], h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
         set_repeat_table_header(hrow)
 
         # Data rows
@@ -2191,10 +2153,10 @@ def export_word():
             ct          = item['ct']
             don_vi      = item['don_vi']
             ket_qua_str = item['ket_qua_str']
-            row_shading = item['row_shading']
-            kq_color    = item['kq_color']
-            if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
+            
+            if ct.phong_loai == "Tuyên huấn":
                 continue
+                
             qn_obj  = ct.quan_nhan
             ho_ten  = qn_obj.ho_ten  if qn_obj else (ct.ten_don_vi_de_xuat or don_vi)
             cap_bac = qn_obj.cap_bac if qn_obj and qn_obj.cap_bac else ''
@@ -2207,7 +2169,6 @@ def export_word():
             add_cell(row.cells[3], chuc_vu)
             add_cell(row.cells[4], don_vi)
 
-            # Cột Tóm tắt — mỗi tiêu chí 1 dòng
             tom_tat_list = build_tom_tat(ct)
             cell_tt = row.cells[5]
             cell_tt.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
@@ -2215,6 +2176,7 @@ def export_word():
             p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p_tt.paragraph_format.space_before = Pt(1)
             p_tt.paragraph_format.space_after  = Pt(1)
+            
             if tom_tat_list:
                 for idx_i, item_txt in enumerate(tom_tat_list):
                     if idx_i > 0:
@@ -2226,31 +2188,20 @@ def export_word():
             else:
                 set_font(p_tt.add_run('-'), size=10)
 
-            # Cột Ghi chú — hiện kết quả duyệt
-            run_kq = add_cell(row.cells[6], ket_qua_str, size=9,
-                              align=WD_ALIGN_PARAGRAPH.CENTER)
-            if kq_color:
-                run_kq.font.color.rgb = RGBColor(*kq_color)
-
-            if row_shading:
-                for c in row.cells:
-                    set_cell_shading(c, row_shading)
-
+            add_cell(row.cells[6], ket_qua_str, size=9, align=WD_ALIGN_PARAGRAPH.CENTER)
             stt += 1
 
-        # Dòng tổng
+        # Dòng tổng (Bỏ màu nền)
         sum_row = tbl.add_row()
         merged  = sum_row.cells[0]
         for i in range(1, len(widths)):
             merged = merged.merge(sum_row.cells[i])
         add_cell(merged, f'Tổng cộng: {stt - stt_start} người', bold=True, size=10)
-        set_cell_shading(merged, 'EEF2FF')
 
-        return stt  # trả về stt tiếp theo (nếu cần đánh số liên tục)
+        return stt
 
     # ── Hàm thêm bảng đơn vị ─────────────────────────────────────────────────
     def add_unit_table(doc, items, section_label):
-        """Bảng 3 cột: STT | Tên đơn vị | Ghi chú"""
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(6)
         p.paragraph_format.space_after  = Pt(2)
@@ -2261,8 +2212,7 @@ def export_word():
             para_font(p2, '(Không có)', size=10, italic=True)
             return
 
-        widths = [0.7, 2.5,3, 10.0]  # STT | Tên đơn vị | Ghi chú
-        
+        widths = [0.7, 2.5, 3.0, 10.0]
         tbl = doc.add_table(rows=1, cols=len(widths))
         set_fixed_table_widths(tbl, widths)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -2297,18 +2247,11 @@ def export_word():
         # Header row
         hrow = tbl.rows[0]
         for i, h in enumerate(['STT', 'Tên đơn vị','Đề xuất của đơn vị', 'Ghi chú']):
-            run = add_cell(hrow.cells[i], h, bold=True, size=10,
-                           align=WD_ALIGN_PARAGRAPH.CENTER)
-            set_cell_shading(hrow.cells[i], '1B3A6B')
-            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+            add_cell(hrow.cells[i], h, bold=True, size=10, align=WD_ALIGN_PARAGRAPH.CENTER)
         set_repeat_table_header(hrow)
 
-        # Data rows
         for idx, item in enumerate(items, 1):
-            ct          = item['ct']
-            ket_qua_str = item['ket_qua_str']
-            row_shading = item['row_shading']
-            kq_color    = item['kq_color']
+            ct = item['ct']
             if ct.bi_loai == True or ct.trang_thai == TrangThaiChiTiet.TU_CHOI:
                 continue
             ten_dv = (ct.ten_don_vi_de_xuat or item['don_vi'] or '-')
@@ -2316,8 +2259,6 @@ def export_word():
             row = tbl.add_row()
             add_cell(row.cells[0], str(idx), align=WD_ALIGN_PARAGRAPH.CENTER)
             add_cell(row.cells[1], ten_dv)
-           
-            
 
             cell = row.cells[2]
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
@@ -2333,9 +2274,7 @@ def export_word():
                 ma_truong_list = list(td.keys())
                 tieu_chi_map = {}
                 if ma_truong_list:
-                    tc_rows = _TieuChi.query.filter(
-                        _TieuChi.ma_truong.in_(ma_truong_list)
-                    ).all()
+                    tc_rows = _TieuChi.query.filter(_TieuChi.ma_truong.in_(ma_truong_list)).all()
                     tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
                 for key, val in td.items():
                     if val and str(val).strip() not in ('', '0', 'None'):
@@ -2348,30 +2287,23 @@ def export_word():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
 
             if criteria_list:
-                for idx_c, item in enumerate(criteria_list):
+                for idx_c, criteria_item in enumerate(criteria_list):
                     if idx_c > 0:
                         p = cell.add_paragraph()
                         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                         p.paragraph_format.space_before = Pt(1)
                         p.paragraph_format.space_after  = Pt(1)
-                    run = p.add_run(f'- {item}')
+                    run = p.add_run(f'- {criteria_item}')
                     set_font(run, size=10)
             else:
                 run = p.add_run('-')
                 set_font(run, size=10)
-                
 
-            if row_shading:
-                for c in row.cells:
-                    set_cell_shading(c, row_shading)
-
-        # Dòng tổng
         sum_row = tbl.add_row()
         merged  = sum_row.cells[0]
         for i in range(1, len(widths)):
             merged = merged.merge(sum_row.cells[i])
         add_cell(merged, f'Tổng cộng: {len(items)} đơn vị', bold=True, size=10)
-        set_cell_shading(merged, 'EEF2FF')
 
     # ═══════════════════════════════════════════════════════════════════════════
     # DOCUMENT SETUP
@@ -2381,9 +2313,9 @@ def export_word():
     PAGE_W_CM     = 21.0
     MARGIN_L      = 3.5
     MARGIN_R      = 1.5
-    PRINT_W_CM    = PAGE_W_CM - MARGIN_L - MARGIN_R   # 16.0
-    HEADER_W_CM   = PAGE_W_CM                          # 21.0
-    OVERFLOW_EACH = (HEADER_W_CM - PRINT_W_CM) / 2    # 2.5
+    PRINT_W_CM    = PAGE_W_CM - MARGIN_L - MARGIN_R
+    HEADER_W_CM   = PAGE_W_CM
+    OVERFLOW_EACH = (HEADER_W_CM - PRINT_W_CM) / 2
     LEFT_CM       = 9.5
     RIGHT_CM      = 11.5
 
@@ -2393,7 +2325,6 @@ def export_word():
         section.left_margin   = Cm(MARGIN_L)
         section.right_margin  = Cm(MARGIN_R)
 
-    # ── Header Quốc hiệu ─────────────────────────────────────────────────────
     tbl_header = doc.add_table(rows=1, cols=2)
     tbl_header.alignment = WD_TABLE_ALIGNMENT.CENTER
     tbl_header.autofit   = False
@@ -2483,27 +2414,18 @@ def export_word():
     # ═══════════════════════════════════════════════════════════════════════════
     # 4 MỤC THEO DANH HIỆU
     # ═══════════════════════════════════════════════════════════════════════════
-    add_unit_table(doc, ds_don_vi_qt,
-                   'I. DANH HIỆU ĐƠN VỊ QUYẾT THẮNG')
-
-    add_unit_table(doc, ds_don_vi_tt,
-                   'II. DANH HIỆU ĐƠN VỊ TIÊN TIẾN')
-
-    add_personnel_table(doc, ds_ca_nhan_td,
-                        'III. DANH HIỆU CHIẾN SĨ THI ĐUA')
-
-    add_personnel_table(doc, ds_ca_nhan_tt,
-                        'IV. DANH HIỆU CHIẾN SĨ TIÊN TIẾN')
+    add_unit_table(doc, ds_don_vi_qt, 'I. DANH HIỆU ĐƠN VỊ QUYẾT THẮNG')
+    add_unit_table(doc, ds_don_vi_tt, 'II. DANH HIỆU ĐƠN VỊ TIÊN TIẾN')
+    add_personnel_table(doc, ds_ca_nhan_td, 'III. DANH HIỆU CHIẾN SĨ THI ĐUA')
+    add_personnel_table(doc, ds_ca_nhan_tt, 'IV. DANH HIỆU CHIẾN SĨ TIÊN TIẾN')
 
     # ── Footer ────────────────────────────────────────────────────────────────
     p_foot = doc.add_paragraph()
     p_foot.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    r_foot = p_foot.add_run(
-        f'(Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})'
-    )
-    r_foot.font.size      = Pt(9)
-    r_foot.font.italic    = True
-    r_foot.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+    r_foot = p_foot.add_run(f'(Xuất lúc {datetime.now().strftime("%H:%M ngày %d/%m/%Y")})')
+    r_foot.font.size   = Pt(9)
+    r_foot.font.italic = True
+    
     # --- Ký tên ---
     doc.add_paragraph()
     tbl_sign = doc.add_table(rows=1, cols=2)
@@ -2520,28 +2442,25 @@ def export_word():
     left_sign = tbl_sign.rows[0].cells[0]
     right_sign = tbl_sign.rows[0].cells[1]
 
-    # Ký xác nhận bên trái
     p_sl = left_sign.paragraphs[0]
     p_sl.alignment = WD_ALIGN_PARAGRAPH.CENTER
-   # para_font(p_sl, 'XÁC NHẬN CỦA CẤP TRÊN', bold=True, size=11)
     left_sign.add_paragraph()
     left_sign.add_paragraph()
     left_sign.add_paragraph()
 
-    # Ký đơn vị bên phải
-    # Ký đơn vị bên phải
     p_sr = right_sign.paragraphs[0]
-    # Sửa ở đây: Truyền thẳng tham số align vào para_font
     para_font(p_sr, 'THỦ TRƯỞNG ĐƠN VỊ', bold=True, size=11, align=WD_ALIGN_PARAGRAPH.CENTER)
     
     p_sr2 = right_sign.add_paragraph()
-    # Sửa ở đây: Truyền thẳng tham số align vào para_font
     para_font(p_sr2, '(Ký, ghi rõ họ tên)', size=10, italic=True, align=WD_ALIGN_PARAGRAPH.CENTER)
+    
     try:
         protect_document_formatting_only(doc, 'bth123')
     except Exception:
         pass
+    
     add_corner_logo(doc)
+    
     # ── Xuất file ─────────────────────────────────────────────────────────────
     buf = BytesIO()
     doc.save(buf)

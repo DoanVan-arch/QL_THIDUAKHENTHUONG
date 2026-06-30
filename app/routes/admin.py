@@ -416,6 +416,7 @@ def approval_tracking():
 
         for ct in dx.chi_tiets:
             is_tap_the = ct.ten_don_vi_de_xuat is not None or ct.quan_nhan_id is None
+            
             if ct.phong_loai == "Tuyên huấn": continue
           #  if ct.bi_loai:                                          continue
           #  if ct.id in approved_ct_ids:                           continue
