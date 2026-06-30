@@ -714,8 +714,8 @@ def pending_list():
     for pd in pending_reviews:
         existing_ct_ids = {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
         for ct in pd.de_xuat.chi_tiets:
-            if ct.bi_loai or ct.trang_thai == TrangThaiChiTiet.TU_CHOI.value:
-                continue
+            # if ct.bi_loai or ct.trang_thai == TrangThaiChiTiet.TU_CHOI.value:
+            #     continue
             if ct.id not in existing_ct_ids:
                 in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
                 if phong_name != PhongDuyet.PHONG_HAUCANKYTHUAT.value and phong_name != PhongDuyet.BAN_SAUDAIHOC.value:

@@ -3587,7 +3587,7 @@ def export_tracking_word_less():
                         p_tt.alignment = WD_ALIGN_PARAGRAPH.LEFT
                         p_tt.paragraph_format.space_before = Pt(1)
                         p_tt.paragraph_format.space_after  = Pt(1)
-                    set_font(p_tt.add_run(f' {part}'), size=10)
+                    set_font(p_tt.add_run(f' {part} ;'), size=10)
             else:
                 set_font(p_tt.add_run(';'), size=10)
 
