@@ -4413,6 +4413,12 @@ def export_pending_final_word():
         headers={'Content-Disposition': 'attachment; filename=danh_sach_cho_phe_duyet_cuoi.doc'}
     )
 
+@admin_bp.route('/reward-list/bang2/export-excel')
+@login_required
+@admin_or_reward_viewer_required
+def export_bang2_word():
+    # Implementation for exporting to Word
+    pass
 
 @admin_bp.route('/reward-list/bang2/export-excel')
 @login_required
