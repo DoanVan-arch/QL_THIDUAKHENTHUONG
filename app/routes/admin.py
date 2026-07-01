@@ -3162,7 +3162,7 @@ def export_tracking_word():
     # ★ Set cookie để FE biết file đã sẵn sàng → ẩn loading overlay
     response.set_cookie(
         'export_done', '1',
-        max_age=300,          # tự hết hạn sau 30s
+        max_age=600,          # tự hết hạn sau 30s
         httponly=False,      # FE cần đọc được
         samesite='Lax',
         path='/'
@@ -3834,7 +3834,7 @@ def export_tracking_word_less():
     # ★ Set cookie để FE biết file đã sẵn sàng → ẩn loading overlay
     response.set_cookie(
         'export_done', '1',
-        max_age=300,          # tự hết hạn sau 30s
+        max_age=600,          # tự hết hạn sau 10 phút
         httponly=False,      # FE cần đọc được
         samesite='Lax',
         path='/'
