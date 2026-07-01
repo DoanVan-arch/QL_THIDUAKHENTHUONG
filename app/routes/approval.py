@@ -2302,8 +2302,8 @@ def export_word():
                 _lock_cell_width(row.cells[i], w)
 
             add_cell(row.cells[0], str(valid_idx), align=WD_ALIGN_PARAGRAPH.CENTER)
-            add_cell(row.cells[1], ct.ten_don_vi_de_xuat or item['don_vi'] or '-')
-
+            add_cell(row.cells[2], ct.ten_don_vi_de_xuat or item['don_vi'] or '-')
+            add_cell(row.cells[1], item['don_vi']  or '-')
             # Cột đề xuất — dùng tieu_chi_map đã load sẵn
             criteria_list = []
             td = ct.tap_the_dict or {}
@@ -2315,7 +2315,7 @@ def export_word():
             if ct.ghi_chu and ct.ghi_chu.strip():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
 
-            _fill_multiline_cell(row.cells[2], criteria_list)
+            _fill_multiline_cell(row.cells[4], criteria_list)
             add_cell(row.cells[3], item['ket_qua_str'], size=9,
                      align=WD_ALIGN_PARAGRAPH.CENTER)
             valid_idx += 1
