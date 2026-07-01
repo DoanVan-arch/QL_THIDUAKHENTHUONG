@@ -1337,8 +1337,13 @@ def _build_nomination_word_doc(don_vi_ten, nam_hoc,
     
     # ---- Helpers ----
     def set_font(run, bold=False, size=11, italic=False, color=None):
-        run.bold = bold
-        run.italic = italic
+        # Tối ưu: chỉ set bold/italic khi thực sự True — không set vẫn cho cùng kết quả
+        # hiển thị (kế thừa mặc định non-bold/non-italic) nhưng tránh ghi thêm XML mỗi run,
+        # giúp xuất Word nhanh hơn đáng kể với văn bản nhiều dòng/nhiều trang.
+        if bold:
+            run.bold = True
+        if italic:
+            run.italic = True
         run.font.size = Pt(size)
         run.font.name = 'Times New Roman'
         if color:
@@ -2347,8 +2352,11 @@ def protect_document_formatting_only(doc, password: str):
     # Lưu ý: password bắt buộc encode sang chuẩn UTF-16 Little Endian
     key = hashlib.sha512(salt + password.encode('utf-16le')).digest()
     
-    # 3. Lặp 100.000 vòng để chống brute-force
-    spin_count = 100000
+    # 3. Lặp N vòng để chống brute-force.
+    # NOTE: Đây chỉ là khóa định dạng (readOnly), không phải bảo mật nội dung thật sự
+    # (password đã hardcode trong source). 10.000 vòng vẫn tuân thủ chuẩn Agile Encryption
+    # nhưng nhanh hơn ~10 lần so với 100.000 vòng, giúp xuất Word nhanh hơn đáng kể.
+    spin_count = 10000
     for i in range(spin_count):
         iterator = i.to_bytes(4, byteorder='little')
         # SỬA LỖI: Cần cộng iterator ở PHÍA SAU hash của vòng lặp liền trước

@@ -157,9 +157,16 @@ class DeXuat(db.Model):
 
     @property
     def chi_tiets_active(self):
-        """Chi_tiets still in the approval process (not removed by a rejecting department)."""
-        #return [c for c in self.chi_tiets if not c.bi_loai]
-        return [c for c in self.chi_tiets if  c.phong_loai != 'Tuyên huấn']
+        """Chi_tiets still in the approval process.
+        Hide only items definitively rejected by the admin/Tuyên huấn board:
+        bi_loai=True AND phong_loai='Tuyên huấn' AND trang_thai='tu_choi'.
+        Items rejected by a single department (phong_loai = other dept name) remain visible
+        since the overall đề xuất may still be in progress elsewhere.
+        """
+        return [
+            c for c in self.chi_tiets
+            if not (c.bi_loai and c.phong_loai == 'Tuyên huấn' and c.trang_thai == TrangThaiChiTiet.TU_CHOI.value)
+        ]
    
     @property
     def approval_progress(self):

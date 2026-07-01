@@ -416,10 +416,9 @@ def approval_tracking():
 
         for ct in dx.chi_tiets:
             is_tap_the = ct.ten_don_vi_de_xuat is not None or ct.quan_nhan_id is None
-            if ct.phong_loai == "Tuyên huấn": continue
-          #  if ct.bi_loai:                                          continue
-          #  if ct.id in approved_ct_ids:                           continue
-          #  if ct.admin_approved:                                   continue
+            # Chỉ ẩn khi bị từ chối dứt điểm bởi Hội đồng/Tuyên huấn (không ẩn nếu chỉ 1 phòng ban từ chối)
+            if ct.bi_loai and ct.phong_loai == "Tuyên huấn" and ct.trang_thai == TrangThaiChiTiet.TU_CHOI.value:
+                continue
             if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter: continue
 
             if not is_tap_the:

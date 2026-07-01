@@ -234,11 +234,12 @@
                         <td class="col-doi-tuong"><small>{{ ct.doi_tuong or '-' }}</small></td>
                         <td class="col-lop"><small>{{ ct.quan_nhan.lop or '-' }}</small></td>
                         
+                        {% set ct_fd = ct_fields_map.get(ct.id, {}) if ct_fields_map is defined else {} %}
                         {% for field in display_fields %}
                         <td class="col-criteria" data-col-key="cn_{{ field }}">
                             {% if field in field_conditions and ct.doi_tuong not in field_conditions[field] %}<small class="text-muted">-</small>
-                            {% elif field == 'nckh_noi_dung' %}{% set val = ct|attr(field) %}{% if val %}<small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
-                            {% else %}{% set val = ct|attr(field) %}{% if val %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}{% endif %}
+                            {% elif field == 'nckh_noi_dung' %}{% set val = ct_fd.get(field) %}{% if val %}<small class="text-truncate d-inline-block" style="max-width:150px;" title="{{ val }}">{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
+                            {% else %}{% set val = ct_fd.get(field) %}{% if val %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}{% endif %}
                         </td>
                         {% endfor %}
                         {% if show_evidence %}
@@ -255,7 +256,7 @@
                         {% if is_ttr_role %}
                             {% for gdept in gate_dept_fields %}{% for field in gdept.fields %}
                             <td class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}">
-                                {% set val = ct|attr(field) if ct|attr(field) is defined else None %}
+                                {% set val = ct_fd.get(field) %}
                                 {% if val is not none and val != '' %}<small>{{ val }}</small>{% else %}<small class="text-muted">-</small>{% endif %}
                             </td>
                             {% endfor %}{% endfor %}
