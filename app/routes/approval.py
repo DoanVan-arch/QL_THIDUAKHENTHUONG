@@ -2316,8 +2316,8 @@ def export_word():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
 
             _fill_multiline_cell(row.cells[3], criteria_list)
-            add_cell(row.cells[3], item['ket_qua_str'], size=9,
-                     align=WD_ALIGN_PARAGRAPH.CENTER)
+            # add_cell(row.cells[3], item['ket_qua_str'], size=9,
+            #          align=WD_ALIGN_PARAGRAPH.CENTER)
             valid_idx += 1
 
         _add_total_row(tbl, widths, f'Tổng cộng: {valid_idx - 1} đơn vị')
