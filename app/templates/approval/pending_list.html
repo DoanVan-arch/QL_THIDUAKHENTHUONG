@@ -1576,11 +1576,20 @@ function openDetailModal(ctId) {
         _pollTimer = setInterval(checkDone, 600);
     }
 
-    function hideOverlay() {
-        progressBar.style.width = '100%';
-        progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped', 'bg-primary');
-        progressBar.classList.add('bg-success');
-        stepEl.textContent = '✓ Hoàn thành! Đang tải xuống...';
+    function hideOverlay(success) {
+        // success=false: bị timeout an toàn (90s) trước khi nhận được cookie xác nhận —
+        // KHÔNG được hiển thị "Hoàn thành" giả, vì request rất có thể đã lỗi/chưa xong thật sự.
+        if (success === false) {
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped', 'bg-primary', 'bg-success');
+            progressBar.classList.add('bg-danger');
+            stepEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Quá thời gian chờ — vui lòng kiểm tra file đã tải chưa, hoặc thử lại.';
+        } else {
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped', 'bg-primary');
+            progressBar.classList.add('bg-success');
+            stepEl.textContent = '✓ Hoàn thành! Đang tải xuống...';
+        }
 
         _stepTimers.forEach(t => clearTimeout(t));
         clearInterval(_pollTimer);
@@ -1589,9 +1598,9 @@ function openDetailModal(ctId) {
             // ★ Dùng class thay vì style.display
             overlay.classList.remove('active');
             progressBar.style.width = '0%';
+            progressBar.classList.remove('bg-danger', 'bg-success');
             progressBar.classList.add('progress-bar-animated', 'progress-bar-striped', 'bg-primary');
-            progressBar.classList.remove('bg-success');
-        }, 1200);
+        }, success === false ? 4000 : 1200);
     }
 
     function checkDone() {
@@ -1599,12 +1608,12 @@ function openDetailModal(ctId) {
             .some(c => c.trim().startsWith(COOKIE_NAME + '='));
         if (hasCookie) {
             document.cookie = COOKIE_NAME + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-            hideOverlay();
+            hideOverlay(true);
             return;
         }
-        // Timeout an toàn 90s
+        // Timeout an toàn 90s — cookie chưa về nghĩa là request có thể đã lỗi/quá lâu
         if (_startTime && Date.now() - _startTime > 90000) {
-            hideOverlay();
+            hideOverlay(false);
         }
     }
 
