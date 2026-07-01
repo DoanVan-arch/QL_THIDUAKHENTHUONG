@@ -2315,7 +2315,7 @@ def export_word():
             if ct.ghi_chu and ct.ghi_chu.strip():
                 criteria_list.append(f'Ghi chú: {ct.ghi_chu}')
 
-            _fill_multiline_cell(row.cells[4], criteria_list)
+            _fill_multiline_cell(row.cells[3], criteria_list)
             add_cell(row.cells[3], item['ket_qua_str'], size=9,
                      align=WD_ALIGN_PARAGRAPH.CENTER)
             valid_idx += 1
