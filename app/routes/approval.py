@@ -1945,7 +1945,7 @@ def export_word():
     # ── 1. Query với eager loading đầy đủ ────────────────────────────────────
     q = (
         PheDuyet.query
-        .filter_by(phong_duyet=phong_name, ket_qua=KetQuaDuyet.CHO_DUYET.value)
+        .filter_by(phong_duyet=phong_name)
         .options(
             selectinload(PheDuyet.chi_tiet_duyet),
             joinedload(PheDuyet.de_xuat).options(
@@ -2231,7 +2231,7 @@ def export_word():
             return stt_start
 
         # STT | Họ tên | Cấp bậc | Chức vụ | Đơn vị | Tóm tắt | Ghi chú
-        widths  = [0.7, 3.5, 1.8, 2.2, 2.5, 5.0, 1.5]
+        widths  = [0.9, 3.5, 1.8, 2.2, 2.5, 5.0, 1.5]
         headers = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ',
                    'Đơn vị', 'Tóm tắt thành tích', 'Ghi chú']
 
