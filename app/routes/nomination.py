@@ -17,6 +17,7 @@ from app.utils.file_upload import save_upload
 from app.utils.activity_logger import log_action
 from datetime import datetime
 from sqlalchemy.exc import ProgrammingError, OperationalError
+from sqlalchemy.orm import selectinload, joinedload
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Pt, Cm, RGBColor
@@ -2061,9 +2062,15 @@ def _build_nomination_word_doc(don_vi_ten, nam_hoc,
 @login_required
 @unit_user_required
 def export_all_word():
-    db.session.expire_all()
+    # Lưu ý: KHÔNG dùng db.session.expire_all() ở đây — việc này buộc SQLAlchemy phải
+    # query lại DB cho MỌI thuộc tính truy cập sau đó (ct.quan_nhan, dx.don_vi, ...),
+    # có thể gây ra 50-150+ round-trip DB thay vì eager-load 1 lần. Mỗi request Flask
+    # đã có session riêng biệt (không có dữ liệu cũ từ request khác để lo ngại "stale").
     nam_hoc_filter = request.args.get('nam_hoc', '').strip()
-    query = DeXuat.query.filter_by(don_vi_id=current_user.don_vi_id)
+    query = DeXuat.query.filter_by(don_vi_id=current_user.don_vi_id).options(
+        selectinload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
+        joinedload(DeXuat.don_vi),
+    )
     if nam_hoc_filter:
         query = query.filter_by(nam_hoc=nam_hoc_filter)
     all_de_xuat = query.order_by(DeXuat.nam_hoc.desc()).all()
@@ -2098,8 +2105,15 @@ def export_all_word():
 @login_required
 @unit_user_required
 def export_nomination_word(id):
-    db.session.expire_all()
-    de_xuat = DeXuat.query.get_or_404(id)
+    # Lưu ý: KHÔNG dùng db.session.expire_all() ở đây (xem giải thích ở export_all_word).
+    # Dùng filter_by(id=...).options(...).first_or_404() thay vì .options(...).get_or_404(id):
+    # Query.get()/get_or_404() có thể BỎ QUA eager-load options nếu object đã có sẵn trong
+    # identity map (SQLAlchemy trả thẳng object cache, không chạy lại SQL) — dùng .first()
+    # đảm bảo luôn thực thi query với options đã khai báo.
+    de_xuat = DeXuat.query.filter_by(id=id).options(
+        selectinload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
+        joinedload(DeXuat.don_vi),
+    ).first_or_404()
     if de_xuat.don_vi_id != current_user.don_vi_id:
         flash('Không có quyền xuất đề xuất này.', 'danger')
         return redirect(url_for('nomination.list_nominations'))

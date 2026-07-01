@@ -2512,7 +2512,9 @@ def export_tracking_word():
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
 
-    db.session.expire_all()
+    # Lưu ý: KHÔNG dùng db.session.expire_all() ở đây — buộc query lại DB cho MỌI
+    # thuộc tính truy cập sau đó (ct.quan_nhan, dx.don_vi, ...), có thể gây ra
+    # hàng chục/trăm round-trip DB dư thừa thay vì eager-load 1 lần bên dưới.
 
     # ── Tham số lọc (giống export_tracking_excel) ────────────────────────────
     status_filter    = request.args.get('status', '')
@@ -2522,7 +2524,10 @@ def export_tracking_word():
     scope_filter     = request.args.get('scope', '')
     nam_hoc_filter   = request.args.get('nam_hoc', '')
 
-    query = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+    query = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value).options(
+        joinedload(DeXuat.don_vi),
+        subqueryload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
+    )
     if nam_hoc_filter:
         query = query.filter(DeXuat.nam_hoc == nam_hoc_filter)
     if status_filter:
@@ -2948,6 +2953,18 @@ def export_tracking_word():
             set_font(doc.add_paragraph().add_run('(Không có)'), size=10, italic=True)
             return
 
+        # ── Batch-load TieuChi 1 lần cho TOÀN BỘ items — tránh N+1 query ──────
+        # (trước đây query TieuChi riêng cho từng đơn vị trong vòng lặp bên dưới,
+        # với hàng trăm đơn vị sẽ tạo ra hàng trăm round-trip DB dư thừa)
+        from app.models.nomination import TieuChi as _TieuChi
+        _all_ma_truong = set()
+        for _ct, _dx in items:
+            _all_ma_truong.update((_ct.tap_the_dict or {}).keys())
+        tieu_chi_map_all = {}
+        if _all_ma_truong:
+            for tc in _TieuChi.query.filter(_TieuChi.ma_truong.in_(list(_all_ma_truong))).all():
+                tieu_chi_map_all[tc.ma_truong] = tc.ten
+
         col_widths  = [0.8, 4.2, 2.5, 9.0]
         
         headers_txt = ['STT', 'Tên đơn vị', 'Đề xuất của đơn vị',
@@ -3005,22 +3022,14 @@ def export_tracking_word():
 
             td = ct.tap_the_dict or {}
             if td:
-                from app.models.nomination import TieuChi as _TieuChi
-                ma_truong_list = list(td.keys())
-                tieu_chi_map   = {}
-                if ma_truong_list:
-                    tc_rows      = _TieuChi.query.filter(
-                        _TieuChi.ma_truong.in_(ma_truong_list)
-                    ).all()
-                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
-
+                # Dùng tieu_chi_map_all đã batch-load sẵn ở đầu hàm — không query lại DB
                 QUY_KEYS = {'th_diem_tdtx_quy1', 'th_diem_tdtx_quy2',
                             'th_diem_tdtx_quy3', 'th_diem_tdtx_quy4'}
 
                 for key, val in td.items():
                     if not val or str(val).strip() in ('', '0', 'None'):
                         continue
-                    label = tieu_chi_map.get(key, key)
+                    label = tieu_chi_map_all.get(key, key)
                     if key in QUY_KEYS:
                         criteria_list_1.append(f'{label}: {val}')
                         try:
@@ -3153,7 +3162,7 @@ def export_tracking_word():
     # ★ Set cookie để FE biết file đã sẵn sàng → ẩn loading overlay
     response.set_cookie(
         'export_done', '1',
-        max_age=100,          # tự hết hạn sau 30s
+        max_age=300,          # tự hết hạn sau 30s
         httponly=False,      # FE cần đọc được
         samesite='Lax',
         path='/'
@@ -3176,7 +3185,7 @@ def export_tracking_word_less():
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
 
-    db.session.expire_all()
+    # Lưu ý: KHÔNG dùng db.session.expire_all() ở đây (xem giải thích ở export_tracking_word).
 
     # ── Tham số lọc (giống export_tracking_excel) ────────────────────────────
     status_filter    = request.args.get('status', '')
@@ -3186,7 +3195,10 @@ def export_tracking_word_less():
     scope_filter     = request.args.get('scope', '')
     nam_hoc_filter   = request.args.get('nam_hoc', '')
 
-    query = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value)
+    query = DeXuat.query.filter(DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value).options(
+        joinedload(DeXuat.don_vi),
+        subqueryload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
+    )
     if nam_hoc_filter:
         query = query.filter(DeXuat.nam_hoc == nam_hoc_filter)
     if status_filter:
@@ -3613,6 +3625,18 @@ def export_tracking_word_less():
             set_font(doc.add_paragraph().add_run('(Không có)'), size=10, italic=True)
             return
 
+        # ── Batch-load TieuChi 1 lần cho TOÀN BỘ items — tránh N+1 query ──────
+        # (trước đây query TieuChi riêng cho từng đơn vị trong vòng lặp bên dưới,
+        # với hàng trăm đơn vị sẽ tạo ra hàng trăm round-trip DB dư thừa)
+        from app.models.nomination import TieuChi as _TieuChi
+        _all_ma_truong = set()
+        for _ct, _dx in items:
+            _all_ma_truong.update((_ct.tap_the_dict or {}).keys())
+        tieu_chi_map_all = {}
+        if _all_ma_truong:
+            for tc in _TieuChi.query.filter(_TieuChi.ma_truong.in_(list(_all_ma_truong))).all():
+                tieu_chi_map_all[tc.ma_truong] = tc.ten
+
         col_widths  = [0.8, 4.2, 2.5, 9.0]
         
         headers_txt = ['STT', 'Tên đơn vị', 'Đề xuất của đơn vị',
@@ -3670,22 +3694,14 @@ def export_tracking_word_less():
 
             td = ct.tap_the_dict or {}
             if td:
-                from app.models.nomination import TieuChi as _TieuChi
-                ma_truong_list = list(td.keys())
-                tieu_chi_map   = {}
-                if ma_truong_list:
-                    tc_rows      = _TieuChi.query.filter(
-                        _TieuChi.ma_truong.in_(ma_truong_list)
-                    ).all()
-                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
-
+                # Dùng tieu_chi_map_all đã batch-load sẵn ở đầu hàm — không query lại DB
                 QUY_KEYS = {'th_diem_tdtx_quy1', 'th_diem_tdtx_quy2',
                             'th_diem_tdtx_quy3', 'th_diem_tdtx_quy4'}
 
                 for key, val in td.items():
                     if not val or str(val).strip() in ('', '0', 'None'):
                         continue
-                    label = tieu_chi_map.get(key, key)
+                    label = tieu_chi_map_all.get(key, key)
                     if key in QUY_KEYS:
                         criteria_list_1.append(f'{label}: {val}')
                         try:
@@ -3818,7 +3834,7 @@ def export_tracking_word_less():
     # ★ Set cookie để FE biết file đã sẵn sàng → ẩn loading overlay
     response.set_cookie(
         'export_done', '1',
-        max_age=100,          # tự hết hạn sau 30s
+        max_age=300,          # tự hết hạn sau 30s
         httponly=False,      # FE cần đọc được
         samesite='Lax',
         path='/'
