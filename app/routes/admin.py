@@ -2496,6 +2496,7 @@ def export_tracking_excel():
     return send_file(output, as_attachment=True,
                      download_name='_'.join(fname_parts) + '.xlsx',
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 @admin_bp.route('/tracking/export-word')
 @login_required
 @admin_required
@@ -3153,12 +3154,13 @@ def export_tracking_word():
     # ★ Set cookie để FE biết file đã sẵn sàng → ẩn loading overlay
     response.set_cookie(
         'export_done', '1',
-        max_age=30,          # tự hết hạn sau 30s
+        max_age=100,          # tự hết hạn sau 30s
         httponly=False,      # FE cần đọc được
         samesite='Lax',
         path='/'
     )
     return response
+
 @admin_bp.route('/tracking/export-word-less')
 @login_required
 @admin_required
