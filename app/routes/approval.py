@@ -2467,13 +2467,32 @@ def export_word():
     buf = BytesIO()
     doc.save(buf)
     buf.seek(0)
-
-    ts_file  = datetime.now().strftime('%Y%m%d_%H%M')
-    filename = f'phe_duyet_{phong_name.replace(" ", "_")}_{ts_file}.docx'
-    return send_file(
+    fname_parts = ['TheoDoiPheduyet']
+    if nam_hoc_filter:
+        fname_parts.append(nam_hoc_filter.replace('-', '_'))
+    fname_parts.append(datetime.now().strftime('%d%m%Y'))
+    filename = '_'.join(fname_parts) + '.docx'
+    
+    # ── Tạo response với cookie báo hiệu hoàn thành ──────────────────────────
+    response = send_file(
         buf, as_attachment=True, download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
+    # ★ Set cookie để FE biết file đã sẵn sàng → ẩn loading overlay
+    response.set_cookie(
+        'export_done', '1',
+        max_age=100,          # tự hết hạn sau 30s
+        httponly=False,      # FE cần đọc được
+        samesite='Lax',
+        path='/'
+    )
+    return response
+    # ts_file  = datetime.now().strftime('%Y%m%d_%H%M')
+    # filename = f'phe_duyet_{phong_name.replace(" ", "_")}_{ts_file}.docx'
+    # return send_file(
+    #     buf, as_attachment=True, download_name=filename,
+    #     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    # )
 
 def set_fixed_table_widths(tbl, widths_cm):
         """Can thiệp sâu vào XML để khóa chết chiều rộng bảng, Word không thể tự đổi"""
