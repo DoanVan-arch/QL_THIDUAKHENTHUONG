@@ -1387,8 +1387,6 @@ def _build_nomination_word_doc(don_vi_ten, nam_hoc,
     def build_tom_tat(ct):
         """Tóm tắt thành tích từ các trường - trả về list để hiển thị mỗi tiêu chí 1 dòng."""
         parts = []
-        qn = ct.quan_nhan
-        
         # Mức độ hoàn thành
         if ct.muc_do_hoan_thanh:
             parts.append(ct.muc_do_hoan_thanh)
@@ -1656,6 +1654,18 @@ def _build_nomination_word_doc(don_vi_ten, nam_hoc,
             para_font(p2, '(Không có)', size=10, italic=True)
             return
 
+        # ── Batch-load TieuChi 1 lần cho TẤT CẢ đơn vị — tránh N+1 query ──────
+        # (trước đây query TieuChi riêng cho từng ct trong vòng lặp bên dưới,
+        # gây N round-trip DB thừa khi có nhiều đơn vị tập thể)
+        from app.models.nomination import TieuChi as _TieuChi
+        _all_ma_truong = set()
+        for _ct in chi_tiets:
+            _all_ma_truong.update((_ct.tap_the_dict or {}).keys())
+        tieu_chi_map = {}
+        if _all_ma_truong:
+            for _tc in _TieuChi.query.filter(_TieuChi.ma_truong.in_(list(_all_ma_truong))).all():
+                tieu_chi_map[_tc.ma_truong] = _tc.ten
+
         tbl = doc.add_table(rows=1, cols=3)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tbl.style = 'Table Grid'
@@ -1694,14 +1704,7 @@ def _build_nomination_word_doc(don_vi_ten, nam_hoc,
             criteria_list = []
             td = ct.tap_the_dict or {}
             if td:
-                from app.models.nomination import TieuChi as _TieuChi
-                ma_truong_list = list(td.keys())
-                tieu_chi_map = {}
-                if ma_truong_list:
-                    tc_rows = _TieuChi.query.filter(
-                        _TieuChi.ma_truong.in_(ma_truong_list)
-                    ).all()
-                    tieu_chi_map = {tc.ma_truong: tc.ten for tc in tc_rows}
+                # Dùng tieu_chi_map đã batch-load ở đầu hàm — không query lại DB
                 for key, val in td.items():
                     if val and str(val).strip() not in ('', '0', 'None'):
                         label = tieu_chi_map.get(key, key)
@@ -2223,12 +2226,11 @@ def add_logo_footer(doc):
     """Thêm logo nhỏ và số trang vào footer cuối trang."""
     import os
     from flask import current_app
-    
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
-    
+
+    # ★ Ưu tiên logo nhỏ (19 KB) để giảm kích thước file docx
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
     if not os.path.exists(logo_path):
-        # Fallback to main logo if watermark doesn't exist
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
         if not os.path.exists(logo_path):
             return
     
@@ -2290,12 +2292,12 @@ def add_corner_logo(doc):
     """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
     import os
     from flask import current_app
-    
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
-    
+
+    # ★ Ưu tiên logo nhỏ (19 KB) thay vì watermark lớn (212 KB) để giảm kích thước file docx
+    # — quan trọng khi băng thông LAN thấp. watermark.png chỉ dùng nếu logo chính không có.
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
     if not os.path.exists(logo_path):
-        # Fallback to main logo if watermark doesn't exist
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
         if not os.path.exists(logo_path):
             return
     

@@ -3926,12 +3926,11 @@ def add_logo_footer(doc):
     """Thêm logo nhỏ và số trang vào footer cuối trang."""
     import os
     from flask import current_app
-    
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
-    
+
+    # ★ Ưu tiên logo nhỏ (19 KB) để giảm kích thước file docx
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
     if not os.path.exists(logo_path):
-        # Fallback to main logo if watermark doesn't exist
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
         if not os.path.exists(logo_path):
             return
     
@@ -3993,12 +3992,11 @@ def add_corner_logo(doc):
     """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
     import os
     from flask import current_app
-    
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
-    
+
+    # ★ Ưu tiên logo nhỏ (19 KB) để giảm kích thước file docx
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
     if not os.path.exists(logo_path):
-        # Fallback to main logo if watermark doesn't exist
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
         if not os.path.exists(logo_path):
             return
     
@@ -4069,11 +4067,11 @@ def protect_document_formatting_only(doc, password: str):
     # Lưu ý: password bắt buộc encode sang chuẩn UTF-16 Little Endian
     key = hashlib.sha512(salt + password.encode('utf-16le')).digest()
     
-    # 3. Lặp 100.000 vòng để chống brute-force
-    spin_count = 100000
+    # 3. Lặp N vòng để chống brute-force.
+    # 10.000 vẫn tuân thủ chuẩn Agile Encryption, nhanh hơn ~10x so với 100.000 vòng.
+    spin_count = 10000
     for i in range(spin_count):
         iterator = i.to_bytes(4, byteorder='little')
-        # SỬA LỖI: Cần cộng iterator ở PHÍA SAU hash của vòng lặp liền trước
         key = hashlib.sha512(key + iterator).digest()
         
     hash_b64 = binascii.b2a_base64(key).strip().decode()

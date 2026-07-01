@@ -2794,12 +2794,11 @@ def add_corner_logo(doc):
     """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
     import os
     from flask import current_app
-    
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
-    
+
+    # ★ Ưu tiên logo nhỏ (19 KB) để giảm kích thước file docx
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
     if not os.path.exists(logo_path):
-        # Fallback to main logo if watermark doesn't exist
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
         if not os.path.exists(logo_path):
             return
     

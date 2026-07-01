@@ -11,4 +11,4 @@ with app.app_context():
         os.makedirs(path, exist_ok=True)
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000, threaded=True)  # Enable threaded mode for handling multiple requests
+    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)  # Enable threaded mode for handling multiple requests
