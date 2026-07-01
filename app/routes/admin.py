@@ -416,7 +416,7 @@ def approval_tracking():
 
         for ct in dx.chi_tiets:
             is_tap_the = ct.ten_don_vi_de_xuat is not None or ct.quan_nhan_id is None
-            
+            if ct.phong_loai == "Tuyên huấn": continue
           #  if ct.bi_loai:                                          continue
           #  if ct.id in approved_ct_ids:                           continue
           #  if ct.admin_approved:                                   continue
@@ -524,8 +524,7 @@ def approval_tracking():
             don_vi_name = dx.don_vi.ten_don_vi if dx.don_vi else ''
 
             for ct_entry in nom_data['chi_tiets']:
-                if ct_entry['phong_loai'] == "Tuyên huấn": continue
-                flat_ca_nhan.append({
+                    flat_ca_nhan.append({
                     **ct_entry,
                     'don_vi':        don_vi_name,
                     'loai_danh_hieu': ct_entry['ct'].loai_danh_hieu or '',
