@@ -530,7 +530,7 @@ def approval_tracking():
                     'loai_danh_hieu': ct_entry['ct'].loai_danh_hieu or '',
                     'dx':            dx,
                 })
-                individual_count += 1
+            individual_count += 1
 
             for ct_entry in nom_data['tap_the_chi_tiets']:
                 flat_tap_the.append({
