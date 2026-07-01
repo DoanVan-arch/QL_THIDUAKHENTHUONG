@@ -524,6 +524,7 @@ def approval_tracking():
             don_vi_name = dx.don_vi.ten_don_vi if dx.don_vi else ''
 
             for ct_entry in nom_data['chi_tiets']:
+                if ct_entry['phong_loai'] == "Tuyên huấn": continue
                 flat_ca_nhan.append({
                     **ct_entry,
                     'don_vi':        don_vi_name,
