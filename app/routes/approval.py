@@ -1950,7 +1950,7 @@ def export_word():
             selectinload(PheDuyet.chi_tiet_duyet),
             joinedload(PheDuyet.de_xuat).options(
                 joinedload(DeXuat.don_vi),
-                selectinload(DeXuat.chi_tiets).joinedload(ChiTiet.quan_nhan),
+                selectinload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
             ),
         )
         .order_by(PheDuyet.created_at.desc())
