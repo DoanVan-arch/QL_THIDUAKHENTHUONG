@@ -417,7 +417,6 @@ def approval_tracking():
         for ct in dx.chi_tiets:
             is_tap_the = ct.ten_don_vi_de_xuat is not None or ct.quan_nhan_id is None
             
-            if ct.phong_loai == "Tuyên huấn": continue
           #  if ct.bi_loai:                                          continue
           #  if ct.id in approved_ct_ids:                           continue
           #  if ct.admin_approved:                                   continue
@@ -1664,11 +1663,11 @@ def reject_individual_from_tracking(ct_id):
     ct.admin_approved = False
 
     # Soft-remove ONLY this cá nhân/tập thể; the rest of the đề xuất continues.
-    
-    ct.bi_loai = True
-    ct.ly_do_loai = ly_do
-    ct.phong_loai = PhongDuyet.ADMIN_TUYENHUAN.value
-    ct.ngay_loai = datetime.utcnow()
+    if not ct.bi_loai:
+        ct.bi_loai = True
+        ct.ly_do_loai = ly_do
+        ct.phong_loai = PhongDuyet.ADMIN_TUYENHUAN.value
+        ct.ngay_loai = datetime.utcnow()
 
     # Recompute status of the remaining active items
     from app.routes.approval import _recompute_de_xuat_status

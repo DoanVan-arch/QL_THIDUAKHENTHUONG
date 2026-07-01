@@ -946,6 +946,7 @@ def pending_list():
     )
 
 
+
 @approval_bp.route('/review/<int:id>', methods=['GET'])
 @login_required
 @department_required
