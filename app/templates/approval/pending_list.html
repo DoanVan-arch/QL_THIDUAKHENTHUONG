@@ -1533,15 +1533,17 @@ function openDetailModal(ctId) {
     if (!overlay) return;
 
     const STEPS = [
-        { pct: 8,  text: 'Đang truy vấn dữ liệu...',        delay: 400   },
-        { pct: 20, text: 'Xử lý danh sách đề xuất...',       delay: 900   },
-        { pct: 35, text: 'Tổng hợp tiêu chí...',             delay: 1600  },
-        { pct: 52, text: 'Tạo cấu trúc bảng Word...',        delay: 2600  },
-        { pct: 68, text: 'Điền dữ liệu vào bảng...',         delay: 4000  },
-        { pct: 80, text: 'Định dạng font & layout...',       delay: 5800  },
-        { pct: 90, text: 'Hoàn thiện tài liệu...',           delay: 8000  },
-        { pct: 96, text: 'Chuẩn bị tải xuống...',            delay: 12000 },
-        { pct: 99, text: 'Sắp xong, vui lòng đợi thêm...',  delay: 18000 },
+        { pct: 8,  text: 'Đang truy vấn dữ liệu...',               delay: 400   },
+        { pct: 20, text: 'Xử lý danh sách đề xuất...',              delay: 900   },
+        { pct: 35, text: 'Tổng hợp tiêu chí...',                    delay: 1800  },
+        { pct: 52, text: 'Tạo cấu trúc bảng Word...',               delay: 3000  },
+        { pct: 68, text: 'Điền dữ liệu vào bảng...',                delay: 5000  },
+        { pct: 80, text: 'Định dạng font & layout...',              delay: 8000  },
+        { pct: 88, text: 'Hoàn thiện tài liệu...',                  delay: 14000 },
+        { pct: 93, text: 'Chuẩn bị tải xuống...',                   delay: 22000 },
+        { pct: 96, text: 'Đang xử lý dữ liệu lớn, vui lòng đợi...', delay: 35000 },
+        { pct: 98, text: 'Gần xong, vui lòng kiên nhẫn...',         delay: 60000 },
+        { pct: 99, text: 'Vẫn đang xử lý, vui lòng đợi thêm...',   delay: 100000},
     ];
 
     let _stepTimers = [];
@@ -1611,8 +1613,9 @@ function openDetailModal(ctId) {
             hideOverlay(true);
             return;
         }
-        // Timeout an toàn 90s — cookie chưa về nghĩa là request có thể đã lỗi/quá lâu
-        if (_startTime && Date.now() - _startTime > 90000) {
+        // Timeout an toàn 180s — khớp với gunicorn timeout (Procfile: --timeout 180)
+        // JS phải chờ đủ để server có thể hoàn thành trước khi báo lỗi
+        if (_startTime && Date.now() - _startTime > 180000) {
             hideOverlay(false);
         }
     }
