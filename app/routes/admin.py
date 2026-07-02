@@ -3006,7 +3006,7 @@ def export_tracking_word_less():
     <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
     <w:b/>
     <w:i w:val="0"/>
-    <w:sz w:val="30"/>
+    <w:sz w:val="21"/>
     </w:rPr>
     <w:t>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</w:t>
     </w:r>
@@ -3021,7 +3021,7 @@ def export_tracking_word_less():
     <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
     <w:b/>
     <w:i w:val="0"/>
-    <w:sz w:val="30"/>
+    <w:sz w:val="21"/>
     <w:u w:val="single"/>
     </w:rPr>
     <w:t>Độc lập - Tự do - Hạnh phúc</w:t>
