@@ -3001,23 +3001,7 @@ def export_tracking_word_less():
     
     buf = build_docx(doc_xml)
     doc = Document(buf)
-
-    # 1. Bỏ màu nền ở phần Tiêu đề cột (Header) & đổi chữ thành màu đen
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                tcPr = cell._tc.get_or_add_tcPr()
-                shd = tcPr.find(qn('w:shd'))
-                if shd is not None:
-                    tcPr.remove(shd) # Xóa màu nền ô
-                
-                # Ép toàn bộ chữ trong ô thành màu đen
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.color.rgb = RGBColor(0, 0, 0)
-
-    # 2. Thêm Watermark (Chữ chéo mờ ở Background)
-    
+   
     # 3. Đặt mật khẩu chống chỉnh sửa (Read-Only)
     settings = doc.settings.element
     prot = OxmlElement('w:documentProtection')
