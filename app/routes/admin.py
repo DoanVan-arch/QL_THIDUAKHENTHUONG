@@ -5,7 +5,6 @@ from flask_login import login_required, current_user
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
-
 from app.extensions import db
 from app.models.user import User, Role, ROLE_DISPLAY
 from app.models.unit import DonVi, LoaiDonVi
@@ -32,7 +31,7 @@ from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
-from docx.oxml import OxmlElement, parse_xml
+from docx.oxml import OxmlElement
 from io import BytesIO
 from flask import send_file
 from datetime import date
@@ -2780,19 +2779,11 @@ def export_tracking_word():
 def export_tracking_word_less():
     """Export bảng theo dõi quy trình phê duyệt ra Word (theo mẫu khen thưởng)."""
     import datetime as _dt
+    import zipfile
     from io import BytesIO
     from datetime import date
-    from docx import Document
-    from docx.shared import Cm, Pt, RGBColor
-    from docx.enum.text import WD_LINE_SPACING
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-
-    # Lưu ý: KHÔNG dùng db.session.expire_all() ở đây (xem giải thích ở export_tracking_word).
-
-    # ── Tham số lọc (giống export_tracking_excel) ────────────────────────────
+    
+    # --- Tham số lọc (giống export_tracking_excel) ---
     status_filter    = request.args.get('status', '')
     unit_filter      = request.args.get('unit', '')
     danh_hieu_filter = request.args.get('danh_hieu', '')
@@ -2817,11 +2808,7 @@ def export_tracking_word_less():
         DonVi.thu_tu.asc(), DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()
     ).all()
 
-    approved_ct_ids = set(
-        row[0] for row in db.session.query(KhenThuong.chi_tiet_id).all()
-    )
-
-    # ── Gom chi tiết theo danh hiệu ──────────────────────────────────────────
+    # --- Gom chi tiết theo danh hiệu ---
     ds_quyet_thang   = []
     ds_tien_tien_dv  = []
     ds_chien_si_tdcs = []
@@ -2838,7 +2825,7 @@ def export_tracking_word_less():
         for unit in units:
             _sort_map[unit.id] = (loai_idx, unit.thu_tu or 0, unit.ten_don_vi or '')
 
-    # ── Hàm sort key ────────────────────────────────────────────────────────────
+    # --- Hàm sort key ---
     def _unit_sort_key(ct_dx_tuple):
         ct, dx = ct_dx_tuple
         don_vi_id = dx.don_vi_id if dx else None
@@ -2847,23 +2834,18 @@ def export_tracking_word_less():
         if ct:
             ho_ten = (ct.quan_nhan.ho_ten if ct.quan_nhan else ct.ten_don_vi_de_xuat) or ''
         return (*base, ho_ten.lower())
+        
     for dx in nominations:
         for ct in dx.chi_tiets:
-            if ct.id in seen_ids:
-                continue
+            if ct.id in seen_ids: continue
             seen_ids.add(ct.id)
 
-            if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter:
-                continue
-            if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG:
-                continue
-            if scope_filter == 'can_bo' and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG:
-                continue
+            if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter: continue
+            if scope_filter == 'quan_luc' and ct.doi_tuong not in BAN_QUANLUC_DOI_TUONG: continue
+            if scope_filter == 'can_bo' and ct.doi_tuong in BAN_QUANLUC_DOI_TUONG: continue
 
-            ho_ten = (ct.quan_nhan.ho_ten if ct.quan_nhan
-                      else (ct.ten_don_vi_de_xuat or ''))
-            if search_query and search_query.lower() not in ho_ten.lower():
-                continue
+            ho_ten = (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or ''))
+            if search_query and search_query.lower() not in ho_ten.lower(): continue
 
             dh = (ct.loai_danh_hieu or '').strip()
             if   dh == 'Đơn vị quyết thắng':  ds_quyet_thang.append((ct, dx))
@@ -2872,10 +2854,7 @@ def export_tracking_word_less():
             elif dh == 'Chiến sĩ tiên tiến':   ds_chien_si_tt.append((ct, dx))
             else: ds_khac.setdefault(dh, []).append((ct, dx))
 
-            # Sort từng nhóm
-   
-
-    # ── Sort từng nhóm ──────────────────────────────────────────────────────────
+    # --- Sort từng nhóm ---
     ds_quyet_thang   = sorted(ds_quyet_thang,   key=_unit_sort_key)
     ds_tien_tien_dv  = sorted(ds_tien_tien_dv,  key=_unit_sort_key)
     ds_chien_si_tdcs = sorted(ds_chien_si_tdcs, key=_unit_sort_key)
@@ -2883,77 +2862,48 @@ def export_tracking_word_less():
     ds_khac          = {dh: sorted(lst, key=_unit_sort_key) for dh, lst in ds_khac.items()}
 
     title_nam_hoc = nam_hoc_filter or 'TẤT CẢ NĂM HỌC'
-    
 
-
-
-
-
-    # ── Tạo docx nhanh bằng XML template (thay python-docx ~700x nhanh hơn) ──────
+    # --- Tạo docx nhanh bằng XML template ---
     from app.utils.docx_fast import (
         cm_to_twips, _para, _build_table, _data_row,
         _build_document_xml, build_docx,
     )
-    import datetime as _dt
 
-    # ── Chiều rộng cột cá nhân (ít cột hơn "less" version) ──────────────────────
+    # --- Chiều rộng cột cá nhân (để màu trắng bằng cách xóa shade, hoặc set None) ---
     CN_WIDTHS = [
-        cm_to_twips(0.8),
-        cm_to_twips(3.5),
-        cm_to_twips(2.0),
-        cm_to_twips(2.5),
-        cm_to_twips(2.5),
-    
-        cm_to_twips(5.5),
+        cm_to_twips(0.8), cm_to_twips(3.5), cm_to_twips(2.0),
+        cm_to_twips(2.5), cm_to_twips(2.5), cm_to_twips(5.5),
     ]
     CN_HEADERS = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Ghi chú']
 
     TT_WIDTHS = [
-        cm_to_twips(0.8),
-        cm_to_twips(4.5),
-        cm_to_twips(11.5),
-       
+        cm_to_twips(0.8), cm_to_twips(4.5), cm_to_twips(11.5),
     ]
-    TT_HEADERS = ['STT', 'Tên đơn vị']
+    TT_HEADERS = ['STT', 'Tên đơn vị', 'Ghi chú']
 
     from app.models.nomination import TieuChi as _TieuChi
     _tieu_chi_map_all = {tc.ma_truong: tc.ten for tc in _TieuChi.query.all()}
+    
     def _build_tomtat(ct):
-        """Tóm tắt thành tích ngắn gọn cho cột Word."""
         parts = []
-        if ct.muc_do_hoan_thanh:
-            parts.append(ct.muc_do_hoan_thanh)
-        if ct.diem_tong_ket:
-            parts.append(f'HT: {ct.diem_tong_ket}')
-        if ct.ket_qua_ren_luyen:
-            parts.append(f'RL: {ct.ket_qua_ren_luyen}')
+        if ct.muc_do_hoan_thanh: parts.append(ct.muc_do_hoan_thanh)
+        if ct.diem_tong_ket: parts.append(f'HT: {ct.diem_tong_ket}')
+        if ct.ket_qua_ren_luyen: parts.append(f'RL: {ct.ket_qua_ren_luyen}')
         return '; '.join(parts)
-    def _build_tt_criteria(ct):
-        td = ct.tap_the_dict or {}
-        lines = []
-        for k, v in td.items():
-            if v and str(v).strip() not in ('', '0', 'None'):
-                label = _tieu_chi_map_all.get(k, k)
-                lines.append(f'\n- {label}: {v}')
-        if ct.muc_do_hoan_thanh:
-            lines.insert(0, f'- Mức độ HT: {ct.muc_do_hoan_thanh}')
-        return ';'.join(lines)
 
     def _cn_rows(items):
         rows_xml = []
         for i, (ct, dx) in enumerate(items, 1):
-            qn = ct.quan_nhan
+            qn_obj = ct.quan_nhan
             row_cells = [
                 (str(i), False, 'center'),
-                (qn.ho_ten if qn else '', True, 'left'),
-                (qn.cap_bac if qn else '', False, 'left'),
-                (qn.chuc_vu if qn else '', False, 'left'),
+                (qn_obj.ho_ten if qn_obj else '', True, 'left'),
+                (qn_obj.cap_bac if qn_obj else '', False, 'left'),
+                (qn_obj.chuc_vu if qn_obj else '', False, 'left'),
                 (dx.don_vi.ten_don_vi if dx.don_vi else '', False, 'left'),
-              
                 (_build_tomtat(ct) or '', False, 'left'),
             ]
-            shade = 'F8F9FA' if i % 2 == 0 else None
-            rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=shade))
+            rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=None)) # Đã đổi shade thành None
         return rows_xml
 
     def _tt_rows(items):
@@ -2962,11 +2912,9 @@ def export_tracking_word_less():
             row_cells = [
                 (str(i), False, 'center'),
                 (ct.ten_don_vi_de_xuat or (dx.don_vi.ten_don_vi if dx.don_vi else ''), True, 'left'),
-                # (_build_tt_criteria(ct), False, 'left'),
-                # (dx.nam_hoc or '', False, 'center'),
+                ('', False, 'center'),
             ]
-            shade = 'F8F9FA' if i % 2 == 0 else None
-            rows_xml.append(_data_row(row_cells, TT_WIDTHS, size_pt=9, shade=shade))
+            rows_xml.append(_data_row(row_cells, TT_WIDTHS, size_pt=9, shade=None)) # Đã đổi shade thành None
         return rows_xml
 
     today_str = _dt.date.today().strftime('%d/%m/%Y')
@@ -2999,23 +2947,35 @@ def export_tracking_word_less():
     
     doc_xml = _build_document_xml(body, margin_left=2016, margin_right=720, margin_top=1440, margin_bottom=1440)
     
+    # --- Sinh file ban đầu bằng XML Fast ---
     buf = build_docx(doc_xml)
-    doc = Document(buf)
-   
-    # 3. Đặt mật khẩu chống chỉnh sửa (Read-Only)
-    settings = doc.settings.element
-    prot = OxmlElement('w:documentProtection')
-    prot.set(qn('w:edit'), 'readOnly')
-    prot.set(qn('w:enforcement'), 'bth123')
-    # Word sẽ khóa văn bản (Chỉ được xem). 
-    # Mặc dù bảo mật này không có mã băm (hash) mật khẩu phức tạp để chặn bẻ khóa nâng cao nhưng ngăn chặn thành công việc chỉnh sửa thông thường.
-    settings.append(prot)
-
-    # Lưu lại những thay đổi hậu kỳ
+    
+    # =========================================================================
+    # BẢO VỆ CHỐNG CHỈNH SỬA BẰNG CÁCH CAN THIỆP ZIP/XML TRỰC TIẾP
+    # =========================================================================
+    buf.seek(0)
     final_buf = BytesIO()
-    doc.save(final_buf)
+
+    # Thẻ XML để thiết lập chế độ Read-Only cho tài liệu
+    protection_tag = b'<w:documentProtection w:edit="readOnly" w:enforcement="1"/>'
+
+    with zipfile.ZipFile(buf, 'r') as zin:
+        with zipfile.ZipFile(final_buf, 'w') as zout:
+            for item in zin.infolist():
+                file_content = zin.read(item.filename)
+                
+                # Tìm file cấu hình settings.xml
+                if item.filename == 'word/settings.xml':
+                    # Tiêm mã bảo vệ vào trước khi kết thúc thẻ w:settings
+                    if b'</w:settings>' in file_content and b'w:documentProtection' not in file_content:
+                        file_content = file_content.replace(b'</w:settings>', protection_tag + b'</w:settings>')
+                
+                # Copy toàn bộ nội dung sang file zip mới
+                zout.writestr(item, file_content)
+    
     final_buf.seek(0)
     # =========================================================================
+
     fname_parts = ['DanhSachKhenThuong']
     if nam_hoc_filter:
         fname_parts.append(nam_hoc_filter.replace('-', '_'))
