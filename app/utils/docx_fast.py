@@ -110,7 +110,7 @@ def _cell(text, bold=False, size_pt=10, italic=False, align='left',
     return f'<w:tc>{tcpr}{p}</w:tc>'
 
 
-def _header_row(headers, widths_twips, size_pt=10, shade='2C4770'):
+def _header_row(headers, widths_twips, size_pt=10, shade=None):
     """Tạo hàng header bảng với nền đậm."""
     cells = ''.join(
         _cell(h, bold=True, size_pt=size_pt, align='center',
@@ -146,7 +146,7 @@ def _total_row(text, widths_twips, size_pt=10):
 
 
 def _build_table(headers, rows_xml, widths_twips, total_label=None,
-                 size_pt=10, header_shade='2C4770'):
+                 size_pt=10, header_shade=None):
     """Tạo <w:tbl> XML string hoàn chỉnh."""
     total_w = sum(widths_twips)
     grid_cols = ''.join(f'<w:gridCol w:w="{w}"/>' for w in widths_twips)

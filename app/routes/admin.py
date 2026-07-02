@@ -2884,7 +2884,7 @@ def export_tracking_word_less():
     
     def _build_tomtat(ct):
         parts = []
-        if ct.muc_do_hoan_thanh: parts.append(ct.muc_do_hoan_thanh)
+        if ct.muc_do_hoan_thanh and 'học viên' not in str(ct.doi_tuong).lower(): parts.append(ct.muc_do_hoan_thanh)
         if ct.diem_tong_ket: parts.append(f'HT: {ct.diem_tong_ket}')
         if ct.ket_qua_ren_luyen: parts.append(f'RL: {ct.ket_qua_ren_luyen}')
         return '; '.join(parts)
@@ -2908,7 +2908,7 @@ def export_tracking_word_less():
     today_str = now.strftime('%d/%m/%Y')
     
     # Thiết lập Tên đơn vị hiển thị động ở góc trái tiêu đề (Nếu có filter đơn vị cụ thể thì lấy tên đó)
-    ten_don_vi_header = unit_filter.upper() if unit_filter else "KHOA SƯ PHẠM QUÂN SỰ"
+    ten_don_vi_header = unit_filter.upper() if unit_filter else "HỘI ĐỒNG THI ĐUA KHEN THƯỞNG"
 
     body = []
     
@@ -3006,7 +3006,7 @@ def export_tracking_word_less():
     <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
     <w:b/>
     <w:i w:val="0"/>
-    <w:sz w:val="24"/>
+    <w:sz w:val="30"/>
     </w:rPr>
     <w:t>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</w:t>
     </w:r>
@@ -3021,7 +3021,7 @@ def export_tracking_word_less():
     <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
     <w:b/>
     <w:i w:val="0"/>
-    <w:sz w:val="24"/>
+    <w:sz w:val="30"/>
     <w:u w:val="single"/>
     </w:rPr>
     <w:t>Độc lập - Tự do - Hạnh phúc</w:t>
@@ -3107,7 +3107,7 @@ def export_tracking_word_less():
     final_buf = BytesIO()
 
     # Thuật toán hash mật khẩu Office 2010+ (Agile Encryption)
-    password = "123" # <--- THAY ĐỔI MẬT KHẨU TẠI ĐÂY
+    password = "bth123" # <--- THAY ĐỔI MẬT KHẨU TẠI ĐÂY
     salt = os.urandom(16)
     salt_b64 = binascii.b2a_base64(salt).strip().decode()
 
