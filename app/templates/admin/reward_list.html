@@ -295,8 +295,7 @@
 
                     <td class="text-center print-only" style="display:none;font-size:0.78rem;">
 
-                        {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq.ket_qua == 'Đồng ý' %}✓{% else %}✗{% endif %}{% else %}–{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
-
+                        {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq %}{% if bq.ket_qua == 'Đồng ý' %}✓{% else %}✗{% endif %}{% else %}–{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
                         <br><small>({{ voted_count }}/{{ total }})</small>
 
                     </td>
