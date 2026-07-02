@@ -2709,6 +2709,7 @@ def export_tracking_word():
     def _tt_rows(items):
         rows_xml = []
         for i, (ct, dx) in enumerate(items, 1):
+            if ct.phong_loai == 'Tuyên huấn': continue
             criteria_text = _build_tt_criteria(ct)
             row_cells = [
                 (str(i), False, 'center'),
@@ -2777,7 +2778,7 @@ def export_tracking_word():
     <w:sz w:val="24"/>
     <w:u w:val="single"/>
     </w:rPr>
-    <w:t>{ten_don_vi_header}</w:t>
+    <w:t>HỘI ĐỒNG THI ĐUA KHEN THƯỞNG</w:t>
     </w:r>
     </w:p>
     <w:p>
@@ -3231,6 +3232,7 @@ def export_tracking_word_less():
         if is_tap_the:
             # HIỂN THỊ DẠNG DANH SÁCH TỪNG DÒNG (BỎ BẢNG)
             for i, (ct, dx) in enumerate(items, 1):
+                if ct.phong_loai == 'Tuyên huấn': continue
                 ten_dv = ct.ten_don_vi_de_xuat or (dx.don_vi.ten_don_vi if dx.don_vi else '')
                 body.append(_para(f"{i}. {ten_dv}", size_pt=11, align='left', space_before=40, space_after=0))
                 
