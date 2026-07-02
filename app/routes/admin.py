@@ -3062,7 +3062,7 @@ def export_tracking_word_less():
     filename = '_'.join(fname_parts) + '.docx'
 
     response = send_file(
-        buf, as_attachment=True, download_name=filename,
+        final_buf, as_attachment=True, download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
     response.set_cookie(
