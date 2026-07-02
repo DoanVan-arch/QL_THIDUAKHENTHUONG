@@ -2325,7 +2325,7 @@ def export_word():
                 (ct.muc_do_hoan_thanh or '', False, 'left'),
                 (ket_qua_str, False, 'center'),
             ]
-            shade = 'F8F9FA' if i % 2 == 0 else None
+            shade = None if i % 2 == 0 else None
             rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=shade))
         return rows_xml
 
@@ -2347,7 +2347,7 @@ def export_word():
                 (item['don_vi'] or '-', False, 'center'),
                 ('\n'.join(criteria_lines), False, 'left'),
             ]
-            shade = 'F8F9FA' if i % 2 == 0 else None
+            shade = None if i % 2 == 0 else None
             rows_xml.append(_data_row(row_cells, DV_WIDTHS, size_pt=9, shade=shade))
         return rows_xml
 
