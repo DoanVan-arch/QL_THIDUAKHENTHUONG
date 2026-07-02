@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
+
 from app.extensions import db
 from app.models.user import User, Role, ROLE_DISPLAY
 from app.models.unit import DonVi, LoaiDonVi
@@ -27,11 +28,11 @@ from sqlalchemy.exc import ProgrammingError, OperationalError
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
-from docx.shared import Pt, Cm, RGBColor
+from docx.shared import Pt, Cm, RGBColor, parse_xml
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
+from docx.oxml import OxmlElement, parse_xml
 from io import BytesIO
 from flask import send_file
 from datetime import date
@@ -2644,8 +2645,8 @@ def export_tracking_word():
         cm_to_twips(2.0),   # Cấp bậc
         cm_to_twips(2.5),   # Chức vụ
         cm_to_twips(2.5),   # Đơn vị
-        cm_to_twips(1.5),   # Năm học
-        cm_to_twips(4.0),   # Tóm tắt
+       
+        cm_to_twips(5.5),   # Tóm tắt
     ]
     CN_HEADERS = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Năm học', 'Tóm tắt thành tích']
 
@@ -2653,10 +2654,10 @@ def export_tracking_word():
     TT_WIDTHS = [
         cm_to_twips(0.8),
         cm_to_twips(4.5),
-        cm_to_twips(9.5),
-        cm_to_twips(2.0),
+        cm_to_twips(11.5),
+       
     ]
-    TT_HEADERS = ['STT', 'Tên đơn vị', 'Đề xuất của đơn vị', 'Năm học']
+    TT_HEADERS = ['STT', 'Tên đơn vị', 'Đề xuất của đơn vị']
 
     # ── TieuChi map (batch load 1 lần) ───────────────────────────────────────────
     from app.models.nomination import TieuChi as _TieuChi
@@ -2699,7 +2700,6 @@ def export_tracking_word():
                 (qn.cap_bac if qn else '', False, 'left'),
                 (qn.chuc_vu if qn else '', False, 'left'),
                 (dx.don_vi.ten_don_vi if dx.don_vi else '', False, 'left'),
-                (dx.nam_hoc or '', False, 'center'),
                 (_build_tomtat(ct), False, 'left'),
             ]
             shade = 'F8F9FA' if i % 2 == 0 else None
@@ -2903,32 +2903,41 @@ def export_tracking_word_less():
         cm_to_twips(2.0),
         cm_to_twips(2.5),
         cm_to_twips(2.5),
-        cm_to_twips(1.5),
-        cm_to_twips(4.0),
+    
+        cm_to_twips(5.5),
     ]
-    CN_HEADERS = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Năm học', 'Ghi chú']
+    CN_HEADERS = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Ghi chú']
 
     TT_WIDTHS = [
         cm_to_twips(0.8),
         cm_to_twips(4.5),
-        cm_to_twips(9.5),
-        cm_to_twips(2.0),
+        cm_to_twips(11.5),
+       
     ]
-    TT_HEADERS = ['STT', 'Tên đơn vị', 'Tiêu chí', 'Năm học']
+    TT_HEADERS = ['STT', 'Tên đơn vị']
 
     from app.models.nomination import TieuChi as _TieuChi
     _tieu_chi_map_all = {tc.ma_truong: tc.ten for tc in _TieuChi.query.all()}
-
+    def _build_tomtat(ct):
+        """Tóm tắt thành tích ngắn gọn cho cột Word."""
+        parts = []
+        if ct.muc_do_hoan_thanh:
+            parts.append(ct.muc_do_hoan_thanh)
+        if ct.diem_tong_ket:
+            parts.append(f'HT: {ct.diem_tong_ket}')
+        if ct.ket_qua_ren_luyen:
+            parts.append(f'RL: {ct.ket_qua_ren_luyen}')
+        return '; '.join(parts)
     def _build_tt_criteria(ct):
         td = ct.tap_the_dict or {}
         lines = []
         for k, v in td.items():
             if v and str(v).strip() not in ('', '0', 'None'):
                 label = _tieu_chi_map_all.get(k, k)
-                lines.append(f'- {label}: {v}')
+                lines.append(f'\n- {label}: {v}')
         if ct.muc_do_hoan_thanh:
             lines.insert(0, f'- Mức độ HT: {ct.muc_do_hoan_thanh}')
-        return '\n'.join(lines)
+        return ';'.join(lines)
 
     def _cn_rows(items):
         rows_xml = []
@@ -2940,8 +2949,8 @@ def export_tracking_word_less():
                 (qn.cap_bac if qn else '', False, 'left'),
                 (qn.chuc_vu if qn else '', False, 'left'),
                 (dx.don_vi.ten_don_vi if dx.don_vi else '', False, 'left'),
-                (dx.nam_hoc or '', False, 'center'),
-                (ct.ghi_chu or '', False, 'left'),
+              
+                (_build_tomtat(ct) or '', False, 'left'),
             ]
             shade = 'F8F9FA' if i % 2 == 0 else None
             rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=shade))
@@ -2953,8 +2962,8 @@ def export_tracking_word_less():
             row_cells = [
                 (str(i), False, 'center'),
                 (ct.ten_don_vi_de_xuat or (dx.don_vi.ten_don_vi if dx.don_vi else ''), True, 'left'),
-                (_build_tt_criteria(ct), False, 'left'),
-                (dx.nam_hoc or '', False, 'center'),
+                # (_build_tt_criteria(ct), False, 'left'),
+                # (dx.nam_hoc or '', False, 'center'),
             ]
             shade = 'F8F9FA' if i % 2 == 0 else None
             rows_xml.append(_data_row(row_cells, TT_WIDTHS, size_pt=9, shade=shade))
@@ -2987,10 +2996,65 @@ def export_tracking_word_less():
 
     body.append(_para(f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M ngày %d/%m/%Y")})',
                       italic=True, size_pt=9, align='right', space_before=120, space_after=0))
-
+    
     doc_xml = _build_document_xml(body, margin_left=2016, margin_right=720, margin_top=1440, margin_bottom=1440)
+    
     buf = build_docx(doc_xml)
+    doc = Document(buf)
 
+    # 1. Bỏ màu nền ở phần Tiêu đề cột (Header) & đổi chữ thành màu đen
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                tcPr = cell._tc.get_or_add_tcPr()
+                shd = tcPr.find(qn('w:shd'))
+                if shd is not None:
+                    tcPr.remove(shd) # Xóa màu nền ô
+                
+                # Ép toàn bộ chữ trong ô thành màu đen
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.color.rgb = RGBColor(0, 0, 0)
+
+    # 2. Thêm Watermark (Chữ chéo mờ ở Background)
+    try:
+        section = doc.sections[0]
+        header = section.header
+        watermark_xml = '''
+        <w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+            <w:r>
+                <w:pict>
+                    <v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e">
+                        <v:path textpathok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0"/>
+                        <v:textpath on="t" fitshape="t"/>
+                        <o:lock v:ext="edit" text="t" shapetype="t"/>
+                    </v:shapetype>
+                    <v:shape id="WaterMarkObject" type="#_x0000_t136" style="position:absolute;width:450pt;height:120pt;rotation:315;z-index:-251657216;mso-position-horizontal:center;mso-position-vertical:center;" fillcolor="#E0E0E0" stroked="f">
+                        <v:fill opacity=".5"/>
+                        <v:textpath style="font-family:'Arial';font-size:1pt;font-weight:bold" string="TÀI LIỆU NỘI BỘ"/>
+                    </v:shape>
+                </w:pict>
+            </w:r>
+        </w:p>
+        '''
+        header._element.append(parse_xml(watermark_xml))
+    except Exception as e:
+        pass # Bỏ qua nếu lỗi chèn XML Watermark
+
+    # 3. Đặt mật khẩu chống chỉnh sửa (Read-Only)
+    settings = doc.settings.element
+    prot = OxmlElement('w:documentProtection')
+    prot.set(qn('w:edit'), 'readOnly')
+    prot.set(qn('w:enforcement'), '1')
+    # Word sẽ khóa văn bản (Chỉ được xem). 
+    # Mặc dù bảo mật này không có mã băm (hash) mật khẩu phức tạp để chặn bẻ khóa nâng cao nhưng ngăn chặn thành công việc chỉnh sửa thông thường.
+    settings.append(prot)
+
+    # Lưu lại những thay đổi hậu kỳ
+    final_buf = BytesIO()
+    doc.save(final_buf)
+    final_buf.seek(0)
+    # =========================================================================
     fname_parts = ['DanhSachKhenThuong']
     if nam_hoc_filter:
         fname_parts.append(nam_hoc_filter.replace('-', '_'))

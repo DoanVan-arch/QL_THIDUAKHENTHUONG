@@ -119,11 +119,11 @@
 
         <h6 class="mb-0">
 
-            <i class="bi bi-people me-2"></i>B???ng 2: X??T DUY???T C???A C?? QUAN TH?????NG TR???C
+            <i class="bi bi-people me-2"></i>BẢNG 2: XÉT DUYỆT CỦA CƠ QUAN THƯỜNG TRỰC
 
             {% if phe_duyet_cuoi_items %}
 
-            <span class="badge bg-primary ms-2">{{ phe_duyet_cuoi_items|length }} ????? xu???t</span>
+            <span class="badge bg-primary ms-2">{{ phe_duyet_cuoi_items|length }} đề xuất</span>
 
             {% endif %}
 
@@ -139,7 +139,7 @@
 
              <a href="{{ url_for('admin.export_bang2_word') }}" class="btn btn-sm btn-outline-success">
 
-                <i class="bi bi-file-earmark-excel me-1"></i>Xu???t Word
+                <i class="bi bi-file-earmark-excel me-1"></i>Xuất Word
 
             </a>
 
@@ -165,7 +165,7 @@
 
         {% if b2_ca_nhan %}
 
-        <div class="fw-semibold text-navy small mb-1 mt-1"><i class="bi bi-person-fill me-1"></i>Danh hi???u c?? nh??n ({{ b2_ca_nhan|length }})</div>
+        <div class="fw-semibold text-navy small mb-1 mt-1"><i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b2_ca_nhan|length }})</div>
 
         <div class="table-responsive mb-3">
 
@@ -177,15 +177,15 @@
 
                         <th class="sticky-stt-col">STT</th>
 
-                        <th class="sticky-name-col">H??? t??n</th>
+                        <th class="sticky-name-col">Họ tên</th>
 
-                        <th>Vai tr??</th>
+                        <th>Vai trò</th>
 
-                        <th>????n v???</th>
+                        <th>Đơn vị</th>
 
-                        <th style="white-space:nowrap;">C???p b???c / Ch???c v???</th>
+                        <th style="white-space:nowrap;">Cấp bậc / Chức vụ</th>
 
-                        <th class="text-center col-b2-detail" style="white-space:nowrap;">Ti???n ????? BQ</th>
+                        <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
 
                         {% for vt in HOI_DONG_VAI_TRO %}
 
@@ -193,9 +193,9 @@
 
                         {% endfor %}
 
-                        <th class="text-center print-only" style="display:none;">K???t qu??? BQ</th>
+                        <th class="text-center print-only" style="display:none;">Kết quả BQ</th>
 
-                        <th class="text-center no-print">Thao t??c</th>
+                        <th class="text-center no-print">Thao tác</th>
 
                     </tr>
 
@@ -237,7 +237,7 @@
 
                         <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet no-print"
 
-                                data-ct-id="{{ ct.id }}" title="Xem chi ti???t"
+                                data-ct-id="{{ ct.id }}" title="Xem chi tiết"
 
                                 style="padding:0.1rem 0.35rem;font-size:0.7rem;"><i class="bi bi-info-circle"></i></button>
 
@@ -247,19 +247,19 @@
 
                         {% set qn2 = ct.quan_nhan %}
 
-                        {% if qn2.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">C???p tr?????ng</span>{% endif %}
+                        {% if qn2.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
 
-                        {% if qn2.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">B?? th??</span>{% endif %}
+                        {% if qn2.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
 
-                        {% if qn2.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">??o??n vi??n</span>{% endif %}
+                        {% if qn2.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
 
-                        {% if qn2.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Ph??? n???</span>{% endif %}
+                        {% if qn2.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
 
                         {% if not (qn2.la_chi_huy or qn2.la_bi_thu or qn2.la_doan_vien or qn2.la_hoi_vien_phu_nu) %}-{% endif %}
 
                     </td>
 
-                    <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '???' }}</td>
+                    <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '-' }}</td>
 
                     <td style="font-size:0.78rem;white-space:nowrap;">
 
@@ -283,11 +283,11 @@
 
                         {% if bq %}
 
-                            {% if bq.ket_qua == '?????ng ??' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
+                            {% if bq.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
 
                             {% else %}<span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>{% endif %}
 
-                        {% else %}<span class="text-muted">???</span>{% endif %}
+                        {% else %}<span class="text-muted">---</span>{% endif %}
 
                     </td>
 
@@ -295,7 +295,7 @@
 
                     <td class="text-center print-only" style="display:none;font-size:0.78rem;">
 
-                        {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq %}{% if bq.ket_qua == '?????ng ??' %}???{% else %}???{% endif %}{% else %}???{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
+                        {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq.ket_qua == 'Đồng ý' %}✓{% else %}✗{% endif %}{% else %}–{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
 
                         <br><small>({{ voted_count }}/{{ total }})</small>
 
@@ -305,11 +305,11 @@
 
                         {% if row.is_confirmed %}
 
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>???? x??c nh???n KT</span>
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
 
-                        {% elif row.admin_final_vote and row.admin_final_vote.ket_qua == 'Kh??ng ?????ng ??' %}
+                        {% elif row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý' %}
 
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>H???i ?????ng b??c</span>
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bầu</span>
 
                         {% else %}
 
@@ -321,15 +321,15 @@
 
                             <button type="button"
 
-                                    class="btn btn-xs {% if my_vote and my_vote.ket_qua == '?????ng ??' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Kh??ng ?????ng ??' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
+                                    class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
 
                                     style="font-size:0.75rem;"
 
-                                    title="Bi???u quy???t ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
+                                    title="Biểu Quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
 
                                     onclick="openVoteModal({{ ct.id }}, '{{ ct.quan_nhan.ho_ten | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}', '{{ ct.loai_danh_hieu.strip() }}')">
 
-                                <i class="bi bi-hand-index me-1"></i>Bi???u quy???t
+                                <i class="bi bi-hand-index me-1"></i>Biểu quyết
 
                             </button>
 
@@ -347,9 +347,9 @@
 
                                     <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
 
-                                            onclick="return confirm('X??c nh???n ?????NG ?? khen th?????ng?')">
+                                            onclick="return confirm('Xác nhận khên thươgnrg cho cá nhân này?')">
 
-                                        <i class="bi bi-check2-circle me-1"></i>?????ng ??
+                                        <i class="bi bi-check2-circle me-1"></i>Đồng ý
 
                                     </button>
 
@@ -359,7 +359,7 @@
 
                                         data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
 
-                                    <i class="bi bi-x-circle me-1"></i>Kh??ng ?????ng ??
+                                    <i class="bi bi-x-circle me-1"></i>Không Đồng ý
 
                                 </button>
 
@@ -367,7 +367,7 @@
 
                                 {# ??? N??T H??? DANH HI???U C???A ADMIN #}
 
-                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chi???n s?? thi ??ua', 'Chi???n s??? thi ??ua', '????n v??? quy???t th???ng') %}
+                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
 
                                 <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
 
@@ -379,13 +379,13 @@
 
                                             '{{ ct.loai_danh_hieu.strip() }}',
 
-                                            '{{ 'Chi???n s?? ti??n ti???n' if 'thi ??ua' in ct.loai_danh_hieu|lower else '????n v??? ti??n ti???n' }}',
+                                            '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
 
                                             'ct'
 
                                         )">
 
-                                    <i class="bi bi-arrow-down-circle me-1"></i>H??? danh hi???u
+                                    <i class="bi bi-arrow-down-circle me-1"></i>Hủy danh hiệu
 
                                 </button>
 
@@ -395,7 +395,7 @@
 
                                 {% else %}
 
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Ch??? BQ</span>
+                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
 
                                 {% endif %}
 
@@ -409,13 +409,13 @@
 
                 </tr>
 
-                {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Kh??ng ?????ng ??') %}
+                {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %}
 
                 <div class="modal fade" id="kdyModal{{ ct.id }}" tabindex="-1">
 
                     <div class="modal-dialog modal-sm"><div class="modal-content">
 
-                        <div class="modal-header"><h6 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i>X??c nh???n Kh??ng ?????ng ??</h6>
+                        <div class="modal-header"><h6 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý</h6>
 
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
 
@@ -423,24 +423,15 @@
 
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                            <div class="modal-body">
-
-                                <p class="small mb-2">X??c nh???n <strong>Kh??ng ?????ng ??</strong> khen th?????ng cho <strong>{{ ct.quan_nhan.ho_ten }}</strong>?</p>
-
-                                <p class="small text-muted mb-2">C?? nh??n n??y s??? chuy???n v??o danh s??ch H???i ?????ng ph???n ?????i.</p>
-
-                                <div><label class="form-label small">Ghi ch?? l?? do (t??y ch???n)</label>
-
+                             <div class="modal-body">
+                                <p class="small mb-2">Xác nhận <strong>Không đồng ý</strong> khen thưởng cho <strong>{{ ct.quan_nhan.ho_ten }}</strong>?</p>
+                                <p class="small text-muted mb-2">Cá nhân này sẽ chuyển vào danh sách Hội đồng phản đối.</p>
+                                <div><label class="form-label small">Ghi chú lý do (tùy chọn)</label>
                                     <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea></div>
-
                             </div>
-
                             <div class="modal-footer">
-
-                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">H???y</button>
-
-                                <button type="submit" class="btn btn-sm btn-danger">X??c nh???n Kh??ng ?????ng ??</button>
-
+                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
                             </div>
 
                         </form>
@@ -467,7 +458,7 @@
 
         {% if b2_tap_the %}
 
-        <div class="fw-semibold text-navy small mb-1 mt-2"><i class="bi bi-building-fill me-1"></i>Danh hi???u t???p th??? ({{ b2_tap_the|length }})</div>
+        <div class="fw-semibold text-navy small mb-1 mt-2"><i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b2_tap_the|length }})</div>
 
         <div class="table-responsive">
 
@@ -479,13 +470,13 @@
 
                         <th class="sticky-stt-col">STT</th>
 
-                        <th class="sticky-name-col">T??n t???p th???</th>
+                        <th class="sticky-name-col">Tên tập thể</th>
 
-                        <th>????n v??? ????? xu???t</th>
+                        <th>Đơn vị đề xuất</th>
 
-                        <th>Danh hi???u</th>
+                        <th>Danh hiệu</th>
 
-                        <th class="text-center col-b2-detail" style="white-space:nowrap;">Ti???n ????? BQ</th>
+                        <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
 
                         {% for vt in HOI_DONG_VAI_TRO %}
 
@@ -493,9 +484,9 @@
 
                         {% endfor %}
 
-                        <th class="text-center print-only" style="display:none;">K???t qu??? BQ</th>
+                        <th class="text-center print-only" style="display:none;">Kết quả BQ</th>
 
-                        <th class="text-center no-print">Thao t??c</th>
+                        <th class="text-center no-print">Thao tác</th>
 
                     </tr>
 
@@ -531,9 +522,9 @@
 
                     <td class="sticky-stt-col">{{ loop.index }}</td>
 
-                    <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '???' }}</strong></td>
+                    <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong></td>
 
-                    <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '???' }}</td>
+                    <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '---' }}</td>
 
                     <td><span class="badge bg-secondary" style="font-size:0.72rem;">{{ ct.loai_danh_hieu }}</span></td>
 
@@ -551,11 +542,11 @@
 
                         {% if bq %}
 
-                            {% if bq.ket_qua == '?????ng ??' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
+                            {% if bq.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
 
                             {% else %}<span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>{% endif %}
 
-                        {% else %}<span class="text-muted">???</span>{% endif %}
+                        {% else %}<span class="text-muted">---</span>{% endif %}
 
                     </td>
 
@@ -563,8 +554,7 @@
 
                     <td class="text-center print-only" style="display:none;font-size:0.78rem;">
 
-                        {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq %}{% if bq.ket_qua == '?????ng ??' %}???{% else %}???{% endif %}{% else %}???{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
-
+                    {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq %}{% if bq.ket_qua == 'Đồng ý' %}✓{% else %}✗{% endif %}{% else %}–{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
                         <br><small>({{ voted_count }}/{{ total }})</small>
 
                     </td>
@@ -572,13 +562,9 @@
                     <td class="text-center no-print" style="white-space:nowrap;">
 
                         {% if row.is_confirmed %}
-
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>???? x??c nh???n KT</span>
-
-                        {% elif row.admin_final_vote and row.admin_final_vote.ket_qua == 'Kh??ng ?????ng ??' %}
-
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>H???i ?????ng b??c</span>
-
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
+                        {% elif row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý' %}
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bác</span>
                         {% else %}
 
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
@@ -589,15 +575,15 @@
 
                             <button type="button"
 
-                                    class="btn btn-xs {% if my_vote and my_vote.ket_qua == '?????ng ??' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Kh??ng ?????ng ??' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
+                                    class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
 
                                     style="font-size:0.75rem;"
 
-                                    title="Bi???u quy???t ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
+                                    title="Biểu quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
 
                                     onclick="openVoteModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}', '{{ ct.loai_danh_hieu.strip() }}')">
 
-                                <i class="bi bi-hand-index me-1"></i>Bi???u quy???t
+                                <i class="bi bi-hand-index me-1"></i>Biểu quyết
 
                             </button>
 
@@ -615,9 +601,9 @@
 
                                     <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
 
-                                            onclick="return confirm('X??c nh???n ?????NG ?? khen th?????ng t???p th??? n??y?')">
+                                            onclick="return confirm('Xác nhận đồng ý khen thưởng tập thể này?')">
 
-                                        <i class="bi bi-check2-circle me-1"></i>?????ng ??
+                                        <i class="bi bi-check2-circle me-1"></i>Đồng ý
 
                                     </button>
 
@@ -627,7 +613,7 @@
 
                                         data-bs-toggle="modal" data-bs-target="#kdyModalTT{{ ct.id }}">
 
-                                    <i class="bi bi-x-circle me-1"></i>Kh??ng ?????ng ??
+                                    <i class="bi bi-x-circle me-1"></i>Không đồng ý
 
                                 </button>
 
@@ -635,7 +621,7 @@
 
                                 {# ??? N??T H??? DANH HI???U C???A ADMIN #}
 
-                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chi???n s?? thi ??ua', 'Chi???n s??? thi ??ua', '????n v??? quy???t th???ng') %}
+                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
 
                                 <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
 
@@ -647,13 +633,13 @@
 
                                             '{{ ct.loai_danh_hieu.strip() }}',
 
-                                            '{{ 'Chi???n s?? ti??n ti???n' if 'thi ??ua' in ct.loai_danh_hieu|lower else '????n v??? ti??n ti???n' }}',
+                                            '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
 
                                             'ct'
 
                                         )">
 
-                                    <i class="bi bi-arrow-down-circle me-1"></i>H??? danh hi???u
+                                    <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
 
                                 </button>
 
@@ -663,7 +649,7 @@
 
                                 {% else %}
 
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Ch??? BQ</span>
+                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chưa biểu quyết</span>
 
                                 {% endif %}
 
@@ -677,13 +663,13 @@
 
                 </tr>
 
-                {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Kh??ng ?????ng ??') %}
+                {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %}
 
                 <div class="modal fade" id="kdyModalTT{{ ct.id }}" tabindex="-1">
 
                     <div class="modal-dialog modal-sm"><div class="modal-content">
 
-                        <div class="modal-header"><h6 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i>X??c nh???n Kh??ng ?????ng ??</h6>
+                        <div class="modal-header"><h6 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý</h6>
 
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
 
@@ -693,11 +679,11 @@
 
                             <div class="modal-body">
 
-                                <p class="small mb-2">X??c nh???n <strong>Kh??ng ?????ng ??</strong> khen th?????ng cho t???p th??? <strong>{{ ct.ten_don_vi_de_xuat or '???' }}</strong>?</p>
+                                <p class="small mb-2">Xác nhận <strong>Không đồng ý</strong> khen thưởng cho tập thể <strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong>?</p>
 
-                                <p class="small text-muted mb-2">T???p th??? n??y s??? chuy???n v??o danh s??ch H???i ?????ng ph???n ?????i.</p>
+                                <p class="small text-muted mb-2">Tập thể này sẽ chuyển vào danh sách Hội đồng phân loại.</p>
 
-                                <div><label class="form-label small">Ghi ch?? l?? do (t??y ch???n)</label>
+                                <div><label class="form-label small">Ghi chú lý do (tùy chọn)</label>
 
                                     <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea></div>
 
@@ -705,9 +691,9 @@
 
                             <div class="modal-footer">
 
-                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">H???y</button>
+                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
 
-                                <button type="submit" class="btn btn-sm btn-danger">X??c nh???n Kh??ng ?????ng ??</button>
+                                <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
 
                             </div>
 
@@ -733,7 +719,7 @@
 
         {% else %}
 
-        <div class="text-muted small fst-italic">Hi???n kh??ng c?? ????? xu???t n??o ??? giai ??o???n x??t duy???t c???a c?? quan th?????ng tr???c.</div>
+        <div class="text-muted small fst-italic">Hiện không có tập thể nào trong giai đoạn xét duyệt của cơ quan thường trực.</div>
 
         {% endif %}
 
