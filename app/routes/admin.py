@@ -2904,11 +2904,168 @@ def export_tracking_word_less():
             rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=None)) 
         return rows_xml
 
-    today_str = _dt.date.today().strftime('%d/%m/%Y')
+    now = _dt.datetime.now()
+    today_str = now.strftime('%d/%m/%Y')
+    
+    # Thiết lập Tên đơn vị hiển thị động ở góc trái tiêu đề (Nếu có filter đơn vị cụ thể thì lấy tên đó)
+    ten_don_vi_header = unit_filter.upper() if unit_filter else "KHOA SƯ PHẠM QUÂN SỰ"
+
     body = []
-    body.append(_para('TRƯỜNG SĨ QUAN CHÍNH TRỊ', bold=True, size_pt=12, align='center', space_before=0, space_after=20))
-    body.append(_para(f'DANH SÁCH KHEN THƯỞNG — {title_nam_hoc}', bold=True, size_pt=14, align='center', space_before=60, space_after=20))
-    body.append(_para(f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M")} ngày {today_str})', italic=True, size_pt=10, align='center', space_before=0, space_after=120))
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # [TÍCH HỢP] BẢNG QUỐC HIỆU TIÊU NGỮ & TIÊU ĐỀ CHUẨN ĐÚNG THEO XML MẪU
+    # ─────────────────────────────────────────────────────────────────────────
+    header_table_xml = f"""<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:tblPr>
+    <w:tblW w:type="dxa" w:w="9070"/>
+    <w:jc w:val="left"/>
+    <w:tblLayout w:type="fixed"/>
+    <w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/>
+    </w:tblPr>
+    <w:tblGrid>
+    <w:gridCol w:w="4535"/>
+    <w:gridCol w:w="4535"/>
+    </w:tblGrid>
+    <w:tr>
+    <w:tc>
+    <w:tcPr>
+    <w:tcW w:type="dxa" w:w="4535"/>
+    <w:tcBorders>
+    <w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    </w:tcBorders>
+    </w:tcPr>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b w:val="0"/>
+    <w:i w:val="0"/>
+    <w:sz w:val="24"/>
+    </w:rPr>
+    <w:t>TRƯỜNG SĨ QUAN CHÍNH TRỊ</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="24"/>
+    <w:u w:val="single"/>
+    </w:rPr>
+    <w:t>{ten_don_vi_header}</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b w:val="0"/>
+    <w:i w:val="0"/>
+    <w:sz w:val="22"/>
+    </w:rPr>
+    </w:r>
+    </w:p>
+    </w:tc>
+    <w:tc>
+    <w:tcPr>
+    <w:tcW w:type="dxa" w:w="4535"/>
+    <w:tcBorders>
+    <w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    </w:tcBorders>
+    </w:tcPr>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="24"/>
+    </w:rPr>
+    <w:t>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="24"/>
+    <w:u w:val="single"/>
+    </w:rPr>
+    <w:t>Độc lập - Tự do - Hạnh phúc</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b w:val="0"/>
+    <w:i/>
+    <w:sz w:val="22"/>
+    </w:rPr>
+    <w:t>Hà Nội, ngày {now.day} tháng {now.month} năm {now.year}</w:t>
+    </w:r>
+    </w:p>
+    </w:tc>
+    </w:tr>
+    </w:tbl>"""
+
+    title_xml = f"""<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:pPr>
+    <w:jc w:val="center"/>
+    <w:spacing w:before="180" w:after="40"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="26"/>
+    </w:rPr>
+    <w:t>DANH SÁCH ĐỀ NGHỊ KHEN THƯỞNG NĂM HỌC {title_nam_hoc.upper()}</w:t>
+    </w:r>
+    </w:p>"""
+
+    body.append(header_table_xml)
+    body.append("<w:p/>")
+    body.append(title_xml)
+    body.append(_para(f'(Xuất lúc {now.strftime("%H:%M")} ngày {today_str})', italic=True, size_pt=10, align='center', space_before=0, space_after=120))
 
     def _add_section(label, items, is_tap_the=False):
         if not items:
@@ -2916,16 +3073,14 @@ def export_tracking_word_less():
         body.append(_para(label, bold=True, size_pt=12, space_before=120, space_after=40))
         
         if is_tap_the:
-            # ─────────────────────────────────────────────────────────────────
-            # [CẬP NHẬT] HIỂN THỊ DẠNG DANH SÁCH TỪNG DÒNG (BỎ BẢNG)
-            # ─────────────────────────────────────────────────────────────────
+            # HIỂN THỊ DẠNG DANH SÁCH TỪNG DÒNG (BỎ BẢNG)
             for i, (ct, dx) in enumerate(items, 1):
                 ten_dv = ct.ten_don_vi_de_xuat or (dx.don_vi.ten_don_vi if dx.don_vi else '')
                 body.append(_para(f"{i}. {ten_dv}", size_pt=11, align='left', space_before=40, space_after=0))
                 
             body.append(_para(f'Tổng cộng: {len(items)} đơn vị', italic=True, size_pt=10, align='right', space_before=60, space_after=60))
         else:
-            # CÁ NHÂN VẪN GIỮ NGUYÊN DẠNG BẢNG
+            # CÁ NHÂN GIỮ NGUYÊN DẠNG BẢNG NỀN TRẮNG CHỮ ĐEN
             rows_xml = _cn_rows(items)
             body.append(_build_table(CN_HEADERS, rows_xml, CN_WIDTHS, total_label=f'Tổng cộng: {len(items)} người', size_pt=9))
             body.append(_para('', space_before=60, space_after=0))
@@ -2937,7 +3092,7 @@ def export_tracking_word_less():
     for extra_dh, extra_items in ds_khac.items():
         _add_section(extra_dh, extra_items)
 
-    body.append(_para(f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M ngày %d/%m/%Y")})',
+    body.append(_para(f'(Xuất lúc {now.strftime("%H:%M ngày %d/%m/%Y")})',
                       italic=True, size_pt=9, align='right', space_before=120, space_after=0))
     
     doc_xml = _build_document_xml(body, margin_left=2016, margin_right=720, margin_top=1440, margin_bottom=1440)
@@ -2993,7 +3148,7 @@ def export_tracking_word_less():
     fname_parts = ['DanhSachKhenThuong']
     if nam_hoc_filter:
         fname_parts.append(nam_hoc_filter.replace('-', '_'))
-    fname_parts.append(_dt.datetime.now().strftime('%d%m%Y'))
+    fname_parts.append(now.strftime('%d%m%Y'))
     filename = '_'.join(fname_parts) + '.docx'
 
     response = send_file(
