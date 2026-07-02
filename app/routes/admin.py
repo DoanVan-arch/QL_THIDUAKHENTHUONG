@@ -3017,35 +3017,12 @@ def export_tracking_word_less():
                         run.font.color.rgb = RGBColor(0, 0, 0)
 
     # 2. Thêm Watermark (Chữ chéo mờ ở Background)
-    try:
-        section = doc.sections[0]
-        header = section.header
-        watermark_xml = '''
-        <w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-            <w:r>
-                <w:pict>
-                    <v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e">
-                        <v:path textpathok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0"/>
-                        <v:textpath on="t" fitshape="t"/>
-                        <o:lock v:ext="edit" text="t" shapetype="t"/>
-                    </v:shapetype>
-                    <v:shape id="WaterMarkObject" type="#_x0000_t136" style="position:absolute;width:450pt;height:120pt;rotation:315;z-index:-251657216;mso-position-horizontal:center;mso-position-vertical:center;" fillcolor="#E0E0E0" stroked="f">
-                        <v:fill opacity=".5"/>
-                        <v:textpath style="font-family:'Arial';font-size:1pt;font-weight:bold" string="TÀI LIỆU NỘI BỘ"/>
-                    </v:shape>
-                </w:pict>
-            </w:r>
-        </w:p>
-        '''
-        header._element.append(parse_xml(watermark_xml))
-    except Exception as e:
-        pass # Bỏ qua nếu lỗi chèn XML Watermark
-
+    
     # 3. Đặt mật khẩu chống chỉnh sửa (Read-Only)
     settings = doc.settings.element
     prot = OxmlElement('w:documentProtection')
     prot.set(qn('w:edit'), 'readOnly')
-    prot.set(qn('w:enforcement'), '1')
+    prot.set(qn('w:enforcement'), 'bth123')
     # Word sẽ khóa văn bản (Chỉ được xem). 
     # Mặc dù bảo mật này không có mã băm (hash) mật khẩu phức tạp để chặn bẻ khóa nâng cao nhưng ngăn chặn thành công việc chỉnh sửa thông thường.
     settings.append(prot)
