@@ -2780,6 +2780,9 @@ def export_tracking_word_less():
     """Export bảng theo dõi quy trình phê duyệt ra Word (theo mẫu khen thưởng)."""
     import datetime as _dt
     import zipfile
+    import os
+    import binascii
+    import hashlib
     from io import BytesIO
     from datetime import date
     
@@ -2869,17 +2872,12 @@ def export_tracking_word_less():
         _build_document_xml, build_docx,
     )
 
-    # --- Chiều rộng cột cá nhân (để màu trắng bằng cách xóa shade, hoặc set None) ---
+    # --- Chiều rộng cột cá nhân ---
     CN_WIDTHS = [
         cm_to_twips(0.8), cm_to_twips(3.5), cm_to_twips(2.0),
         cm_to_twips(2.5), cm_to_twips(2.5), cm_to_twips(5.5),
     ]
     CN_HEADERS = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Ghi chú']
-
-    TT_WIDTHS = [
-        cm_to_twips(0.8), cm_to_twips(4.5), cm_to_twips(11.5),
-    ]
-    TT_HEADERS = ['STT', 'Tên đơn vị', 'Ghi chú']
 
     from app.models.nomination import TieuChi as _TieuChi
     _tieu_chi_map_all = {tc.ma_truong: tc.ten for tc in _TieuChi.query.all()}
@@ -2903,18 +2901,7 @@ def export_tracking_word_less():
                 (dx.don_vi.ten_don_vi if dx.don_vi else '', False, 'left'),
                 (_build_tomtat(ct) or '', False, 'left'),
             ]
-            rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=None)) # Đã đổi shade thành None
-        return rows_xml
-
-    def _tt_rows(items):
-        rows_xml = []
-        for i, (ct, dx) in enumerate(items, 1):
-            row_cells = [
-                (str(i), False, 'center'),
-                (ct.ten_don_vi_de_xuat or (dx.don_vi.ten_don_vi if dx.don_vi else ''), True, 'left'),
-                ('', False, 'center'),
-            ]
-            rows_xml.append(_data_row(row_cells, TT_WIDTHS, size_pt=9, shade=None)) # Đã đổi shade thành None
+            rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=None)) 
         return rows_xml
 
     today_str = _dt.date.today().strftime('%d/%m/%Y')
@@ -2927,13 +2914,21 @@ def export_tracking_word_less():
         if not items:
             return
         body.append(_para(label, bold=True, size_pt=12, space_before=120, space_after=40))
+        
         if is_tap_the:
-            rows_xml = _tt_rows(items)
-            body.append(_build_table(TT_HEADERS, rows_xml, TT_WIDTHS, total_label=f'Tổng cộng: {len(items)} đơn vị', size_pt=9))
+            # ─────────────────────────────────────────────────────────────────
+            # [CẬP NHẬT] HIỂN THỊ DẠNG DANH SÁCH TỪNG DÒNG (BỎ BẢNG)
+            # ─────────────────────────────────────────────────────────────────
+            for i, (ct, dx) in enumerate(items, 1):
+                ten_dv = ct.ten_don_vi_de_xuat or (dx.don_vi.ten_don_vi if dx.don_vi else '')
+                body.append(_para(f"{i}. {ten_dv}", size_pt=11, align='left', space_before=40, space_after=0))
+                
+            body.append(_para(f'Tổng cộng: {len(items)} đơn vị', italic=True, size_pt=10, align='right', space_before=60, space_after=60))
         else:
+            # CÁ NHÂN VẪN GIỮ NGUYÊN DẠNG BẢNG
             rows_xml = _cn_rows(items)
             body.append(_build_table(CN_HEADERS, rows_xml, CN_WIDTHS, total_label=f'Tổng cộng: {len(items)} người', size_pt=9))
-        body.append(_para('', space_before=60, space_after=0))
+            body.append(_para('', space_before=60, space_after=0))
 
     _add_section('I. DANH HIỆU ĐƠN VỊ QUYẾT THẮNG', ds_quyet_thang, is_tap_the=True)
     _add_section('II. DANH HIỆU ĐƠN VỊ TIÊN TIẾN', ds_tien_tien_dv, is_tap_the=True)
@@ -2951,13 +2946,30 @@ def export_tracking_word_less():
     buf = build_docx(doc_xml)
     
     # =========================================================================
-    # BẢO VỆ CHỐNG CHỈNH SỬA BẰNG CÁCH CAN THIỆP ZIP/XML TRỰC TIẾP
+    # BẢO VỆ CHỐNG CHỈNH SỬA (CÓ MẬT KHẨU BĂM) BẰNG ZIP/XML TRỰC TIẾP
     # =========================================================================
     buf.seek(0)
     final_buf = BytesIO()
 
-    # Thẻ XML để thiết lập chế độ Read-Only cho tài liệu
-    protection_tag = b'<w:documentProtection w:edit="readOnly" w:enforcement="1"/>'
+    # Thuật toán hash mật khẩu Office 2010+ (Agile Encryption)
+    password = "123" # <--- THAY ĐỔI MẬT KHẨU TẠI ĐÂY
+    salt = os.urandom(16)
+    salt_b64 = binascii.b2a_base64(salt).strip().decode()
+
+    key = hashlib.sha512(salt + password.encode('utf-16le')).digest()
+    spin_count = 10000
+    for i in range(spin_count):
+        iterator = i.to_bytes(4, byteorder='little')
+        key = hashlib.sha512(key + iterator).digest()
+        
+    hash_b64 = binascii.b2a_base64(key).strip().decode()
+
+    # Tạo chuỗi XML bảo vệ theo chuẩn Agile
+    protection_tag = (
+        f'<w:documentProtection w:edit="readOnly" w:enforcement="1" '
+        f'w:algorithmName="SHA-512" w:spinCount="{spin_count}" '
+        f'w:hashValue="{hash_b64}" w:saltValue="{salt_b64}"/>'
+    ).encode('utf-8')
 
     with zipfile.ZipFile(buf, 'r') as zin:
         with zipfile.ZipFile(final_buf, 'w') as zout:
@@ -2967,8 +2979,10 @@ def export_tracking_word_less():
                 # Tìm file cấu hình settings.xml
                 if item.filename == 'word/settings.xml':
                     # Tiêm mã bảo vệ vào trước khi kết thúc thẻ w:settings
-                    if b'</w:settings>' in file_content and b'w:documentProtection' not in file_content:
-                        file_content = file_content.replace(b'</w:settings>', protection_tag + b'</w:settings>')
+                    if b'</w:settings>' in file_content:
+                        # Tránh trùng lặp nếu thẻ đã tồn tại
+                        if b'w:documentProtection' not in file_content:
+                            file_content = file_content.replace(b'</w:settings>', protection_tag + b'</w:settings>')
                 
                 # Copy toàn bộ nội dung sang file zip mới
                 zout.writestr(item, file_content)
@@ -2991,154 +3005,6 @@ def export_tracking_word_less():
         max_age=600, httponly=False, samesite='Lax', path='/'
     )
     return response
-
-def set_fixed_table_widths(tbl, widths_cm):
-        """Can thiệp sâu vào XML để khóa chết chiều rộng bảng, Word không thể tự đổi"""
-        # 1. Ép kiểu bảng thành Fixed Layout (Không tự co giãn)
-        tbl.autofit = False
-        tblPr = tbl._tbl.tblPr
-        tblLayout = tblPr.find(qn('w:tblLayout'))
-        if tblLayout is None:
-            tblLayout = OxmlElement('w:tblLayout')
-            tblPr.append(tblLayout)
-        tblLayout.set(qn('w:type'), 'fixed')
-
-        # 2. Xóa lưới cột cũ và xây lại khung lưới mới theo đúng kích thước cm
-        tblGrid = tbl._tbl.find(qn('w:tblGrid'))
-        if tblGrid is not None:
-            tbl._tbl.remove(tblGrid)
-        tblGrid = OxmlElement('w:tblGrid')
-        tbl._tbl.insert(1, tblGrid)  # Chèn khung lưới vào đúng vị trí chuẩn XML
-
-        for w in widths_cm:
-            gridCol = OxmlElement('w:gridCol')
-            # Chuyển đổi Cm sang đơn vị Twips của Word (1 twip = 635 EMUs)
-            gridCol.set(qn('w:w'), str(int(Cm(w) / 635)))
-            tblGrid.append(gridCol)
-
-        # 3. Khóa cứng chiều rộng ở cấp độ từng Ô (Cell)
-        for i, w in enumerate(widths_cm):
-            twips_val = str(int(Cm(w) / 635))
-            for row in tbl.rows:
-                tcPr = row.cells[i]._tc.get_or_add_tcPr()
-                tcW = tcPr.find(qn('w:tcW'))
-                if tcW is None:
-                    tcW = OxmlElement('w:tcW')
-                    tcPr.append(tcW)
-                tcW.set(qn('w:w'), twips_val)
-                tcW.set(qn('w:type'), 'dxa')
-def add_page_number(run):
-        """Thêm mã trường đếm số trang tự động (PAGE) vào run"""
-        fldChar1 = OxmlElement('w:fldChar')
-        fldChar1.set(qn('w:fldCharType'), 'begin')
-
-        instrText = OxmlElement('w:instrText')
-        instrText.set(qn('xml:space'), 'preserve')
-        instrText.text = "PAGE"
-
-        fldChar2 = OxmlElement('w:fldChar')
-        fldChar2.set(qn('w:fldCharType'), 'separate')
-
-        fldChar3 = OxmlElement('w:fldChar')
-        fldChar3.set(qn('w:fldCharType'), 'end')
-
-        run._r.append(fldChar1)
-        run._r.append(instrText)
-        run._r.append(fldChar2)
-        run._r.append(fldChar3)
-def add_text_watermark(doc, text="TRƯỜNG SĨ QUAN CHÍNH TRỊ"):
-    """Thêm text watermark xéo góc 45 độ, mờ, ở giữa trang."""
-    try:
-        for section in doc.sections:
-            header = section.header
-            # Tạo paragraph trong header
-            para = header.add_paragraph()
-            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
-            # Thêm run với text
-            run = para.add_run(text)
-            run.font.size = Pt(48)
-            run.font.name = 'Times New Roman'
-            run.font.bold = True
-            run.font.color.rgb = RGBColor(192, 192, 192)  # Light gray
-            
-            # Access paragraph XML to add rotation and positioning
-            p_element = para._element
-            pPr = p_element.get_or_add_pPr()
-            
-            # Create text box frame with rotation
-            # Note: This is a simplified approach - true watermark needs more complex XML
-            # For better watermark effect, we'll use the shape approach below
-            
-    except Exception as e:
-        print(f"Warning: Could not add text watermark: {e}")
-
-
-def add_logo_footer(doc):
-    """Thêm logo nhỏ và số trang vào footer cuối trang."""
-    import os
-    from flask import current_app
-
-    # ★ Ưu tiên logo nhỏ (19 KB) để giảm kích thước file docx
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo-Si-quan.png')
-    if not os.path.exists(logo_path):
-        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'watermark.png')
-        if not os.path.exists(logo_path):
-            return
-    
-    try:
-        for section in doc.sections:
-            footer = section.footer
-            
-            # Thêm số trang ở giữa
-            para_page = footer.add_paragraph()
-            para_page.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            para_page.paragraph_format.space_before = Pt(2)
-            para_page.paragraph_format.space_after = Pt(2)
-            
-            # Add page number field
-            run_page = para_page.add_run()
-            run_page.font.size = Pt(10)
-            run_page.font.name = 'Times New Roman'
-            
-            # Insert page number field code
-            from docx.oxml import OxmlElement
-            from docx.oxml.ns import qn
-            
-            fldChar1 = OxmlElement('w:fldChar')
-            fldChar1.set(qn('w:fldCharType'), 'begin')
-            
-            instrText = OxmlElement('w:instrText')
-            instrText.set(qn('xml:space'), 'preserve')
-            instrText.text = 'PAGE'
-            
-            fldChar2 = OxmlElement('w:fldChar')
-            fldChar2.set(qn('w:fldCharType'), 'end')
-            
-            run_page._element.append(fldChar1)
-            run_page._element.append(instrText)
-            run_page._element.append(fldChar2)
-            
-            # Thêm logo nhỏ bên dưới số trang
-            para = footer.add_paragraph()
-            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
-            # Thêm logo nhỏ (1.2cm)
-            run = para.add_run()
-            run.add_picture(logo_path, width=Cm(1.2))
-            
-            # Thêm text bên dưới logo
-            para2 = footer.add_paragraph()
-            para2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run2 = para2.add_run('Trường Sĩ quan Chính trị')
-            run2.font.size = Pt(7)
-            run2.font.name = 'Times New Roman'
-            run2.font.italic = True
-            run2.font.color.rgb = RGBColor(128, 128, 128)
-            
-    except Exception as e:
-        print(f"Warning: Could not add footer logo: {e}")
-
 
 def add_corner_logo(doc):
     """Thêm logo nhỏ ở góc phải trên cùng của trang (sau header table hiện tại)."""
