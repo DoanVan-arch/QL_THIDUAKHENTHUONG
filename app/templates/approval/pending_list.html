@@ -1615,7 +1615,7 @@ function openDetailModal(ctId) {
         }
         // Timeout an toàn 180s — khớp với gunicorn timeout (Procfile: --timeout 180)
         // JS phải chờ đủ để server có thể hoàn thành trước khi báo lỗi
-        if (_startTime && Date.now() - _startTime > 180000) {
+        if (_startTime && Date.now() - _startTime > 280000) {
             hideOverlay(false);
         }
     }
