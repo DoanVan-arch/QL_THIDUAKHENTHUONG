@@ -2689,6 +2689,8 @@ def export_word():
       
             
         for f in criteria_fields not in ('nckh_noi_dung'):
+            if f in ('nckh_noi_dung',): # Thêm dấu phẩy để tạo một tuple đúng chuẩn nếu chỉ có 1 phần tử
+                continue
             val = getattr(ct, f, None) or ''
             if val:
                 parts.append(f'{field_labels.get(f, f)}: {val}')
