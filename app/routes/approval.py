@@ -2642,11 +2642,11 @@ def export_word():
             
             row_cells = [
                 (str(stt), False, 'center'),
-                (qn.ho_ten if qn else '', True, 'left'),
+                (qn.ho_ten if qn else '', True, 'justify'),
                 (qn.cap_bac if qn and qn.cap_bac else '', False, 'left'),
                 (qn.chuc_vu if qn and qn.chuc_vu else '', False, 'left'),
-                (item['don_vi'], False, 'left'),
-                (build_tom_tat(item['ct']) or '', False, 'left'),
+                (item['don_vi'], False, 'justify'),
+                (build_tom_tat(item['ct']) or '', False, 'justify'),
                 
             ]
             shade = None if i % 2 == 0 else None
@@ -2767,7 +2767,7 @@ def export_word():
     <w:sz w:val="24"/>
     <w:u w:val="single"/>
     </w:rPr>
-    <w:t>{current_user.ho_ten}</w:t>
+    <w:t>{phong_name.upper()}</w:t>
     </w:r>
     </w:p>
     <w:p>
@@ -2862,21 +2862,7 @@ def export_word():
     </w:r>
     </w:p>"""
 
-    body.append(header_table_xml)
-    body.append("<w:p/>")
-    body.append(title_xml)
-    body.append(_para(f'(Xuất lúc {now.strftime("%H:%M")} ngày {today_str})', italic=True, size_pt=10, align='center', space_before=0, space_after=120))
-
-    body.append(_para(phong_name.upper(), bold=True, size_pt=12, align='center', space_before=0, space_after=20))
-    body.append(_para(
-        'DANH SÁCH PHÊ DUYỆT KHEN THƯỞNG' + (f' NĂM HỌC {nam_hoc_filter}' if nam_hoc_filter else ''),
-        bold=True, size_pt=13, align='center', space_before=60, space_after=20
-    ))
-    body.append(_para(
-        f'({phong_name} — Xuất lúc {_dt.datetime.now().strftime("%H:%M ngày %d/%m/%Y")})',
-        italic=True, size_pt=10, align='center', space_before=0, space_after=120
-    ))
-
+    
     def _add_section(label, items, is_tap_the=False):
         if not items:
             return

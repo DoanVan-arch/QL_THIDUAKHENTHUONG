@@ -1179,9 +1179,9 @@ def confirm_khen_thuong_ct(ct_id):
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
     de_xuat = ct.de_xuat
 
-    if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
-        flash('Đề xuất không ở giai đoạn chờ xác nhận khen thưởng.', 'warning')
-        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+    # if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+    #     flash('Đề xuất không ở giai đoạn chờ xác nhận khen thưởng.', 'warning')
+    #     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     # Require all 7 organs to have cast a vote (any result) before Admin decides
     for vai_tro in HOI_DONG_VAI_TRO:
@@ -2696,7 +2696,7 @@ def export_tracking_word():
                 (qn.cap_bac if qn else '', False, 'left'),
                 (qn.chuc_vu if qn else '', False, 'left'),
                 (dx.don_vi.ten_don_vi if dx.don_vi else '', False, 'left'),
-                (_build_tomtat(ct), False, 'left'),
+                (_build_tomtat(ct), False, 'justify'),
             ]
             shade = None if i % 2 == 0 else None
             rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=shade))
@@ -3057,7 +3057,7 @@ def export_tracking_word_less():
                 (qn_obj.cap_bac if qn_obj else '', False, 'left'),
                 (qn_obj.chuc_vu if qn_obj else '', False, 'left'),
                 (dx.don_vi.ten_don_vi if dx.don_vi else '', False, 'left'),
-                (_build_tomtat(ct) or '', False, 'left'),
+                (_build_tomtat(ct) or '', False, 'justify'),
             ]
             rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=None)) 
         return rows_xml
