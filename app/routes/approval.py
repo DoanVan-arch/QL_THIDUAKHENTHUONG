@@ -2519,8 +2519,11 @@ def export_word():
                 selectinload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
             ),
         )
-        .order_by(PheDuyet.created_at.desc())
+        
     )
+    q = q.order_by(
+        DonVi.thu_tu.asc(), DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()
+    ).all()
     if nam_hoc_filter:
         q = q.join(DeXuat, PheDuyet.de_xuat_id == DeXuat.id).filter(
             DeXuat.nam_hoc == nam_hoc_filter
@@ -2675,7 +2678,7 @@ def export_word():
                 if val:
                     tn.append(f'{label}: {val}')
             parts.append(', '.join(tn))
-        if ct.mo_ta_khoa_hoc:
+        if ct.mo_ta_khoa_hoc and phong_name != PhongDuyet.PHONG_KHOAHOC.value:
             parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
         if ct.thanh_tich_ca_nhan_khac:
             parts.append(ct.thanh_tich_ca_nhan_khac)
