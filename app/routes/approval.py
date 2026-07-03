@@ -2518,7 +2518,7 @@ def export_word():
             selectinload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
         ),
     )
-)
+    )
 
     # Áp dụng các bộ lọc tương tự như mẫu
     if nam_hoc_filter:
@@ -2532,7 +2532,7 @@ def export_word():
     ).all()
     # ── 1. Query với eager loading đầy đủ ────────────────────────────────────
     
-    pending_reviews = q.all()
+    pending_reviews = q
 
     # ── 2. Out-of-scope (không query thêm) ───────────────────────────────────
     out_of_scope_ct_ids = set()
