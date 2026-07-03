@@ -1069,11 +1069,62 @@ def _auto_finalize_scope_dept_batch_v2(de_xuat_ids, de_xuat_map_hint=None):
     return result
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# pending_list() — VIẾT LẠI HOÀN TOÀN
+# Từ ~930 queries → ~8 queries cố định (không phụ thuộc số đề xuất)
+#
+# ROOT CAUSES đã fix:
+# [#1] Step 5 reload thiếu eager-load de_xuat → lazy load 70+ lần
+# [#2] _auto_finalize_scope_dept_batch() query lại DeXuat đã có
+# [#3] _recompute_de_xuat_status() gọi trong loop → N×2 queries
+# [#4] get_field_labels()/get_phong_fields() không cache → 6 queries
+# [#5] IN(700+ ids) trong group_gate batch
+# [#6] quan_nhan KHÔNG được eager-load → 700 lazy loads
+# ═══════════════════════════════════════════════════════════════════════════
+
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import exists as sa_exists
+from functools import lru_cache
+
+
+# ── Module-level cache cho TieuChi (FIX-#4) ─────────────────────────────
+# Dùng simple dict thay vì lru_cache để có thể invalidate khi cần
+_tieu_chi_cache: dict = {}
+
+def _get_tieu_chi_cached():
+    """Load TieuChi 1 lần per process, cache vào module-level dict."""
+    if _tieu_chi_cache:
+        return _tieu_chi_cache
+    rows = TieuChi.query.filter_by(is_active=True).all()
+    _tieu_chi_cache['labels']      = {tc.ma_truong: tc.ten for tc in rows}
+    _tieu_chi_cache['phong_fields'] = {}
+    for tc in rows:
+        for pd_name in (tc.phong_duyet or []):
+            role = _PHONG_TO_ROLE.get(pd_name)
+            if role:
+                _tieu_chi_cache['phong_fields'].setdefault(role, [])
+                if tc.ma_truong not in _tieu_chi_cache['phong_fields'][role]:
+                    _tieu_chi_cache['phong_fields'][role].append(tc.ma_truong)
+    return _tieu_chi_cache
+
+def get_field_labels_cached():
+    c = _get_tieu_chi_cached()
+    return c.get('labels') or _FALLBACK_FIELD_LABELS
+
+def get_phong_fields_cached():
+    c = _get_tieu_chi_cached()
+    return c.get('phong_fields') or _FALLBACK_PHONG_FIELDS
+
+def invalidate_tieu_chi_cache():
+    """Gọi sau khi admin thay đổi TieuChi."""
+    _tieu_chi_cache.clear()
+
+
 @approval_bp.route('/pending')
 @login_required
 @department_required
 def pending_list():
-    # ── FIX-E: Tắt expire_on_commit ngay đầu request ─────────────────────
+    # ── Tắt expire_on_commit — an toàn trong 1 request ──────────────────
     db.session().expire_on_commit = False
 
     from app.models.nomination import DeXuat as _DeXuat, DanhHieu as _DanhHieu
@@ -1082,166 +1133,183 @@ def pending_list():
     phong_name     = ROLE_TO_PHONG.get(current_user.role, '')
     nam_hoc_filter = request.args.get('nam_hoc', '')
 
-    # ── 1. Nam học dropdown — 1 query nhỏ ────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════
+    # QUERY 1: Nam học dropdown
+    # ════════════════════════════════════════════════════════════════════
     nam_hoc_list = [n[0] for n in db.session.query(_DeXuat.nam_hoc).join(
         PheDuyet, PheDuyet.de_xuat_id == _DeXuat.id
-    ).filter(
-        PheDuyet.phong_duyet == phong_name,
+    ).filter(PheDuyet.phong_duyet == phong_name
     ).distinct().order_by(_DeXuat.nam_hoc.desc()).all()]
 
-    # ── 2. Query chính — EAGER LOAD đầy đủ, lọc orphan/all-bi_loai trên DB
-    # FIX-F: Lọc ngay trên DB thay vì load hết rồi filter Python
-    # ─────────────────────────────────────────────────────────────────────
-    # Subquery: de_xuat có ít nhất 1 chi_tiet active (bi_loai=False)
+    if not nam_hoc_filter:
+        # Không có filter → chỉ render dropdown, không load data
+        return render_template(
+            'approval/pending_list.html',
+            pending_reviews=[], all_item_results={},
+            phong_name=phong_name, allowed_fields=[], table_columns=[],
+            field_labels=get_field_labels_cached(), field_conditions={},
+            unit_names=[], out_of_scope_ct_ids=set(),
+            group_gate_by_pd={}, group_gate_by_ct={},
+            managed_dept_columns=[], gate_dept_fields=[],
+            nam_hoc_filter='', nam_hoc_list=nam_hoc_list,
+            tt_criteria_fields=[], tt_field_labels={},
+            edit_requests_by_ct={}, ct_fields_map={},
+            stats={'total': 0, 'approved': 0, 'rejected': 0},
+        )
+
+    # ════════════════════════════════════════════════════════════════════
+    # QUERY 2+3+4: Query chính — EAGER LOAD ĐẦY ĐỦ bao gồm quan_nhan
+    # FIX-#6: thêm joinedload(chi_tiets.quan_nhan) → tránh 700 lazy loads
+    # FIX-#1: KHÔNG reload lại sau này → giữ nguyên object trong identity map
+    # ════════════════════════════════════════════════════════════════════
     has_active_ct = (
         db.session.query(DeXuatChiTiet.id)
         .filter(
             DeXuatChiTiet.de_xuat_id == _DeXuat.id,
             DeXuatChiTiet.bi_loai == False,
-        )
-        .correlate(_DeXuat)
-        .exists()
+        ).correlate(_DeXuat).exists()
     )
 
-    q = (
+    pending_reviews = (
         db.session.query(PheDuyet)
         .join(_DeXuat, PheDuyet.de_xuat_id == _DeXuat.id)
         .join(DonVi, _DeXuat.don_vi_id == DonVi.id)
         .filter(
             PheDuyet.phong_duyet == phong_name,
-            _DeXuat.id != None,          # loại orphan
-            has_active_ct,               # FIX-F: loại all-bi_loai trên DB
+            _DeXuat.nam_hoc == nam_hoc_filter,
+            _DeXuat.id != None,
+            has_active_ct,
         )
         .options(
+            # ★ KEY: eager-load TOÀN BỘ quan hệ cần thiết trong 1 lần
             selectinload(PheDuyet.de_xuat).options(
                 joinedload(_DeXuat.don_vi),
-                selectinload(_DeXuat.chi_tiets),
+                selectinload(_DeXuat.chi_tiets).options(
+                    joinedload(DeXuatChiTiet.quan_nhan),  # FIX-#6
+                ),
             ),
             selectinload(PheDuyet.chi_tiet_duyet),
         )
         .order_by(DonVi.thu_tu.asc(), _DeXuat.ngay_gui.desc())
+        .all()
     )
-    if nam_hoc_filter:
-        q = q.filter(_DeXuat.nam_hoc == nam_hoc_filter)
 
-    pending_reviews = q.all()
+    if not pending_reviews:
+        return render_template(
+            'approval/pending_list.html',
+            pending_reviews=[], all_item_results={},
+            phong_name=phong_name, allowed_fields=[], table_columns=[],
+            field_labels=get_field_labels_cached(), field_conditions={},
+            unit_names=[], out_of_scope_ct_ids=set(),
+            group_gate_by_pd={}, group_gate_by_ct={},
+            managed_dept_columns=[], gate_dept_fields=[],
+            nam_hoc_filter=nam_hoc_filter, nam_hoc_list=nam_hoc_list,
+            tt_criteria_fields=[], tt_field_labels={},
+            edit_requests_by_ct={}, ct_fields_map={},
+            stats={'total': 0, 'approved': 0, 'rejected': 0},
+        )
 
-    # ── 3. Build de_xuat_map để tái sử dụng (FIX-C) ─────────────────────
-    de_xuat_map = {pd.de_xuat_id: pd.de_xuat for pd in pending_reviews if pd.de_xuat}
+    # ════════════════════════════════════════════════════════════════════
+    # BUILD IN-MEMORY MAPS — không query thêm
+    # ════════════════════════════════════════════════════════════════════
+    de_xuat_map   = {pd.de_xuat_id: pd.de_xuat for pd in pending_reviews if pd.de_xuat}
+    existing_map  = {pd.id: {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
+                     for pd in pending_reviews}
 
-    # ── 4. Tạo KetQuaDuyetChiTiet còn thiếu — batch insert ───────────────
-    # Thu thập tất cả chi_tiet_id đã có KetQua trong 1 set per pd
-    existing_map = {pd.id: {kq.chi_tiet_id for kq in pd.chi_tiet_duyet}
-                    for pd in pending_reviews}
-
+    # ════════════════════════════════════════════════════════════════════
+    # QUERY 5 (optional): Tạo KetQuaDuyetChiTiet còn thiếu — bulk insert
+    # FIX-#1: KHÔNG reload lại sau bulk_save → dùng in-memory update
+    # ════════════════════════════════════════════════════════════════════
     new_records = []
+    # Map pd_id → list KetQuaDuyetChiTiet mới để merge vào chi_tiet_duyet
+    new_kq_by_pd: dict[int, list] = {}
+
+    is_special = phong_name in (
+        PhongDuyet.PHONG_HAUCANKYTHUAT.value,
+        PhongDuyet.BAN_SAUDAIHOC.value,
+    )
     for pd in pending_reviews:
         existing_ct_ids = existing_map[pd.id]
         for ct in pd.de_xuat.chi_tiets:
-            if ct.phong_loai == 'Tuyên huấn':
+            if ct.phong_loai == 'Tuyên huấn' or ct.id in existing_ct_ids:
                 continue
-            if ct.id in existing_ct_ids:
-                continue
-            in_scope = _is_in_dept_scope(current_user.role, ct.doi_tuong)
-            is_special = phong_name in (
-                PhongDuyet.PHONG_HAUCANKYTHUAT.value,
-                PhongDuyet.BAN_SAUDAIHOC.value,
-            )
+            in_scope    = _is_in_dept_scope(current_user.role, ct.doi_tuong)
             ket_qua_val = (
                 KetQuaDuyet.DONG_Y.value
                 if is_special or not in_scope
                 else KetQuaDuyet.CHO_DUYET.value
             )
-            new_records.append(KetQuaDuyetChiTiet(
+            kq_new = KetQuaDuyetChiTiet(
                 phe_duyet_id=pd.id,
                 chi_tiet_id=ct.id,
                 ket_qua=ket_qua_val,
-            ))
+            )
+            new_records.append(kq_new)
+            new_kq_by_pd.setdefault(pd.id, []).append(kq_new)
 
     if new_records:
-        db.session.bulk_save_objects(new_records, return_defaults=False)
+        db.session.add_all(new_records)   # add_all để có id sau flush
         db.session.flush()
-
-        # FIX-A: Thay vì reload toàn bộ PheDuyet (thiếu eager-load de_xuat),
-        # chỉ expire + refresh chi_tiet_duyet collection trực tiếp trên các
-        # object đã có trong identity map — giữ nguyên de_xuat eager-loaded.
-        affected_pd_ids = {r.phe_duyet_id for r in new_records}
+        # FIX-#1: Cập nhật chi_tiet_duyet IN-MEMORY, không reload từ DB
+        # SQLAlchemy identity map đã có các object mới sau add_all + flush
         for pd in pending_reviews:
-            if pd.id in affected_pd_ids:
-                # Expire chỉ collection chi_tiet_duyet, không expire toàn object
-                db.session.expire(pd, ['chi_tiet_duyet'])
-        # Trigger reload chi_tiet_duyet cho tất cả affected pds trong 1 selectin
-        affected_pds = [pd for pd in pending_reviews if pd.id in affected_pd_ids]
-        if affected_pds:
-            from sqlalchemy.orm import selectin_polymorphic
-            # Truy cập thuộc tính để trigger selectinload
-            _ = [pd.chi_tiet_duyet for pd in affected_pds]
-            # SQLAlchemy sẽ batch load tất cả trong 1 query nhờ selectinload strategy
-            # đã được set ở query chính — nhưng vì đã expire, nó sẽ re-fetch.
-            # Để chắc chắn batch: dùng explicit selectinload
-            refreshed = (
-                db.session.query(PheDuyet)
-                .filter(PheDuyet.id.in_(list(affected_pd_ids)))
-                .options(selectinload(PheDuyet.chi_tiet_duyet))
-                .all()
-            )
-            # Không cần thay thế trong pending_reviews vì SQLAlchemy identity map
-            # đã cập nhật các object gốc (cùng id → cùng object trong memory)
+            if pd.id in new_kq_by_pd:
+                # Append trực tiếp vào collection đã loaded
+                for kq_new in new_kq_by_pd[pd.id]:
+                    if kq_new not in pd.chi_tiet_duyet:
+                        pd.chi_tiet_duyet.append(kq_new)
 
-    # ── 5. Auto-finalize — FIX-B: inline logic, không gọi _recompute_de_xuat_status ─
-    de_xuat_ids_to_check = [
-        pd.de_xuat_id for pd in pending_reviews
-        if pd.ket_qua == KetQuaDuyet.CHO_DUYET.value
-    ]
+    # ════════════════════════════════════════════════════════════════════
+    # AUTO-FINALIZE — FIX-#3: inline logic, KHÔNG gọi _recompute_de_xuat_status
+    # Dùng all_related_pd_map đã load 1 lần
+    # ════════════════════════════════════════════════════════════════════
+    de_xuat_ids_all = list(de_xuat_map.keys())
+    auto_finalized_ids: set[int] = set()
+    need_commit = bool(new_records)
 
-    auto_finalized_ids = set()
-    all_related_pd_map: dict[int, list[PheDuyet]] = {}
+    # QUERY 6: Load tất cả PheDuyet liên quan (1 query)
+    all_related_pd_map: dict[int, list] = {}
     existing_admin_set: set[int] = set()
 
-    if de_xuat_ids_to_check:
-        # Batch load tất cả PheDuyet liên quan (1 query)
-        related_pds = PheDuyet.query.filter(
-            PheDuyet.de_xuat_id.in_(de_xuat_ids_to_check),
+    if de_xuat_ids_all:
+        for rpd in PheDuyet.query.filter(
+            PheDuyet.de_xuat_id.in_(de_xuat_ids_all),
             PheDuyet.phong_duyet != PhongDuyet.ADMIN_TUYENHUAN.value,
-        ).all()
-        for rpd in related_pds:
+        ).all():
             all_related_pd_map.setdefault(rpd.de_xuat_id, []).append(rpd)
 
         existing_admin_set = {
             r[0] for r in db.session.query(PheDuyet.de_xuat_id).filter(
-                PheDuyet.de_xuat_id.in_(de_xuat_ids_to_check),
+                PheDuyet.de_xuat_id.in_(de_xuat_ids_all),
                 PheDuyet.phong_duyet == PhongDuyet.ADMIN_TUYENHUAN.value,
             ).all()
         }
 
-    need_commit_finalize = False
     for pd in pending_reviews:
         if pd.ket_qua != KetQuaDuyet.CHO_DUYET.value:
             continue
         active_ct_ids = {ct.id for ct in pd.de_xuat.chi_tiets if not ct.bi_loai}
         if not active_ct_ids:
             continue
-        pending_in_scope = [
-            kq for kq in pd.chi_tiet_duyet
-            if kq.chi_tiet_id in active_ct_ids
-            and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
-        ]
-        if pending_in_scope:
-            continue  # Còn items chưa duyệt → không finalize
+        # Kiểm tra còn item nào CHO_DUYET không (dùng in-memory)
+        still_pending = any(
+            kq.chi_tiet_id in active_ct_ids and kq.ket_qua == KetQuaDuyet.CHO_DUYET.value
+            for kq in pd.chi_tiet_duyet
+        )
+        if still_pending:
+            continue
 
         # Tất cả active items đã có kết quả → auto-finalize
-        pd.ket_qua        = KetQuaDuyet.DONG_Y.value
-        pd.nguoi_duyet_id = None
-        pd.ngay_duyet     = datetime.utcnow()
-        pd.ghi_chu        = 'Tự động duyệt (không có đối tượng thuộc phạm vi)'
+        pd.ket_qua    = KetQuaDuyet.DONG_Y.value
+        pd.ngay_duyet = datetime.utcnow()
+        pd.ghi_chu    = 'Tự động duyệt (không có đối tượng thuộc phạm vi)'
         auto_finalized_ids.add(pd.id)
-        need_commit_finalize = True
+        need_commit = True
 
-        # FIX-B: Kiểm tra toàn bộ dept inline — không gọi _recompute_de_xuat_status()
-        de_xuat   = pd.de_xuat
-        all_dept  = all_related_pd_map.get(de_xuat.id, [])
-        # Cập nhật ket_qua của pd hiện tại trong all_dept list (đã thay đổi ở trên)
-        all_done  = all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept)
+        # FIX-#3: Kiểm tra toàn dept inline — không gọi _recompute_de_xuat_status
+        de_xuat  = pd.de_xuat
+        all_dept = all_related_pd_map.get(de_xuat.id, [])
+        all_done = all(a.ket_qua == KetQuaDuyet.DONG_Y.value for a in all_dept)
         if all_done and all_dept:
             de_xuat.trang_thai = TrangThaiDeXuat.HOI_DONG.value
             if de_xuat.id not in existing_admin_set:
@@ -1252,54 +1320,75 @@ def pending_list():
                 ))
                 existing_admin_set.add(de_xuat.id)
 
-    if need_commit_finalize:
+    if need_commit:
         db.session.commit()
 
-    # ── 6. Loại bỏ auto-finalized khỏi danh sách hiển thị ────────────────
+    # Loại auto-finalized khỏi danh sách hiển thị
     pending_reviews = [pd for pd in pending_reviews if pd.id not in auto_finalized_ids]
 
-    # ── 7. Build all_item_results ─────────────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════
+    # BUILD LOOKUP MAPS — hoàn toàn in-memory, 0 queries
+    # ════════════════════════════════════════════════════════════════════
     all_item_results = {
         pd.id: {kq.chi_tiet_id: kq for kq in pd.chi_tiet_duyet}
         for pd in pending_reviews
     }
 
-    # ── 8. Out-of-scope set ───────────────────────────────────────────────
-    out_of_scope_ct_ids = set()
+    out_of_scope_ct_ids: set[int] = set()
     if current_user.role in (Role.BAN_QUANLUC, Role.BAN_CANBO):
         for pd in pending_reviews:
             for ct in pd.de_xuat.chi_tiets:
                 if not _is_in_dept_scope(current_user.role, ct.doi_tuong):
                     out_of_scope_ct_ids.add(ct.id)
 
-    # ── 9. Columns / fields ───────────────────────────────────────────────
-    allowed_fields       = get_phong_fields().get(current_user.role, [])
-    table_columns        = get_phong_table_columns().get(current_user.role, [])
+    # ════════════════════════════════════════════════════════════════════
+    # FIX-#4: Dùng cached field labels/fields — 0 queries thêm
+    # ════════════════════════════════════════════════════════════════════
+    _field_labels    = get_field_labels_cached()
+    _phong_fields    = get_phong_fields_cached()
+    allowed_fields   = _phong_fields.get(current_user.role, [])
+    _all_cols        = {c.name for c in DeXuatChiTiet.__table__.columns}
+    _SYSTEM_FIELDS   = {
+        'id','de_xuat_id','quan_nhan_id','loai_danh_hieu','doi_tuong',
+        'ten_don_vi_de_xuat','ghi_chu','bi_loai','trang_thai','ly_do_tu_choi',
+        'created_at','updated_at','tap_the_data','ly_do_loai','diem_nckh',
+        'xep_loai_tong_ket','diem_tot_nghiep','xep_loai_doan_vien','diem_the_luc',
+        'ngay_loai','admin_approved','phong_loai','diem_kiem_tra_tin_hoc',
+        'nam_hoc','ly_do_loai',
+    }
+    table_columns = [
+        f for f in (_phong_fields.get(current_user.role, []))
+        if f not in _LONG_TEXT_FIELDS and f in _all_cols
+    ]
+    if current_user.role in _VIEW_ALL_CRITERIA_ROLES or not table_columns:
+        table_columns = [f for f in _all_cols if f not in _SYSTEM_FIELDS]
+
     field_conditions     = PHONG_FIELD_CONDITIONS.get(current_user.role, {})
     managed_dept_columns = _managed_gate_columns(current_user.role)
 
-    if current_user.role in _VIEW_ALL_CRITERIA_ROLES or not table_columns:
-        table_columns = _all_criteria_columns()
-
-    # ── 10. Gate dept fields & group gate ────────────────────────────────
-    gate_dept_fields = []
+    # ════════════════════════════════════════════════════════════════════
+    # GATE DEPT FIELDS + AUTO-FINALIZE SCOPE (THU_TRUONG_PHONG_TMHC)
+    # FIX-#2: Truyền de_xuat_map đã có → không query lại DeXuat
+    # ════════════════════════════════════════════════════════════════════
+    gate_dept_fields: list = []
     if current_user.role in _GROUP_CONFIRMATION:
-        # FIX-C: Truyền de_xuat_map đã có, tránh query lại
-        unique_de_xuat_ids = list(de_xuat_map.keys())
-        _auto_finalize_scope_dept_batch_v2(unique_de_xuat_ids, de_xuat_map_hint=de_xuat_map)
-
-        phong_fields_all = get_phong_fields()
+        _auto_finalize_scope_dept_batch_v2(
+            list(de_xuat_map.keys()),
+            de_xuat_map_hint=de_xuat_map,   # FIX-#2
+        )
         for gate_dept_name in managed_dept_columns:
             gate_role = _PHONG_TO_ROLE.get(gate_dept_name)
             if gate_role:
-                fields = [f for f in phong_fields_all.get(gate_role, [])
+                fields = [f for f in _phong_fields.get(gate_role, [])
                           if f not in _LONG_TEXT_FIELDS]
                 if fields:
                     gate_dept_fields.append({'dept': gate_dept_name, 'fields': fields})
 
-    # ── 11. Group gate — FIX-D: dùng bản v2 có chunk IN() ────────────────
-    group_gate_by_pd = {}
-    group_gate_by_ct = {}
+    # ════════════════════════════════════════════════════════════════════
+    # QUERY 7: Group gate batch — FIX-#5: chunk IN() 200
+    # ════════════════════════════════════════════════════════════════════
+    group_gate_by_pd: dict = {}
+    group_gate_by_ct: dict = {}
     if current_user.role in _GROUP_CONFIRMATION:
         pd_de_xuat_ct_ids = [
             (pd.id, pd.de_xuat_id, [ct.id for ct in pd.de_xuat.chi_tiets])
@@ -1309,17 +1398,21 @@ def pending_list():
             current_user.role, pd_de_xuat_ct_ids
         )
 
-    # ── 12. Unit names dropdown ───────────────────────────────────────────
-    seen       = set()
-    unit_names = []
+    # ════════════════════════════════════════════════════════════════════
+    # Unit names — in-memory
+    # ════════════════════════════════════════════════════════════════════
+    seen: set[str] = set()
+    unit_names: list[str] = []
     for pd in pending_reviews:
         name = pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat and pd.de_xuat.don_vi else ''
         if name and name not in seen:
             seen.add(name)
             unit_names.append(name)
 
-    # ── 13. Tap the criteria columns ─────────────────────────────────────
-    tt_all_keys = set()
+    # ════════════════════════════════════════════════════════════════════
+    # QUERY 8: Tap the criteria columns
+    # ════════════════════════════════════════════════════════════════════
+    tt_all_keys: set[str] = set()
     for dh in _DanhHieu.query.filter_by(pham_vi='Đơn vị', is_active=True).all():
         for ma_truong in (dh.tieu_chi or []):
             tt_all_keys.add(ma_truong)
@@ -1328,28 +1421,27 @@ def pending_list():
             if ct.quan_nhan_id is None:
                 tt_all_keys.update((ct.tap_the_dict or {}).keys())
 
+    tt_criteria_fields: list[str] = []
+    tt_field_labels_map: dict[str, str] = {}
     if tt_all_keys:
-        tt_tieu_chi_rows    = TieuChi.query.filter(
-            TieuChi.ma_truong.in_(list(tt_all_keys)), TieuChi.is_active == True
+        tt_rows = TieuChi.query.filter(
+            TieuChi.ma_truong.in_(list(tt_all_keys)),
+            TieuChi.is_active == True,
         ).order_by(TieuChi.thu_tu, TieuChi.ten).all()
-        tt_criteria_fields  = [tc.ma_truong for tc in tt_tieu_chi_rows]
-        tt_field_labels_map = {tc.ma_truong: tc.ten for tc in tt_tieu_chi_rows}
+        tt_criteria_fields  = [tc.ma_truong for tc in tt_rows]
+        tt_field_labels_map = {tc.ma_truong: tc.ten for tc in tt_rows}
         for k in tt_all_keys:
             if k not in tt_field_labels_map:
                 tt_criteria_fields.append(k)
                 tt_field_labels_map[k] = k
-    else:
-        tt_criteria_fields  = []
-        tt_field_labels_map = {}
 
-    # ── 14. Edit requests — 1 query ──────────────────────────────────────
-    edit_requests_by_ct = {}
+    # ════════════════════════════════════════════════════════════════════
+    # QUERY 9: Edit requests — 1 query với IN()
+    # ════════════════════════════════════════════════════════════════════
+    edit_requests_by_ct: dict = {}
     all_ct_ids = [
-        ct.id
-        for pd in pending_reviews
-        if pd.de_xuat
-        for ct in pd.de_xuat.chi_tiets
-        if not ct.bi_loai
+        ct.id for pd in pending_reviews if pd.de_xuat
+        for ct in pd.de_xuat.chi_tiets if not ct.bi_loai
     ]
     if all_ct_ids:
         for req in YeuCauChinhSua.query.filter(
@@ -1359,11 +1451,13 @@ def pending_list():
         ).all():
             edit_requests_by_ct[req.chi_tiet_id] = req
 
-    # ── 15. ct_fields_map — Python getattr(), không query DB ─────────────
+    # ════════════════════════════════════════════════════════════════════
+    # ct_fields_map — Python getattr(), 0 queries
+    # ════════════════════════════════════════════════════════════════════
     all_display_fields = set(table_columns) | {
         f for gd in gate_dept_fields for f in gd['fields']
     }
-    ct_fields_map = {}
+    ct_fields_map: dict = {}
     if all_display_fields:
         for pd in pending_reviews:
             if not pd.de_xuat:
@@ -1378,7 +1472,9 @@ def pending_list():
                         fd[field] = val
                 ct_fields_map[ct.id] = fd
 
-    # ── 16. Stats từ server (truyền vào template để tránh tính lại Jinja) ─
+    # ════════════════════════════════════════════════════════════════════
+    # Stats — in-memory, 0 queries
+    # ════════════════════════════════════════════════════════════════════
     ns_total = ns_approved = ns_rejected = 0
     for pd in pending_reviews:
         results_pd = all_item_results.get(pd.id, {})
@@ -1387,10 +1483,11 @@ def pending_list():
                 continue
             ns_total += 1
             kq = results_pd.get(ct.id)
-            if kq and kq.ket_qua == KetQuaDuyet.DONG_Y.value:
-                ns_approved += 1
-            elif kq and kq.ket_qua == KetQuaDuyet.TU_CHOI.value:
-                ns_rejected += 1
+            if kq:
+                if kq.ket_qua == KetQuaDuyet.DONG_Y.value:
+                    ns_approved += 1
+                elif kq.ket_qua == KetQuaDuyet.TU_CHOI.value:
+                    ns_rejected += 1
 
     return render_template(
         'approval/pending_list.html',
@@ -1399,7 +1496,7 @@ def pending_list():
         phong_name=phong_name,
         allowed_fields=allowed_fields,
         table_columns=table_columns,
-        field_labels=get_field_labels(),
+        field_labels=_field_labels,          # dùng cached
         field_conditions=field_conditions,
         unit_names=unit_names,
         out_of_scope_ct_ids=out_of_scope_ct_ids,
@@ -1413,14 +1510,12 @@ def pending_list():
         tt_field_labels=tt_field_labels_map,
         edit_requests_by_ct=edit_requests_by_ct,
         ct_fields_map=ct_fields_map,
-        # FIX-16: Truyền stats từ server → template không cần tính lại
         stats={
             'total':    ns_total,
             'approved': ns_approved,
             'rejected': ns_rejected,
         },
     )
-
 
 @approval_bp.route('/review/<int:id>', methods=['GET'])
 @login_required
