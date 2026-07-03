@@ -2177,7 +2177,10 @@ def export_excel():
 def export_word():
     from io import BytesIO
     from datetime import date, datetime
-  
+    import zipfile
+    import os
+    import binascii
+    import hashlib
     from sqlalchemy.orm import joinedload, selectinload
 
     phong_name     = ROLE_TO_PHONG.get(current_user.role, '')
@@ -2292,10 +2295,10 @@ def export_word():
         cm_to_twips(1.8),   # Cấp bậc
         cm_to_twips(2.2),   # Chức vụ
         cm_to_twips(2.5),   # Đơn vị
-        cm_to_twips(5.0),   # Tóm tắt
-        cm_to_twips(1.5),   # KQ
+        cm_to_twips(6.5),   # Tóm tắt
+        
     ]
-    CN_HEADERS = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Tóm tắt thành tích', 'Kết quả']
+    CN_HEADERS = ['STT', 'Họ và tên', 'Cấp bậc', 'Chức vụ', 'Đơn vị', 'Tóm tắt thành tích']
 
     # ── Columns: đơn vị ─────────────────────────────────────────────────────────
     DV_WIDTHS = [
@@ -2314,20 +2317,50 @@ def export_word():
                 continue
             stt += 1
             ct = item['ct']; qn = ct.quan_nhan
-            ket_qua_str = item['ket_qua_str']
+            
             row_cells = [
                 (str(stt), False, 'center'),
                 (qn.ho_ten if qn else '', True, 'left'),
                 (qn.cap_bac if qn and qn.cap_bac else '', False, 'left'),
                 (qn.chuc_vu if qn and qn.chuc_vu else '', False, 'left'),
                 (item['don_vi'], False, 'left'),
-                (ct.muc_do_hoan_thanh or '', False, 'left'),
-                (ket_qua_str, False, 'center'),
+                (build_tom_tat(item['ct']) or '', False, 'left'),
+                
             ]
             shade = None if i % 2 == 0 else None
             rows_xml.append(_data_row(row_cells, CN_WIDTHS, size_pt=9, shade=shade))
         return rows_xml
-
+    def build_tom_tat(ct) -> list[str]:
+        parts = []
+        if ct.muc_do_hoan_thanh:
+            parts.append(ct.muc_do_hoan_thanh)
+        if ct.diem_tong_ket:
+            parts.append(f'Kết quả học tập: {ct.diem_tong_ket}')
+        if ct.ket_qua_ren_luyen:
+            parts.append(f'Rèn luyện: {ct.ket_qua_ren_luyen}')
+        if ct.hinh_thuc_tot_nghiep:
+            tn = [f'TN: {ct.hinh_thuc_tot_nghiep}']
+            for attr, label in (
+                ('diem_tn_ctd',         'CTĐ-CT'),
+                ('diem_tn_ct',          'CT'),
+                ('diem_tn_ta',          'TA'),
+                ('diem_tn_mon4',        'Môn 4'),
+                ('diem_tn_chuyennganh', 'Chuyên ngành'),
+                ('diem_tn_baove',       'Bảo vệ'),
+            ):
+                val = getattr(ct, attr, None)
+                if val:
+                    tn.append(f'{label}: {val}')
+            parts.append(', '.join(tn))
+        if ct.mo_ta_khoa_hoc:
+            parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
+        if ct.thanh_tich_ca_nhan_khac:
+            parts.append(ct.thanh_tich_ca_nhan_khac)
+        for f in criteria_fields:
+            val = getattr(ct, f, None) or ''
+            if val:
+                parts.append(f'{field_labels.get(f, f)}: {val}')
+        return parts
     def _dv_rows(items):
         rows_xml = []
         stt = 0
@@ -2545,14 +2578,55 @@ def export_word():
     doc_xml = _build_document_xml(body, margin_left=2016, margin_right=720, margin_top=1440, margin_bottom=1440)
     buf = build_docx(doc_xml)
 
-    fname_parts = ['TheoDoiPheduyet']
+    final_buf = BytesIO()
+    buf.seek(0)
+    # Thuật toán hash mật khẩu Office 2010+ (Agile Encryption)
+    password = "bth123" # <--- THAY ĐỔI MẬT KHẨU TẠI ĐÂY
+    salt = os.urandom(16)
+    salt_b64 = binascii.b2a_base64(salt).strip().decode()
+
+    key = hashlib.sha512(salt + password.encode('utf-16le')).digest()
+    spin_count = 10000
+    for i in range(spin_count):
+        iterator = i.to_bytes(4, byteorder='little')
+        key = hashlib.sha512(key + iterator).digest()
+        
+    hash_b64 = binascii.b2a_base64(key).strip().decode()
+
+    # Tạo chuỗi XML bảo vệ theo chuẩn Agile
+    protection_tag = (
+        f'<w:documentProtection w:edit="readOnly" w:enforcement="1" '
+        f'w:algorithmName="SHA-512" w:spinCount="{spin_count}" '
+        f'w:hashValue="{hash_b64}" w:saltValue="{salt_b64}"/>'
+    ).encode('utf-8')
+
+    with zipfile.ZipFile(buf, 'r') as zin:
+        with zipfile.ZipFile(final_buf, 'w') as zout:
+            for item in zin.infolist():
+                file_content = zin.read(item.filename)
+                
+                # Tìm file cấu hình settings.xml
+                if item.filename == 'word/settings.xml':
+                    # Tiêm mã bảo vệ vào trước khi kết thúc thẻ w:settings
+                    if b'</w:settings>' in file_content:
+                        # Tránh trùng lặp nếu thẻ đã tồn tại
+                        if b'w:documentProtection' not in file_content:
+                            file_content = file_content.replace(b'</w:settings>', protection_tag + b'</w:settings>')
+                
+                # Copy toàn bộ nội dung sang file zip mới
+                zout.writestr(item, file_content)
+    
+    final_buf.seek(0)
+    # =========================================================================
+
+    fname_parts = ['DanhSachKhenThuong']
     if nam_hoc_filter:
         fname_parts.append(nam_hoc_filter.replace('-', '_'))
-    fname_parts.append(_dt.datetime.now().strftime('%d%m%Y'))
+    fname_parts.append(now.strftime('%d%m%Y'))
     filename = '_'.join(fname_parts) + '.docx'
 
     response = send_file(
-        buf, as_attachment=True, download_name=filename,
+        final_buf, as_attachment=True, download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
     response.set_cookie(

@@ -1,4 +1,13 @@
 ﻿
+{# ============================================================
+   pending_list.html — PHIÊN BẢN TỐI ƯU TỐC ĐỘ
+   Thay đổi chính so với bản gốc:
+   1. XÓA toàn bộ modal mcModal inline → 1 modal dùng chung (lazy fetch)
+   2. Event delegation thay forEach bind (giảm N×5 → 5 listeners)
+   3. Stats counter O(1) thay querySelectorAll O(n)
+   4. Debounce filter input 250ms
+   5. Stats ưu tiên từ server (stats variable)
+============================================================ #}
 {% extends "base.html" %}
 {% block title %}Phê duyệt khen thưởng{% endblock %}
 
@@ -110,23 +119,37 @@
     {% endfor %}
 {% endfor %}
 
-{% set ns = namespace(total=0, approved=0, rejected=0, pending=0) %}
-{% for item in all_cn + all_tt %}
-    {% if item.ct.id not in out_of_scope_ct_ids %}
-    {% set kq = item.results[item.ct.id] if item.ct.id in item.results else None %}
-    {% set ns.total = ns.total + 1 %}
-    {% if kq and kq.ket_qua == 'Đồng ý' %}{% set ns.approved = ns.approved + 1 %}
-    {% elif kq and kq.ket_qua == 'Từ chối' %}{% set ns.rejected = ns.rejected + 1 %}
-    {% else %}{% set ns.pending = ns.pending + 1 %}{% endif %}
-    {% endif %}
-{% endfor %}
+{# ── Stats: ưu tiên dùng stats từ server nếu có, fallback tính trong template ── #}
+{% if stats is defined %}
+  {% set _total    = stats.total %}
+  {% set _approved = stats.approved %}
+  {% set _rejected = stats.rejected %}
+  {% set _pending  = stats.total - stats.approved - stats.rejected %}
+{% else %}
+  {% set ns = namespace(total=0, approved=0, rejected=0, pending=0) %}
+  {% for item in all_cn + all_tt %}
+      {% if item.ct.id not in out_of_scope_ct_ids %}
+      {% set kq = item.results[item.ct.id] if item.ct.id in item.results else None %}
+      {% set ns.total = ns.total + 1 %}
+      {% if kq and kq.ket_qua == 'Đồng ý' %}{% set ns.approved = ns.approved + 1 %}
+      {% elif kq and kq.ket_qua == 'Từ chối' %}{% set ns.rejected = ns.rejected + 1 %}
+      {% else %}{% set ns.pending = ns.pending + 1 %}{% endif %}
+      {% endif %}
+  {% endfor %}
+  {% set _total    = ns.total %}
+  {% set _approved = ns.approved %}
+  {% set _rejected = ns.rejected %}
+  {% set _pending  = ns.pending %}
+{% endif %}
 
 <div class="d-flex gap-3 mb-3 flex-wrap" id="globalStats">
-    <div class="stat-mini"><i class="bi bi-people-fill text-primary"></i><span>Tổng: <strong id="gs-total">{{ ns.total }}</strong></span></div>
-    <div class="stat-mini"><i class="bi bi-hourglass-split text-warning"></i><span>Chờ duyệt: <strong id="gs-pending">{{ ns.pending }}</strong></span></div>
-    <div class="stat-mini"><i class="bi bi-check-circle-fill text-success"></i><span>Nhất trí: <strong id="gs-approved">{{ ns.approved }}</strong></span></div>
-    {% if ns.rejected > 0 %}
-    <div class="stat-mini"><i class="bi bi-x-circle-fill text-danger"></i><span>Không NT: <strong id="gs-rejected">{{ ns.rejected }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-people-fill text-primary"></i><span>Tổng: <strong id="gs-total">{{ _total }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-hourglass-split text-warning"></i><span>Chờ duyệt: <strong id="gs-pending">{{ _pending }}</strong></span></div>
+    <div class="stat-mini"><i class="bi bi-check-circle-fill text-success"></i><span>Nhất trí: <strong id="gs-approved">{{ _approved }}</strong></span></div>
+    {% if _rejected > 0 %}
+    <div class="stat-mini"><i class="bi bi-x-circle-fill text-danger"></i><span>Không NT: <strong id="gs-rejected">{{ _rejected }}</strong></span></div>
+    {% else %}
+    <div class="stat-mini" id="stat-rejected-wrap" style="display:none;"><i class="bi bi-x-circle-fill text-danger"></i><span>Không NT: <strong id="gs-rejected">0</strong></span></div>
     {% endif %}
 </div>
 
@@ -157,7 +180,6 @@
                         <th class="col-cap-bac">Cấp bậc / Chức vụ</th>
                         <th class="col-doi-tuong">Đối tượng</th>
                         <th class="col-lop">Lớp</th>
-                        
                         {% for field in display_fields %}
                         <th class="col-criteria" data-col-key="cn_{{ field }}" data-col-label="{{ field_labels[field] if field in field_labels else field }}">
                             <small>{{ field_labels[field] if field in field_labels else field }}</small>
@@ -233,7 +255,6 @@
                         </td>
                         <td class="col-doi-tuong"><small>{{ ct.doi_tuong or '-' }}</small></td>
                         <td class="col-lop"><small>{{ ct.quan_nhan.lop or '-' }}</small></td>
-                        
                         {% set ct_fd = ct_fields_map.get(ct.id, {}) if ct_fields_map is defined else {} %}
                         {% for field in display_fields %}
                         <td class="col-criteria" data-col-key="cn_{{ field }}">
@@ -244,7 +265,14 @@
                         {% endfor %}
                         {% if show_evidence %}
                         <td class="col-evidence text-center">
-                            {% if ct.minh_chungs %}<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-bs-toggle="modal" data-bs-target="#mcModal{{ ct.id }}"><i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small></button>
+                            {% if ct.minh_chungs %}
+                            {# TỐI ƯU: dùng 1 modal dùng chung + lazy fetch thay vì render modal inline #}
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary py-0 px-1 open-mc-btn"
+                                    data-ct-id="{{ ct.id }}"
+                                    data-name="{{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Don vi' }}">
+                                <i class="bi bi-image"></i><small>{{ ct.minh_chungs|length }}</small>
+                            </button>
                             {% else %}<small class="text-muted">-</small>{% endif %}
                         </td>
                         {% else %}
@@ -312,10 +340,10 @@
                                 <a href="javascript:void(0)"
                                    class="request-edit-link text-primary d-block"
                                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tập thể'))|e }}"
+                                   data-name="{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else (ct.ten_don_vi_de_xuat or 'Tap the'))|e }}"
                                    data-tap-the="false"
                                    style="font-size:0.68rem;">
-                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Yêu cầu sửa{% else %}Yêu cầu sửa{% endif %}
+                                    <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
                                 </a>
                                 {% if is_approved or is_rejected %}
                                 <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"
@@ -383,7 +411,6 @@
                         <th class="sticky-name">Tên tập thể</th>
                         <th class="col-danhhieu-sticky">Danh hiệu</th>
                         <th class="col-don-vi">Đơn vị</th>
-                        
                         <th class="col-criteria">{{ field_labels.get('muc_do_hoan_thanh', 'Mức độ HTNV') }}</th>
                         <th class="col-criteria">{{ field_labels.get('chu_tri_don_vi_danh_hieu', 'Chủ trì ĐV DH') }}</th>
                         {% for f in tt_criteria_fields %}
@@ -443,7 +470,6 @@
                             {% else %}<span class="badge bg-secondary">{{ ct.loai_danh_hieu or '-' }}</span>{% endif %}
                         </td>
                         <td class="col-don-vi"><small>{{ pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat.don_vi else '—' }}</small></td>
-                        
                         <td class="col-criteria"><small>{{ ct.muc_do_hoan_thanh or '-' }}</small></td>
                         <td class="col-criteria"><small>{{ ct.chu_tri_don_vi_danh_hieu or '-' }}</small></td>
                         {% set ttd = ct.tap_the_dict or {} %}
@@ -499,10 +525,10 @@
                                 <a href="javascript:void(0)"
                                    class="request-edit-link text-primary d-block"
                                    data-pd-id="{{ pd.id }}" data-ct-id="{{ ct.id }}"
-                                   data-name="{{ (ct.ten_don_vi_de_xuat or 'Tập thể')|e }}"
+                                   data-name="{{ (ct.ten_don_vi_de_xuat or 'Tap the')|e }}"
                                    data-tap-the="true"
                                    style="font-size:0.68rem;">
-                                    <i class="bi bi-pencil-square me-1"></i>{% if ct.id in edit_requests_by_ct %}Yêu cầu sửa{% else %}Yêu cầu sửa{% endif %}
+                                    <i class="bi bi-pencil-square me-1"></i>Yêu cầu sửa
                                 </a>
                                 {% if is_approved or is_rejected %}
                                 <a href="javascript:void(0)" class="revoke-item-link text-warning d-block"
@@ -546,26 +572,16 @@
 </div>
 {% endif %}
 
-<!-- Evidence Modals -->
-{% if show_evidence %}
-{% for pd in pending_reviews %}{% for ct in pd.de_xuat.chi_tiets_active %}{% if ct.minh_chungs %}
-<div class="modal fade" id="mcModal{{ ct.id }}" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
+{# ══ MODAL MINH CHỨNG DÙNG CHUNG — lazy load (thay thế toàn bộ modal inline) ══ #}
+<div class="modal fade" id="mcModalShared" tabindex="-1">
+    <div class="modal-dialog modal-lg"><div class="modal-content">
         <div class="modal-header modal-header-navy">
-            <h6 class="modal-title">Minh chứng: {{ ct.quan_nhan.ho_ten if ct.quan_nhan else 'Đơn vị' }}</h6>
+            <h6 class="modal-title" id="mcModalTitle">Minh chứng</h6>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body">
-            <div class="d-flex flex-wrap gap-2">
-                {% for mc in ct.minh_chungs %}
-                <img src="{{ url_for('uploaded_file', filename=mc.duong_dan) }}" class="evidence-thumb" alt="{{ mc.ten_file_goc }}" style="max-width:150px;">
-                {% endfor %}
-            </div>
-        </div>
+        <div class="modal-body" id="mcModalBody"></div>
     </div></div>
 </div>
-{% endif %}{% endfor %}{% endfor %}
-{% endif %}
 
 <!-- Batch approve modal -->
 <div class="modal fade" id="batchApproveModal" tabindex="-1">
@@ -584,7 +600,7 @@
     </div></div>
 </div>
 
-<!-- Request edit modal — CHỈ 1 lần khai báo -->
+<!-- Request edit modal -->
 <div class="modal fade" id="requestEditModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-header modal-header-navy">
@@ -617,7 +633,7 @@
     </div></div>
 </div>
 
-<!-- Detail Modal — CHỈ 1 lần khai báo -->
+<!-- Detail Modal -->
 <div class="modal fade" id="detailModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-header py-2">
@@ -630,27 +646,19 @@
         </div>
     </div></div>
 </div>
+
 <div id="exportLoadingOverlay">
     <div class="export-loading-box">
-        <div class="mb-3">
-            <i class="bi bi-file-earmark-word text-primary" style="font-size:2.5rem;"></i>
-        </div>
-        <div class="fw-semibold mb-2" style="font-size:1rem;" id="exportLoadingTitle">
-            Đang tạo file Word...
-        </div>
-        <div class="text-muted small mb-3" id="exportLoadingSubtitle">
-            Vui lòng đợi, quá trình này có thể mất 10–30 giây
-        </div>
+        <div class="mb-3"><i class="bi bi-file-earmark-word text-primary" style="font-size:2.5rem;"></i></div>
+        <div class="fw-semibold mb-2" style="font-size:1rem;" id="exportLoadingTitle">Đang tạo file Word...</div>
+        <div class="text-muted small mb-3" id="exportLoadingSubtitle">Vui lòng đợi, quá trình này có thể mất 10–30 giây</div>
         <div class="progress mb-3" style="height:8px; border-radius:4px;">
-            <div id="exportProgressBar"
-                 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                 style="width:0%; transition:width 0.4s ease;"></div>
+            <div id="exportProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width:0%; transition:width 0.4s ease;"></div>
         </div>
-        <div class="text-muted" style="font-size:0.78rem;" id="exportLoadingStep">
-            Khởi tạo...
-        </div>
+        <div class="text-muted" style="font-size:0.78rem;" id="exportLoadingStep">Khởi tạo...</div>
     </div>
 </div>
+
 <script type="application/json" id="reqEditFieldData">
 {
   "ca_nhan": [{% for f in table_columns %}{"ma_truong": {{ f|tojson }}, "ten": {{ (field_labels.get(f, f))|tojson }}}{{ "," if not loop.last }}{% endfor %}],
@@ -678,95 +686,21 @@
 </div>
 
 <style>
-/* Danh hiệu (chỉ bảng cá nhân) */
-/* ── Sticky columns — tính chính xác ───────────────────────── */
-.tbl-scroll .sticky-stt {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 2;
-    width: 34px; min-width: 34px; max-width: 34px;
-    background: #fff;
-    border-right: 2px solid #b0bec5 !important;
-}
-.tbl-scroll thead .sticky-stt {
-    z-index: 4 !important;
-    background: var(--navy-primary, #1a3a5c) !important;
-    color: #fff !important;
-}
-
-.tbl-scroll .sticky-name {
-    position: sticky !important;
-    left: 34px !important;
-    z-index: 2;
-    width: 190px; min-width: 190px; max-width: 190px;
-    background: #fff;
-    overflow: hidden;
-    /* Bỏ box-shadow ở đây — để col-danhhieu-sticky tự có shadow */
-}
-.tbl-scroll thead .sticky-name {
-    z-index: 4 !important;
-    background: var(--navy-primary, #1a3a5c) !important;
-    color: #fff !important;
-}
-
-/* ── Danh hiệu sticky — left = stt(34) + name(190) = 224px ─── */
-.tbl-scroll .col-danhhieu-sticky {
-    position: sticky !important;
-    left: 224px !important;   /* ← sửa từ 288 → 224 */
-    z-index: 2;
-    width: 68px; min-width: 68px; max-width: 68px;
-    background: #fff;
-    box-shadow: 3px 0 6px rgba(0, 0, 0, .12); /* shadow chuyển sang đây */
-}
-.tbl-scroll thead .col-danhhieu-sticky {
-    z-index: 4 !important;
-    background: var(--navy-primary, #1a3a5c) !important;
-    color: #fff !important;
-}
-#exportLoadingOverlay {
-    display: none;          /* ← JS dùng class, không dùng style inline */
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: rgba(0, 0, 0, 0.6);   /* ← tăng opacity thay cho blur */
-    /* KHÔNG dùng backdrop-filter — lỗi trên localhost/offline */
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 16px;
-}
-#exportLoadingOverlay.active {
-    display: flex !important;
-}
-.export-loading-box {
-    background: #fff;
-    border-radius: 16px;
-    padding: 32px 40px;
-    text-align: center;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, .25);
-    min-width: 280px;
-}
-/* ── Màu nền sticky cells theo trạng thái row ───────────────── */
-.tbl-scroll tr.table-success .sticky-stt,
-.tbl-scroll tr.table-success .sticky-name,
-.tbl-scroll tr.table-success .col-danhhieu-sticky,
-.tbl-scroll tr.table-success .col-pending  { background: #d1e7dd !important; }
-
-.tbl-scroll tr.table-danger .sticky-stt,
-.tbl-scroll tr.table-danger .sticky-name,
-.tbl-scroll tr.table-danger .col-danhhieu-sticky,
-.tbl-scroll tr.table-danger .col-pending   { background: #f8d7da !important; }
-
-.tbl-scroll tr.table-warning-custom .sticky-stt,
-.tbl-scroll tr.table-warning-custom .sticky-name,
-.tbl-scroll tr.table-warning-custom .col-danhhieu-sticky,
-.tbl-scroll tr.table-warning-custom .col-pending { background: #fff3cd !important; }
-
-.tbl-scroll tbody tr:hover .sticky-stt,
-.tbl-scroll tbody tr:hover .sticky-name,
-.tbl-scroll tbody tr:hover .col-danhhieu-sticky,
-.tbl-scroll tbody tr:hover .col-pending    { background: #f0f4f8 !important; }
-
+.tbl-scroll .sticky-stt { position:sticky !important; left:0 !important; z-index:2; width:34px; min-width:34px; max-width:34px; background:#fff; border-right:2px solid #b0bec5 !important; }
+.tbl-scroll thead .sticky-stt { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
+.tbl-scroll .sticky-name { position:sticky !important; left:34px !important; z-index:2; width:190px; min-width:190px; max-width:190px; background:#fff; overflow:hidden; }
+.tbl-scroll thead .sticky-name { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
+.tbl-scroll .col-danhhieu-sticky { position:sticky !important; left:224px !important; z-index:2; width:68px; min-width:68px; max-width:68px; background:#fff; box-shadow:3px 0 6px rgba(0,0,0,.12); }
+.tbl-scroll thead .col-danhhieu-sticky { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
+.tbl-scroll .col-pending { width:110px; min-width:110px; position:sticky !important; right:0 !important; z-index:2; background:#fff; box-shadow:-3px 0 6px rgba(0,0,0,.10); }
+.tbl-scroll thead .col-pending { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
+#exportLoadingOverlay { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+#exportLoadingOverlay.active { display:flex !important; }
+.export-loading-box { background:#fff; border-radius:16px; padding:32px 40px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.25); min-width:280px; }
+.tbl-scroll tr.table-success .sticky-stt,.tbl-scroll tr.table-success .sticky-name,.tbl-scroll tr.table-success .col-danhhieu-sticky,.tbl-scroll tr.table-success .col-pending { background:#d1e7dd !important; }
+.tbl-scroll tr.table-danger .sticky-stt,.tbl-scroll tr.table-danger .sticky-name,.tbl-scroll tr.table-danger .col-danhhieu-sticky,.tbl-scroll tr.table-danger .col-pending { background:#f8d7da !important; }
+.tbl-scroll tr.table-warning-custom .sticky-stt,.tbl-scroll tr.table-warning-custom .sticky-name,.tbl-scroll tr.table-warning-custom .col-danhhieu-sticky,.tbl-scroll tr.table-warning-custom .col-pending { background:#fff3cd !important; }
+.tbl-scroll tbody tr:hover .sticky-stt,.tbl-scroll tbody tr:hover .sticky-name,.tbl-scroll tbody tr:hover .col-danhhieu-sticky,.tbl-scroll tbody tr:hover .col-pending { background:#f0f4f8 !important; }
 .toolbar-wrapper { display:block; position:sticky; top:0; z-index:100; background:#fff; border-bottom:1px solid #dee2e6; padding:6px 0; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,.07); width:100%; }
 .toolbar-inner { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:0 4px; }
 .toolbar-inner::-webkit-scrollbar { display:none; }
@@ -777,32 +711,20 @@
 .tbl-mirror { overflow-x:scroll; overflow-y:hidden; height:14px; background:#f8f9fa; border-bottom:1px solid #dee2e6; }
 .tbl-mirror > div { height:1px; }
 .tbl-scroll table { border-collapse:separate !important; border-spacing:0 !important; table-layout:auto !important; width:max-content !important; font-size:0.82rem; }
-.tbl-scroll th, .tbl-scroll td { border-bottom:1px solid #dee2e6; border-right:1px solid #dee2e6; padding:4px 8px !important; vertical-align:middle; box-sizing:border-box; }
-.tbl-scroll th:first-child, .tbl-scroll td:first-child { border-left:1px solid #dee2e6; }
+.tbl-scroll th,.tbl-scroll td { border-bottom:1px solid #dee2e6; border-right:1px solid #dee2e6; padding:4px 8px !important; vertical-align:middle; box-sizing:border-box; }
+.tbl-scroll th:first-child,.tbl-scroll td:first-child { border-left:1px solid #dee2e6; }
 .tbl-scroll thead th { border-top:1px solid #dee2e6; white-space:normal !important; word-break:break-word; vertical-align:bottom; line-height:1.3; text-align:center; }
-.tbl-scroll thead .sticky-stt, .tbl-scroll thead .sticky-name, .tbl-scroll thead .col-pending { white-space:nowrap !important; }
+.tbl-scroll thead .sticky-stt,.tbl-scroll thead .sticky-name,.tbl-scroll thead .col-pending { white-space:nowrap !important; }
 .tbl-scroll tbody td { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.tbl-scroll .col-don-vi    { width:120px; min-width:120px; }
-.tbl-scroll .col-cap-bac   { width:160px; min-width:160px; }
-.tbl-scroll .col-doi-tuong { width:90px;  min-width:90px;  }
-.tbl-scroll .col-danh-hieu { width:75px;  min-width:75px;  }
-.tbl-scroll .col-criteria  { width:95px;  min-width:90px;  }
-.tbl-scroll .col-evidence  { width:60px;  min-width:60px; text-align:center; }
+.tbl-scroll .col-don-vi { width:120px; min-width:120px; }
+.tbl-scroll .col-cap-bac { width:160px; min-width:160px; }
+.tbl-scroll .col-doi-tuong { width:90px; min-width:90px; }
+.tbl-scroll .col-criteria { width:95px; min-width:90px; }
+.tbl-scroll .col-evidence { width:60px; min-width:60px; text-align:center; }
 .tbl-scroll .col-gate-criteria { width:72px; min-width:68px; }
-.tbl-scroll .col-managed   { width:80px;  min-width:74px;  }
-.tbl-scroll .col-pending   { width:110px; min-width:110px; }
-.tbl-scroll .col-lop       { width:70px;  min-width:70px;  }
-.tbl-scroll .sticky-stt { position:sticky !important; left:0 !important; z-index:2; width:34px; min-width:34px; max-width:34px; background:#fff; border-right:2px solid #b0bec5 !important; }
-.tbl-scroll thead .sticky-stt { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
-.tbl-scroll .sticky-name { position:sticky !important; left:34px !important; z-index:2; width:190px; min-width:190px; max-width:190px; background:#fff; box-shadow:3px 0 6px rgba(0,0,0,.12); overflow:hidden; }
-.tbl-scroll thead .sticky-name { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
-.tbl-scroll .col-pending { position:sticky !important; right:0 !important; z-index:2; background:#fff; box-shadow:-3px 0 6px rgba(0,0,0,.10); }
-.tbl-scroll thead .col-pending { z-index:4 !important; background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; }
-.tbl-scroll tr.table-success .sticky-stt, .tbl-scroll tr.table-success .sticky-name, .tbl-scroll tr.table-success .col-pending { background:#d1e7dd !important; }
-.tbl-scroll tr.table-danger  .sticky-stt, .tbl-scroll tr.table-danger  .sticky-name, .tbl-scroll tr.table-danger  .col-pending { background:#f8d7da !important; }
-.tbl-scroll tr.table-warning-custom .sticky-stt, .tbl-scroll tr.table-warning-custom .sticky-name, .tbl-scroll tr.table-warning-custom .col-pending { background:#fff3cd !important; }
+.tbl-scroll .col-managed { width:80px; min-width:74px; }
+.tbl-scroll .col-lop { width:70px; min-width:70px; }
 .table-warning-custom { background-color:#fff3cd !important; }
-.tbl-scroll tbody tr:hover .sticky-stt, .tbl-scroll tbody tr:hover .sticky-name, .tbl-scroll tbody tr:hover .col-pending { background:#f0f4f8 !important; }
 .name-btn-group { display:flex; align-items:flex-start; gap:4px; }
 .name-btn-group .name-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .toggle-approval:checked { background-color:#198754; border-color:#198754; }
@@ -854,26 +776,72 @@ function onNamHocChange(sel) {
 }
 </script>
 
-{# ══ MAIN SCRIPT — CHỈ 1 DOMContentLoaded ══ #}
+<script>
+(function () {
+    var LS_KEY = 'sharedNamHoc';
+    var cur    = '{{ nam_hoc_filter }}';
+    if (!cur) {
+        var saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+            var urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.get('nam_hoc')) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('nam_hoc', saved);
+                window.location.replace(url.toString());
+                return;
+            } else { localStorage.removeItem(LS_KEY); }
+        }
+    } else { localStorage.setItem(LS_KEY, cur); }
+})();
+
+function onNamHocChange(sel) {
+    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
+    else           localStorage.removeItem('sharedNamHoc');
+    sel.form.submit();
+}
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-    // ── Print timestamp ──────────────────────────────────────
+    // ── Print timestamp
     const _pts = document.getElementById('printTimestamp');
     if (_pts) _pts.textContent = new Date().toLocaleString('vi-VN');
 
-    // ── VIEW MODE ────────────────────────────────────────────
+    // ── Stats counter O(1) — không querySelectorAll mỗi lần
+    let _stats = {
+        total:    parseInt(document.getElementById('gs-total')?.textContent    || 0),
+        approved: parseInt(document.getElementById('gs-approved')?.textContent || 0),
+        rejected: parseInt(document.getElementById('gs-rejected')?.textContent || 0)
+    };
+    function updateGlobalStats(delta) {
+        if (delta) {
+            _stats.approved += (delta.approved || 0);
+            _stats.rejected += (delta.rejected || 0);
+        } else {
+            _stats.approved = document.querySelectorAll('.ct-row.table-success').length;
+            _stats.rejected = document.querySelectorAll('.ct-row.table-danger').length;
+        }
+        const pending = Math.max(0, _stats.total - _stats.approved - _stats.rejected);
+        const el = id => document.getElementById(id);
+        if (el('gs-total'))    el('gs-total').textContent    = _stats.total;
+        if (el('gs-pending'))  el('gs-pending').textContent  = pending;
+        if (el('gs-approved')) el('gs-approved').textContent = _stats.approved;
+        if (el('gs-rejected')) el('gs-rejected').textContent = _stats.rejected;
+        const rw = el('stat-rejected-wrap');
+        if (rw) rw.style.display = _stats.rejected > 0 ? '' : 'none';
+    }
+
+    // ── VIEW MODE
     const VM_KEY  = 'pendingListViewMode';
     const tableCN = document.getElementById('tableCaNhan');
     const tableTT = document.getElementById('tableTapThe');
     const btnC    = document.getElementById('btnViewCompact');
     const btnF    = document.getElementById('btnViewFull');
-
     function applyViewMode(mode) {
         [tableCN, tableTT].forEach(t => { if (!t) return; t.classList.toggle('view-compact', mode === 'compact'); });
-        
-              btnC && btnC.classList.toggle('active', mode === 'compact');
+        btnC && btnC.classList.toggle('active', mode === 'compact');
         btnF && btnF.classList.toggle('active', mode !== 'compact');
         try { localStorage.setItem(VM_KEY, mode); } catch(e) {}
     }
@@ -883,13 +851,16 @@ document.addEventListener('DOMContentLoaded', function () {
     btnC && btnC.addEventListener('click', () => applyViewMode('compact'));
     btnF && btnF.addEventListener('click', () => applyViewMode('full'));
 
-    // ── FILTERS ──────────────────────────────────────────────
+    // ── FILTERS với debounce
     const unitFilter     = document.getElementById('unitFilter');
     const danhHieuFilter = document.getElementById('danhHieuFilter');
     const searchInput    = document.getElementById('searchInput');
     const scopeFilter    = document.getElementById('scopeFilter');
     const BAN_QUANLUC    = ['Công nhân viên', 'Quân nhân chuyên nghiệp', 'Hạ sĩ quan, chiến sĩ'];
 
+    function debounce(fn, ms) {
+        let t; return function(...args) { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
     function applyFilters() {
         const selUnit  = unitFilter     ? unitFilter.value     : '';
         const selDH    = danhHieuFilter ? danhHieuFilter.value : '';
@@ -911,89 +882,109 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (rr) rr.style.display = 'none';
             }
         });
-        updateGlobalStats();
+        updateGlobalStats(null);
     }
     [unitFilter, danhHieuFilter, scopeFilter].forEach(el => el && el.addEventListener('change', applyFilters));
-    searchInput && searchInput.addEventListener('input', applyFilters);
+    searchInput && searchInput.addEventListener('input', debounce(applyFilters, 250));
 
-    // ── TOGGLE SWITCHES ──────────────────────────────────────
-    document.querySelectorAll('.toggle-approval').forEach(sw => {
-        sw.addEventListener('change', function () {
-            if (this.checked) saveToggle(this.dataset.pdId, this.dataset.ctId, true, '');
-            else              showRejectRow(this.dataset.pdId, this.dataset.ctId);
-        });
+    // ── EVENT DELEGATION — thay thế toàn bộ forEach bind
+    document.addEventListener('change', function(e) {
+        if (!e.target.classList.contains('toggle-approval')) return;
+        const sw = e.target;
+        if (sw.checked) saveToggle(sw.dataset.pdId, sw.dataset.ctId, true, '');
+        else            showRejectRow(sw.dataset.pdId, sw.dataset.ctId);
     });
 
-    document.querySelectorAll('.reject-link').forEach(link => {
-        link.addEventListener('click', function () {
-            showRejectRow(this.dataset.pdId, this.dataset.ctId);
-        });
-    });
+    document.addEventListener('click', function(e) {
+        // Minh chứng lazy load
+        const mcBtn = e.target.closest('.open-mc-btn');
+        if (mcBtn) {
+            const ctId = mcBtn.dataset.ctId;
+            const name = mcBtn.dataset.name || 'Minh chứng';
+            document.getElementById('mcModalTitle').textContent = 'Minh chứng: ' + name;
+            const body = document.getElementById('mcModalBody');
+            body.innerHTML = '<div class="text-center py-3"><span class="spinner-border text-navy"></span></div>';
+            new bootstrap.Modal(document.getElementById('mcModalShared')).show();
+            fetch('/admin/api/chi-tiet/' + ctId + '?mc_only=1')
+                .then(r => r.json())
+                .then(d => {
+                    if (!d.minh_chungs || !d.minh_chungs.length) {
+                        body.innerHTML = '<p class="text-muted">Không có minh chứng.</p>'; return;
+                    }
+                    body.innerHTML = '<div class="d-flex flex-wrap gap-2">' +
+                        d.minh_chungs.map(mc => mc.is_image
+                            ? `<img src="${mc.url}" class="evidence-thumb" style="max-width:150px;" alt="${mc.ten_file}">`
+                            : `<a href="${mc.url}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.ten_file}</a>`
+                        ).join('') + '</div>';
+                })
+                .catch(() => { body.innerHTML = '<p class="text-danger">Lỗi tải minh chứng.</p>'; });
+            return;
+        }
 
-    document.querySelectorAll('.save-reject-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const pdId = this.dataset.pdId, ctId = this.dataset.ctId;
-            const inp  = document.getElementById(`reason-input-${pdId}-${ctId}`);
-            const reason = inp.value.trim();
-            if (!reason) { inp.classList.add('is-invalid'); return; }
+        // reject-link
+        const rl = e.target.closest('.reject-link');
+        if (rl) { showRejectRow(rl.dataset.pdId, rl.dataset.ctId); return; }
+
+        // save-reject-btn
+        const srb = e.target.closest('.save-reject-btn');
+        if (srb) {
+            const {pdId, ctId} = srb.dataset;
+            const inp = document.getElementById(`reason-input-${pdId}-${ctId}`);
+            const reason = inp?.value.trim();
+            if (!reason) { inp?.classList.add('is-invalid'); return; }
             inp.classList.remove('is-invalid');
             saveToggle(pdId, ctId, false, reason);
-        });
-    });
+            return;
+        }
 
-    document.querySelectorAll('.cancel-reject-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            hideRejectRow(this.dataset.pdId, this.dataset.ctId);
-            const sw = document.getElementById(`switch-${this.dataset.pdId}-${this.dataset.ctId}`);
+        // cancel-reject-btn
+        const crb = e.target.closest('.cancel-reject-btn');
+        if (crb) {
+            hideRejectRow(crb.dataset.pdId, crb.dataset.ctId);
+            const sw = document.getElementById(`switch-${crb.dataset.pdId}-${crb.dataset.ctId}`);
             if (sw) sw.checked = false;
-        });
-    });
+            return;
+        }
 
-    document.querySelectorAll('[id^="reason-input-"]').forEach(inp => {
-        inp.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.closest('tr').querySelector('.save-reject-btn').click();
-            }
-        });
-    });
-
-    // ── REVOKE ITEM ──────────────────────────────────────────
-    document.querySelectorAll('.revoke-item-link').forEach(link => {
-        link.addEventListener('click', function () {
-            const pdId = this.dataset.pdId, ctId = this.dataset.ctId;
+        // revoke-item-link
+        const rv = e.target.closest('.revoke-item-link');
+        if (rv && rv.style.display !== 'none') {
+            const {pdId, ctId} = rv.dataset;
             if (!confirm('Thu hồi kết quả duyệt cho mục này?')) return;
             fetch(`/approval/revoke-item/${pdId}/${ctId}`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': csrfToken }
-            })
-            .then(r => r.json())
-            .then(data => {
+                method: 'POST', headers: { 'X-CSRFToken': csrfToken }
+            }).then(r => r.json()).then(data => {
                 if (data.success) {
                     const row = document.getElementById(`row-${pdId}-${ctId}`);
+                    const wasApproved = row.classList.contains('table-success');
+                    const wasRejected = row.classList.contains('table-danger');
                     row.classList.remove('table-success', 'table-danger');
-                    const sw = document.getElementById(`switch-${pdId}-${ctId}`);
-                    if (sw) sw.checked = false;
-                    const rl = row.querySelector('.reject-link');
-                    if (rl) rl.style.display = '';
+                    const sw2 = document.getElementById(`switch-${pdId}-${ctId}`);
+                    if (sw2) sw2.checked = false;
+                    const rl2 = row.querySelector('.reject-link');
+                    if (rl2) rl2.style.display = '';
                     const rt = document.getElementById(`reason-text-${pdId}-${ctId}`);
                     if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
-                    this.style.display = 'none';
-                    updateGlobalStats();
-                } else {
-                    alert(data.message || 'Không thể thu hồi.');
-                }
-            })
-            .catch(() => alert('Lỗi kết nối.'));
-        });
+                    rv.style.display = 'none';
+                    updateGlobalStats(wasApproved ? {approved:-1} : wasRejected ? {rejected:-1} : null);
+                } else alert(data.message || 'Không thể thu hồi.');
+            }).catch(() => alert('Lỗi kết nối.'));
+            return;
+        }
     });
 
-    // ── REQUEST EDIT MODAL ───────────────────────────────────
-    let reqEditFieldData = { ca_nhan: [], tap_the: [] };
-    try {
-        reqEditFieldData = JSON.parse(document.getElementById('reqEditFieldData').textContent);
-    } catch(e) {}
+    // ── Enter key trong reason-input
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter') return;
+        const inp = e.target.closest('[id^="reason-input-"]');
+        if (!inp) return;
+        e.preventDefault();
+        inp.closest('tr').querySelector('.save-reject-btn')?.click();
+    });
 
+    // ── REQUEST EDIT MODAL
+    let reqEditFieldData = { ca_nhan: [], tap_the: [] };
+    try { reqEditFieldData = JSON.parse(document.getElementById('reqEditFieldData').textContent); } catch(e) {}
     const _reqEditModalEl = document.getElementById('requestEditModal');
     const _reqEditModal   = _reqEditModalEl ? new bootstrap.Modal(_reqEditModalEl) : null;
     let   _reqEditCtx     = { pdId: null, ctId: null };
@@ -1004,95 +995,67 @@ document.addEventListener('DOMContentLoaded', function () {
         const el = document.getElementById('reqEditSelectedCount');
         if (el) el.textContent = `${checked} / ${total}`;
     }
-
-    // Event delegation — bind 1 lần duy nhất
-    document.getElementById('reqEditFields') &&
-    document.getElementById('reqEditFields').addEventListener('change', function (e) {
+    document.getElementById('reqEditFields')?.addEventListener('change', function(e) {
         if (e.target.classList.contains('req-edit-field')) _reqEditUpdateCount();
     });
-
-    document.getElementById('reqEditSelectAll') &&
-    document.getElementById('reqEditSelectAll').addEventListener('click', function () {
+    document.getElementById('reqEditSelectAll')?.addEventListener('click', function() {
         document.querySelectorAll('#reqEditFields .req-edit-field').forEach(cb => cb.checked = true);
         _reqEditUpdateCount();
     });
-
-    document.getElementById('reqEditDeselectAll') &&
-    document.getElementById('reqEditDeselectAll').addEventListener('click', function () {
+    document.getElementById('reqEditDeselectAll')?.addEventListener('click', function() {
         document.querySelectorAll('#reqEditFields .req-edit-field').forEach(cb => cb.checked = false);
         _reqEditUpdateCount();
     });
 
-    // Mở modal
-    document.querySelectorAll('.request-edit-link').forEach(link => {
-        link.addEventListener('click', function () {
-            _reqEditCtx.pdId = this.dataset.pdId;
-            _reqEditCtx.ctId = this.dataset.ctId;
-            const isTapThe   = this.dataset.tapThe === 'true';
-
-            document.getElementById('reqEditName').textContent = this.dataset.name || '';
-            document.getElementById('reqEditReason').value     = '';
-
-            const fields    = isTapThe ? reqEditFieldData.tap_the : reqEditFieldData.ca_nhan;
-            const container = document.getElementById('reqEditFields');
-            container.innerHTML = '';
-
-            if (!fields || !fields.length) {
-                container.innerHTML = '<p class="text-muted small mb-0">Không có tiêu chí nào.</p>';
-            } else {
-                fields.forEach(f => {
-                    const div = document.createElement('div');
-                    div.className = 'form-check';
-                    div.innerHTML = `
-                        <input class="form-check-input req-edit-field"
-                               type="checkbox" id="reqf_${f.ma_truong}" value="${f.ma_truong}">
-                        <label class="form-check-label small" for="reqf_${f.ma_truong}">${f.ten}</label>`;
-                    container.appendChild(div);
-                });
-            }
-            _reqEditUpdateCount();
-            if (_reqEditModal) _reqEditModal.show();
-        });
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('.request-edit-link');
+        if (!link) return;
+        _reqEditCtx.pdId = link.dataset.pdId;
+        _reqEditCtx.ctId = link.dataset.ctId;
+        const isTapThe   = link.dataset.tapThe === 'true';
+        document.getElementById('reqEditName').textContent = link.dataset.name || '';
+        document.getElementById('reqEditReason').value     = '';
+        const fields    = isTapThe ? reqEditFieldData.tap_the : reqEditFieldData.ca_nhan;
+        const container = document.getElementById('reqEditFields');
+        container.innerHTML = '';
+        if (!fields || !fields.length) {
+            container.innerHTML = '<p class="text-muted small mb-0">Không có tiêu chí nào.</p>';
+        } else {
+            fields.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `<input class="form-check-input req-edit-field" type="checkbox" id="reqf_${f.ma_truong}" value="${f.ma_truong}">
+                    <label class="form-check-label small" for="reqf_${f.ma_truong}">${f.ten}</label>`;
+                container.appendChild(div);
+            });
+        }
+        _reqEditUpdateCount();
+        if (_reqEditModal) _reqEditModal.show();
     });
 
-    // ★ Submit yêu cầu sửa — KHÔNG reload trang
-    document.getElementById('reqEditSubmit') &&
-    document.getElementById('reqEditSubmit').addEventListener('click', function () {
+    document.getElementById('reqEditSubmit')?.addEventListener('click', function() {
         const checked = [...new Set(
-            Array.from(document.querySelectorAll('#reqEditFields .req-edit-field:checked'))
-                .map(c => c.value)
+            Array.from(document.querySelectorAll('#reqEditFields .req-edit-field:checked')).map(c => c.value)
         )];
         const reason = document.getElementById('reqEditReason').value.trim();
         if (!checked.length) { alert('Vui lòng chọn ít nhất một tiêu chí.'); return; }
-
         const btn = this;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi...';
-
         fetch(`/approval/request-edit/${_reqEditCtx.pdId}/${_reqEditCtx.ctId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
             body: JSON.stringify({ fields: checked, ly_do: reason }),
-        })
-        .then(r => r.json())
-        .then(data => {
+        }).then(r => r.json()).then(data => {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-send me-1"></i>Gửi yêu cầu';
-
             if (data.success) {
                 if (_reqEditModal) _reqEditModal.hide();
                 showToast(data.message || 'Đã gửi yêu cầu chỉnh sửa.', 'success');
-
-                // ★ Cập nhật DOM — KHÔNG reload trang
-                const pdId = _reqEditCtx.pdId;
-                const ctId = _reqEditCtx.ctId;
-                const row  = document.getElementById(`row-${pdId}-${ctId}`);
+                const row = document.getElementById(`row-${_reqEditCtx.pdId}-${_reqEditCtx.ctId}`);
                 if (row) {
-                    // 1. Đổi màu row → warning
                     row.classList.remove('table-success', 'table-danger');
                     row.classList.add('table-warning-custom');
-
-                    // 2. Thêm/cập nhật badge trong ô tên
                     const nameText = row.querySelector('.name-text');
                     if (nameText) {
                         let badge = nameText.querySelector('.badge-edit-req');
@@ -1104,37 +1067,23 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                         badge.title = `Đã yêu cầu sửa: ${reason || ''}`;
                     }
-
-                    // 3. Đổi text link → "Cập nhật yêu cầu"
                     const editLink = row.querySelector('.request-edit-link');
-                    if (editLink) {
-                        editLink.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Cập nhật yêu cầu';
-                    }
-
-                    // 4. Reset inline background để CSS class tự xử lý sticky cells
-                    [row.querySelector('.sticky-stt'),
-                     row.querySelector('.sticky-name'),
-                     row.querySelector('.col-pending')
-                    ].forEach(cell => { if (cell) cell.style.background = ''; });
+                    if (editLink) editLink.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Cập nhật yêu cầu';
                 }
-            } else {
-                alert(data.message || 'Không thể gửi yêu cầu.');
-            }
-        })
-        .catch(() => {
+            } else { alert(data.message || 'Không thể gửi yêu cầu.'); }
+        }).catch(() => {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-send me-1"></i>Gửi yêu cầu';
             alert('Lỗi kết nối.');
         });
     });
 
-    // ── BATCH APPROVE ────────────────────────────────────────
+    // ── BATCH APPROVE
     let batchPendingData = null;
-
     ['btnApproveAllCN', 'btnApproveAllTT'].forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (!btn) return;
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function() {
             const tableId = btnId === 'btnApproveAllCN' ? 'tableCaNhan' : 'tableTapThe';
             const table   = document.getElementById(tableId);
             const items   = [];
@@ -1148,10 +1097,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             if (!items.length) { showToast('Đã duyệt hết.', 'info'); return; }
             const grouped = {};
-            items.forEach(({ pdId, ctId }) => {
-                if (!grouped[pdId]) grouped[pdId] = [];
-                grouped[pdId].push(ctId);
-            });
+            items.forEach(({ pdId, ctId }) => { if (!grouped[pdId]) grouped[pdId] = []; grouped[pdId].push(ctId); });
             batchPendingData = Object.entries(grouped).map(([pdId, ctIds]) => ({ pdId, ctIds }));
             const label = btnId === 'btnApproveAllCN' ? 'cá nhân' : 'tập thể';
             document.getElementById('batchApproveTitle').textContent   = `Nhất trí tất cả ${label}`;
@@ -1160,8 +1106,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    document.getElementById('batchApproveConfirm') &&
-    document.getElementById('batchApproveConfirm').addEventListener('click', async function () {
+    document.getElementById('batchApproveConfirm')?.addEventListener('click', async function() {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
         try {
@@ -1180,22 +1125,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ── FILTER BAR TOGGLE ────────────────────────────────────
+    // ── FILTER BAR TOGGLE
     const toggleFilterBar = document.getElementById('toggleFilterBar');
     const filterBar       = document.getElementById('filterBar');
     if (toggleFilterBar && filterBar) {
         toggleFilterBar.addEventListener('click', () => filterBar.classList.toggle('d-none'));
     }
 
-    // ── INIT HELPERS ─────────────────────────────────────────
+    // ── INIT
     initColToggle('tableCaNhan', 'btnColToggleCN');
     initColToggle('tableTapThe', 'btnColToggleTT');
     initMirrorScroll('mirrorCN', 'tblOuterCN');
     initMirrorScroll('mirrorTT', 'tblOuterTT');
 
-    // ════════════════════════════════════════════════════════
-    // HELPER FUNCTIONS
-    // ════════════════════════════════════════════════════════
+    // ════ HELPERS ════
     async function doBatchApprove(pdId, ctIds) {
         const res  = await fetch('/approval/batch-approve', {
             method: 'POST',
@@ -1203,16 +1146,9 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({ pd_id: parseInt(pdId), ct_ids: ctIds }),
         });
         const data = await res.json();
-
-        // ── Bỏ qua lỗi "Đã hoàn tất duyệt" — vẫn update DOM ────────────────
-        if (!data.success && data.message && data.message.includes('Đã hoàn tất')) {
-            console.warn(`pd_id=${pdId}: ${data.message} — bỏ qua`);
-            // Vẫn update DOM cho các ctId này
-        } else if (!data.success) {
-            throw new Error(`pd_id=${pdId}: ${data.message || 'Batch approve failed'}`);
+        if (!data.success && data.message && !data.message.includes('Đã hoàn tất')) {
+            throw new Error(`pd_id=${pdId}: ${data.message}`);
         }
-
-        // Update DOM
         ctIds.forEach(ctId => {
             const sw  = document.getElementById(`switch-${pdId}-${ctId}`);
             const row = document.getElementById(`row-${pdId}-${ctId}`);
@@ -1227,11 +1163,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const rv = row.querySelector('.revoke-item-link');
             if (rv) rv.style.display = '';
         });
-
-        updateGlobalStats();
+        updateGlobalStats(null);
         return data;
     }
-
 
     function showRejectRow(pdId, ctId) {
         const row = document.getElementById(`reject-row-${pdId}-${ctId}`);
@@ -1240,7 +1174,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const inp = document.getElementById(`reason-input-${pdId}-${ctId}`);
         if (inp) { inp.classList.remove('is-invalid'); inp.focus(); }
     }
-
     function hideRejectRow(pdId, ctId) {
         const row = document.getElementById(`reject-row-${pdId}-${ctId}`);
         if (row) row.style.display = 'none';
@@ -1261,6 +1194,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             const row = document.getElementById(`row-${pdId}-${ctId}`);
+            const wasApproved = row.classList.contains('table-success');
+            const wasRejected = row.classList.contains('table-danger');
             row.classList.remove('table-success', 'table-danger');
             hideRejectRow(pdId, ctId);
             const rl = row.querySelector('.reject-link');
@@ -1272,6 +1207,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (rl) rl.style.display = 'none';
                 if (rt) { rt.style.display = 'none'; rt.textContent = ''; }
                 if (rv) rv.style.display = '';
+                if (!wasApproved) updateGlobalStats({ approved: +1, rejected: wasRejected ? -1 : 0 });
             } else {
                 row.classList.add('table-danger');
                 if (sw) sw.checked = false;
@@ -1279,8 +1215,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const short = lyDo.length > 20 ? lyDo.substring(0, 20) + '...' : lyDo;
                 if (rt) { rt.textContent = short; rt.title = lyDo; rt.style.display = ''; }
                 if (rv) rv.style.display = '';
+                if (!wasRejected) updateGlobalStats({ rejected: +1, approved: wasApproved ? -1 : 0 });
             }
-            updateGlobalStats();
             if (data.auto_finalized) showToast('Đã tự động hoàn tất duyệt cho đơn vị này.', 'success');
         } catch(err) {
             console.error(err);
@@ -1289,25 +1225,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function updateGlobalStats() {
-        let total = 0, approved = 0, rejected = 0;
-        document.querySelectorAll('.ct-row').forEach(row => {
-            if (row.dataset.outOfScope === 'true' || row.style.display === 'none') return;
-            total++;
-            if (row.classList.contains('table-success')) approved++;
-            else if (row.classList.contains('table-danger')) rejected++;
-        });
-        const el = id => document.getElementById(id);
-        if (el('gs-total'))    el('gs-total').textContent    = total;
-        if (el('gs-pending'))  el('gs-pending').textContent  = total - approved - rejected;
-        if (el('gs-approved')) el('gs-approved').textContent = approved;
-        if (el('gs-rejected')) el('gs-rejected').textContent = rejected;
-    }
-
     function showToast(message, type) {
-        const container = document.querySelector('.content-area')
-                       || (document.querySelector('.page-header') && document.querySelector('.page-header').parentNode)
-                       || document.body;
         const div = document.createElement('div');
         div.className = `alert alert-${type} alert-dismissible fade show`;
         div.style.cssText = 'font-size:0.85rem;position:fixed;top:16px;right:16px;z-index:9999;min-width:280px;';
@@ -1315,8 +1233,237 @@ document.addEventListener('DOMContentLoaded', function () {
         document.body.appendChild(div);
         setTimeout(() => div.remove(), 4000);
     }
-
 }); // end DOMContentLoaded
+
+// ════ MIRROR SCROLLBAR ════
+function initMirrorScroll(mirrorId, outerId) {
+    const mirror = document.getElementById(mirrorId);
+    const outer  = document.getElementById(outerId);
+    if (!mirror || !outer) return;
+    const inner  = mirror.firstElementChild;
+    function syncWidth() {
+        const tbl = outer.querySelector('table');
+        inner.style.width = (tbl ? tbl.offsetWidth : outer.scrollWidth) + 'px';
+    }
+    syncWidth();
+    if (window.ResizeObserver) new ResizeObserver(syncWidth).observe(outer);
+    let lock = false;
+    mirror.addEventListener('scroll', () => { if (lock) return; lock = true; outer.scrollLeft = mirror.scrollLeft; lock = false; });
+    outer.addEventListener('scroll',  () => { if (lock) return; lock = true; mirror.scrollLeft = outer.scrollLeft; lock = false; });
+}
+
+// ════ COLUMN TOGGLE ════
+function initColToggle(tableId, btnId) {
+    const table = document.getElementById(tableId);
+    const btn   = document.getElementById(btnId);
+    if (!table || !btn) return;
+    const storageKey = 'col_toggle_' + tableId + '_{{ current_user.role }}';
+    const ths = Array.from(table.querySelectorAll('thead th[data-col-key]'));
+    if (!ths.length) return;
+    let panel = document.getElementById(btnId + '_panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = btnId + '_panel';
+        panel.style.cssText = 'display:none;position:fixed;z-index:2000;min-width:210px;max-height:320px;overflow-y:auto;background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);';
+        document.body.appendChild(panel);
+    }
+    let html = `<div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2">
+        <span class="fw-semibold small">Hiển thị cột</span>
+        <button type="button" class="btn-close" style="font-size:.65rem;"
+                onclick="document.getElementById('${btnId}_panel').style.display='none'"></button>
+    </div>`;
+    ths.forEach(th => {
+        const key   = th.dataset.colKey;
+        const label = (th.dataset.colLabel || th.textContent.trim()).slice(0, 35);
+        html += `<div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox"
+                   id="chk_${tableId}_${key}" checked
+                   onchange="applyColToggle('${tableId}','${storageKey}')">
+            <label class="form-check-label small" for="chk_${tableId}_${key}" style="cursor:pointer;">${label}</label>
+        </div>`;
+    });
+    html += `<div class="border-top pt-1 mt-2 d-flex gap-1">
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;"
+                onclick="setAllColToggle('${tableId}','${storageKey}',true)">Tất cả</button>
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;"
+                onclick="setAllColToggle('${tableId}','${storageKey}',false)">Ẩn hết</button>
+    </div>`;
+    panel.innerHTML = html;
+    try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        ths.forEach(th => {
+            const k = th.dataset.colKey;
+            if (k in saved && !saved[k]) {
+                const c = document.getElementById(`chk_${tableId}_${k}`);
+                if (c) c.checked = false;
+            }
+        });
+    } catch(e) {}
+    applyColToggle(tableId, storageKey);
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const r = btn.getBoundingClientRect();
+        panel.style.top  = (r.bottom + 4) + 'px';
+        panel.style.left = Math.max(4, r.right - 210) + 'px';
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', function(e) {
+        if (!panel.contains(e.target) && e.target !== btn) panel.style.display = 'none';
+    }, true);
+}
+function applyColToggle(tableId, storageKey) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const state = {};
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => {
+        const key     = th.dataset.colKey;
+        const chk     = document.getElementById(`chk_${tableId}_${key}`);
+        const visible = chk ? chk.checked : true;
+        state[key]    = visible;
+        table.querySelectorAll(`[data-col-key="${key}"]`).forEach(el => { el.style.display = visible ? '' : 'none'; });
+    });
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch(e) {}
+}
+function setAllColToggle(tableId, storageKey, visible) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    table.querySelectorAll('thead th[data-col-key]').forEach(th => {
+        const c = document.getElementById(`chk_${tableId}_${th.dataset.colKey}`);
+        if (c) c.checked = visible;
+    });
+    applyColToggle(tableId, storageKey);
+}
+
+// ════ DETAIL MODAL ════
+function openDetailModal(ctId) {
+    const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+    const body  = document.getElementById('detailModalBody');
+    body.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-navy"></span></div>';
+    modal.show();
+    fetch('/admin/api/chi-tiet/' + ctId + '?dept_only=1')
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(d => {
+            const p = d.personal || {}, n = d.nomination || {};
+            const badges = [
+                p.la_chi_huy         ? '<span class="badge bg-danger">Cấp trưởng</span>'       : '',
+                p.la_bi_thu          ? '<span class="badge bg-primary">Bí thư</span>'           : '',
+                p.la_doan_vien       ? '<span class="badge bg-info text-dark">Đoàn viên</span>' : '',
+                p.la_hoi_vien_phu_nu ? '<span class="badge bg-pink">Phụ nữ</span>'              : '',
+            ].filter(Boolean).join(' ');
+            let html = `<div class="row g-2 mb-2">
+              <div class="col-12"><h6 class="fw-bold mb-1">${p.ho_ten||'—'}</h6>${badges}</div>
+              <div class="col-6"><small class="text-muted d-block">Đơn vị</small>${n.don_vi||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Năm học</small>${n.nam_hoc||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Cấp bậc</small>${p.cap_bac||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Chức vụ</small>${p.chuc_vu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Đối tượng</small>${p.doi_tuong||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Danh hiệu</small>${n.loai_danh_hieu||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Học hàm/vị</small>${[p.hoc_ham,p.hoc_vi].filter(Boolean).join(' / ')||'—'}</div>
+              <div class="col-6"><small class="text-muted d-block">Trạng thái</small>${n.trang_thai||'—'}</div>
+            </div>`;
+            if (d.criteria && d.criteria.length) {
+                const filled = d.criteria.filter(c => c.value && c.value !== 'None');
+                const empty  = d.criteria.filter(c => !c.value || c.value === 'None');
+                html += '<hr class="my-2"><h6 class="fw-semibold">Tiêu chí <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.criteria.length + '</span></h6>';
+                html += '<table class="table table-sm table-bordered mb-2" style="font-size:.8rem;">';
+                filled.forEach(c => { html += `<tr><td class="text-muted" style="width:52%">${c.label}</td><td class="fw-semibold">${c.value}${c.score?` <small class="text-muted">(${c.score})</small>`:''}</td></tr>`; });
+                if (empty.length) html += `<tr class="table-light"><td colspan="2" class="text-muted small py-1 px-2">Chưa nhập (${empty.length}): ${empty.map(c=>c.label).join(', ')}</td></tr>`;
+                html += '</table>';
+            }
+            if (d.minh_chungs && d.minh_chungs.length) {
+                html += '<hr class="my-2"><h6 class="fw-semibold">Minh chứng <span class="badge bg-secondary ms-1" style="font-size:.72rem;">' + d.minh_chungs.length + '</span></h6>';
+                html += '<div class="d-flex flex-wrap gap-2 mb-2">';
+                d.minh_chungs.forEach(mc => {
+                    if (mc.is_image) {
+                        html += `<div class="text-center" style="max-width:120px;"><a href="${mc.url}" target="_blank" rel="noopener"><img src="${mc.url}" alt="${mc.ten_file}" onerror="this.onerror=null;this.parentNode.innerHTML='<span class=\\'text-muted small\\'>Không tìm thấy</span>'" style="max-width:110px;max-height:90px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;"></a><div class="text-muted text-truncate" style="font-size:.7rem;max-width:110px;" title="${mc.ten_file}">${mc.loai}</div></div>`;
+                    } else {
+                        html += `<a href="${mc.url}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.78rem;"><i class="bi bi-file-earmark-arrow-down me-1"></i>${mc.loai}: ${mc.ten_file}</a>`;
+                    }
+                });
+                html += '</div>';
+            }
+            body.innerHTML = html;
+        })
+        .catch(e => { body.innerHTML = `<div class="alert alert-danger">Lỗi tải dữ liệu: ${e.message}</div>`; });
+}
+
+// ════ EXPORT LOADING OVERLAY ════
+(function () {
+    const COOKIE_NAME = 'export_done';
+    const overlay     = document.getElementById('exportLoadingOverlay');
+    const progressBar = document.getElementById('exportProgressBar');
+    const stepEl      = document.getElementById('exportLoadingStep');
+    const titleEl     = document.getElementById('exportLoadingTitle');
+    const subtitleEl  = document.getElementById('exportLoadingSubtitle');
+    if (!overlay) return;
+    const STEPS = [
+        { pct: 8,  text: 'Đang truy vấn dữ liệu...',               delay: 400   },
+        { pct: 20, text: 'Xử lý danh sách đề xuất...',              delay: 900   },
+        { pct: 35, text: 'Tổng hợp tiêu chí...',                    delay: 1800  },
+        { pct: 52, text: 'Tạo cấu trúc bảng Word...',               delay: 3000  },
+        { pct: 68, text: 'Điền dữ liệu vào bảng...',                delay: 5000  },
+        { pct: 80, text: 'Định dạng font & layout...',              delay: 8000  },
+        { pct: 88, text: 'Hoàn thiện tài liệu...',                  delay: 14000 },
+        { pct: 93, text: 'Chuẩn bị tải xuống...',                   delay: 22000 },
+        { pct: 96, text: 'Đang xử lý dữ liệu lớn, vui lòng đợi...', delay: 35000 },
+        { pct: 98, text: 'Gần xong, vui lòng kiên nhẫn...',         delay: 60000 },
+        { pct: 99, text: 'Vẫn đang xử lý, vui lòng đợi thêm...',   delay: 100000},
+    ];
+    let _stepTimers = [], _pollTimer = null, _startTime = null;
+    function showOverlay(titleText, subtitleText) {
+        titleEl.textContent    = titleText    || 'Đang tạo file Word...';
+        subtitleEl.textContent = subtitleText || 'Vui lòng đợi, quá trình này có thể mất 10–30 giây';
+        progressBar.style.width = '0%';
+        progressBar.classList.add('progress-bar-animated', 'progress-bar-striped', 'bg-primary');
+        progressBar.classList.remove('bg-success');
+        stepEl.textContent = 'Khởi tạo...';
+        overlay.classList.add('active');
+        _startTime = Date.now();
+        _stepTimers.forEach(t => clearTimeout(t));
+        _stepTimers = STEPS.map(step => setTimeout(() => { progressBar.style.width = step.pct + '%'; stepEl.textContent = step.text; }, step.delay));
+        clearInterval(_pollTimer);
+        _pollTimer = setInterval(checkDone, 600);
+    }
+    function hideOverlay(success) {
+        if (success === false) {
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped', 'bg-primary', 'bg-success');
+            progressBar.classList.add('bg-danger');
+            stepEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Quá thời gian chờ — vui lòng kiểm tra file đã tải chưa, hoặc thử lại.';
+        } else {
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped', 'bg-primary');
+            progressBar.classList.add('bg-success');
+            stepEl.textContent = '✓ Hoàn thành! Đang tải xuống...';
+        }
+        _stepTimers.forEach(t => clearTimeout(t));
+        clearInterval(_pollTimer);
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            progressBar.style.width = '0%';
+            progressBar.classList.remove('bg-danger', 'bg-success');
+            progressBar.classList.add('progress-bar-animated', 'progress-bar-striped', 'bg-primary');
+        }, success === false ? 4000 : 1200);
+    }
+    function checkDone() {
+        const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith(COOKIE_NAME + '='));
+        if (hasCookie) { document.cookie = COOKIE_NAME + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'; hideOverlay(true); return; }
+        if (_startTime && Date.now() - _startTime > 280000) hideOverlay(false);
+    }
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        if ((link.getAttribute('href') || '').toLowerCase().includes('word'))
+            showOverlay('Đang tạo file Word...', 'Vui lòng đợi, quá trình này có thể mất 10–30 giây');
+    });
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('button[data-export="word"]');
+        if (btn) showOverlay('Đang tạo file Word...', 'Vui lòng đợi, quá trình này có thể mất 10–30 giây');
+    });
+})();
+</script>
+
+{% endblock %}
 
 // ════════════════════════════════════════════════════════
 // MIRROR SCROLLBAR
@@ -1615,7 +1762,7 @@ function openDetailModal(ctId) {
         }
         // Timeout an toàn 180s — khớp với gunicorn timeout (Procfile: --timeout 180)
         // JS phải chờ đủ để server có thể hoàn thành trước khi báo lỗi
-        if (_startTime && Date.now() - _startTime > 280000) {
+        if (_startTime && Date.now() - _startTime > 180000) {
             hideOverlay(false);
         }
     }
