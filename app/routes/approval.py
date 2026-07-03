@@ -2177,12 +2177,7 @@ def export_excel():
 def export_word():
     from io import BytesIO
     from datetime import date, datetime
-    from docx import Document
-    from docx.shared import Cm, Pt
-    from docx.enum.text import WD_LINE_SPACING, WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
+  
     from sqlalchemy.orm import joinedload, selectinload
 
     phong_name     = ROLE_TO_PHONG.get(current_user.role, '')
@@ -2240,14 +2235,14 @@ def export_word():
                 _TieuChi.ma_truong.in_(list(all_ma_truong))
             ).all()
         }
-
+    
     # ── 4. Phân loại chi tiết theo danh hiệu ─────────────────────────────────
     ds_don_vi_qt  = []
     ds_don_vi_tt  = []
     ds_ca_nhan_td = []
     ds_ca_nhan_tt = []
     seen_ids      = set()
-
+    title_nam_hoc = nam_hoc_filter
     for pd in pending_reviews:
         results = all_item_results.get(pd.id, {})
         don_vi  = pd.de_xuat.don_vi.ten_don_vi if pd.de_xuat and pd.de_xuat.don_vi else ''
@@ -2313,11 +2308,15 @@ def export_word():
 
     def _cn_rows(items):
         rows_xml = []
+        stt =0
         for i, item in enumerate(items, 1):
+            if item['ct'].phong_loai == 'Tuyên huấn':
+                continue
+            stt += 1
             ct = item['ct']; qn = ct.quan_nhan
             ket_qua_str = item['ket_qua_str']
             row_cells = [
-                (str(i), False, 'center'),
+                (str(stt), False, 'center'),
                 (qn.ho_ten if qn else '', True, 'left'),
                 (qn.cap_bac if qn and qn.cap_bac else '', False, 'left'),
                 (qn.chuc_vu if qn and qn.chuc_vu else '', False, 'left'),
@@ -2331,8 +2330,12 @@ def export_word():
 
     def _dv_rows(items):
         rows_xml = []
+        stt = 0
         for i, item in enumerate(items, 1):
             ct = item['ct']
+            if ct.phong_loai == 'Tuyên huấn':
+                continue
+            stt += 1
             td = ct.tap_the_dict or {}
             criteria_lines = []
             for k, v in td.items():
@@ -2342,7 +2345,7 @@ def export_word():
             if ct.muc_do_hoan_thanh:
                 criteria_lines.insert(0, f'- Mức độ HT: {ct.muc_do_hoan_thanh}')
             row_cells = [
-                (str(i), False, 'center'),
+                (str(stt), False, 'center'),
                 (ct.ten_don_vi_de_xuat or item['don_vi'] or '-', True, 'left'),
                 (item['don_vi'] or '-', False, 'center'),
                 ('\n'.join(criteria_lines), False, 'left'),
@@ -2353,6 +2356,162 @@ def export_word():
 
     today_str = _dt.date.today().strftime('%d/%m/%Y')
     body = []
+    now = _dt.datetime.now()
+      # ─────────────────────────────────────────────────────────────────────────
+    # [TÍCH HỢP] BẢNG QUỐC HIỆU TIÊU NGỮ & TIÊU ĐỀ CHUẨN ĐÚNG THEO XML MẪU
+    # ─────────────────────────────────────────────────────────────────────────
+    header_table_xml = f"""<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:tblPr>
+    <w:tblW w:type="dxa" w:w="9070"/>
+    <w:jc w:val="left"/>
+    <w:tblLayout w:type="fixed"/>
+    <w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/>
+    </w:tblPr>
+    <w:tblGrid>
+    <w:gridCol w:w="4535"/>
+    <w:gridCol w:w="4535"/>
+    </w:tblGrid>
+    <w:tr>
+    <w:tc>
+    <w:tcPr>
+    <w:tcW w:type="dxa" w:w="4535"/>
+    <w:tcBorders>
+    <w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    </w:tcBorders>
+    </w:tcPr>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b w:val="0"/>
+    <w:i w:val="0"/>
+    <w:sz w:val="24"/>
+    </w:rPr>
+    <w:t>TRƯỜNG SĨ QUAN CHÍNH TRỊ</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="24"/>
+    <w:u w:val="single"/>
+    </w:rPr>
+    <w:t>{current_user.ten_don_vi}</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b w:val="0"/>
+    <w:i w:val="0"/>
+    <w:sz w:val="22"/>
+    </w:rPr>
+    </w:r>
+    </w:p>
+    </w:tc>
+    <w:tc>
+    <w:tcPr>
+    <w:tcW w:type="dxa" w:w="4535"/>
+    <w:tcBorders>
+    <w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    <w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+    </w:tcBorders>
+    </w:tcPr>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="21"/>
+    </w:rPr>
+    <w:t>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="21"/>
+    <w:u w:val="single"/>
+    </w:rPr>
+    <w:t>Độc lập - Tự do - Hạnh phúc</w:t>
+    </w:r>
+    </w:p>
+    <w:p>
+    <w:pPr>
+    <w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>
+    <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b w:val="0"/>
+    <w:i/>
+    <w:sz w:val="22"/>
+    </w:rPr>
+    <w:t>Hà Nội, ngày {now.day} tháng {now.month} năm {now.year}</w:t>
+    </w:r>
+    </w:p>
+    </w:tc>
+    </w:tr>
+    </w:tbl>"""
+
+    title_xml = f"""<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:pPr>
+    <w:jc w:val="center"/>
+    <w:spacing w:before="180" w:after="40"/>
+    </w:pPr>
+    <w:r>
+    <w:rPr>
+    <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+    <w:b/>
+    <w:i w:val="0"/>
+    <w:sz w:val="26"/>
+    </w:rPr>
+    <w:t>DANH SÁCH ĐỀ NGHỊ KHEN THƯỞNG NĂM HỌC {title_nam_hoc.upper()}</w:t>
+    </w:r>
+    </w:p>"""
+
+    body.append(header_table_xml)
+    body.append("<w:p/>")
+    body.append(title_xml)
+    body.append(_para(f'(Xuất lúc {now.strftime("%H:%M")} ngày {today_str})', italic=True, size_pt=10, align='center', space_before=0, space_after=120))
+
     body.append(_para(phong_name.upper(), bold=True, size_pt=12, align='center', space_before=0, space_after=20))
     body.append(_para(
         'DANH SÁCH PHÊ DUYỆT KHEN THƯỞNG' + (f' NĂM HỌC {nam_hoc_filter}' if nam_hoc_filter else ''),

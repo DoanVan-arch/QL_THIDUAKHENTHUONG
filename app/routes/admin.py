@@ -2513,13 +2513,7 @@ def export_tracking_word():
     import datetime as _dt
     from io import BytesIO
     from datetime import date
-    from docx import Document
-    from docx.shared import Cm, Pt, RGBColor
-    from docx.enum.text import WD_LINE_SPACING
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
+   
 
     # Lưu ý: KHÔNG dùng db.session.expire_all() ở đây — buộc query lại DB cho MỌI
     # thuộc tính truy cập sau đó (ct.quan_nhan, dx.don_vi, ...), có thể gây ra
@@ -2691,11 +2685,13 @@ def export_tracking_word():
 
     def _cn_rows(items):
         rows_xml = []
+        stt = 0
         for i, (ct, dx) in enumerate(items, 1):
             if(ct.phong_loai == 'Tuyên huấn'): continue
             qn = ct.quan_nhan
+            stt = stt + 1
             row_cells = [
-                (str(i), False, 'center'),
+                (str(stt), False, 'center'),
                 (qn.ho_ten if qn else '', True, 'left'),
                 (qn.cap_bac if qn else '', False, 'left'),
                 (qn.chuc_vu if qn else '', False, 'left'),
@@ -2708,11 +2704,13 @@ def export_tracking_word():
 
     def _tt_rows(items):
         rows_xml = []
+        stt = 0
         for i, (ct, dx) in enumerate(items, 1):
             if ct.phong_loai == 'Tuyên huấn': continue
+            stt = stt + 1
             criteria_text = _build_tt_criteria(ct)
             row_cells = [
-                (str(i), False, 'center'),
+                (str(stt), False, 'center'),
                 (ct.ten_don_vi_de_xuat or (dx.don_vi.ten_don_vi if dx.don_vi else ''), True, 'left'),
                 (criteria_text, False, 'left'),
                 (dx.nam_hoc or '', False, 'center'),
@@ -2723,6 +2721,7 @@ def export_tracking_word():
 
     # ── Xây dựng nội dung tài liệu ───────────────────────────────────────────────
     body = []
+    now = _dt.datetime.now()
      # ─────────────────────────────────────────────────────────────────────────
     # [TÍCH HỢP] BẢNG QUỐC HIỆU TIÊU NGỮ & TIÊU ĐỀ CHUẨN ĐÚNG THEO XML MẪU
     # ─────────────────────────────────────────────────────────────────────────
@@ -3047,11 +3046,13 @@ def export_tracking_word_less():
 
     def _cn_rows(items):
         rows_xml = []
+        stt = 0
         for i, (ct, dx) in enumerate(items, 1):
             if(ct.phong_loai == 'Tuyên huấn'): continue
+            stt  = stt + 1
             qn_obj = ct.quan_nhan
             row_cells = [
-                (str(i), False, 'center'),
+                (str(stt), False, 'center'),
                 (qn_obj.ho_ten if qn_obj else '', True, 'left'),
                 (qn_obj.cap_bac if qn_obj else '', False, 'left'),
                 (qn_obj.chuc_vu if qn_obj else '', False, 'left'),
