@@ -2521,6 +2521,7 @@ def export_word():
         )
         
     )
+    q = q.join(DonVi, DeXuat.don_vi_id == DonVi.id)
     q = q.order_by(
         DonVi.thu_tu.asc(), DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()
     ).all()
