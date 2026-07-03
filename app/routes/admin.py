@@ -2871,17 +2871,17 @@ def export_tracking_word():
     <w:t>DANH SÁCH ĐỀ NGHỊ KHEN THƯỞNG NĂM HỌC {title_nam_hoc.upper()}</w:t>
     </w:r>
     </w:p>"""
-
+    today_str = _dt.date.today().strftime('%d/%m/%Y')
     body.append(header_table_xml)
     body.append("<w:p/>")
     body.append(title_xml)
     body.append(_para(f'(Xuất lúc {now.strftime("%H:%M")} ngày {today_str})', italic=True, size_pt=10, align='center', space_before=0, space_after=120))
 
     # Tiêu đề
-    today_str = _dt.date.today().strftime('%d/%m/%Y')
-    body.append(_para('TRƯỜNG SĨ QUAN CHÍNH TRỊ', bold=True, size_pt=12, align='center', space_before=0, space_after=20))
-    body.append(_para(f'THEO DÕI PHÊ DUYỆT KHEN THƯỞNG — {title_nam_hoc}', bold=True, size_pt=14, align='center', space_before=60, space_after=20))
-    body.append(_para(f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M")} ngày {today_str})', italic=True, size_pt=10, align='center', space_before=0, space_after=120))
+    # today_str = _dt.date.today().strftime('%d/%m/%Y')
+    # body.append(_para('TRƯỜNG SĨ QUAN CHÍNH TRỊ', bold=True, size_pt=12, align='center', space_before=0, space_after=20))
+    # body.append(_para(f'THEO DÕI PHÊ DUYỆT KHEN THƯỞNG — {title_nam_hoc}', bold=True, size_pt=14, align='center', space_before=60, space_after=20))
+    # body.append(_para(f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M")} ngày {today_str})', italic=True, size_pt=10, align='center', space_before=0, space_after=120))
 
     def _add_section(label, items, is_tap_the=False):
         if not items:
@@ -2907,7 +2907,90 @@ def export_tracking_word():
     # Footer
     body.append(_para(f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M ngày %d/%m/%Y")})',
                       italic=True, size_pt=9, align='right', space_before=120, space_after=0))
-
+    chu_ky_xml = f"""<w:tbl>
+<w:tblPr>
+<w:tblW w:type="auto" w:w="0"/>
+<w:jc w:val="center"/>
+<w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/>
+</w:tblPr>
+<w:tblGrid>
+<w:gridCol w:w="4320"/>
+<w:gridCol w:w="4320"/>
+</w:tblGrid>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:type="dxa" w:w="4320"/>
+<w:tcBorders>
+<w:top w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:left w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:bottom w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:right w:val="none"/>
+</w:tcBorders>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:jc w:val="center"/>
+</w:pPr>
+</w:p>
+<w:p/>
+<w:p/>
+<w:p/>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:type="dxa" w:w="4320"/>
+<w:tcBorders>
+<w:top w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:left w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:bottom w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:right w:val="none"/>
+</w:tcBorders>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+<w:b/>
+<w:i w:val="0"/>
+<w:sz w:val="22"/>
+</w:rPr>
+<w:t>THỦ TRƯỞNG ĐƠN VỊ</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+<w:b w:val="0"/>
+<w:i/>
+<w:sz w:val="20"/>
+</w:rPr>
+<w:t>(Ký, ghi rõ họ tên)</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>"""
+    body.append(chu_ky_xml)
     doc_xml = _build_document_xml(body, margin_left=2016, margin_right=720, margin_top=1440, margin_bottom=1440)
     buf = build_docx(doc_xml)
 
@@ -3253,7 +3336,90 @@ def export_tracking_word_less():
 
     body.append(_para(f'(Xuất lúc {now.strftime("%H:%M ngày %d/%m/%Y")})',
                       italic=True, size_pt=9, align='right', space_before=120, space_after=0))
-    
+     chu_ky_xml = f"""<w:tbl>
+<w:tblPr>
+<w:tblW w:type="auto" w:w="0"/>
+<w:jc w:val="center"/>
+<w:tblLook w:firstColumn="1" w:firstRow="1" w:lastColumn="0" w:lastRow="0" w:noHBand="0" w:noVBand="1" w:val="04A0"/>
+</w:tblPr>
+<w:tblGrid>
+<w:gridCol w:w="4320"/>
+<w:gridCol w:w="4320"/>
+</w:tblGrid>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:type="dxa" w:w="4320"/>
+<w:tcBorders>
+<w:top w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:left w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:bottom w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:right w:val="none"/>
+</w:tcBorders>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:jc w:val="center"/>
+</w:pPr>
+</w:p>
+<w:p/>
+<w:p/>
+<w:p/>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:type="dxa" w:w="4320"/>
+<w:tcBorders>
+<w:top w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:left w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:bottom w:val="none"/>
+</w:tcBorders>
+<w:tcBorders>
+<w:right w:val="none"/>
+</w:tcBorders>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+<w:b/>
+<w:i w:val="0"/>
+<w:sz w:val="22"/>
+</w:rPr>
+<w:t>THỦ TRƯỞNG ĐƠN VỊ</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+<w:b w:val="0"/>
+<w:i/>
+<w:sz w:val="20"/>
+</w:rPr>
+<w:t>(Ký, ghi rõ họ tên)</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>"""
+    body.append(chu_ky_xml)
     doc_xml = _build_document_xml(body, margin_left=2016, margin_right=720, margin_top=1440, margin_bottom=1440)
     
     # --- Sinh file ban đầu bằng XML Fast ---
