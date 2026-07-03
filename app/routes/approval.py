@@ -2767,7 +2767,7 @@ def export_word():
     <w:sz w:val="24"/>
     <w:u w:val="single"/>
     </w:rPr>
-    <w:t>{current_user.ten_don_vi}</w:t>
+    <w:t>{current_user.ho_ten}</w:t>
     </w:r>
     </w:p>
     <w:p>
