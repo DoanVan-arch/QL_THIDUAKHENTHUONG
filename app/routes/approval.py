@@ -2686,7 +2686,9 @@ def export_word():
             parts.append(f'NCKH: {ct.mo_ta_khoa_hoc}')
         if ct.thanh_tich_ca_nhan_khac:
             parts.append(ct.thanh_tich_ca_nhan_khac)
-        for f in criteria_fields:
+      
+            
+        for f in criteria_fields not in ('nckh_noi_dung'):
             val = getattr(ct, f, None) or ''
             if val:
                 parts.append(f'{field_labels.get(f, f)}: {val}')
