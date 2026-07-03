@@ -2688,7 +2688,7 @@ def export_word():
             parts.append(ct.thanh_tich_ca_nhan_khac)
       
             
-        for f in criteria_fields not in ('nckh_noi_dung'):
+        for f in criteria_fields:
             if f in ('nckh_noi_dung',): # Thêm dấu phẩy để tạo một tuple đúng chuẩn nếu chỉ có 1 phần tử
                 continue
             val = getattr(ct, f, None) or ''
