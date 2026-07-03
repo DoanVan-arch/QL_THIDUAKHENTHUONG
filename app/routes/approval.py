@@ -2888,7 +2888,7 @@ def export_word():
 
     body.append(_para(f'(Xuất lúc {_dt.datetime.now().strftime("%H:%M ngày %d/%m/%Y")})',
                       italic=True, size_pt=9, align='right', space_before=120, space_after=0))
-     chu_ky_xml = f"""<w:tbl>
+    chu_ky_xml = f"""<w:tbl>
 <w:tblPr>
 <w:tblW w:type="auto" w:w="0"/>
 <w:jc w:val="center"/>
