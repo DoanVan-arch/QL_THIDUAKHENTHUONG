@@ -2507,28 +2507,31 @@ def export_word():
 
     phong_name     = ROLE_TO_PHONG.get(current_user.role, '')
     nam_hoc_filter = request.args.get('nam_hoc', '')
-
-    # ── 1. Query với eager loading đầy đủ ────────────────────────────────────
     q = (
-        PheDuyet.query
-        .filter_by(phong_duyet=phong_name)
-        .options(
-            selectinload(PheDuyet.chi_tiet_duyet),
-            joinedload(PheDuyet.de_xuat).options(
-                joinedload(DeXuat.don_vi),
-                selectinload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
-            ),
-        )
-        
+    PheDuyet.query
+    .filter_by(phong_duyet=phong_name)
+    .join(DeXuat)  # Bắt buộc join DeXuat để có thể dùng DeXuat trong filter và order_by bên dưới
+    .options(
+        selectinload(PheDuyet.chi_tiet_duyet),
+        joinedload(PheDuyet.de_xuat).options(
+            joinedload(DeXuat.don_vi),
+            selectinload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
+        ),
     )
+)
+
+    # Áp dụng các bộ lọc tương tự như mẫu
+    if nam_hoc_filter:
+        q = q.filter(DeXuat.nam_hoc == nam_hoc_filter)
+
     q = q.join(DonVi, DeXuat.don_vi_id == DonVi.id)
+
+    # Sắp xếp và lấy kết quả
     q = q.order_by(
         DonVi.thu_tu.asc(), DeXuat.nam_hoc.desc(), DeXuat.ngay_gui.desc()
     ).all()
-    if nam_hoc_filter:
-        q = q.join(DeXuat, PheDuyet.de_xuat_id == DeXuat.id).filter(
-            DeXuat.nam_hoc == nam_hoc_filter
-        )
+    # ── 1. Query với eager loading đầy đủ ────────────────────────────────────
+    
     pending_reviews = q.all()
 
     # ── 2. Out-of-scope (không query thêm) ───────────────────────────────────
