@@ -1184,12 +1184,12 @@ def confirm_khen_thuong_ct(ct_id):
     #     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     # Require all 7 organs to have cast a vote (any result) before Admin decides
-    for vai_tro in HOI_DONG_VAI_TRO:
-        bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
-        if not bq:
-            vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
-            flash(f'{vt_name} chưa biểu quyết cho cá nhân/tập thể này.', 'warning')
-            return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+    # for vai_tro in HOI_DONG_VAI_TRO:
+    #     bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+    #     if not bq:
+    #         vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
+    #         flash(f'{vt_name} chưa biểu quyết cho cá nhân/tập thể này.', 'warning')
+    #         return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     existing = KhenThuong.query.filter_by(de_xuat_id=de_xuat.id, chi_tiet_id=ct.id).first()
     if existing:
@@ -1236,13 +1236,13 @@ def confirm_khong_dong_y_ct(ct_id):
         flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
         return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
-    # Require all 7 organs to have cast a vote before Admin decides
-    for vai_tro in HOI_DONG_VAI_TRO:
-        bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
-        if not bq:
-            vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
-            flash(f'{vt_name} chưa biểu quyết cho cá nhân/tập thể này.', 'warning')
-            return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+    # # Require all 7 organs to have cast a vote before Admin decides
+    # for vai_tro in HOI_DONG_VAI_TRO:
+    #     bq = HoiDongBieuQuyet.query.filter_by(chi_tiet_id=ct.id, vai_tro=vai_tro).first()
+    #     if not bq:
+    #         vt_name = HOI_DONG_VAI_TRO_DISPLAY.get(vai_tro, vai_tro)
+    #         flash(f'{vt_name} chưa biểu quyết cho cá nhân/tập thể này.', 'warning')
+    #         return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     # Check not already confirmed as KhenThuong
     if KhenThuong.query.filter_by(chi_tiet_id=ct.id).first():
