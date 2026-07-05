@@ -306,10 +306,6 @@
 
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
 
-                      
-
-                        
-
                         {% else %}
                        
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
@@ -318,7 +314,7 @@
 
                             <!-- {% set my_vote = row.votes.get(current_user_vai_tro) %} -->
 
-                            <button type="button"
+                            <!-- <button type="button"
 
                                     class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
 
@@ -330,7 +326,7 @@
 
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
 
-                            </button>
+                            </button> -->
 
                             <!-- {% endif %} --> 
 
@@ -340,27 +336,27 @@
 
                                 <!-- {% if row.all_voted %} -->
 
-                                <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
+                            <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
 
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                                    <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
+                                <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
 
-                                            onclick="return confirm('Xác nhận khên thươgnrg cho cá nhân này?')">
+                                        onclick="return confirm('Xác nhận khên thươgnrg cho cá nhân này?')">
 
-                                        <i class="bi bi-check2-circle me-1"></i>Đồng ý
-
-                                    </button>
-
-                                </form>
-
-                                <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
-
-                                        data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
-
-                                    <i class="bi bi-x-circle me-1"></i>Không Đồng ý
+                                    <i class="bi bi-check2-circle me-1"></i>Đồng ý
 
                                 </button>
+
+                            </form>
+
+                            <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
+
+                                    data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
+
+                                <i class="bi bi-x-circle me-1"></i>Không Đồng ý
+
+                            </button>
 
                                 
 
@@ -368,25 +364,25 @@
 
                                 {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
 
-                                <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
+                            <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
 
-                                        onclick="openDowngradeModal(
+                                    onclick="openDowngradeModal(
 
-                                            {{ ct.id }},
+                                        {{ ct.id }},
 
-                                            '{{ ct.quan_nhan.ho_ten|e }}',
+                                        '{{ ct.quan_nhan.ho_ten|e }}',
 
-                                            '{{ ct.loai_danh_hieu.strip() }}',
+                                        '{{ ct.loai_danh_hieu.strip() }}',
 
-                                            '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
+                                        '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
 
-                                            'ct'
+                                        'ct'
 
-                                        )">
+                                    )">
 
-                                    <i class="bi bi-arrow-down-circle me-1"></i>Hủy danh hiệu
+                                <i class="bi bi-arrow-down-circle me-1"></i>Hủy danh hiệu
 
-                                </button>
+                            </button>
 
                                 {% endif %}
 
@@ -572,7 +568,7 @@
 
                             {% set my_vote = row.votes.get(current_user_vai_tro) %} -->
 
-                            <button type="button"
+                            <!-- <button type="button"
 
                                     class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
 
@@ -584,7 +580,7 @@
 
                                 <i class="bi bi-hand-index me-1"></i>Biểu quyết
 
-                            </button>
+                            </button> -->
 
                             <!-- {% endif %} -->
 
