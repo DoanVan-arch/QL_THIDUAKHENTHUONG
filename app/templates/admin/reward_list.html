@@ -306,12 +306,12 @@
 
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
 
-                        {% elif  row.admin_final_vote.ket_qua == 'Không đồng ý' %}
+                      
 
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bầu</span>
+                        
 
                         {% else %}
-                       
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bầu</span>
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
 
                             <!-- {% if current_user_vai_tro %}
@@ -562,10 +562,10 @@
 
                         {% if row.is_confirmed %}
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
-                        {% elif  row.admin_final_vote.ket_qua == 'Không đồng ý' %}
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bác</span>
+                        <!-- {% elif  row.admin_final_vote.ket_qua == 'Không đồng ý' %} -->
+                       
                         {% else %}
-
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bác</span>
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
 
                             {% if current_user_vai_tro %}
