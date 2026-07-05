@@ -314,9 +314,9 @@
                         <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bầu</span>
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
 
-                            <!-- {% if current_user_vai_tro %}
+                            <!--  {% if current_user_vai_tro %} -->
 
-                            {% set my_vote = row.votes.get(current_user_vai_tro) %}
+                            <!-- {% set my_vote = row.votes.get(current_user_vai_tro) %} -->
 
                             <button type="button"
 
@@ -332,7 +332,7 @@
 
                             </button>
 
-                            {% endif %} -->
+                            <!-- {% endif %} --> 
 
                             
 
@@ -565,12 +565,12 @@
                         <!-- {% elif  row.admin_final_vote.ket_qua == 'Không đồng ý' %} -->
                        
                         {% else %}
-                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bác</span>
+                        <!-- <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bác</span> -->
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
 
-                            {% if current_user_vai_tro %}
+                            <!-- {% if current_user_vai_tro %}
 
-                            {% set my_vote = row.votes.get(current_user_vai_tro) %}
+                            {% set my_vote = row.votes.get(current_user_vai_tro) %} -->
 
                             <button type="button"
 
@@ -586,7 +586,7 @@
 
                             </button>
 
-                            {% endif %}
+                            <!-- {% endif %} -->
 
                             
 
