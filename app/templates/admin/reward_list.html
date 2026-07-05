@@ -314,7 +314,7 @@
 
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
 
-                            {% if current_user_vai_tro %}
+                            <!-- {% if current_user_vai_tro %}
 
                             {% set my_vote = row.votes.get(current_user_vai_tro) %}
 
@@ -332,11 +332,11 @@
 
                             </button>
 
-                            {% endif %}
+                            {% endif %} -->
 
                             
 
-                            {% if can_admin_action %}
+                            <!-- {% if can_admin_action %} -->
 
                                 <!-- {% if row.all_voted %} -->
 
@@ -398,7 +398,7 @@
 
                                 <!-- {% endif %} -->
 
-                            {% endif %}
+                            <!-- {% endif %} -->
 
                         </div>
 
@@ -408,7 +408,7 @@
 
                 </tr>
 
-                {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %}
+                <!-- {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %} -->
 
                 <div class="modal fade" id="kdyModal{{ ct.id }}" tabindex="-1">
 
@@ -439,7 +439,7 @@
 
                 </div>
 
-                {% endif %}
+                <!-- {% endif %} -->
 
                 {% endfor %}
 
@@ -590,7 +590,7 @@
 
                             
 
-                            {% if can_admin_action %}
+                            <!-- {% if can_admin_action %} -->
 
                                 <!-- {% if row.all_voted %} -->
 
@@ -652,7 +652,7 @@
 
                                 {% endif %} -->
 
-                            {% endif %}
+                            <!-- {% endif %} -->
 
                         </div>
 
@@ -662,7 +662,7 @@
 
                 </tr>
 
-                {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %}
+                <!-- {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %} -->
 
                 <div class="modal fade" id="kdyModalTT{{ ct.id }}" tabindex="-1">
 
@@ -702,7 +702,7 @@
 
                 </div>
 
-                {% endif %}
+                <!-- {% endif %} -->
 
                 {% endfor %}
 
@@ -851,7 +851,7 @@
                                class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            {% if can_admin_action %}
+                            <!-- {% if can_admin_action %} -->
                             <button type="button" class="btn btn-sm btn-outline-danger"
                                     title="Thu hồi phê duyệt cuối"
                                     onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
@@ -871,7 +871,7 @@
                                 <i class="bi bi-arrow-down-circle"></i>
                             </button>
                             {% endif %}
-                            {% endif %}
+                            <!-- {% endif %} -->
                         </td>
                     </tr>
                     {% endfor %}
@@ -926,7 +926,7 @@
                                class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            {% if can_admin_action %}
+                            <!-- {% if can_admin_action %} -->
                             <button type="button" class="btn btn-sm btn-outline-danger"
                                     title="Thu hồi phê duyệt cuối"
                                     onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
@@ -946,7 +946,7 @@
                                 <i class="bi bi-arrow-down-circle"></i>
                             </button>
                             {% endif %}
-                            {% endif %}
+                            <!-- {% endif %} -->
                         </td>
                     </tr>
                     {% endfor %}
@@ -1163,7 +1163,7 @@
     </div>
 </div>
 
-{% if can_admin_action %}
+<!-- {% if can_admin_action %} -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1186,7 +1186,7 @@
         </div>
     </div>
 </div>
-{% endif %}
+<!-- {% endif %} -->
 
 {# ===== Chi Tiết Offcanvas ===== #}
 <div class="offcanvas offcanvas-end" tabindex="-1" id="chiTietOffcanvas" style="width:480px;">
