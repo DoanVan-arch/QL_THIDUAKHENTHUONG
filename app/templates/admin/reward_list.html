@@ -2,25 +2,22 @@
 {% block title %}Danh sách khen thưởng{% endblock %}
 
 {% block content %}
-{# ===== PAGE HEADER with global controls ===== #}
+{# PAGE HEADER #}
 <div class="page-header">
     <div>
         <h4><i class="bi bi-trophy me-2"></i>Danh sách khen thưởng</h4>
         <small class="text-muted">Cá nhân và đơn vị đã được phê duyệt khen thưởng</small>
     </div>
     <div class="d-flex gap-2 align-items-center flex-wrap">
-        {# View toggle – affects all tables #}
         <button id="btnToggleView" class="btn btn-outline-secondary btn-sm" onclick="toggleAllViews()">
             <i class="bi bi-layout-text-sidebar-reverse me-1"></i><span id="lblToggleView">Thu gọn</span>
         </button>
         <a href="{{ url_for('admin.reward_stats') }}" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-bar-chart me-1"></i>Thống kê
         </a>
-        {# PDF print – prints the current page with timestamp watermark #}
         <button class="btn btn-outline-danger btn-sm" onclick="printPage()">
             <i class="bi bi-file-earmark-pdf me-1"></i>In / PDF
         </button>
-        {# Excel for Bảng 3 (main reward list) #}
         <a href="{{ url_for('admin.export_reward_list', nam_hoc=nam_hoc_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query) }}"
            class="btn btn-success btn-sm">
             <i class="bi bi-file-earmark-excel me-1"></i>Excel Bảng 3
@@ -28,7 +25,7 @@
     </div>
 </div>
 
-{# ===== Filters (đưa lên đầu trang) ===== #}
+{# Filters #}
 <div class="card-section mb-3 no-print" id="filterCard">
     <div class="card-body-custom py-2">
         <form method="GET" id="filterForm" class="d-flex align-items-center gap-2 flex-wrap">
@@ -54,8 +51,7 @@
                 {% endfor %}
             </select>
             <div class="input-group input-group-sm" style="width:220px;">
-                <input type="text" class="form-control" name="q" value="{{ search_query }}"
-                       placeholder="Tìm tên...">
+                <input type="text" class="form-control" name="q" value="{{ search_query }}" placeholder="Tìm tên...">
                 <button type="submit" class="btn btn-outline-navy"><i class="bi bi-search"></i></button>
             </div>
             {% endif %}
@@ -78,253 +74,167 @@
         <div class="row g-2">
             <div class="col-md-6">
                 <div class="fw-semibold mb-1">CSTD 3 lần trở lên (không liên tiếp)</div>
-                {% if cstd_non_consecutive %}
-                    {% for item in cstd_non_consecutive %}
-                    <div class="small mb-1">
-                        <span class="fw-semibold">{{ item.qn.ho_ten }}</span>
-                        <span class="text-muted">({{ item.count }} lần)</span>
-                        <span class="text-muted">- {{ item.years|join(', ') }}</span>
-                    </div>
-                    {% endfor %}
+                {% for item in cstd_non_consecutive %}
+                <div class="small mb-1">
+                    <span class="fw-semibold">{{ item.qn.ho_ten }}</span>
+                    <span class="text-muted">({{ item.count }} lần) - {{ item.years|join(', ') }}</span>
+                </div>
                 {% else %}
                 <div class="text-muted small">Không có dữ liệu</div>
-                {% endif %}
+                {% endfor %}
             </div>
             <div class="col-md-6">
                 <div class="fw-semibold mb-1">CSTD 3 năm liên tiếp trở lên</div>
-                {% if cstd_consecutive %}
-                    {% for item in cstd_consecutive %}
-                    <div class="small mb-1">
-                        <span class="fw-semibold">{{ item.qn.ho_ten }}</span>
-                        <span class="text-muted">(chuỗi dài nhất: {{ item.max_streak }})</span>
-                        <span class="text-muted">- {{ item.years|join(', ') }}</span>
-                    </div>
-                    {% endfor %}
+                {% for item in cstd_consecutive %}
+                <div class="small mb-1">
+                    <span class="fw-semibold">{{ item.qn.ho_ten }}</span>
+                    <span class="text-muted">(chuỗi dài nhất: {{ item.max_streak }}) - {{ item.years|join(', ') }}</span>
+                </div>
                 {% else %}
                 <div class="text-muted small">Không có dữ liệu</div>
-                {% endif %}
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 {% endif %}
 
-
-
-{# ===== B???NG 2: PHE_DUYET_CUOI ??? H???i ?????ng bi???u quy???t ===== #}
-
+{# ===== BẢNG 2 ===== #}
 <div class="card-section mb-3 print-section" id="bang2"><a id="printBang2"></a>
-
     <div class="card-header-custom d-flex align-items-center justify-content-between">
-
         <h6 class="mb-0">
-
             <i class="bi bi-people me-2"></i>BẢNG 2: XÉT DUYỆT CỦA CƠ QUAN THƯỜNG TRỰC
-
             {% if phe_duyet_cuoi_items %}
-
             <span class="badge bg-primary ms-2">{{ phe_duyet_cuoi_items|length }} đề xuất</span>
-
             {% endif %}
-
         </h6>
-
         <div class="d-flex gap-2 align-items-center no-print">
-
             <a href="{{ url_for('admin.export_bang2_excel') }}" class="btn btn-sm btn-outline-success">
-
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
-
             </a>
-
-             <a href="{{ url_for('admin.export_bang2_word') }}" class="btn btn-sm btn-outline-success">
-
-                <i class="bi bi-file-earmark-excel me-1"></i>Xuất Word
-
+            <a href="{{ url_for('admin.export_bang2_word') }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-word me-1"></i>Xuất Word
             </a>
-
-           
-
         </div>
-
     </div>
-
     <div class="card-body-custom py-2">
-
         {% if phe_duyet_cuoi_items %}
-
-        {# T??ch c?? nh??n v?? t???p th??? #}
-
         {% set b2_ca_nhan = phe_duyet_cuoi_items | selectattr('ct.quan_nhan_id') | list %}
-
         {% set b2_tap_the = phe_duyet_cuoi_items | rejectattr('ct.quan_nhan_id') | list %}
 
-
-
-        {# --- Sub-b???ng: C?? nh??n --- #}
-
+        {# ── Sub-bảng Cá nhân ── #}
         {% if b2_ca_nhan %}
-
-        <div class="fw-semibold text-navy small mb-1 mt-1"><i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b2_ca_nhan|length }})</div>
-
+        <div class="fw-semibold text-navy small mb-1 mt-1">
+            <i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b2_ca_nhan|length }})
+        </div>
         <div class="table-responsive mb-3">
-
             <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
-
                 <thead>
-
                     <tr>
-
                         <th class="sticky-stt-col">STT</th>
-
                         <th class="sticky-name-col">Họ tên</th>
-
                         <th>Vai trò</th>
-
                         <th>Đơn vị</th>
-
                         <th style="white-space:nowrap;">Cấp bậc / Chức vụ</th>
-
                         <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
-
                         {% for vt in HOI_DONG_VAI_TRO %}
-
-                        <th class="text-center no-print col-b2-detail" style="font-size:0.72rem;white-space:normal;min-width:72px;max-width:90px;line-height:1.3;word-break:break-word;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
-
+                        <th class="text-center no-print col-b2-detail"
+                            style="font-size:0.72rem;white-space:normal;min-width:72px;max-width:90px;line-height:1.3;word-break:break-word;">
+                            {{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}
+                        </th>
                         {% endfor %}
-
                         <th class="text-center print-only" style="display:none;">Kết quả BQ</th>
-
                         <th class="text-center no-print">Thao tác</th>
-
                     </tr>
-
                 </thead>
-
                 <tbody>
-
                 {% set ns = namespace(prev_award=None) %}
-
                 {% for row in b2_ca_nhan %}
-
                 {% set ct = row.ct %}
-
                 {% set dx = row.dx %}
-
-                {% set voted_count = 7 %}
-
+                {% set voted_count = row.votes|length %}
                 {% set total = HOI_DONG_VAI_TRO|length %}
-
                 {% if ct.loai_danh_hieu != ns.prev_award %}
-
                 {% set ns.prev_award = ct.loai_danh_hieu %}
-
                 <tr class="table-light">
-
-                    <td colspan="99" class="fw-semibold text-navy small py-1"><i class="bi bi-bookmark-fill me-1"></i>{{ ct.loai_danh_hieu }}</td>
-
+                    <td colspan="99" class="fw-semibold text-navy small py-1">
+                        <i class="bi bi-bookmark-fill me-1"></i>{{ ct.loai_danh_hieu }}
+                    </td>
                 </tr>
-
                 {% endif %}
-
                 <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
-
                     <td class="sticky-stt-col">{{ loop.index }}</td>
-
                     <td class="sticky-name-col">
-
                         <strong>{{ ct.quan_nhan.ho_ten }}</strong>
-
                         <button type="button" class="btn btn-xs btn-outline-info ms-1 btn-chi-tiet no-print"
-
                                 data-ct-id="{{ ct.id }}" title="Xem chi tiết"
-
-                                style="padding:0.1rem 0.35rem;font-size:0.7rem;"><i class="bi bi-info-circle"></i></button>
-
+                                style="padding:0.1rem 0.35rem;font-size:0.7rem;">
+                            <i class="bi bi-info-circle"></i>
+                        </button>
                     </td>
-
                     <td style="font-size:0.75rem;">
-
                         {% set qn2 = ct.quan_nhan %}
-
                         {% if qn2.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
-
                         {% if qn2.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
-
                         {% if qn2.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.58rem;">Đoàn viên</span>{% endif %}
-
                         {% if qn2.la_hoi_vien_phu_nu %}<span class="badge bg-pink" style="font-size:0.58rem;">Phụ nữ</span>{% endif %}
-
                         {% if not (qn2.la_chi_huy or qn2.la_bi_thu or qn2.la_doan_vien or qn2.la_hoi_vien_phu_nu) %}-{% endif %}
-
                     </td>
-
                     <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '-' }}</td>
-
                     <td style="font-size:0.78rem;white-space:nowrap;">
-
                         {{ ct.quan_nhan.cap_bac }}<br>
-
                         <span class="text-muted">{{ ct.quan_nhan.chuc_vu }}</span>
-
                     </td>
-
                     <td class="text-center col-b2-detail" style="white-space:nowrap;">
-
-                        <span class="badge {% if voted_count == total %}bg-success{% elif voted_count > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="font-size:0.72rem;">{{ voted_count }}/{{ total }}</span>
-
+                        <span class="badge {% if voted_count == total %}bg-success{% elif voted_count > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}"
+                              style="font-size:0.72rem;">{{ voted_count }}/{{ total }}</span>
                     </td>
-
                     {% for vt in HOI_DONG_VAI_TRO %}
-
                     {% set bq = row.votes.get(vt) %}
-
                     <td class="text-center no-print col-b2-detail" style="padding:0.25rem 0.3rem;">
-                        <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
-                        <!-- {% if bq %}
-                            <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span> -->
-                            <!-- {% if bq.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
-
-                            {% else %}<span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>{% endif %} -->
-
-                        <!-- {% else %}<span class="text-muted">---</span>{% endif %} -->
-
+                        {% if bq %}
+                            {% if bq.ket_qua == 'Đồng ý' %}
+                                <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
+                            {% else %}
+                                <span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">---</span>
+                        {% endif %}
                     </td>
-
                     {% endfor %}
-
                     <td class="text-center print-only" style="display:none;font-size:0.78rem;">
-
                         {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq %}{% if bq.ket_qua == 'Đồng ý' %}✓{% else %}✗{% endif %}{% else %}–{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
                         <br><small>({{ voted_count }}/{{ total }})</small>
-
                     </td>
                     <td class="text-center no-print" style="white-space:nowrap;">
                         {% if row.is_confirmed %}
-                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Đã xác nhận KT
+                            </span>
                         {% else %}
                             <div class="d-flex gap-1 justify-content-center flex-wrap">
                                 {% if can_admin_action %}
-                                    <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
+                                    <form method="POST"
+                                          action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}"
+                                          class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
+                                        <button class="btn btn-xs btn-success py-0" type="submit"
+                                                style="font-size:0.75rem;"
                                                 onclick="return confirm('Xác nhận khen thưởng cho cá nhân này?')">
                                             <i class="bi bi-check2-circle me-1"></i>Đồng ý
                                         </button>
                                     </form>
-                                    <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
-                                            data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
+                                    {# ★ FIX: dùng onclick gọi JS thay vì data-bs-target #}
+                                    <button type="button" class="btn btn-xs btn-danger py-0"
+                                            style="font-size:0.75rem;"
+                                            onclick="openKdyModal('kdyModal{{ ct.id }}')">
                                         <i class="bi bi-x-circle me-1"></i>Không Đồng ý
                                     </button>
-                                    {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
-                                    <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
-                                            onclick="openDowngradeModal(
-                                                {{ ct.id }},
-                                                '{{ ct.quan_nhan.ho_ten|e }}',
-                                                '{{ ct.loai_danh_hieu.strip() }}',
-                                                '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
-                                                'ct'
-                                            )">
+                                    {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua','Chiến sỹ thi đua','Đơn vị quyết thắng') %}
+                                    <button type="button" class="btn btn-xs btn-warning py-0 text-dark"
+                                            style="font-size:0.75rem;"
+                                            onclick="openDowngradeModal({{ ct.id }},'{{ ct.quan_nhan.ho_ten|e }}','{{ ct.loai_danh_hieu.strip() }}','{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}','ct')">
                                         <i class="bi bi-arrow-down-circle me-1"></i>Hủy danh hiệu
                                     </button>
                                     {% endif %}
@@ -337,261 +247,211 @@
                         {% endif %}
                     </td>
                 </tr>
-
-                <!-- {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %} -->
-
-                <div class="modal fade" id="kdyModal{{ ct.id }}" tabindex="-1">
-
-                    <div class="modal-dialog modal-sm"><div class="modal-content">
-
-                        <div class="modal-header"><h6 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý</h6>
-
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-
-                        <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
-
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                             <div class="modal-body">
-                                <p class="small mb-2">Xác nhận <strong>Không đồng ý</strong> khen thưởng cho <strong>{{ ct.quan_nhan.ho_ten }}</strong>?</p>
-                                <p class="small text-muted mb-2">Cá nhân này sẽ chuyển vào danh sách Hội đồng phản đối.</p>
-                                <div><label class="form-label small">Ghi chú lý do (tùy chọn)</label>
-                                    <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea></div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                                <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
-                            </div>
-
-                        </form>
-
-                    </div></div>
-
-                </div>
-
-                <!-- {% endif %} -->
-
                 {% endfor %}
-
                 </tbody>
-
             </table>
-
         </div>
 
+        {# ★★★ FIX CHÍNH: Modal KDY cá nhân đặt SAU </table>, NGOÀI <tbody> ★★★ #}
+        {% for row in b2_ca_nhan %}
+        {% set ct = row.ct %}
+        {% if not row.is_confirmed %}
+        <div class="modal fade" id="kdyModal{{ ct.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title text-danger">
+                            <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <p class="small mb-2">
+                                Xác nhận <strong>Không đồng ý</strong> khen thưởng cho
+                                <strong>{{ ct.quan_nhan.ho_ten }}</strong>?
+                            </p>
+                            <p class="small text-muted mb-2">
+                                Cá nhân này sẽ chuyển vào danh sách Hội đồng phản đối.
+                            </p>
+                            <div>
+                                <label class="form-label small">Ghi chú lý do (tùy chọn)</label>
+                                <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         {% endif %}
+        {% endfor %}
+        {% endif %}{# end b2_ca_nhan #}
 
-
-
-        {# --- Sub-b???ng: T???p th??? --- #}
-
+        {# ── Sub-bảng Tập thể ── #}
         {% if b2_tap_the %}
-
-        <div class="fw-semibold text-navy small mb-1 mt-2"><i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b2_tap_the|length }})</div>
-
+        <div class="fw-semibold text-navy small mb-1 mt-2">
+            <i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b2_tap_the|length }})
+        </div>
         <div class="table-responsive">
-
             <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
-
                 <thead>
-
                     <tr>
-
                         <th class="sticky-stt-col">STT</th>
-
                         <th class="sticky-name-col">Tên tập thể</th>
-
                         <th>Đơn vị đề xuất</th>
-
                         <th>Danh hiệu</th>
-
                         <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
-
                         {% for vt in HOI_DONG_VAI_TRO %}
-
-                        <th class="text-center no-print col-b2-detail" style="font-size:0.72rem;white-space:normal;min-width:72px;max-width:90px;line-height:1.3;word-break:break-word;">{{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}</th>
-
+                        <th class="text-center no-print col-b2-detail"
+                            style="font-size:0.72rem;white-space:normal;min-width:72px;max-width:90px;line-height:1.3;word-break:break-word;">
+                            {{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}
+                        </th>
                         {% endfor %}
-
                         <th class="text-center print-only" style="display:none;">Kết quả BQ</th>
-
                         <th class="text-center no-print">Thao tác</th>
-
                     </tr>
-
                 </thead>
-
                 <tbody>
-
                 {% set ns2 = namespace(prev_award=None) %}
-
                 {% for row in b2_tap_the %}
-
                 {% set ct = row.ct %}
-
                 {% set dx = row.dx %}
-
-                {% set voted_count = 7 %}
-
+                {% set voted_count = row.votes|length %}
                 {% set total = HOI_DONG_VAI_TRO|length %}
-
                 {% if ct.loai_danh_hieu != ns2.prev_award %}
-
                 {% set ns2.prev_award = ct.loai_danh_hieu %}
-
                 <tr class="table-light">
-
-                    <td colspan="99" class="fw-semibold text-navy small py-1"><i class="bi bi-bookmark-fill me-1"></i>{{ ct.loai_danh_hieu }}</td>
-
+                    <td colspan="99" class="fw-semibold text-navy small py-1">
+                        <i class="bi bi-bookmark-fill me-1"></i>{{ ct.loai_danh_hieu }}
+                    </td>
                 </tr>
-
                 {% endif %}
-
                 <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
-
                     <td class="sticky-stt-col">{{ loop.index }}</td>
-
                     <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong></td>
-
                     <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '---' }}</td>
-
                     <td><span class="badge bg-secondary" style="font-size:0.72rem;">{{ ct.loai_danh_hieu }}</span></td>
-
                     <td class="text-center col-b2-detail" style="white-space:nowrap;">
-
-                        <span class="badge {% if voted_count == total %}bg-success{% elif voted_count > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}" style="font-size:0.72rem;">{{ voted_count }}/{{ total }}</span>
-
+                        <span class="badge {% if voted_count == total %}bg-success{% elif voted_count > 0 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}"
+                              style="font-size:0.72rem;">{{ voted_count }}/{{ total }}</span>
                     </td>
-
                     {% for vt in HOI_DONG_VAI_TRO %}
-
                     {% set bq = row.votes.get(vt) %}
-
                     <td class="text-center no-print col-b2-detail" style="padding:0.25rem 0.3rem;">
-
                         {% if bq %}
-
-                            {% if bq.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
-
-                            {% else %}<span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>{% endif %}
-
-                        {% else %}<span class="text-muted">---</span>{% endif %}
-
+                            {% if bq.ket_qua == 'Đồng ý' %}
+                                <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
+                            {% else %}
+                                <span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">---</span>
+                        {% endif %}
                     </td>
-
                     {% endfor %}
-
                     <td class="text-center print-only" style="display:none;font-size:0.78rem;">
-
-                    {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq %}{% if bq.ket_qua == 'Đồng ý' %}✓{% else %}✗{% endif %}{% else %}–{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
+                        {% for vt in HOI_DONG_VAI_TRO %}{% set bq = row.votes.get(vt) %}{% if bq %}{% if bq.ket_qua == 'Đồng ý' %}✓{% else %}✗{% endif %}{% else %}–{% endif %}{% if not loop.last %} {% endif %}{% endfor %}
                         <br><small>({{ voted_count }}/{{ total }})</small>
-
                     </td>
                     <td class="text-center no-print" style="white-space:nowrap;">
-                    {% if row.is_confirmed %}
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
-                    {% else %}
-                        <div class="d-flex gap-1 justify-content-center flex-wrap">
-                            {% if can_admin_action %}
-                                <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
-                                            onclick="return confirm('Xác nhận đồng ý khen thưởng tập thể này?')">
-                                        <i class="bi bi-check2-circle me-1"></i>Đồng ý
+                        {% if row.is_confirmed %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Đã xác nhận KT
+                            </span>
+                        {% else %}
+                            <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                {% if can_admin_action %}
+                                    <form method="POST"
+                                          action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}"
+                                          class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-xs btn-success py-0" type="submit"
+                                                style="font-size:0.75rem;"
+                                                onclick="return confirm('Xác nhận đồng ý khen thưởng tập thể này?')">
+                                            <i class="bi bi-check2-circle me-1"></i>Đồng ý
+                                        </button>
+                                    </form>
+                                    {# ★ FIX: dùng onclick gọi JS #}
+                                    <button type="button" class="btn btn-xs btn-danger py-0"
+                                            style="font-size:0.75rem;"
+                                            onclick="openKdyModal('kdyModalTT{{ ct.id }}')">
+                                        <i class="bi bi-x-circle me-1"></i>Không đồng ý
                                     </button>
-                                </form>
-                                <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
-                                        data-bs-toggle="modal" data-bs-target="#kdyModalTT{{ ct.id }}">
-                                    <i class="bi bi-x-circle me-1"></i>Không đồng ý
-                                </button>
-                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
-                                <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
-                                        onclick="openDowngradeModal(
-                                            {{ ct.id }},
-                                            '{{ ct.ten_don_vi_de_xuat|e }}',
-                                            '{{ ct.loai_danh_hieu.strip() }}',
-                                            '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
-                                            'ct'
-                                        )">
-                                    <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
-                                </button>
+                                    {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua','Chiến sỹ thi đua','Đơn vị quyết thắng') %}
+                                    <button type="button" class="btn btn-xs btn-warning py-0 text-dark"
+                                            style="font-size:0.75rem;"
+                                            onclick="openDowngradeModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}','{{ ct.loai_danh_hieu.strip() }}','{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}','ct')">
+                                        <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
+                                    </button>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-light text-muted border" style="font-size:0.7rem;">
+                                        <i class="bi bi-lock me-1"></i>Không có quyền
+                                    </span>
                                 {% endif %}
-                            {% else %}
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;">
-                                    <i class="bi bi-lock me-1"></i>Không có quyền
-                                </span>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </td>
+                            </div>
+                        {% endif %}
+                    </td>
                 </tr>
-
-                <!-- {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %} -->
-
-                <div class="modal fade" id="kdyModalTT{{ ct.id }}" tabindex="-1">
-
-                    <div class="modal-dialog modal-sm"><div class="modal-content">
-
-                        <div class="modal-header"><h6 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý</h6>
-
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-
-                        <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
-
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                            <div class="modal-body">
-
-                                <p class="small mb-2">Xác nhận <strong>Không đồng ý</strong> khen thưởng cho tập thể <strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong>?</p>
-
-                                <p class="small text-muted mb-2">Tập thể này sẽ chuyển vào danh sách Hội đồng phân loại.</p>
-
-                                <div><label class="form-label small">Ghi chú lý do (tùy chọn)</label>
-
-                                    <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea></div>
-
-                            </div>
-
-                            <div class="modal-footer">
-
-                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
-
-                                <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
-
-                            </div>
-
-                        </form>
-
-                    </div></div>
-
-                </div>
-
-                <!-- {% endif %} -->
-
                 {% endfor %}
-
                 </tbody>
-
             </table>
-
         </div>
 
+        {# ★★★ FIX CHÍNH: Modal KDY tập thể đặt SAU </table>, NGOÀI <tbody> ★★★ #}
+        {% for row in b2_tap_the %}
+        {% set ct = row.ct %}
+        {% if not row.is_confirmed %}
+        <div class="modal fade" id="kdyModalTT{{ ct.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title text-danger">
+                            <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <p class="small mb-2">
+                                Xác nhận <strong>Không đồng ý</strong> khen thưởng cho tập thể
+                                <strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong>?
+                            </p>
+                            <p class="small text-muted mb-2">
+                                Tập thể này sẽ chuyển vào danh sách Hội đồng phân loại.
+                            </p>
+                            <div>
+                                <label class="form-label small">Ghi chú lý do (tùy chọn)</label>
+                                <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         {% endif %}
-
-
+        {% endfor %}
+        {% endif %}{# end b2_tap_the #}
 
         {% else %}
-
-        <div class="text-muted small fst-italic">Hiện không có tập thể nào trong giai đoạn xét duyệt của cơ quan thường trực.</div>
-
+        <div class="text-muted small fst-italic">
+            Hiện không có tập thể nào trong giai đoạn xét duyệt của cơ quan thường trực.
+        </div>
         {% endif %}
-
     </div>
-
-
 </div>
 
-{# ===== BẢNG 3 header + summary stats ===== #}
+{# ===== BẢNG 3 header ===== #}
 {% if nam_hoc_filter %}
 <div class="d-flex gap-3 mb-2 flex-wrap align-items-center no-print">
     <span class="fw-semibold text-navy"><i class="bi bi-trophy me-1"></i>Bảng 3: Danh sách khen thưởng đã xác nhận</span>
@@ -620,15 +480,10 @@
     </div>
     {% for dh, count in stats_by_danh_hieu.items() %}
     <div class="stat-mini">
-        {% if dh == 'Chiến sĩ thi đua' or dh == 'Chiến sỹ thi đua' %}
-        <span class="badge bg-warning text-dark me-1">CSTD</span>
-        {% elif dh == 'Chiến sĩ tiên tiến' or dh == 'Chiến sỹ tiên tiến' %}
-        <span class="badge bg-info text-dark me-1">CSTT</span>
-        {% elif dh == 'Đơn vị quyết thắng' %}
-        <span class="badge bg-navy me-1">DVQT</span>
-        {% else %}
-        <span class="badge bg-secondary me-1">DVTT</span>
-        {% endif %}
+        {% if dh in ('Chiến sĩ thi đua','Chiến sỹ thi đua') %}<span class="badge bg-warning text-dark me-1">CSTD</span>
+        {% elif dh in ('Chiến sĩ tiên tiến','Chiến sỹ tiên tiến') %}<span class="badge bg-info text-dark me-1">CSTT</span>
+        {% elif dh == 'Đơn vị quyết thắng' %}<span class="badge bg-navy me-1">DVQT</span>
+        {% else %}<span class="badge bg-secondary me-1">DVTT</span>{% endif %}
         <span><strong>{{ count }}</strong></span>
     </div>
     {% endfor %}
@@ -644,17 +499,17 @@
 </div>
 {% else %}
 
-{# ===== BẢNG 3: Danh sách khen thưởng ===== #}
+{# ===== BẢNG 3 ===== #}
 <div class="card-section print-section" id="printBang3">
     <div class="card-body-custom p-0">
         {% if rewards.items %}
-        {# Tách cá nhân và tập thể #}
         {% set b3_ca_nhan = rewards.items | selectattr('quan_nhan_id') | list %}
         {% set b3_tap_the = rewards.items | rejectattr('quan_nhan_id') | list %}
 
-        {# --- Sub-bảng: Cá nhân --- #}
         {% if b3_ca_nhan %}
-        <div class="fw-semibold text-navy small px-3 pt-2 pb-1"><i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b3_ca_nhan|length }})</div>
+        <div class="fw-semibold text-navy small px-3 pt-2 pb-1">
+            <i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b3_ca_nhan|length }})
+        </div>
         <div class="table-responsive">
             <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
                 <thead>
@@ -686,8 +541,7 @@
                         <td class="sticky-stt-col">{{ loop.index }}</td>
                         <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>
-                            {% if kt.quan_nhan %}
-                            {% set qn3 = kt.quan_nhan %}
+                            {% if kt.quan_nhan %}{% set qn3 = kt.quan_nhan %}
                             {% if qn3.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.6rem;">Cấp trưởng</span>{% endif %}
                             {% if qn3.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.6rem;">Bí thư</span>{% endif %}
                             {% if qn3.la_doan_vien %}<span class="badge bg-info text-dark" style="font-size:0.6rem;">Đoàn viên</span>{% endif %}
@@ -700,42 +554,36 @@
                         <td class="col-b3-detail"><small>{{ kt.doi_tuong or '-' }}</small></td>
                         <td>{{ kt.don_vi.ten_don_vi }}</td>
                         <td>
-                            {% if kt.loai_danh_hieu == 'Chiến sĩ thi đua' or kt.loai_danh_hieu == 'Chiến sỹ thi đua' %}<span class="badge bg-warning text-dark">CSTD</span>
-                            {% elif kt.loai_danh_hieu == 'Chiến sĩ tiên tiến' or kt.loai_danh_hieu == 'Chiến sỹ tiên tiến' %}<span class="badge bg-info text-dark">CSTT</span>
+                            {% if kt.loai_danh_hieu in ('Chiến sĩ thi đua','Chiến sỹ thi đua') %}<span class="badge bg-warning text-dark">CSTD</span>
+                            {% elif kt.loai_danh_hieu in ('Chiến sĩ tiên tiến','Chiến sỹ tiên tiến') %}<span class="badge bg-info text-dark">CSTT</span>
                             {% else %}<span class="badge bg-secondary">{{ kt.loai_danh_hieu }}</span>{% endif %}
                         </td>
                         <td>{{ kt.nam_hoc }}</td>
-                        <td class="col-b3-detail"><span title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
-                                        <td class="text-center no-print">
-                        <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
-                                data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
-                            <i class="bi bi-info-circle"></i>
-                        </button>
-                        <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
-                        class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                        {% if can_admin_action %}
+                        <td class="col-b3-detail">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</td>
+                        <td class="text-center no-print">
+                            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
+                                    data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                            <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
+                               class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if can_admin_action %}
                             <button type="button" class="btn btn-sm btn-outline-danger"
                                     title="Thu hồi phê duyệt cuối"
-                                    onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
+                                    onclick="openRevokeModal({{ kt.de_xuat_id }},'{{ kt.don_vi.ten_don_vi|e }}','{{ kt.nam_hoc|e }}')">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
-                            {% if kt.loai_danh_hieu and kt.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
+                            {% if kt.loai_danh_hieu and kt.loai_danh_hieu.strip() in ('Chiến sĩ thi đua','Chiến sỹ thi đua','Đơn vị quyết thắng') %}
                             <button type="button" class="btn btn-sm btn-outline-warning text-dark"
                                     title="Hạ danh hiệu"
-                                    onclick="openDowngradeModal(
-                                        {{ kt.id }},
-                                        '{{ kt.ho_ten|e }}',
-                                        '{{ kt.loai_danh_hieu.strip() }}',
-                                        '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in kt.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
-                                        'kt'
-                                    )">
+                                    onclick="openDowngradeModal({{ kt.id }},'{{ kt.ho_ten|e }}','{{ kt.loai_danh_hieu.strip() }}','{{ 'Chiến sĩ tiên tiến' if 'thi đua' in kt.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}','kt')">
                                 <i class="bi bi-arrow-down-circle"></i>
                             </button>
                             {% endif %}
-                        {% endif %}
-                    </td>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -743,9 +591,10 @@
         </div>
         {% endif %}
 
-        {# --- Sub-bảng: Tập thể --- #}
         {% if b3_tap_the %}
-        <div class="fw-semibold text-navy small px-3 pt-3 pb-1"><i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b3_tap_the|length }})</div>
+        <div class="fw-semibold text-navy small px-3 pt-3 pb-1">
+            <i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b3_tap_the|length }})
+        </div>
         <div class="table-responsive">
             <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
                 <thead>
@@ -779,37 +628,31 @@
                             {% else %}<span class="badge bg-secondary">{{ kt.loai_danh_hieu }}</span>{% endif %}
                         </td>
                         <td>{{ kt.nam_hoc }}</td>
-                        <td class="col-b3-detail"><span>{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
-                            <td class="text-center no-print">
-            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
-                    data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
-                <i class="bi bi-info-circle"></i>
-            </button>
-            <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
-            class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
-                <i class="bi bi-eye"></i>
-            </a>
-            {% if can_admin_action %}
-                <button type="button" class="btn btn-sm btn-outline-danger"
-                        title="Thu hồi phê duyệt cuối"
-                        onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                </button>
-                {% if kt.loai_danh_hieu and kt.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
-                <button type="button" class="btn btn-sm btn-outline-warning text-dark"
-                        title="Hạ danh hiệu"
-                        onclick="openDowngradeModal(
-                            {{ kt.id }},
-                            '{{ kt.ho_ten|e }}',
-                            '{{ kt.loai_danh_hieu.strip() }}',
-                            '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in kt.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
-                            'kt'
-                        )">
-                    <i class="bi bi-arrow-down-circle"></i>
-                </button>
-                {% endif %}
-            {% endif %}
-        </td>
+                        <td class="col-b3-detail">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</td>
+                        <td class="text-center no-print">
+                            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
+                                    data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                            <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
+                               class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if can_admin_action %}
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    title="Thu hồi phê duyệt cuối"
+                                    onclick="openRevokeModal({{ kt.de_xuat_id }},'{{ kt.don_vi.ten_don_vi|e }}','{{ kt.nam_hoc|e }}')">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            {% if kt.loai_danh_hieu and kt.loai_danh_hieu.strip() in ('Chiến sĩ thi đua','Chiến sỹ thi đua','Đơn vị quyết thắng') %}
+                            <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                                    title="Hạ danh hiệu"
+                                    onclick="openDowngradeModal({{ kt.id }},'{{ kt.ho_ten|e }}','{{ kt.loai_danh_hieu.strip() }}','{{ 'Chiến sĩ tiên tiến' if 'thi đua' in kt.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}','kt')">
+                                <i class="bi bi-arrow-down-circle"></i>
+                            </button>
+                            {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -846,7 +689,7 @@
         {% endif %}
         {% else %}
         <div class="empty-state">
-            <i class="bi bi-trophy d-block" style="font-size:2rem; color:var(--navy-primary);"></i>
+            <i class="bi bi-trophy d-block" style="font-size:2rem;color:var(--navy-primary);"></i>
             <p>Chưa có kết quả khen thưởng nào</p>
             {% if nam_hoc_filter or unit_filter or danh_hieu_filter or search_query %}
             <a href="{{ url_for('admin.reward_list') }}" class="btn btn-sm btn-outline-navy">
@@ -857,10 +700,9 @@
         {% endif %}
     </div>
 </div>
-{% endif %}{# end nam_hoc_filter #}
+{% endif %}
 
 {% if nam_hoc_filter and rejected_items %}
-{# ===== BẢNG BỊ TỪ CHỐI: Admin xác nhận Không đồng ý sau biểu quyết HĐ ===== #}
 <div class="card-section mb-3 print-section" id="printBangKDY" style="border-left:4px solid #dc3545;">
     <div class="card-header-custom d-flex align-items-center justify-content-between" style="background:#fff5f5;">
         <h6 class="mb-0 text-danger">
@@ -868,7 +710,8 @@
             <span class="badge bg-danger ms-2">{{ rejected_items|length }}</span>
         </h6>
         <div class="d-flex gap-2 no-print">
-            <button class="btn btn-sm btn-outline-danger" onclick="printSection('printBangKDY','Bảng 3b – Không đồng ý khen thưởng')">
+            <button class="btn btn-sm btn-outline-danger"
+                    onclick="printSection('printBangKDY','Bảng 3b – Không đồng ý khen thưởng')">
                 <i class="bi bi-printer me-1"></i>In PDF
             </button>
         </div>
@@ -879,17 +722,14 @@
                 <thead>
                     <tr>
                         <th class="sticky-stt-col">STT</th>
-                        <th>Danh hiệu</th>
-                        <th>Đơn vị</th>
+                        <th>Danh hiệu</th><th>Đơn vị</th>
                         <th>Cá nhân / Tập thể</th>
-                        <th>Năm học</th>
-                        <th>Ghi chú phản đối</th>
+                        <th>Năm học</th><th>Ghi chú phản đối</th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for row in rejected_items %}
-                {% set ct = row.ct %}
-                {% set dx = row.dx %}
+                {% set ct = row.ct %}{% set dx = row.dx %}
                 <tr class="table-danger">
                     <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td><span class="badge bg-secondary">{{ ct.loai_danh_hieu }}</span></td>
@@ -906,7 +746,9 @@
 </div>
 {% endif %}
 
-{# ===== Vote Modal for Bảng 2 ===== #}
+{# ===== CÁC MODAL TOÀN CỤC ===== #}
+
+{# Vote Modal #}
 <div class="modal fade" id="voteModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
@@ -918,34 +760,30 @@
                 <p class="mb-1 small"><strong id="voteModalName"></strong></p>
                 <p class="mb-2 small text-muted">Ban: <span id="voteModalBan"></span></p>
                 <p class="mb-2 small">Biểu quyết hiện tại: <span id="voteModalCurrent"></span></p>
-                
                 <form id="voteFormDongY" method="POST" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="ket_qua" value="Đồng ý">
                     <input type="hidden" name="vai_tro" id="voteFormVaiTro" value="admin">
                     <div class="mb-2">
                         <label class="form-label small mb-1">Ghi chú (tuỳ chọn)</label>
-                        <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteY" placeholder="Ghi chú...">
+                        <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteY">
                     </div>
                     <button type="submit" class="btn btn-success w-100 mb-2">
                         <i class="bi bi-check-lg me-1"></i>Đồng ý
                     </button>
                 </form>
-                
                 <form id="voteFormKhong" method="POST" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="ket_qua" value="Không đồng ý">
                     <input type="hidden" name="vai_tro" id="voteFormVaiTroK" value="admin">
                     <div class="mb-2">
                         <label class="form-label small mb-1">Ghi chú (tuỳ chọn)</label>
-                        <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteK" placeholder="Ghi chú...">
+                        <input type="text" name="ghi_chu" class="form-control form-control-sm" id="voteNoteK">
                     </div>
                     <button type="submit" class="btn btn-danger w-100">
                         <i class="bi bi-x-lg me-1"></i>Không đồng ý
                     </button>
                 </form>
-
-                {# NÚT HẠ DANH HIỆU SẼ ĐƯỢC JS HIỂN THỊ NẾU ĐẠT ĐIỀU KIỆN #}
                 <hr class="my-3">
                 <button type="button" id="btnVoteDowngrade" class="btn btn-warning w-100 text-dark" style="display:none;">
                     <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
@@ -955,23 +793,18 @@
     </div>
 </div>
 
-{# ===== Downgrade Modal ===== #}
+{# Downgrade Modal #}
 <div class="modal fade" id="downgradeModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <form id="downgradeForm" method="POST" action="">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header" style="background:#ffc107;">
-                    <h6 class="modal-title text-dark">
-                        <i class="bi bi-arrow-down-circle me-2"></i>Hạ danh hiệu
-                    </h6>
+                    <h6 class="modal-title text-dark"><i class="bi bi-arrow-down-circle me-2"></i>Hạ danh hiệu</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-2" style="font-size:0.9rem;">
-                        Xác nhận hạ danh hiệu cho:<br>
-                        <strong id="downgradeName"></strong>
-                    </p>
+                    <p class="mb-2" style="font-size:0.9rem;">Xác nhận hạ danh hiệu cho:<br><strong id="downgradeName"></strong></p>
                     <div class="d-flex align-items-center gap-2 my-3 justify-content-center">
                         <span class="badge fs-6" id="downgradeOldBadge"></span>
                         <i class="bi bi-arrow-right text-muted fs-5"></i>
@@ -983,8 +816,7 @@
                     </p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary btn-sm"
-                            data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-warning btn-sm text-dark">
                         <i class="bi bi-arrow-down-circle me-1"></i>Xác nhận hạ danh hiệu
                     </button>
@@ -994,7 +826,7 @@
     </div>
 </div>
 
-{# ===== Revoke Modal ===== #}
+{# Revoke Modal #}
 <div class="modal fade" id="revokeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1025,7 +857,7 @@
     </div>
 </div>
 
-<!-- {% if can_admin_action %} -->
+{# Reject Modal #}
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1048,168 +880,168 @@
         </div>
     </div>
 </div>
-<!-- {% endif %} -->
 
-{# ===== Chi Tiết Offcanvas ===== #}
+{# Chi Tiết Offcanvas #}
 <div class="offcanvas offcanvas-end" tabindex="-1" id="chiTietOffcanvas" style="width:480px;">
     <div class="offcanvas-header" style="background:var(--navy-primary);color:#fff;">
         <h6 class="offcanvas-title mb-0"><i class="bi bi-person-lines-fill me-2"></i>Chi tiết cá nhân</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body p-0" id="chiTietBody">
-        <div class="text-center py-5 text-muted" id="chiTietLoading">
+        <div class="text-center py-5 text-muted">
             <div class="spinner-border spinner-border-sm me-2"></div>Đang tải...
         </div>
     </div>
 </div>
 
-<style>
-    .stat-mini {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 0.4rem 0.75rem;
-        font-size: 0.82rem;
-    }
-    .stat-mini i { font-size: 1rem; }
-    .print-only { display: none; }
-
-    @media print {
-        .no-print { display: none !important; }
-        .print-only { display: revert !important; }
-        td.print-only, th.print-only { display: table-cell !important; }
-        span.print-only { display: inline !important; }
-        .card-section { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
-        .collapse { display: block !important; }
-        body { font-size: 10pt; }
-        table { font-size: 9pt !important; }
-        .badge { border: 1px solid #666; color: #000 !important; background: transparent !important; }
-        #printTimestamp { display: block !important; position: fixed; bottom: 10px; right: 10px;
-            font-size: 9pt; color: #666; }
-        /* Section-specific print: hide all print-sections, show only the selected one */
-        body[data-print-section] .print-section { display: none !important; }
-        body[data-print-section="printBang1"] #printBang1 { display: block !important; }
-        body[data-print-section="printBang2"] #printBang2 { display: block !important; }
-        body[data-print-section="printBang3"] #printBang3 { display: block !important; }
-        body[data-print-section="printBangKDY"] #printBangKDY { display: block !important; }
-        body[data-print-section="printTracking"] #printTracking { display: block !important; }
-    }
-    /* compact mode – hides col-b1-detail, col-b2-detail, col-b3-detail */
-    body.rl-compact .col-b1-detail,
-    body.rl-compact .col-b2-detail,
-    body.rl-compact .col-b3-detail { display: none; }
-
-    /* ===== STICKY STT + HỌ TÊN COL ===== */
-    .sticky-stt-col {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 1;
-        background: #fff !important;
-        box-shadow: none;
-        min-width: 40px;
-        width: 40px;
-    }
-    thead th.sticky-stt-col {
-        background: var(--navy-primary, #1a3a5c) !important;
-        color: #fff !important;
-        z-index: 2;
-    }
-    tbody tr:hover td.sticky-stt-col { background: #F8F9FB !important; }
-    tr.table-success td.sticky-stt-col { background: #d1e7dd !important; }
-    tr.table-warning td.sticky-stt-col { background: #fff3cd !important; }
-    tr.table-danger  td.sticky-stt-col { background: #f8d7da !important; }
-    tr.table-info    td.sticky-stt-col { background: #cff4fc !important; }
-    tr.table-light   td.sticky-stt-col { background: #f8f9fa !important; }
-
-    .sticky-name-col {
-        position: sticky !important;
-        left: 40px !important;
-        z-index: 1;
-        background: #fff !important;
-        box-shadow: 2px 0 4px rgba(0,0,0,0.06);
-        min-width: 130px;
-    }
-    thead th.sticky-name-col {
-        background: var(--navy-primary, #1a3a5c) !important;
-        color: #fff !important;
-        z-index: 2;
-    }
-    tbody tr:hover td.sticky-name-col { background: #F8F9FB !important; }
-    tr.table-success td.sticky-name-col { background: #d1e7dd !important; }
-    tr.table-warning td.sticky-name-col { background: #fff3cd !important; }
-    tr.table-danger  td.sticky-name-col { background: #f8d7da !important; }
-    tr.table-info    td.sticky-name-col { background: #cff4fc !important; }
-    tr.table-light   td.sticky-name-col { background: #f8f9fa !important; }
-</style>
-
-{# Print timestamp watermark (only visible when printing) #}
+{# Print timestamp #}
 <div id="printTimestamp" style="display:none;"></div>
 <div id="printSectionTitle" class="print-only" style="font-weight:bold;font-size:13pt;margin-bottom:8px;"></div>
 
+<style>
+    .stat-mini {
+        display:flex; align-items:center; gap:0.4rem;
+        background:#fff; border:1px solid var(--border-color);
+        border-radius:8px; padding:0.4rem 0.75rem; font-size:0.82rem;
+    }
+    .stat-mini i { font-size:1rem; }
+    .print-only { display:none; }
+
+    @media print {
+        .no-print { display:none !important; }
+        .print-only { display:revert !important; }
+        td.print-only, th.print-only { display:table-cell !important; }
+        span.print-only { display:inline !important; }
+        .card-section { box-shadow:none !important; border:1px solid #ccc !important; page-break-inside:avoid; }
+        body { font-size:10pt; }
+        table { font-size:9pt !important; }
+        .badge { border:1px solid #666; color:#000 !important; background:transparent !important; }
+        #printTimestamp { display:block !important; position:fixed; bottom:10px; right:10px; font-size:9pt; color:#666; }
+        body[data-print-section] .print-section { display:none !important; }
+        body[data-print-section="printBang2"] #printBang2 { display:block !important; }
+        body[data-print-section="printBang3"] #printBang3 { display:block !important; }
+        body[data-print-section="printBangKDY"] #printBangKDY { display:block !important; }
+    }
+
+    body.rl-compact .col-b1-detail,
+    body.rl-compact .col-b2-detail,
+    body.rl-compact .col-b3-detail { display:none; }
+
+    .sticky-stt-col {
+        position:sticky !important; left:0 !important; z-index:1;
+        background:#fff !important; min-width:40px; width:40px;
+    }
+    thead th.sticky-stt-col {
+        background:var(--navy-primary,#1a3a5c) !important;
+        color:#fff !important; z-index:2;
+    }
+    tbody tr:hover td.sticky-stt-col { background:#F8F9FB !important; }
+    tr.table-success td.sticky-stt-col { background:#d1e7dd !important; }
+    tr.table-warning td.sticky-stt-col { background:#fff3cd !important; }
+    tr.table-danger  td.sticky-stt-col { background:#f8d7da !important; }
+    tr.table-light   td.sticky-stt-col { background:#f8f9fa !important; }
+
+    .sticky-name-col {
+        position:sticky !important; left:40px !important; z-index:1;
+        background:#fff !important; box-shadow:2px 0 4px rgba(0,0,0,0.06);
+        min-width:130px;
+    }
+    thead th.sticky-name-col {
+        background:var(--navy-primary,#1a3a5c) !important;
+        color:#fff !important; z-index:2;
+    }
+    tbody tr:hover td.sticky-name-col { background:#F8F9FB !important; }
+    tr.table-success td.sticky-name-col { background:#d1e7dd !important; }
+    tr.table-warning td.sticky-name-col { background:#fff3cd !important; }
+    tr.table-danger  td.sticky-name-col { background:#f8d7da !important; }
+    tr.table-light   td.sticky-name-col { background:#f8f9fa !important; }
+</style>
+
 <script>
+// ===================================================================
+// ★ FIX CHÍNH: openKdyModal — mở modal KDY bằng JS thay vì data-bs-target
+// Lý do: modal nằm ngoài <table> nên data-bs-target đôi khi không resolve
+// ===================================================================
+function openKdyModal(modalId) {
+    var el = document.getElementById(modalId);
+    if (!el) {
+        console.error('KDY Modal not found:', modalId);
+        return;
+    }
+    var modal = bootstrap.Modal.getOrCreateInstance(el);
+    modal.show();
+}
+
 // ===== Vote Modal =====
 var VOTE_URL = '{{ url_for("admin.hoi_dong_vote_ct", ct_id=0) }}'.replace('/0', '/');
 
 function openVoteModal(ctId, name, ban, currentVote, oldDH) {
     document.getElementById('voteModalName').textContent = name;
     document.getElementById('voteModalBan').textContent = ban;
-    var cur = currentVote ? currentVote : 'Chưa biểu quyết';
-    document.getElementById('voteModalCurrent').textContent = cur;
+    document.getElementById('voteModalCurrent').textContent = currentVote || 'Chưa biểu quyết';
     var url = VOTE_URL + ctId;
     document.getElementById('voteFormDongY').action = url;
     document.getElementById('voteFormKhong').action = url;
-    
     document.getElementById('voteNoteY').value = '';
     document.getElementById('voteNoteK').value = '';
-    
-    // Kiểm tra để hiện diện tích nút Hạ danh hiệu trong Modal Biểu quyết
+
     var oldDH_clean = oldDH ? oldDH.trim() : '';
-    var canDowngrade = ['Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng'].indexOf(oldDH_clean) !== -1;
+    var canDowngrade = ['Chiến sĩ thi đua','Chiến sỹ thi đua','Đơn vị quyết thắng'].indexOf(oldDH_clean) !== -1;
     var btnDowngrade = document.getElementById('btnVoteDowngrade');
-    
     if (canDowngrade) {
         btnDowngrade.style.display = 'block';
         var newDH = (oldDH_clean.indexOf('thi đua') !== -1) ? 'Chiến sĩ tiên tiến' : 'Đơn vị tiên tiến';
-        
         btnDowngrade.onclick = function() {
-            // Đóng Vote Modal
-            var vmElement = document.getElementById('voteModal');
-            var vmInstance = bootstrap.Modal.getInstance(vmElement);
-            if (vmInstance) vmInstance.hide();
-            
-            // Mở Downgrade Modal thay thế
+            bootstrap.Modal.getInstance(document.getElementById('voteModal')).hide();
             openDowngradeModal(ctId, name, oldDH_clean, newDH, 'ct');
         };
     } else {
         btnDowngrade.style.display = 'none';
     }
-
     new bootstrap.Modal(document.getElementById('voteModal')).show();
 }
 
-function openVoteModalKhong(ctId, name) {
-    openVoteModal(ctId, name, 'Admin', '', '');
-    // After modal opens, scroll to Không đồng ý form
-    setTimeout(function() {
-        var el = document.getElementById('voteNoteK');
-        if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
-    }, 300);
-}
-
-// ===== Revoke / Reject =====
+// ===== Revoke Modal =====
 function openRevokeModal(deXuatId, unitName, namHoc) {
-    document.getElementById('revokeForm').action = '{{ url_for("admin.revoke_final_approval", id=0) }}'.replace('/0', '/' + deXuatId);
+    document.getElementById('revokeForm').action =
+        '{{ url_for("admin.revoke_final_approval", id=0) }}'.replace('/0', '/' + deXuatId);
     document.getElementById('revokeUnitName').textContent = unitName;
     document.getElementById('revokeNamHoc').textContent = namHoc;
     new bootstrap.Modal(document.getElementById('revokeModal')).show();
 }
+
+// ===== Reject Modal =====
 function openRejectModal(deXuatId, unitName) {
-    document.getElementById('rejectForm').action = '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0', '/' + deXuatId);
+    document.getElementById('rejectForm').action =
+        '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0', '/' + deXuatId);
     document.getElementById('rejectUnit').textContent = unitName;
     new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+// ===== Downgrade Modal =====
+var DOWNGRADE_CT_URL = '{{ url_for("admin.downgrade_danh_hieu_ct", ct_id=0) }}'.replace('/0', '/');
+var DOWNGRADE_KT_URL = '{{ url_for("admin.downgrade_khen_thuong", kt_id=0) }}'.replace('/0', '/');
+var _BADGE_MAP = {
+    'Chiến sĩ thi đua':   ['bg-warning text-dark','CSTD'],
+    'Chiến sỹ thi đua':   ['bg-warning text-dark','CSTD'],
+    'Chiến sĩ tiên tiến': ['bg-info text-dark','CSTT'],
+    'Chiến sỹ tiên tiến': ['bg-info text-dark','CSTT'],
+    'Đơn vị quyết thắng': ['bg-navy','DVQT'],
+    'Đơn vị tiên tiến':   ['bg-secondary','DVTT'],
+};
+function openDowngradeModal(id, name, oldDH, newDH, type) {
+    document.getElementById('downgradeForm').action =
+        (type === 'kt' ? DOWNGRADE_KT_URL : DOWNGRADE_CT_URL) + id;
+    document.getElementById('downgradeName').textContent = name;
+    var oldInfo = _BADGE_MAP[oldDH] || ['bg-secondary', oldDH];
+    var oldBadge = document.getElementById('downgradeOldBadge');
+    oldBadge.className = 'badge fs-6 ' + oldInfo[0];
+    oldBadge.textContent = oldInfo[1];
+    var newInfo = _BADGE_MAP[newDH] || ['bg-secondary', newDH];
+    var newBadge = document.getElementById('downgradeNewBadge');
+    newBadge.className = 'badge fs-6 ' + newInfo[0];
+    newBadge.textContent = newInfo[1];
+    new bootstrap.Modal(document.getElementById('downgradeModal')).show();
 }
 
 // ===== Compact / Full toggle =====
@@ -1233,9 +1065,9 @@ function openRejectModal(deXuatId, unitName) {
 function _setPrintTimestamp() {
     var ts = document.getElementById('printTimestamp');
     var now = new Date();
-    var pad = function(n){ return n < 10 ? '0' + n : n; };
-    ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' ngày '
-        + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
+    var pad = function(n){ return n < 10 ? '0'+n : n; };
+    ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes())
+        + ' ngày ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
     ts.style.display = 'block';
 }
 function printPage() {
@@ -1253,128 +1085,80 @@ function printSection(sectionId, title) {
 
 // ===== Offcanvas chi tiết =====
 (function() {
-    const API_URL = '{{ url_for("admin.api_chi_tiet_detail", ct_id=0) }}'.replace('/0', '/');
-
+    var API_URL = '{{ url_for("admin.api_chi_tiet_detail", ct_id=0) }}'.replace('/0', '/');
     function badge(val) {
-        return '<span class="badge bg-success">Đồng ý</span>';
-        // if (val === 'Đồng ý') return '<span class="badge bg-success">Đồng ý</span>';
-        ///if (val === 'Không đồng ý') return '<span class="badge bg-danger">Không đồng ý</span>';
-       // return '<span class="text-muted">—</span>';
+        if (val === 'Đồng ý') return '<span class="badge bg-success">Đồng ý</span>';
+        if (val === 'Không đồng ý') return '<span class="badge bg-danger">Không đồng ý</span>';
+        return '<span class="text-muted">—</span>';
     }
-
     function renderDetail(data) {
-        const p = data.personal;
-        const n = data.nomination;
-        const criteria = data.criteria;
-        const votes = data.votes;
-
-        const roles = p.la_chi_huy || p.la_bi_thu
+        var p = data.personal, n = data.nomination;
+        var criteria = data.criteria, votes = data.votes;
+        var roles = (p.la_chi_huy || p.la_bi_thu)
             ? [p.la_chi_huy ? 'Cấp trưởng' : '', p.la_bi_thu ? 'Bí thư' : ''].filter(Boolean).join(' – ')
             : '—';
-
-        let personalRows = `
-            <tr><th>Đơn vị</th><td>${n.don_vi}</td></tr>
-            <tr><th>Năm học</th><td>${n.nam_hoc || '—'}</td></tr>
-            <tr><th>Danh hiệu</th><td><strong>${n.loai_danh_hieu}</strong></td></tr>
-            <tr><th>CCCD</th><td>${p.can_cuoc_cong_dan || '—'}</td></tr>
-            <tr><th>Ngày sinh</th><td>${p.ngay_sinh || '—'}</td></tr>
-            <tr><th>Ngày nhập ngũ</th><td>${p.ngay_nhap_ngu || '—'}</td></tr>
-            <tr><th>Cấp bậc</th><td>${p.cap_bac || '—'}</td></tr>
-            <tr><th>Chức vụ</th><td>${p.chuc_vu || '—'}</td></tr>
-            <tr><th>Đối tượng</th><td>${p.doi_tuong || '—'}</td></tr>
-            <tr><th>ĐV trực thuộc</th><td>${p.don_vi_truc_thuoc || '—'}</td></tr>
-            <tr><th>Học hàm / Học vị</th><td>${p.hoc_ham || '—'} / ${p.hoc_vi || '—'}</td></tr>
-            <tr><th>Trình độ học vấn</th><td>${p.trinh_do_hoc_van || '—'}</td></tr>
-            <tr><th>Ngoại ngữ</th><td>${p.ngoai_ngu || '—'}</td></tr>
-            <tr><th>Vai trò</th><td>${roles}</td></tr>
-            <tr><th>Đoàn viên</th><td>${p.la_doan_vien ? 'Có' : 'Không'}</td></tr>
-            <tr><th>Hội viên phụ nữ</th><td>${p.la_hoi_vien_phu_nu ? 'Có' : 'Không'}</td></tr>
-        `;
-
-        let criteriaRows = criteria.length ? criteria.map(c => {
-            const scoreStr = c.score ? ` <span class="badge bg-light text-dark border ms-1">${c.score}</span>` : '';
-            return `<tr><th>${c.label}</th><td>${c.value}${scoreStr}</td></tr>`;
-        }).join('') : '<tr><td colspan="2" class="text-muted text-center">Không có tiêu chí</td></tr>';
-
-        let voteRows = votes.map(v => `
-            <tr><th style="font-weight:500;">${v.vai_tro}</th>
-            <td>${badge(v.ket_qua)}${v.ghi_chu ? ` <small class="text-muted ms-1">${v.ghi_chu}</small>` : ''}</td></tr>
-        `).join('');
-
-        return `
-        <div class="p-3 border-bottom" style="background:#f8f9fa;">
-            <h6 class="mb-0 text-navy fw-bold">${p.ho_ten}</h6>
-            <small class="text-muted">${p.cap_bac || ''} ${p.chuc_vu ? '— ' + p.chuc_vu : ''}</small>
-        </div>
-        <div class="accordion accordion-flush" id="detailAccordion">
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button py-2" type="button" data-bs-toggle="collapse" data-bs-target="#accPersonal">
-                        <i class="bi bi-person me-2 text-navy"></i><strong>Thông tin cá nhân</strong>
-                    </button>
-                </h2>
-                <div id="accPersonal" class="accordion-collapse collapse show" data-bs-parent="#detailAccordion">
-                    <div class="accordion-body p-0">
-                        <table class="table table-sm mb-0" style="font-size:0.82rem;">
-                            <tbody>${personalRows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#accCriteria">
-                        <i class="bi bi-clipboard-data me-2 text-navy"></i><strong>Tiêu chí xét duyệt</strong>
-                    </button>
-                </h2>
-                <div id="accCriteria" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
-                    <div class="accordion-body p-0">
-                        <table class="table table-sm mb-0" style="font-size:0.82rem;">
-                            <tbody>${criteriaRows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#accVotes">
-                        <i class="bi bi-people me-2 text-navy"></i><strong>Biểu quyết Hội đồng</strong>
-                    </button>
-                </h2>
-                <div id="accVotes" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
-                    <div class="accordion-body p-0">
-                        <table class="table table-sm mb-0" style="font-size:0.82rem;">
-                            <tbody>${voteRows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>`;
+        var personalRows = [
+            ['Đơn vị', n.don_vi], ['Năm học', n.nam_hoc || '—'],
+            ['Danh hiệu', '<strong>' + n.loai_danh_hieu + '</strong>'],
+            ['CCCD', p.can_cuoc_cong_dan || '—'], ['Ngày sinh', p.ngay_sinh || '—'],
+            ['Ngày nhập ngũ', p.ngay_nhap_ngu || '—'], ['Cấp bậc', p.cap_bac || '—'],
+            ['Chức vụ', p.chuc_vu || '—'], ['Đối tượng', p.doi_tuong || '—'],
+            ['ĐV trực thuộc', p.don_vi_truc_thuoc || '—'],
+            ['Học hàm/Học vị', (p.hoc_ham || '—') + ' / ' + (p.hoc_vi || '—')],
+            ['Trình độ học vấn', p.trinh_do_hoc_van || '—'],
+            ['Ngoại ngữ', p.ngoai_ngu || '—'], ['Vai trò', roles],
+            ['Đoàn viên', p.la_doan_vien ? 'Có' : 'Không'],
+            ['Hội viên phụ nữ', p.la_hoi_vien_phu_nu ? 'Có' : 'Không'],
+        ].map(function(r){ return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>'; }).join('');
+        var criteriaRows = criteria.length
+            ? criteria.map(function(c){
+                var sc = c.score ? ' <span class="badge bg-light text-dark border ms-1">' + c.score + '</span>' : '';
+                return '<tr><th>' + c.label + '</th><td>' + c.value + sc + '</td></tr>';
+            }).join('')
+            : '<tr><td colspan="2" class="text-muted text-center">Không có tiêu chí</td></tr>';
+        var voteRows = votes.map(function(v){
+            return '<tr><th style="font-weight:500;">' + v.vai_tro + '</th><td>'
+                + badge(v.ket_qua)
+                + (v.ghi_chu ? ' <small class="text-muted ms-1">' + v.ghi_chu + '</small>' : '')
+                + '</td></tr>';
+        }).join('');
+        return '<div class="p-3 border-bottom" style="background:#f8f9fa;">'
+            + '<h6 class="mb-0 text-navy fw-bold">' + p.ho_ten + '</h6>'
+            + '<small class="text-muted">' + (p.cap_bac || '') + (p.chuc_vu ? ' — ' + p.chuc_vu : '') + '</small>'
+            + '</div>'
+            + '<div class="accordion accordion-flush" id="detailAccordion">'
+            + _accItem('accPersonal', 'bi-person', 'Thông tin cá nhân', personalRows, true)
+            + _accItem('accCriteria', 'bi-clipboard-data', 'Tiêu chí xét duyệt', criteriaRows, false)
+            + _accItem('accVotes', 'bi-people', 'Biểu quyết Hội đồng', voteRows, false)
+            + '</div>';
     }
-
+    function _accItem(id, icon, title, rows, open) {
+        return '<div class="accordion-item">'
+            + '<h2 class="accordion-header"><button class="accordion-button ' + (open ? '' : 'collapsed') + ' py-2" type="button"'
+            + ' data-bs-toggle="collapse" data-bs-target="#' + id + '">'
+            + '<i class="bi ' + icon + ' me-2 text-navy"></i><strong>' + title + '</strong></button></h2>'
+            + '<div id="' + id + '" class="accordion-collapse collapse ' + (open ? 'show' : '') + '" data-bs-parent="#detailAccordion">'
+            + '<div class="accordion-body p-0"><table class="table table-sm mb-0" style="font-size:0.82rem;">'
+            + '<tbody>' + rows + '</tbody></table></div></div></div>';
+    }
     document.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-chi-tiet');
+        var btn = e.target.closest('.btn-chi-tiet');
         if (!btn) return;
-        const ctId = btn.dataset.ctId;
-        const body = document.getElementById('chiTietBody');
+        var ctId = btn.dataset.ctId;
+        var body = document.getElementById('chiTietBody');
         body.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Đang tải...</div>';
-        const offcanvas = new bootstrap.Offcanvas(document.getElementById('chiTietOffcanvas'));
-        offcanvas.show();
+        new bootstrap.Offcanvas(document.getElementById('chiTietOffcanvas')).show();
         fetch(API_URL + ctId)
-            .then(r => r.json())
-            .then(data => { body.innerHTML = renderDetail(data); })
-            .catch(() => { body.innerHTML = '<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>'; });
+            .then(function(r){ return r.json(); })
+            .then(function(data){ body.innerHTML = renderDetail(data); })
+            .catch(function(){ body.innerHTML = '<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>'; });
     });
 })();
-</script>
 
-<script>
-// Lưu/khôi phục năm học đã chọn qua localStorage
+// ===== Lưu/khôi phục năm học =====
 (function() {
     var LS_KEY = 'sharedNamHoc';
     var currentNamHoc = '{{ nam_hoc_filter }}';
-
-    // Nếu URL không có nam_hoc nhưng localStorage có → tự redirect
     if (!currentNamHoc) {
         var saved = localStorage.getItem(LS_KEY);
         if (saved) {
@@ -1384,173 +1168,95 @@ function printSection(sectionId, title) {
             return;
         }
     } else {
-        // Có nam_hoc trong URL → lưu vào localStorage
         localStorage.setItem(LS_KEY, currentNamHoc);
     }
 })();
-
 function onNamHocChange(sel) {
-    if (sel.value) {
-        localStorage.setItem('sharedNamHoc', sel.value);
-    } else {
-        localStorage.removeItem('sharedNamHoc');
-    }
+    if (sel.value) localStorage.setItem('sharedNamHoc', sel.value);
+    else localStorage.removeItem('sharedNamHoc');
     sel.form.submit();
 }
-// ===== Downgrade Modal =====
-var DOWNGRADE_CT_URL = '{{ url_for("admin.downgrade_danh_hieu_ct", ct_id=0) }}'.replace('/0', '/');
-var DOWNGRADE_KT_URL = '{{ url_for("admin.downgrade_khen_thuong",  kt_id=0) }}'.replace('/0', '/');
 
-var _BADGE_MAP = {
-    'Chiến sĩ thi đua':   ['bg-warning text-dark', 'CSTD'],
-    'Chiến sỹ thi đua':   ['bg-warning text-dark', 'CSTD'],
-    'Chiến sĩ tiên tiến': ['bg-info text-dark',    'CSTT'],
-    'Chiến sỹ tiên tiến': ['bg-info text-dark',    'CSTT'],
-    'Đơn vị quyết thắng': ['bg-navy',              'DVQT'],
-    'Đơn vị tiên tiến':   ['bg-secondary',         'DVTT'],
-};
-
-function openDowngradeModal(id, name, oldDH, newDH, type) {
-    // Đặt action URL — gọi đúng route hạ danh hiệu (downgrade) tương ứng với loại (cá nhân/tập thể 'ct' hay đã xác nhận 'kt')
-    var url = (type === 'kt' ? DOWNGRADE_KT_URL : DOWNGRADE_CT_URL) + id;
-    document.getElementById('downgradeForm').action = url;
-
-    // Tên
-    document.getElementById('downgradeName').textContent = name;
-
-    // Badge cũ
-    var oldInfo = _BADGE_MAP[oldDH] || ['bg-secondary', oldDH];
-    var oldBadge = document.getElementById('downgradeOldBadge');
-    oldBadge.className = 'badge fs-6 ' + oldInfo[0];
-    oldBadge.textContent = oldInfo[1];
-
-    // Badge mới
-    var newInfo = _BADGE_MAP[newDH] || ['bg-secondary', newDH];
-    var newBadge = document.getElementById('downgradeNewBadge');
-    newBadge.className = 'badge fs-6 ' + newInfo[0];
-    newBadge.textContent = newInfo[1];
-
-    new bootstrap.Modal(document.getElementById('downgradeModal')).show();
-}
-
-// ╔══════════════════════════════════════════════════════════════════════╗
-// ║  AJAX INTERCEPT — Bảng 2/3 thao tác KHÔNG reload lại trang          ║
-// ║  Intercept tất cả form POST trong #bang2, #revokeModal, #rejectModal ║
-// ║  và downgradeForm → gửi AJAX → reload chỉ phần cần thiết.           ║
-// ╚══════════════════════════════════════════════════════════════════════╝
-(function () {
+// ===================================================================
+// AJAX INTERCEPT — form POST không reload trang
+// ===================================================================
+(function() {
     'use strict';
-
-    // ── Utility: hiển thị flash tạm thời không reload trang ───────────
     function showFlash(msg, type) {
-        type = type || 'success';
-        var cls = type === 'success' ? 'alert-success' : (type === 'danger' ? 'alert-danger' : 'alert-info');
-        var icon = type === 'success' ? 'bi-check-circle-fill' : (type === 'danger' ? 'bi-x-circle-fill' : 'bi-info-circle-fill');
+        var cls = type === 'success' ? 'alert-success' : 'alert-danger';
+        var icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
         var el = document.createElement('div');
         el.className = 'alert ' + cls + ' alert-dismissible fade show fixed-top mx-auto mt-3 shadow';
         el.style.cssText = 'max-width:540px;z-index:9999;left:0;right:0;';
-        el.innerHTML = '<i class="bi ' + icon + ' me-2"></i>' + msg +
-            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        el.innerHTML = '<i class="bi ' + icon + ' me-2"></i>' + msg
+            + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
         document.body.appendChild(el);
-        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 3500);
+        setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 3500);
     }
 
-    // ── Utility: reload Bảng 2 (phe_duyet_cuoi_items) không load lại trang
     function reloadBang2And3() {
-        // Reload trang nhưng GIỮ lại scroll position và không flash
         var url = new URL(window.location.href);
-        // Thêm cache-bust nhẹ để force refresh
         url.searchParams.set('_r', Date.now());
-        // Dùng replaceState để tránh history pollution
-        fetch(url.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest-partial'}})
-            .then(function (r) { return r.text(); })
-            .then(function (html) {
+        fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest-partial' } })
+            .then(function(r){ return r.text(); })
+            .then(function(html) {
                 var parser = new DOMParser();
                 var newDoc = parser.parseFromString(html, 'text/html');
-                // Cập nhật Bảng 2
                 var b2Old = document.getElementById('bang2');
                 var b2New = newDoc.getElementById('bang2');
-                if (b2Old && b2New) {
-                    b2Old.innerHTML = b2New.innerHTML;
-                    // Re-attach tooltips
-                    b2Old.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
-                        new bootstrap.Tooltip(el);
-                    });
-                }
-                // Cập nhật stats Bảng 3 header nếu có
-                var b3statsOld = document.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
-                var b3statsNew = newDoc.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
-                if (b3statsOld && b3statsNew) {
-                    b3statsOld.innerHTML = b3statsNew.innerHTML;
-                }
+                if (b2Old && b2New) b2Old.innerHTML = b2New.innerHTML;
+                var statsOld = document.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
+                var statsNew = newDoc.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
+                if (statsOld && statsNew) statsOld.innerHTML = statsNew.innerHTML;
             })
-            .catch(function () {
-                // Nếu fetch thất bại (session hết hạn, v.v.) → reload bình thường
-                window.location.reload();
-            });
+            .catch(function(){ window.location.reload(); });
     }
 
-    // ── Intercept tất cả form submit trong Bảng 2 và modal KDY ────────
-    function ajaxSubmitForm(form, onSuccess) {
-        var formData = new FormData(form);
+    function ajaxSubmitForm(form) {
         fetch(form.action, {
             method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            },
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(function (r) {
-            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+        .then(function(r){
+            if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
         })
-        .then(function (data) {
+        .then(function(data) {
             if (data.ok) {
                 showFlash(data.message || 'Thành công.', 'success');
-                // Đóng modal nếu đang mở
-                var openModals = document.querySelectorAll('.modal.show');
-                openModals.forEach(function (m) {
+                // Đóng tất cả modal đang mở
+                document.querySelectorAll('.modal.show').forEach(function(m) {
                     var inst = bootstrap.Modal.getInstance(m);
                     if (inst) inst.hide();
                 });
-                if (onSuccess) onSuccess(data);
-                else reloadBang2And3();
+                reloadBang2And3();
             } else {
                 showFlash(data.message || 'Có lỗi xảy ra.', 'danger');
             }
         })
-        .catch(function (e) {
-            // Fallback: redirect bình thường nếu AJAX lỗi
-            form.submit();
-        });
+        .catch(function(){ form.submit(); }); // fallback
     }
 
-    // Event delegation cho Bảng 2 và các modal
-    document.addEventListener('submit', function (e) {
+    var AJAX_ROUTES = [
+        '/confirm-khen-thuong-ct/',
+        '/confirm-khong-dong-y-ct/',
+        '/downgrade-ct/',
+        '/downgrade-kt/',
+        '/vote-ct/',
+        '/revoke-final-approval/',
+    ];
+
+    document.addEventListener('submit', function(e) {
         var form = e.target;
         if (!form || form.tagName !== 'FORM' || form.method.toUpperCase() !== 'POST') return;
-
         var action = form.action || '';
-
-        // Intercept các route Bảng 2/3 action
-        var AJAX_ROUTES = [
-            '/reward-list/confirm-khen-thuong-ct/',
-            '/reward-list/confirm-khong-dong-y-ct/',
-            '/reward-list/downgrade-ct/',
-            '/reward-list/downgrade-kt/',
-            '/reward-list/vote-ct/',
-        ];
-        var isAjaxRoute = AJAX_ROUTES.some(function (r) { return action.indexOf(r) !== -1; });
-        if (!isAjaxRoute) return;
-
+        var isAjax = AJAX_ROUTES.some(function(r){ return action.indexOf(r) !== -1; });
+        if (!isAjax) return;
         e.preventDefault();
         ajaxSubmitForm(form);
     }, true);
-
-    // Vote forms (#voteFormDongY, #voteFormKhong) cũng dùng submit event — đã được bắt ở trên
-    // Downgrade form (#downgradeForm) cũng dùng submit event — đã được bắt ở trên
-
 })();
-
 </script>
+
 {% endblock %}
