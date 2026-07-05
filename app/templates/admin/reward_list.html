@@ -299,109 +299,43 @@
                         <br><small>({{ voted_count }}/{{ total }})</small>
 
                     </td>
-
                     <td class="text-center no-print" style="white-space:nowrap;">
-
                         {% if row.is_confirmed %}
-
-                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
-
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
                         {% else %}
-                       
-                        <div class="d-flex gap-1 justify-content-center flex-wrap">
-
-                            <!--  {% if current_user_vai_tro %} -->
-
-                            <!-- {% set my_vote = row.votes.get(current_user_vai_tro) %} -->
-
-                            <!-- <button type="button"
-
-                                    class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
-
-                                    style="font-size:0.75rem;"
-
-                                    title="Biểu Quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
-
-                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.quan_nhan.ho_ten | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}', '{{ ct.loai_danh_hieu.strip() }}')">
-
-                                <i class="bi bi-hand-index me-1"></i>Biểu quyết
-
-                            </button> -->
-
-                            <!-- {% endif %} --> 
-
-                            
-
-                            <!-- {% if can_admin_action %} -->
-
-                                <!-- {% if row.all_voted %} -->
-
-                            <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
-
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                                <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
-
-                                        onclick="return confirm('Xác nhận khên thươgnrg cho cá nhân này?')">
-
-                                    <i class="bi bi-check2-circle me-1"></i>Đồng ý
-
-                                </button>
-
-                            </form>
-
-                            <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
-
-                                    data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
-
-                                <i class="bi bi-x-circle me-1"></i>Không Đồng ý
-
-                            </button>
-
-                                
-
-                                {# ??? N??T H??? DANH HI???U C???A ADMIN #}
-
-                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
-
-                            <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
-
-                                    onclick="openDowngradeModal(
-
-                                        {{ ct.id }},
-
-                                        '{{ ct.quan_nhan.ho_ten|e }}',
-
-                                        '{{ ct.loai_danh_hieu.strip() }}',
-
-                                        '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
-
-                                        'ct'
-
-                                    )">
-
-                                <i class="bi bi-arrow-down-circle me-1"></i>Hủy danh hiệu
-
-                            </button>
-
+                            <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                {% if can_admin_action %}
+                                    <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
+                                                onclick="return confirm('Xác nhận khen thưởng cho cá nhân này?')">
+                                            <i class="bi bi-check2-circle me-1"></i>Đồng ý
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
+                                            data-bs-toggle="modal" data-bs-target="#kdyModal{{ ct.id }}">
+                                        <i class="bi bi-x-circle me-1"></i>Không Đồng ý
+                                    </button>
+                                    {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
+                                    <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
+                                            onclick="openDowngradeModal(
+                                                {{ ct.id }},
+                                                '{{ ct.quan_nhan.ho_ten|e }}',
+                                                '{{ ct.loai_danh_hieu.strip() }}',
+                                                '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
+                                                'ct'
+                                            )">
+                                        <i class="bi bi-arrow-down-circle me-1"></i>Hủy danh hiệu
+                                    </button>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-light text-muted border" style="font-size:0.7rem;">
+                                        <i class="bi bi-lock me-1"></i>Không có quyền
+                                    </span>
                                 {% endif %}
-
-                                
-
-                                <!-- {% else %}
-
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span> -->
-
-                                <!-- {% endif %} -->
-
-                            <!-- {% endif %} -->
-
-                        </div>
-
+                            </div>
                         {% endif %}
-
                     </td>
-
                 </tr>
 
                 <!-- {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %} -->
@@ -553,109 +487,43 @@
                         <br><small>({{ voted_count }}/{{ total }})</small>
 
                     </td>
-
                     <td class="text-center no-print" style="white-space:nowrap;">
-
-                        {% if row.is_confirmed %}
+                    {% if row.is_confirmed %}
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>
-                        <!-- {% elif  row.admin_final_vote.ket_qua == 'Không đồng ý' %} -->
-                       
-                        {% else %}
-                        <!-- <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hội đồng bác</span> -->
+                    {% else %}
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
-
-                            <!-- {% if current_user_vai_tro %}
-
-                            {% set my_vote = row.votes.get(current_user_vai_tro) %} -->
-
-                            <!-- <button type="button"
-
-                                    class="btn btn-xs {% if my_vote and my_vote.ket_qua == 'Đồng ý' %}btn-success{% elif my_vote and my_vote.ket_qua == 'Không đồng ý' %}btn-danger{% else %}btn-outline-primary{% endif %} py-0"
-
-                                    style="font-size:0.75rem;"
-
-                                    title="Biểu quyết ({{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] }})"
-
-                                    onclick="openVoteModal({{ ct.id }}, '{{ ct.ten_don_vi_de_xuat | e }}', '{{ HOI_DONG_VAI_TRO_DISPLAY[current_user_vai_tro] | e }}', '{{ my_vote.ket_qua if my_vote else '' }}', '{{ ct.loai_danh_hieu.strip() }}')">
-
-                                <i class="bi bi-hand-index me-1"></i>Biểu quyết
-
-                            </button> -->
-
-                            <!-- {% endif %} -->
-
-                            
-
-                            <!-- {% if can_admin_action %} -->
-
-                                <!-- {% if row.all_voted %} -->
-
+                            {% if can_admin_action %}
                                 <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
-
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
                                     <button class="btn btn-xs btn-success py-0" type="submit" style="font-size:0.75rem;"
-
                                             onclick="return confirm('Xác nhận đồng ý khen thưởng tập thể này?')">
-
                                         <i class="bi bi-check2-circle me-1"></i>Đồng ý
-
                                     </button>
-
                                 </form>
-
                                 <button type="button" class="btn btn-xs btn-danger py-0" style="font-size:0.75rem;"
-
                                         data-bs-toggle="modal" data-bs-target="#kdyModalTT{{ ct.id }}">
-
                                     <i class="bi bi-x-circle me-1"></i>Không đồng ý
-
                                 </button>
-
-                               
-
-                                {# ??? N??T H??? DANH HI???U C???A ADMIN #}
-
-                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sĩ thi đua', 'Đơn vị quyết thắng') %}
-
+                                {% if ct.loai_danh_hieu and ct.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
                                 <button type="button" class="btn btn-xs btn-warning py-0 text-dark" style="font-size:0.75rem;"
-
                                         onclick="openDowngradeModal(
-
                                             {{ ct.id }},
-
                                             '{{ ct.ten_don_vi_de_xuat|e }}',
-
                                             '{{ ct.loai_danh_hieu.strip() }}',
-
                                             '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in ct.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
-
                                             'ct'
-
                                         )">
-
                                     <i class="bi bi-arrow-down-circle me-1"></i>Hạ danh hiệu
-
                                 </button>
-
                                 {% endif %}
-
-
-
-                                <!-- {% else %}
-
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chưa biểu quyết</span>
-
-                                {% endif %} -->
-
-                            <!-- {% endif %} -->
-
+                            {% else %}
+                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;">
+                                    <i class="bi bi-lock me-1"></i>Không có quyền
+                                </span>
+                            {% endif %}
                         </div>
-
-                        {% endif %}
-
-                    </td>
-
+                    {% endif %}
+                </td>
                 </tr>
 
                 <!-- {% if can_admin_action and row.all_voted and not row.is_confirmed and not (row.admin_final_vote and row.admin_final_vote.ket_qua == 'Không đồng ý') %} -->
@@ -838,22 +706,21 @@
                         </td>
                         <td>{{ kt.nam_hoc }}</td>
                         <td class="col-b3-detail"><span title="{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}">{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
-                        <td class="text-center no-print">
-                            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
-                                    data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
-                                <i class="bi bi-info-circle"></i>
-                            </button>
-                            <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
-                               class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <!-- {% if can_admin_action %} -->
+                                        <td class="text-center no-print">
+                        <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
+                                data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
+                            <i class="bi bi-info-circle"></i>
+                        </button>
+                        <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
+                        class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if can_admin_action %}
                             <button type="button" class="btn btn-sm btn-outline-danger"
                                     title="Thu hồi phê duyệt cuối"
                                     onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
-                            {# ★ NÚT HẠ DANH HIỆU Bảng 3 #}
                             {% if kt.loai_danh_hieu and kt.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
                             <button type="button" class="btn btn-sm btn-outline-warning text-dark"
                                     title="Hạ danh hiệu"
@@ -867,8 +734,8 @@
                                 <i class="bi bi-arrow-down-circle"></i>
                             </button>
                             {% endif %}
-                            <!-- {% endif %} -->
-                        </td>
+                        {% endif %}
+                    </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -913,37 +780,36 @@
                         </td>
                         <td>{{ kt.nam_hoc }}</td>
                         <td class="col-b3-detail"><span>{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</span></td>
-                        <td class="text-center no-print">
-                            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
-                                    data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
-                                <i class="bi bi-info-circle"></i>
-                            </button>
-                            <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
-                               class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <!-- {% if can_admin_action %} -->
-                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                    title="Thu hồi phê duyệt cuối"
-                                    onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
-                            {# ★ NÚT HẠ DANH HIỆU Bảng 3 #}
-                            {% if kt.loai_danh_hieu and kt.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
-                            <button type="button" class="btn btn-sm btn-outline-warning text-dark"
-                                    title="Hạ danh hiệu"
-                                    onclick="openDowngradeModal(
-                                        {{ kt.id }},
-                                        '{{ kt.ho_ten|e }}',
-                                        '{{ kt.loai_danh_hieu.strip() }}',
-                                        '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in kt.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
-                                        'kt'
-                                    )">
-                                <i class="bi bi-arrow-down-circle"></i>
-                            </button>
-                            {% endif %}
-                            <!-- {% endif %} -->
-                        </td>
+                            <td class="text-center no-print">
+            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-chi-tiet"
+                    data-ct-id="{{ kt.chi_tiet_id }}" title="Xem chi tiết">
+                <i class="bi bi-info-circle"></i>
+            </button>
+            <a href="{{ url_for('admin.reward_detail', kt_id=kt.id) }}"
+            class="btn btn-sm btn-outline-navy me-1" title="Xem trang chi tiết">
+                <i class="bi bi-eye"></i>
+            </a>
+            {% if can_admin_action %}
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        title="Thu hồi phê duyệt cuối"
+                        onclick="openRevokeModal({{ kt.de_xuat_id }}, '{{ kt.don_vi.ten_don_vi|e }}', '{{ kt.nam_hoc|e }}')">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+                {% if kt.loai_danh_hieu and kt.loai_danh_hieu.strip() in ('Chiến sĩ thi đua', 'Chiến sỹ thi đua', 'Đơn vị quyết thắng') %}
+                <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                        title="Hạ danh hiệu"
+                        onclick="openDowngradeModal(
+                            {{ kt.id }},
+                            '{{ kt.ho_ten|e }}',
+                            '{{ kt.loai_danh_hieu.strip() }}',
+                            '{{ 'Chiến sĩ tiên tiến' if 'thi đua' in kt.loai_danh_hieu|lower else 'Đơn vị tiên tiến' }}',
+                            'kt'
+                        )">
+                    <i class="bi bi-arrow-down-circle"></i>
+                </button>
+                {% endif %}
+            {% endif %}
+        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
