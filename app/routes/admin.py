@@ -1052,7 +1052,7 @@ def final_approve_individual(ct_id):
                detail=f'{ho_ten} — đề xuất #{de_xuat.id} năm học {de_xuat.nam_hoc}')
     db.session.commit()
     flash(f'Đã đồng ý cho "{ho_ten}". Khi toàn bộ đề xuất được duyệt sẽ chuyển sang Hội đồng biểu quyết.', 'success')
-    return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc, _anchor='bang2'))
+    return redirect(url_for('admin.tracking', nam_hoc=de_xuat.nam_hoc, _anchor='bang2'))
 
 
 @admin_bp.route('/tracking/<int:id>/final-approve', methods=['POST'])
