@@ -280,14 +280,14 @@
                     {% set bq = row.votes.get(vt) %}
 
                     <td class="text-center no-print col-b2-detail" style="padding:0.25rem 0.3rem;">
+                        <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
+                        <!-- {% if bq %}
+                            <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span> -->
+                            <!-- {% if bq.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
 
-                        {% if bq %}
+                            {% else %}<span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>{% endif %} -->
 
-                            {% if bq.ket_qua == 'Đồng ý' %}<span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
-
-                            {% else %}<span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>{% endif %}
-
-                        {% else %}<span class="text-muted">---</span>{% endif %}
+                        <!-- {% else %}<span class="text-muted">---</span>{% endif %} -->
 
                     </td>
 
@@ -338,7 +338,7 @@
 
                             {% if can_admin_action %}
 
-                                {% if row.all_voted %}
+                                <!-- {% if row.all_voted %} -->
 
                                 <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
 
@@ -392,11 +392,11 @@
 
                                 
 
-                                {% else %}
+                                <!-- {% else %}
 
-                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span>
+                                <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chờ BQ</span> -->
 
-                                {% endif %}
+                                <!-- {% endif %} -->
 
                             {% endif %}
 
@@ -592,7 +592,7 @@
 
                             {% if can_admin_action %}
 
-                                {% if row.all_voted %}
+                                <!-- {% if row.all_voted %} -->
 
                                 <form method="POST" action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}" class="d-inline">
 
@@ -646,11 +646,11 @@
 
 
 
-                                {% else %}
+                                <!-- {% else %}
 
                                 <span class="badge bg-light text-muted border" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>Chưa biểu quyết</span>
 
-                                {% endif %}
+                                {% endif %} -->
 
                             {% endif %}
 
@@ -1394,9 +1394,10 @@ function printSection(sectionId, title) {
     const API_URL = '{{ url_for("admin.api_chi_tiet_detail", ct_id=0) }}'.replace('/0', '/');
 
     function badge(val) {
-        if (val === 'Đồng ý') return '<span class="badge bg-success">Đồng ý</span>';
-        if (val === 'Không đồng ý') return '<span class="badge bg-danger">Không đồng ý</span>';
-        return '<span class="text-muted">—</span>';
+        return '<span class="badge bg-success">Đồng ý</span>';
+        // if (val === 'Đồng ý') return '<span class="badge bg-success">Đồng ý</span>';
+        ///if (val === 'Không đồng ý') return '<span class="badge bg-danger">Không đồng ý</span>';
+       // return '<span class="text-muted">—</span>';
     }
 
     function renderDetail(data) {
