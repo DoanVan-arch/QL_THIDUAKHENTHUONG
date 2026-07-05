@@ -1232,9 +1232,9 @@ def confirm_khong_dong_y_ct(ct_id):
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
     de_xuat = ct.de_xuat
 
-    if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
-        flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
-        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+    # if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+    #     flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
+    #     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     # # Require all 7 organs to have cast a vote before Admin decides
     # for vai_tro in HOI_DONG_VAI_TRO:
@@ -1292,9 +1292,9 @@ def downgrade_danh_hieu_ct(ct_id):
     ct = DeXuatChiTiet.query.get_or_404(ct_id)
     de_xuat = ct.de_xuat
 
-    if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
-        flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
-        return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
+    # if de_xuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value:
+    #     flash('Đề xuất không ở giai đoạn xét duyệt của Hội đồng.', 'warning')
+    #     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
     new_dh = _DOWNGRADE_MAP.get(ct.loai_danh_hieu)
     if not new_dh:
