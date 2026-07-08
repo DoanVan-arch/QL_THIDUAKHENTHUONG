@@ -171,7 +171,7 @@
                 </tr>
                 {% endif %}
                 {# ★ FIX: thêm class kdy-rejected nếu bị từ chối #}
-                <tr class="{{ 'table-success' if row.is_confirmed else 'kdy-rejected' if row.is_rejected else '' }}"
+                <tr class="{{ 'table-success' if row.is_confirmed else 'table-danger' if row.is_rejected else '' }}"
                     data-ct-id="{{ ct.id }}">
                     <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col">
@@ -209,7 +209,7 @@
                                 <span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>
                             {% endif %}
                         {% else %}
-                            <span class="text-muted">---</span>
+                            <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
                         {% endif %}
                     </td>
                     {% endfor %}
@@ -347,7 +347,7 @@
                     </td>
                 </tr>
                 {% endif %}
-                <tr class="{{ 'table-success' if row.is_confirmed else 'kdy-rejected' if row.is_rejected else '' }}"
+                <tr class="{{ 'table-success' if row.is_confirmed else 'table-danger' if row.is_rejected else '' }}"
                     data-ct-id="{{ ct.id }}">
                     <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong></td>
@@ -367,7 +367,7 @@
                                 <span class="badge bg-danger" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-x-lg"></i></span>
                             {% endif %}
                         {% else %}
-                            <span class="text-muted">---</span>
+                            <span class="badge bg-success" title="{{ bq.ghi_chu or '' }}"><i class="bi bi-check-lg"></i></span>
                         {% endif %}
                     </td>
                     {% endfor %}
@@ -1044,7 +1044,7 @@ function openKdyModal(modalId) {
 // ===================================================================
 function openConfirmAllModal() {
     // Đếm số dòng chưa xử lý (không có badge Đã xác nhận / Không đồng ý)
-    var pending = document.querySelectorAll('#bang2 tbody tr[data-ct-id]:not(.table-success):not(.kdy-rejected)').length;
+    var pending = document.querySelectorAll('#bang2 tbody tr[data-ct-id]:not(.table-success):not(.table-danger)').length;
     var countEl = document.getElementById('confirmAllCount');
     if (countEl) countEl.textContent = pending;
     bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmAllModal')).show();
