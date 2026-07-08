@@ -1219,6 +1219,83 @@ def confirm_khen_thuong_ct(ct_id):
         return jsonify({'ok': True, 'message': f'Đã xác nhận khen thưởng cho {name}.'})
     return redirect(url_for('admin.reward_list', nam_hoc=de_xuat.nam_hoc))
 
+@admin_bp.route('/reward-list/confirm-all-khen-thuong', methods=['POST'])
+@login_required
+@admin_required
+def confirm_all_khen_thuong():
+    """
+    Admin xác nhận đồng ý khen thưởng cho TẤT CẢ DeXuatChiTiet
+    đang ở giai đoạn PHE_DUYET_CUOI mà chưa có bản ghi KhenThuong.
+    Tương đương gọi confirm_khen_thuong_ct() cho từng ct một.
+    """
+    now = datetime.utcnow()
+    count_ok = 0
+    count_skip = 0
+    errors = []
+
+    try:
+        # Lấy tất cả DeXuatChiTiet thuộc các đề xuất đang ở PHE_DUYET_CUOI
+        cts = (
+            DeXuatChiTiet.query
+            .join(DeXuat, DeXuatChiTiet.de_xuat_id == DeXuat.id)
+            .filter(DeXuat.trang_thai == TrangThaiDeXuat.PHE_DUYET_CUOI.value)
+            .all()
+        )
+
+        for ct in cts:
+            de_xuat = ct.de_xuat
+
+            # Bỏ qua nếu đã có bản ghi KhenThuong rồi
+            existing = KhenThuong.query.filter_by(
+                de_xuat_id=de_xuat.id,
+                chi_tiet_id=ct.id
+            ).first()
+            if existing:
+                count_skip += 1
+                continue
+
+            # Tạo bản ghi KhenThuong (giống confirm_khen_thuong_ct)
+            name = (
+                ct.quan_nhan.ho_ten
+                if ct.quan_nhan
+                else (ct.ten_don_vi_de_xuat or de_xuat.don_vi.ten_don_vi)
+            )
+            kt = KhenThuong(
+                de_xuat_id=de_xuat.id,
+                chi_tiet_id=ct.id,
+                quan_nhan_id=ct.quan_nhan_id,
+                don_vi_id=de_xuat.don_vi_id,
+                ho_ten=name,
+                cap_bac=ct.quan_nhan.cap_bac if ct.quan_nhan else None,
+                chuc_vu=ct.quan_nhan.chuc_vu if ct.quan_nhan else None,
+                doi_tuong=ct.doi_tuong,
+                loai_danh_hieu=ct.loai_danh_hieu,
+                nam_hoc=de_xuat.nam_hoc,
+                nguoi_duyet_id=current_user.id,
+                ngay_duyet=now,
+            )
+            db.session.add(kt)
+            count_ok += 1
+
+        db.session.commit()
+
+        msg = f'Đã xác nhận khen thưởng cho {count_ok} cá nhân/tập thể.'
+        if count_skip:
+            msg += f' ({count_skip} đã được duyệt trước đó, bỏ qua.)'
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': True, 'message': msg, 'count': count_ok})
+
+        flash(msg, 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        err_msg = f'Lỗi khi xác nhận hàng loạt: {str(e)}'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'message': err_msg}), 500
+        flash(err_msg, 'danger')
+
+    return redirect(url_for('admin.reward_list'))
 
 @admin_bp.route('/reward-list/confirm-khong-dong-y-ct/<int:ct_id>', methods=['POST'])
 @login_required
