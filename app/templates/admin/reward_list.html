@@ -109,6 +109,14 @@
             {% endif %}
         </h6>
         <div class="d-flex gap-2 align-items-center no-print">
+            {# ★ NÚT ĐỒNG Ý TẤT CẢ #}
+            {% if can_admin_action and phe_duyet_cuoi_items %}
+            <button type="button" class="btn btn-sm btn-success"
+                    onclick="openConfirmAllModal()"
+                    title="Xác nhận đồng ý tất cả đề xuất chưa được duyệt">
+                <i class="bi bi-check2-all me-1"></i>Đồng ý tất cả
+            </button>
+            {% endif %}
             <a href="{{ url_for('admin.export_bang2_excel') }}" class="btn btn-sm btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
@@ -162,7 +170,9 @@
                     </td>
                 </tr>
                 {% endif %}
-                <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
+                {# ★ FIX: thêm class kdy-rejected nếu bị từ chối #}
+                <tr class="{{ 'table-success' if row.is_confirmed else 'kdy-rejected' if row.is_rejected else '' }}"
+                    data-ct-id="{{ ct.id }}">
                     <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col">
                         <strong>{{ ct.quan_nhan.ho_ten }}</strong>
@@ -212,6 +222,11 @@
                             <span class="badge bg-success">
                                 <i class="bi bi-check-circle me-1"></i>Đã xác nhận KT
                             </span>
+                        {% elif row.is_rejected %}
+                            {# ★ Hiển thị trạng thái bị từ chối #}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle me-1"></i>Không đồng ý
+                            </span>
                         {% else %}
                             <div class="d-flex gap-1 justify-content-center flex-wrap">
                                 {% if can_admin_action %}
@@ -225,7 +240,6 @@
                                             <i class="bi bi-check2-circle me-1"></i>Đồng ý
                                         </button>
                                     </form>
-                                    {# ★ FIX: dùng onclick gọi JS thay vì data-bs-target #}
                                     <button type="button" class="btn btn-xs btn-danger py-0"
                                             style="font-size:0.75rem;"
                                             onclick="openKdyModal('kdyModal{{ ct.id }}')">
@@ -252,18 +266,18 @@
             </table>
         </div>
 
-        {# ★★★ FIX CHÍNH: Modal KDY cá nhân đặt SAU </table>, NGOÀI <tbody> ★★★ #}
+        {# Modal KDY cá nhân — ngoài table #}
         {% for row in b2_ca_nhan %}
         {% set ct = row.ct %}
         {% if not row.is_confirmed %}
         <div class="modal fade" id="kdyModal{{ ct.id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-sm">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h6 class="modal-title text-danger">
+                    <div class="modal-header bg-danger text-white">
+                        <h6 class="modal-title">
                             <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
                         </h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -282,7 +296,9 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -331,7 +347,8 @@
                     </td>
                 </tr>
                 {% endif %}
-                <tr class="{{ 'table-success' if row.is_confirmed else '' }}">
+                <tr class="{{ 'table-success' if row.is_confirmed else 'kdy-rejected' if row.is_rejected else '' }}"
+                    data-ct-id="{{ ct.id }}">
                     <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong></td>
                     <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '---' }}</td>
@@ -363,6 +380,10 @@
                             <span class="badge bg-success">
                                 <i class="bi bi-check-circle me-1"></i>Đã xác nhận KT
                             </span>
+                        {% elif row.is_rejected %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle me-1"></i>Không đồng ý
+                            </span>
                         {% else %}
                             <div class="d-flex gap-1 justify-content-center flex-wrap">
                                 {% if can_admin_action %}
@@ -376,7 +397,6 @@
                                             <i class="bi bi-check2-circle me-1"></i>Đồng ý
                                         </button>
                                     </form>
-                                    {# ★ FIX: dùng onclick gọi JS #}
                                     <button type="button" class="btn btn-xs btn-danger py-0"
                                             style="font-size:0.75rem;"
                                             onclick="openKdyModal('kdyModalTT{{ ct.id }}')">
@@ -403,18 +423,18 @@
             </table>
         </div>
 
-        {# ★★★ FIX CHÍNH: Modal KDY tập thể đặt SAU </table>, NGOÀI <tbody> ★★★ #}
+        {# Modal KDY tập thể — ngoài table #}
         {% for row in b2_tap_the %}
         {% set ct = row.ct %}
         {% if not row.is_confirmed %}
         <div class="modal fade" id="kdyModalTT{{ ct.id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-sm">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h6 class="modal-title text-danger">
+                    <div class="modal-header bg-danger text-white">
+                        <h6 class="modal-title">
                             <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
                         </h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -433,7 +453,9 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-sm btn-danger">Xác nhận Không đồng ý</button>
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -748,6 +770,45 @@
 
 {# ===== CÁC MODAL TOÀN CỤC ===== #}
 
+{# ★ Modal Đồng ý tất cả #}
+<div class="modal fade" id="confirmAllModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="confirmAllForm" method="POST"
+                  action="{{ url_for('admin.confirm_all_khen_thuong') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-success text-white">
+                    <h6 class="modal-title">
+                        <i class="bi bi-check2-all me-2"></i>Xác nhận Đồng ý tất cả
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Thao tác này sẽ <strong>đồng ý khen thưởng toàn bộ</strong> các đề xuất
+                        chưa được xử lý trong Bảng 2.
+                    </div>
+                    <p class="mb-1" style="font-size:0.9rem;">
+                        Tổng số đề xuất chờ duyệt:
+                        <strong class="text-success" id="confirmAllCount">
+                            {{ phe_duyet_cuoi_items | selectattr('is_confirmed', 'equalto', False) | list | length if phe_duyet_cuoi_items else 0 }}
+                        </strong>
+                    </p>
+                    <p class="text-muted small mb-0">Bạn có chắc chắn muốn tiếp tục?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check2-all me-1"></i>Xác nhận Đồng ý tất cả
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {# Vote Modal #}
 <div class="modal fade" id="voteModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
@@ -899,6 +960,7 @@
 <div id="printSectionTitle" class="print-only" style="font-weight:bold;font-size:13pt;margin-bottom:8px;"></div>
 
 <style>
+    /* ===== Stat mini ===== */
     .stat-mini {
         display:flex; align-items:center; gap:0.4rem;
         background:#fff; border:1px solid var(--border-color);
@@ -907,6 +969,16 @@
     .stat-mini i { font-size:1rem; }
     .print-only { display:none; }
 
+    /* ===== ★ KDY REJECTED ROW — nền đỏ nhạt ===== */
+    tr.kdy-rejected {
+        background-color: #fff0f0 !important;
+        border-left: 3px solid #dc3545;
+    }
+    tr.kdy-rejected td { color: #842029; }
+    tr.kdy-rejected td.sticky-stt-col  { background: #ffd6d6 !important; }
+    tr.kdy-rejected td.sticky-name-col { background: #ffd6d6 !important; }
+
+    /* ===== Print ===== */
     @media print {
         .no-print { display:none !important; }
         .print-only { display:revert !important; }
@@ -918,22 +990,23 @@
         .badge { border:1px solid #666; color:#000 !important; background:transparent !important; }
         #printTimestamp { display:block !important; position:fixed; bottom:10px; right:10px; font-size:9pt; color:#666; }
         body[data-print-section] .print-section { display:none !important; }
-        body[data-print-section="printBang2"] #printBang2 { display:block !important; }
+        body[data-print-section="printBang2"] #bang2   { display:block !important; }
         body[data-print-section="printBang3"] #printBang3 { display:block !important; }
         body[data-print-section="printBangKDY"] #printBangKDY { display:block !important; }
     }
 
+    /* ===== Compact toggle ===== */
     body.rl-compact .col-b1-detail,
     body.rl-compact .col-b2-detail,
     body.rl-compact .col-b3-detail { display:none; }
 
+    /* ===== Sticky STT ===== */
     .sticky-stt-col {
         position:sticky !important; left:0 !important; z-index:1;
         background:#fff !important; min-width:40px; width:40px;
     }
     thead th.sticky-stt-col {
-        background:var(--navy-primary,#1a3a5c) !important;
-        color:#fff !important; z-index:2;
+        background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; z-index:2;
     }
     tbody tr:hover td.sticky-stt-col { background:#F8F9FB !important; }
     tr.table-success td.sticky-stt-col { background:#d1e7dd !important; }
@@ -941,14 +1014,13 @@
     tr.table-danger  td.sticky-stt-col { background:#f8d7da !important; }
     tr.table-light   td.sticky-stt-col { background:#f8f9fa !important; }
 
+    /* ===== Sticky Name ===== */
     .sticky-name-col {
         position:sticky !important; left:40px !important; z-index:1;
-        background:#fff !important; box-shadow:2px 0 4px rgba(0,0,0,0.06);
-        min-width:130px;
+        background:#fff !important; box-shadow:2px 0 4px rgba(0,0,0,0.06); min-width:130px;
     }
     thead th.sticky-name-col {
-        background:var(--navy-primary,#1a3a5c) !important;
-        color:#fff !important; z-index:2;
+        background:var(--navy-primary,#1a3a5c) !important; color:#fff !important; z-index:2;
     }
     tbody tr:hover td.sticky-name-col { background:#F8F9FB !important; }
     tr.table-success td.sticky-name-col { background:#d1e7dd !important; }
@@ -959,20 +1031,28 @@
 
 <script>
 // ===================================================================
-// ★ FIX CHÍNH: openKdyModal — mở modal KDY bằng JS thay vì data-bs-target
-// Lý do: modal nằm ngoài <table> nên data-bs-target đôi khi không resolve
+// openKdyModal — mở modal KDY bằng JS (tránh lỗi data-bs-target)
 // ===================================================================
 function openKdyModal(modalId) {
     var el = document.getElementById(modalId);
-    if (!el) {
-        console.error('KDY Modal not found:', modalId);
-        return;
-    }
-    var modal = bootstrap.Modal.getOrCreateInstance(el);
-    modal.show();
+    if (!el) { console.error('KDY Modal not found:', modalId); return; }
+    bootstrap.Modal.getOrCreateInstance(el).show();
 }
 
-// ===== Vote Modal =====
+// ===================================================================
+// ★ openConfirmAllModal — mở modal Đồng ý tất cả
+// ===================================================================
+function openConfirmAllModal() {
+    // Đếm số dòng chưa xử lý (không có badge Đã xác nhận / Không đồng ý)
+    var pending = document.querySelectorAll('#bang2 tbody tr[data-ct-id]:not(.table-success):not(.kdy-rejected)').length;
+    var countEl = document.getElementById('confirmAllCount');
+    if (countEl) countEl.textContent = pending;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmAllModal')).show();
+}
+
+// ===================================================================
+// Vote Modal
+// ===================================================================
 var VOTE_URL = '{{ url_for("admin.hoi_dong_vote_ct", ct_id=0) }}'.replace('/0', '/');
 
 function openVoteModal(ctId, name, ban, currentVote, oldDH) {
@@ -984,7 +1064,6 @@ function openVoteModal(ctId, name, ban, currentVote, oldDH) {
     document.getElementById('voteFormKhong').action = url;
     document.getElementById('voteNoteY').value = '';
     document.getElementById('voteNoteK').value = '';
-
     var oldDH_clean = oldDH ? oldDH.trim() : '';
     var canDowngrade = ['Chiến sĩ thi đua','Chiến sỹ thi đua','Đơn vị quyết thắng'].indexOf(oldDH_clean) !== -1;
     var btnDowngrade = document.getElementById('btnVoteDowngrade');
@@ -998,27 +1077,29 @@ function openVoteModal(ctId, name, ban, currentVote, oldDH) {
     } else {
         btnDowngrade.style.display = 'none';
     }
-    new bootstrap.Modal(document.getElementById('voteModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('voteModal')).show();
 }
 
-// ===== Revoke Modal =====
+// ===================================================================
+// Revoke / Reject
+// ===================================================================
 function openRevokeModal(deXuatId, unitName, namHoc) {
     document.getElementById('revokeForm').action =
         '{{ url_for("admin.revoke_final_approval", id=0) }}'.replace('/0', '/' + deXuatId);
     document.getElementById('revokeUnitName').textContent = unitName;
     document.getElementById('revokeNamHoc').textContent = namHoc;
-    new bootstrap.Modal(document.getElementById('revokeModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('revokeModal')).show();
 }
-
-// ===== Reject Modal =====
 function openRejectModal(deXuatId, unitName) {
     document.getElementById('rejectForm').action =
         '{{ url_for("admin.reject_from_tracking", id=0) }}'.replace('/0', '/' + deXuatId);
     document.getElementById('rejectUnit').textContent = unitName;
-    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectModal')).show();
 }
 
-// ===== Downgrade Modal =====
+// ===================================================================
+// Downgrade Modal
+// ===================================================================
 var DOWNGRADE_CT_URL = '{{ url_for("admin.downgrade_danh_hieu_ct", ct_id=0) }}'.replace('/0', '/');
 var DOWNGRADE_KT_URL = '{{ url_for("admin.downgrade_khen_thuong", kt_id=0) }}'.replace('/0', '/');
 var _BADGE_MAP = {
@@ -1034,17 +1115,17 @@ function openDowngradeModal(id, name, oldDH, newDH, type) {
         (type === 'kt' ? DOWNGRADE_KT_URL : DOWNGRADE_CT_URL) + id;
     document.getElementById('downgradeName').textContent = name;
     var oldInfo = _BADGE_MAP[oldDH] || ['bg-secondary', oldDH];
-    var oldBadge = document.getElementById('downgradeOldBadge');
-    oldBadge.className = 'badge fs-6 ' + oldInfo[0];
-    oldBadge.textContent = oldInfo[1];
+    var ob = document.getElementById('downgradeOldBadge');
+    ob.className = 'badge fs-6 ' + oldInfo[0]; ob.textContent = oldInfo[1];
     var newInfo = _BADGE_MAP[newDH] || ['bg-secondary', newDH];
-    var newBadge = document.getElementById('downgradeNewBadge');
-    newBadge.className = 'badge fs-6 ' + newInfo[0];
-    newBadge.textContent = newInfo[1];
-    new bootstrap.Modal(document.getElementById('downgradeModal')).show();
+    var nb = document.getElementById('downgradeNewBadge');
+    nb.className = 'badge fs-6 ' + newInfo[0]; nb.textContent = newInfo[1];
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('downgradeModal')).show();
 }
 
-// ===== Compact / Full toggle =====
+// ===================================================================
+// Compact / Full toggle
+// ===================================================================
 (function() {
     var KEY = 'rewardListViewMode';
     var compact = localStorage.getItem(KEY) === 'compact';
@@ -1061,29 +1142,30 @@ function openDowngradeModal(id, name, oldDH, newDH, type) {
     document.addEventListener('DOMContentLoaded', applyView);
 })();
 
-// ===== PDF Print =====
+// ===================================================================
+// PDF Print
+// ===================================================================
 function _setPrintTimestamp() {
     var ts = document.getElementById('printTimestamp');
-    var now = new Date();
-    var pad = function(n){ return n < 10 ? '0'+n : n; };
+    var now = new Date(), pad = function(n){ return n<10?'0'+n:n; };
     ts.textContent = 'In lúc: ' + pad(now.getHours()) + ':' + pad(now.getMinutes())
         + ' ngày ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear();
     ts.style.display = 'block';
 }
 function printPage() {
     document.body.removeAttribute('data-print-section');
-    _setPrintTimestamp();
-    window.print();
+    _setPrintTimestamp(); window.print();
 }
 function printSection(sectionId, title) {
     document.body.setAttribute('data-print-section', sectionId);
     document.getElementById('printSectionTitle').textContent = title || '';
-    _setPrintTimestamp();
-    window.print();
+    _setPrintTimestamp(); window.print();
     setTimeout(function(){ document.body.removeAttribute('data-print-section'); }, 1000);
 }
 
-// ===== Offcanvas chi tiết =====
+// ===================================================================
+// Offcanvas chi tiết
+// ===================================================================
 (function() {
     var API_URL = '{{ url_for("admin.api_chi_tiet_detail", ct_id=0) }}'.replace('/0', '/');
     function badge(val) {
@@ -1091,71 +1173,67 @@ function printSection(sectionId, title) {
         if (val === 'Không đồng ý') return '<span class="badge bg-danger">Không đồng ý</span>';
         return '<span class="text-muted">—</span>';
     }
+    function _accItem(id, icon, title, rows, open) {
+        return '<div class="accordion-item">'
+            + '<h2 class="accordion-header"><button class="accordion-button '+(open?'':'collapsed')+' py-2" type="button"'
+            + ' data-bs-toggle="collapse" data-bs-target="#'+id+'">'
+            + '<i class="bi '+icon+' me-2 text-navy"></i><strong>'+title+'</strong></button></h2>'
+            + '<div id="'+id+'" class="accordion-collapse collapse '+(open?'show':'')+'" data-bs-parent="#detailAccordion">'
+            + '<div class="accordion-body p-0"><table class="table table-sm mb-0" style="font-size:0.82rem;">'
+            + '<tbody>'+rows+'</tbody></table></div></div></div>';
+    }
     function renderDetail(data) {
-        var p = data.personal, n = data.nomination;
-        var criteria = data.criteria, votes = data.votes;
-        var roles = (p.la_chi_huy || p.la_bi_thu)
-            ? [p.la_chi_huy ? 'Cấp trưởng' : '', p.la_bi_thu ? 'Bí thư' : ''].filter(Boolean).join(' – ')
-            : '—';
+        var p = data.personal, n = data.nomination, criteria = data.criteria, votes = data.votes;
+        var roles = (p.la_chi_huy||p.la_bi_thu)
+            ? [p.la_chi_huy?'Cấp trưởng':'',p.la_bi_thu?'Bí thư':''].filter(Boolean).join(' – ') : '—';
         var personalRows = [
-            ['Đơn vị', n.don_vi], ['Năm học', n.nam_hoc || '—'],
-            ['Danh hiệu', '<strong>' + n.loai_danh_hieu + '</strong>'],
-            ['CCCD', p.can_cuoc_cong_dan || '—'], ['Ngày sinh', p.ngay_sinh || '—'],
-            ['Ngày nhập ngũ', p.ngay_nhap_ngu || '—'], ['Cấp bậc', p.cap_bac || '—'],
-            ['Chức vụ', p.chuc_vu || '—'], ['Đối tượng', p.doi_tuong || '—'],
-            ['ĐV trực thuộc', p.don_vi_truc_thuoc || '—'],
-            ['Học hàm/Học vị', (p.hoc_ham || '—') + ' / ' + (p.hoc_vi || '—')],
-            ['Trình độ học vấn', p.trinh_do_hoc_van || '—'],
-            ['Ngoại ngữ', p.ngoai_ngu || '—'], ['Vai trò', roles],
-            ['Đoàn viên', p.la_doan_vien ? 'Có' : 'Không'],
-            ['Hội viên phụ nữ', p.la_hoi_vien_phu_nu ? 'Có' : 'Không'],
-        ].map(function(r){ return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>'; }).join('');
+            ['Đơn vị',n.don_vi],['Năm học',n.nam_hoc||'—'],
+            ['Danh hiệu','<strong>'+n.loai_danh_hieu+'</strong>'],
+            ['CCCD',p.can_cuoc_cong_dan||'—'],['Ngày sinh',p.ngay_sinh||'—'],
+            ['Ngày nhập ngũ',p.ngay_nhap_ngu||'—'],['Cấp bậc',p.cap_bac||'—'],
+            ['Chức vụ',p.chuc_vu||'—'],['Đối tượng',p.doi_tuong||'—'],
+            ['ĐV trực thuộc',p.don_vi_truc_thuoc||'—'],
+            ['Học hàm/Học vị',(p.hoc_ham||'—')+' / '+(p.hoc_vi||'—')],
+            ['Trình độ học vấn',p.trinh_do_hoc_van||'—'],
+            ['Ngoại ngữ',p.ngoai_ngu||'—'],['Vai trò',roles],
+            ['Đoàn viên',p.la_doan_vien?'Có':'Không'],
+            ['Hội viên phụ nữ',p.la_hoi_vien_phu_nu?'Có':'Không'],
+        ].map(function(r){return '<tr><th>'+r[0]+'</th><td>'+r[1]+'</td></tr>';}).join('');
         var criteriaRows = criteria.length
             ? criteria.map(function(c){
-                var sc = c.score ? ' <span class="badge bg-light text-dark border ms-1">' + c.score + '</span>' : '';
-                return '<tr><th>' + c.label + '</th><td>' + c.value + sc + '</td></tr>';
+                var sc = c.score?' <span class="badge bg-light text-dark border ms-1">'+c.score+'</span>':'';
+                return '<tr><th>'+c.label+'</th><td>'+c.value+sc+'</td></tr>';
             }).join('')
             : '<tr><td colspan="2" class="text-muted text-center">Không có tiêu chí</td></tr>';
         var voteRows = votes.map(function(v){
-            return '<tr><th style="font-weight:500;">' + v.vai_tro + '</th><td>'
-                + badge(v.ket_qua)
-                + (v.ghi_chu ? ' <small class="text-muted ms-1">' + v.ghi_chu + '</small>' : '')
-                + '</td></tr>';
+            return '<tr><th style="font-weight:500;">'+v.vai_tro+'</th><td>'+badge(v.ket_qua)
+                +(v.ghi_chu?' <small class="text-muted ms-1">'+v.ghi_chu+'</small>':'')+'</td></tr>';
         }).join('');
         return '<div class="p-3 border-bottom" style="background:#f8f9fa;">'
-            + '<h6 class="mb-0 text-navy fw-bold">' + p.ho_ten + '</h6>'
-            + '<small class="text-muted">' + (p.cap_bac || '') + (p.chuc_vu ? ' — ' + p.chuc_vu : '') + '</small>'
-            + '</div>'
+            + '<h6 class="mb-0 text-navy fw-bold">'+p.ho_ten+'</h6>'
+            + '<small class="text-muted">'+(p.cap_bac||'')+(p.chuc_vu?' — '+p.chuc_vu:'')+'</small></div>'
             + '<div class="accordion accordion-flush" id="detailAccordion">'
-            + _accItem('accPersonal', 'bi-person', 'Thông tin cá nhân', personalRows, true)
-            + _accItem('accCriteria', 'bi-clipboard-data', 'Tiêu chí xét duyệt', criteriaRows, false)
-            + _accItem('accVotes', 'bi-people', 'Biểu quyết Hội đồng', voteRows, false)
+            + _accItem('accPersonal','bi-person','Thông tin cá nhân',personalRows,true)
+            + _accItem('accCriteria','bi-clipboard-data','Tiêu chí xét duyệt',criteriaRows,false)
+            + _accItem('accVotes','bi-people','Biểu quyết Hội đồng',voteRows,false)
             + '</div>';
-    }
-    function _accItem(id, icon, title, rows, open) {
-        return '<div class="accordion-item">'
-            + '<h2 class="accordion-header"><button class="accordion-button ' + (open ? '' : 'collapsed') + ' py-2" type="button"'
-            + ' data-bs-toggle="collapse" data-bs-target="#' + id + '">'
-            + '<i class="bi ' + icon + ' me-2 text-navy"></i><strong>' + title + '</strong></button></h2>'
-            + '<div id="' + id + '" class="accordion-collapse collapse ' + (open ? 'show' : '') + '" data-bs-parent="#detailAccordion">'
-            + '<div class="accordion-body p-0"><table class="table table-sm mb-0" style="font-size:0.82rem;">'
-            + '<tbody>' + rows + '</tbody></table></div></div></div>';
     }
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-chi-tiet');
         if (!btn) return;
-        var ctId = btn.dataset.ctId;
         var body = document.getElementById('chiTietBody');
         body.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Đang tải...</div>';
-        new bootstrap.Offcanvas(document.getElementById('chiTietOffcanvas')).show();
-        fetch(API_URL + ctId)
-            .then(function(r){ return r.json(); })
-            .then(function(data){ body.innerHTML = renderDetail(data); })
-            .catch(function(){ body.innerHTML = '<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>'; });
+        bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('chiTietOffcanvas')).show();
+        fetch(API_URL + btn.dataset.ctId)
+            .then(function(r){return r.json();})
+            .then(function(data){body.innerHTML=renderDetail(data);})
+            .catch(function(){body.innerHTML='<div class="alert alert-danger m-3">Không tải được dữ liệu.</div>';});
     });
 })();
 
-// ===== Lưu/khôi phục năm học =====
+// ===================================================================
+// Lưu/khôi phục năm học
+// ===================================================================
 (function() {
     var LS_KEY = 'sharedNamHoc';
     var currentNamHoc = '{{ nam_hoc_filter }}';
@@ -1164,8 +1242,7 @@ function printSection(sectionId, title) {
         if (saved) {
             var url = new URL(window.location.href);
             url.searchParams.set('nam_hoc', saved);
-            window.location.replace(url.toString());
-            return;
+            window.location.replace(url.toString()); return;
         }
     } else {
         localStorage.setItem(LS_KEY, currentNamHoc);
@@ -1182,26 +1259,55 @@ function onNamHocChange(sel) {
 // ===================================================================
 (function() {
     'use strict';
+
     function showFlash(msg, type) {
-        var cls = type === 'success' ? 'alert-success' : 'alert-danger';
-        var icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+        var cls = type==='success'?'alert-success':'alert-danger';
+        var icon = type==='success'?'bi-check-circle-fill':'bi-x-circle-fill';
         var el = document.createElement('div');
-        el.className = 'alert ' + cls + ' alert-dismissible fade show fixed-top mx-auto mt-3 shadow';
+        el.className = 'alert '+cls+' alert-dismissible fade show fixed-top mx-auto mt-3 shadow';
         el.style.cssText = 'max-width:540px;z-index:9999;left:0;right:0;';
-        el.innerHTML = '<i class="bi ' + icon + ' me-2"></i>' + msg
-            + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        el.innerHTML = '<i class="bi '+icon+' me-2"></i>'+msg
+            +'<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
         document.body.appendChild(el);
-        setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 3500);
+        setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},3500);
+    }
+
+    // ★ Highlight hàng KDY ngay lập tức (không cần reload)
+    function markRowRejected(ctId) {
+        var row = document.querySelector('#bang2 tbody tr[data-ct-id="'+ctId+'"]');
+        if (!row) return;
+        row.className = 'kdy-rejected';
+        // Cập nhật cột Thao tác
+        var tdAction = row.querySelector('td.text-center.no-print');
+        if (tdAction) {
+            tdAction.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Không đồng ý</span>';
+        }
+        // Cập nhật sticky cols
+        var stt = row.querySelector('td.sticky-stt-col');
+        var name = row.querySelector('td.sticky-name-col');
+        if (stt) stt.style.background = '#ffd6d6';
+        if (name) name.style.background = '#ffd6d6';
+    }
+
+    // ★ Highlight hàng Đồng ý ngay lập tức
+    function markRowConfirmed(ctId) {
+        var row = document.querySelector('#bang2 tbody tr[data-ct-id="'+ctId+'"]');
+        if (!row) return;
+        row.className = 'table-success';
+        var tdAction = row.querySelector('td.text-center.no-print');
+        if (tdAction) {
+            tdAction.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã xác nhận KT</span>';
+        }
     }
 
     function reloadBang2And3() {
         var url = new URL(window.location.href);
         url.searchParams.set('_r', Date.now());
-        fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest-partial' } })
-            .then(function(r){ return r.text(); })
-            .then(function(html) {
+        fetch(url.toString(), {headers:{'X-Requested-With':'XMLHttpRequest-partial'}})
+            .then(function(r){return r.text();})
+            .then(function(html){
                 var parser = new DOMParser();
-                var newDoc = parser.parseFromString(html, 'text/html');
+                var newDoc = parser.parseFromString(html,'text/html');
                 var b2Old = document.getElementById('bang2');
                 var b2New = newDoc.getElementById('bang2');
                 if (b2Old && b2New) b2Old.innerHTML = b2New.innerHTML;
@@ -1209,38 +1315,57 @@ function onNamHocChange(sel) {
                 var statsNew = newDoc.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
                 if (statsOld && statsNew) statsOld.innerHTML = statsNew.innerHTML;
             })
-            .catch(function(){ window.location.reload(); });
+            .catch(function(){window.location.reload();});
     }
 
     function ajaxSubmitForm(form) {
-        fetch(form.action, {
-            method: 'POST',
+        // Lấy ct_id từ action URL (dùng để highlight ngay)
+        var actionUrl = form.action || '';
+        var ctIdMatch = actionUrl.match(/\/(\d+)\/?$/);
+        var ctId = ctIdMatch ? ctIdMatch[1] : null;
+        var isKdy = actionUrl.indexOf('confirm-khong-dong-y') !== -1;
+        var isConfirm = actionUrl.indexOf('confirm-khen-thuong-ct') !== -1;
+        var isConfirmAll = actionUrl.indexOf('confirm-all') !== -1;
+
+        fetch(actionUrl, {
+            method:'POST',
             body: new FormData(form),
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers:{'X-Requested-With':'XMLHttpRequest'}
         })
         .then(function(r){
-            if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (!r.ok) throw new Error('HTTP '+r.status);
             return r.json();
         })
-        .then(function(data) {
+        .then(function(data){
             if (data.ok) {
-                showFlash(data.message || 'Thành công.', 'success');
-                // Đóng tất cả modal đang mở
-                document.querySelectorAll('.modal.show').forEach(function(m) {
+                showFlash(data.message||'Thành công.','success');
+                // Đóng modal
+                document.querySelectorAll('.modal.show').forEach(function(m){
                     var inst = bootstrap.Modal.getInstance(m);
                     if (inst) inst.hide();
                 });
-                reloadBang2And3();
+                // ★ Highlight ngay lập tức rồi reload nền
+                if (isKdy && ctId) {
+                    markRowRejected(ctId);
+                    setTimeout(reloadBang2And3, 800);
+                } else if (isConfirm && ctId) {
+                    markRowConfirmed(ctId);
+                    setTimeout(reloadBang2And3, 800);
+                } else {
+                    // Đồng ý tất cả hoặc các action khác → reload ngay
+                    reloadBang2And3();
+                }
             } else {
-                showFlash(data.message || 'Có lỗi xảy ra.', 'danger');
+                showFlash(data.message||'Có lỗi xảy ra.','danger');
             }
         })
-        .catch(function(){ form.submit(); }); // fallback
+        .catch(function(){form.submit();});
     }
 
     var AJAX_ROUTES = [
         '/confirm-khen-thuong-ct/',
         '/confirm-khong-dong-y-ct/',
+        '/confirm-all',
         '/downgrade-ct/',
         '/downgrade-kt/',
         '/vote-ct/',
@@ -1249,9 +1374,9 @@ function onNamHocChange(sel) {
 
     document.addEventListener('submit', function(e) {
         var form = e.target;
-        if (!form || form.tagName !== 'FORM' || form.method.toUpperCase() !== 'POST') return;
+        if (!form || form.tagName!=='FORM' || form.method.toUpperCase()!=='POST') return;
         var action = form.action || '';
-        var isAjax = AJAX_ROUTES.some(function(r){ return action.indexOf(r) !== -1; });
+        var isAjax = AJAX_ROUTES.some(function(r){return action.indexOf(r)!==-1;});
         if (!isAjax) return;
         e.preventDefault();
         ajaxSubmitForm(form);
