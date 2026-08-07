@@ -162,11 +162,14 @@
                     {% set dx = ct_data.dx %}
                     {% set dept_results = ct_data.dept_results %}
                     {% set ct_can_approve = ct_data.can_final_approve %}
-                    {% set ns_r = namespace(any_rejected=false) %}
-                    {% for dn in dept_names %}
-                        {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
-                    {% endfor %}
-                    <tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_can_approve %}table-info{% endif %}">
+                    {# Thêm biến admin_approved vào namespace #}
+{% set ns_r = namespace(any_rejected=false) %}
+{% for dn in dept_names %}
+    {% if dept_results[dn] and dept_results[dn].ket_qua == 'Từ chối' %}{% set ns_r.any_rejected = true %}{% endif %}
+{% endfor %}
+{# ★ SỬA: ưu tiên admin_approved > can_approve > rejected #}
+<tr class="{% if ns_r.any_rejected %}table-danger{% elif ct_data.admin_approved %}row-admin-approved{% elif ct_can_approve %}table-info{% endif %}"
+    data-ct-id="{{ ct.id }}">
                         <td class="col-cb text-center">
                             <input type="checkbox" class="form-check-input row-cb"
                                    data-id="{{ ct.id }}" data-table="CN"
@@ -175,11 +178,16 @@
                         </td>
                         <td class="col-stt">{{ loop.index }}</td>
                         <td class="col-name fw-semibold">
-                            <div class="name-btn-group">
-                                <div class="name-text">
-                                    <i class="bi bi-person-circle text-primary me-1"></i>
-                                    {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
-                                    {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
+                        <div class="name-btn-group">
+                            <div class="name-text">
+                                <i class="bi bi-person-circle text-primary me-1"></i>
+                                {{ ct.quan_nhan.ho_ten if ct.quan_nhan else '-' }}
+                                {% if ct_data.admin_approved %}
+                                <span class="badge bg-warning text-dark d-block mt-1" style="font-size:0.6rem;white-space:normal;">
+                                    <i class="bi bi-hourglass-split me-1"></i>Đang đợi HĐ xác nhận
+                                </span>
+                                {% endif %}
+                                {% if ct.quan_nhan %}{% set qn = ct.quan_nhan %}
                                     <div class="d-flex flex-wrap gap-1 mt-1">
                                         {% if qn.la_chi_huy %}<span class="badge bg-danger" style="font-size:0.58rem;">Cấp trưởng</span>{% endif %}
                                         {% if qn.la_bi_thu %}<span class="badge bg-primary" style="font-size:0.58rem;">Bí thư</span>{% endif %}
@@ -314,7 +322,8 @@
                     {% set dept_results = item.dept_results %}
                     {% set ct_can_approve = item.can_final_approve %}
                     {% set dx_tt = item.dx %}
-                    <tr class="{% if ct_can_approve %}table-info{% endif %}">
+                    <tr class="{% if item.admin_approved %}row-admin-approved{% elif ct_can_approve %}table-info{% endif %}"
+                    data-ct-id="{{ ct.id }}">
                         <td class="col-cb text-center">
                             <input type="checkbox" class="form-check-input row-cb"
                                    data-id="{{ ct.id }}" data-table="TT"
@@ -327,7 +336,13 @@
                                 <div class="name-text">
                                     <i class="bi bi-building text-primary me-1"></i>
                                     {{ ct.ten_don_vi_de_xuat or (dx_tt.don_vi.ten_don_vi if dx_tt.don_vi else '—') }}
+                                    {% if item.admin_approved %}
+                                    <span class="badge bg-warning text-dark d-block mt-1" style="font-size:0.6rem;white-space:normal;">
+                                        <i class="bi bi-hourglass-split me-1"></i>Đang đợi HĐ xác nhận
+                                    </span>
+                                    {% endif %}
                                 </div>
+
                                 <a href="javascript:void(0)" onclick="openDetailModal({{ ct.id }})"
                                    class="btn btn-sm btn-outline-navy py-0 px-1 flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
@@ -423,27 +438,32 @@
 {% endif %}
 
 <!-- ================================================================ MODALS -->
+<!-- ★ SỬA: dùng data-ct-id thay vì action trực tiếp -->
 <div class="modal fade" id="individualApproveModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-        <form id="individualApproveForm" method="POST" action="">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="modal-header" style="background:linear-gradient(135deg,var(--navy-primary),var(--navy-light));color:#fff;">
-                <h6 class="modal-title"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối cá nhân</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-header" style="background:linear-gradient(135deg,var(--navy-primary),var(--navy-light));color:#fff;">
+            <h6 class="modal-title"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối cá nhân</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;">
+                <i class="bi bi-info-circle me-1"></i>Phê duyệt cuối sẽ lưu cá nhân này vào danh sách khen thưởng.
             </div>
-            <div class="modal-body">
-                <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;"><i class="bi bi-info-circle me-1"></i>Phê duyệt cuối sẽ lưu cá nhân này vào danh sách khen thưởng.</div>
-                <p class="mb-2" style="font-size:0.9rem;">Cá nhân: <strong id="approveIndividualName"></strong></p>
-                <div class="mb-3"><label class="form-label small">Ghi chú (tùy chọn)</label>
-                <textarea class="form-control form-control-sm" name="ghi_chu" rows="2"></textarea></div>
+            <p class="mb-2" style="font-size:0.9rem;">Cá nhân: <strong id="approveIndividualName"></strong></p>
+            <div class="mb-3">
+                <label class="form-label small">Ghi chú (tùy chọn)</label>
+                <textarea class="form-control form-control-sm" id="approveGhiChu" rows="2"></textarea>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" class="btn btn-success"><i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt</button>
-            </div>
-        </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-success" id="btnConfirmApprove">
+                <i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt
+            </button>
+        </div>
     </div></div>
 </div>
+
 
 <div class="modal fade" id="batchFinalModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
@@ -578,6 +598,31 @@
 </script>
 
 <style>
+/* ── Hàng đã admin_approved: nền vàng ── */
+.tbl-scroll tr.row-admin-approved td {
+    background-color: #fff3cd !important;
+}
+/* Sticky cols cũng phải vàng */
+.tbl-scroll tr.row-admin-approved .col-cb,
+.tbl-scroll tr.row-admin-approved .col-stt,
+.tbl-scroll tr.row-admin-approved .col-name,
+.tbl-scroll tr.row-admin-approved .col-danhhieu-sticky,
+.tbl-scroll tr.row-admin-approved .col-action {
+    background-color: #fff3cd !important;
+}
+/* Hover giữ nguyên vàng đậm hơn */
+.tbl-scroll tbody tr.row-admin-approved:hover td,
+.tbl-scroll tbody tr.row-admin-approved:hover .col-cb,
+.tbl-scroll tbody tr.row-admin-approved:hover .col-stt,
+.tbl-scroll tbody tr.row-admin-approved:hover .col-name,
+.tbl-scroll tbody tr.row-admin-approved:hover .col-danhhieu-sticky,
+.tbl-scroll tbody tr.row-admin-approved:hover .col-action {
+    background-color: #ffe69c !important;
+}
+</style>
+
+<style>
+    
 /* ============================================================
    STAT MINI
 ============================================================ */
@@ -1138,16 +1183,132 @@ function setAllColToggle(tableId, storageKey, visible) {
     });
     applyColToggle(tableId, storageKey);
 }
+let _currentApproveCtId = null;
 
-/* ---- Modal helpers ---- */
 function openIndividualApproveModal(ctId, hoTen) {
-    document.getElementById('individualApproveForm').action =
-        '{{ url_for("admin.final_approve_individual", ct_id=0) }}'
-            .replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+    _currentApproveCtId = ctId;
     document.getElementById('approveIndividualName').textContent = hoTen;
+    document.getElementById('approveGhiChu').value = '';
+
+    const btn = document.getElementById('btnConfirmApprove');
+    btn.disabled  = false;
+    btn.innerHTML = '<i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt';
+
     new bootstrap.Modal(document.getElementById('individualApproveModal')).show();
 }
 
+document.addEventListener('DOMContentLoaded', function () {
+    // ... (giữ nguyên DOMContentLoaded cũ, chỉ thêm đoạn này vào cuối)
+
+    const btnConfirm = document.getElementById('btnConfirmApprove');
+    if (btnConfirm) {
+        btnConfirm.addEventListener('click', async function () {
+            if (!_currentApproveCtId) return;
+
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+            const ghiChu    = (document.getElementById('approveGhiChu').value || '').trim();
+
+            this.disabled  = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+
+            try {
+                const url = '{{ url_for("admin.final_approve_individual", ct_id=0) }}'
+                    .replace('/0/', '/' + _currentApproveCtId + '/')
+                    .replace('/0',  '/' + _currentApproveCtId);
+
+                const res = await fetch(url, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken':  csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',   // ★ flag AJAX
+                    },
+                    body: 'csrf_token=' + encodeURIComponent(csrfToken)
+                        + '&ghi_chu='   + encodeURIComponent(ghiChu),
+                });
+
+                // Nếu server trả JSON → xử lý inline
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    const data = await res.json();
+                    if (data.success) {
+                        _applyApproveSuccess(_currentApproveCtId);
+                        bootstrap.Modal.getInstance(
+                            document.getElementById('individualApproveModal')
+                        ).hide();
+                    } else {
+                        alert(data.message || 'Có lỗi xảy ra.');
+                    }
+                } else {
+                    // Server redirect (không hỗ trợ JSON) → vẫn update UI
+                    if (res.ok || res.redirected) {
+                        _applyApproveSuccess(_currentApproveCtId);
+                        bootstrap.Modal.getInstance(
+                            document.getElementById('individualApproveModal')
+                        ).hide();
+                    } else {
+                        alert('Có lỗi xảy ra (HTTP ' + res.status + ').');
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Lỗi kết nối. Vui lòng thử lại.');
+            } finally {
+                this.disabled  = false;
+                this.innerHTML = '<i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt';
+            }
+        });
+    }
+});
+
+/**
+ * Cập nhật UI dòng sau khi phê duyệt thành công — không reload trang.
+ * - Đổi màu nền → vàng (row-admin-approved)
+ * - Thêm badge "Đang đợi HĐ xác nhận"
+ * - Ẩn nút phê duyệt cuối
+ */
+function _applyApproveSuccess(ctId) {
+    const row = document.querySelector('tr[data-ct-id="' + ctId + '"]');
+    if (!row) return;
+
+    // 1. Đổi màu nền
+    row.classList.remove('table-info', 'table-danger');
+    row.classList.add('row-admin-approved');
+
+    // Cập nhật sticky cols background
+    row.querySelectorAll(
+        '.col-cb, .col-stt, .col-name, .col-danhhieu-sticky, .col-action'
+    ).forEach(td => {
+        td.style.background = '#fff3cd';
+    });
+
+    // 2. Thêm badge vào cột name (nếu chưa có)
+    const nameCell = row.querySelector('.col-name .name-text');
+    if (nameCell && !nameCell.querySelector('.badge-admin-approved')) {
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-warning text-dark d-block mt-1 badge-admin-approved';
+        badge.style.cssText = 'font-size:0.6rem;white-space:normal;';
+        badge.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Đang đợi HĐ xác nhận';
+        nameCell.appendChild(badge);
+    }
+
+    // 3. Ẩn nút phê duyệt cuối trong cột action
+    const actionCell = row.querySelector('.col-action');
+    if (actionCell) {
+        actionCell.querySelectorAll('.btn-success').forEach(btn => {
+            btn.style.display = 'none';
+        });
+    }
+
+    // 4. Toast thông báo
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success position-fixed bottom-0 end-0 m-3 shadow';
+    toast.style.cssText = 'z-index:9999;min-width:260px;animation:fadeInUp .3s ease;';
+    toast.innerHTML = '<i class="bi bi-shield-check me-2 text-success"></i>'
+                    + 'Đã phê duyệt cuối thành công!';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+}
 function openRejectIndividualModal(ctId, hoTen) {
     document.getElementById('rejectIndividualForm').action =
         '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'

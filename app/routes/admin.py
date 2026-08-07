@@ -486,6 +486,7 @@ def approval_tracking():
                 'can_final_approve': ct_can_approve,
                 'dx_id':            dx.id,
                 'fields_dict':      fields_dict,   # ★ THÊM
+                'admin_approved':   ct.admin_approved,
             }
 
             if is_tap_the:
@@ -1020,7 +1021,7 @@ def final_approve_individual(ct_id):
 
     # Mark this individual as admin pre-approved
     ct.admin_approved = True
-
+    ct.
     # Check if ALL individuals in this nomination are now admin-approved
     all_ct_ids = {c.id for c in de_xuat.chi_tiets}
     already_approved = {c.id for c in de_xuat.chi_tiets if c.admin_approved}
@@ -1052,7 +1053,13 @@ def final_approve_individual(ct_id):
                detail=f'{ho_ten} — đề xuất #{de_xuat.id} năm học {de_xuat.nam_hoc}')
     db.session.commit()
     flash(f'Đã đồng ý cho "{ho_ten}". Khi toàn bộ đề xuất được duyệt sẽ chuyển sang Hội đồng biểu quyết.', 'success')
-    return redirect(url_for('admin.approval_tracking'))
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if is_ajax:
+        return jsonify({'success': True, 'message': 'Phê duyệt thành công'})
+    
+    flash('Đã phê duyệt cuối thành công!', 'success')
+    return redirect(request.referrer or url_for('admin.approval_tracking'))
 
 @admin_bp.route('/tracking/<int:id>/final-approve', methods=['POST'])
 @login_required
