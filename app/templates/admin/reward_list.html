@@ -489,6 +489,37 @@
         </a>
     </div>
 </div>
+
+{# BẢNG 3 FILTER SECTION #}
+<div class="card-section mb-2 no-print">
+    <div class="card-body-custom py-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label mb-0 me-1 fw-semibold small">Lọc Bảng 3:</label>
+            <select class="form-select form-select-sm" id="b3UnitFilter" style="width:auto;">
+                <option value="">Tất cả đơn vị</option>
+                {% for u in unit_names %}
+                <option value="{{ u }}">{{ u }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm" id="b3DanhHieuFilter" style="width:auto;">
+                <option value="">Tất cả danh hiệu</option>
+                {% for dh in danh_hieu_list %}
+                <option value="{{ dh }}">{{ dh }}</option>
+                {% endfor %}
+            </select>
+            <div class="input-group input-group-sm" style="width:200px;">
+                <input type="text" class="form-control" id="b3SearchInput" placeholder="Tìm tên...">
+                <button type="button" class="btn btn-outline-navy" onclick="applyB3Filter()">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearB3Filter()">
+                <i class="bi bi-x-lg me-1"></i>Xóa lọc
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="print-only mb-2">
     <strong>Bảng 3: Danh sách khen thưởng đã xác nhận</strong>
     {% if nam_hoc_filter %} — Năm học: {{ nam_hoc_filter }}{% endif %}
@@ -1299,6 +1330,9 @@ function onNamHocChange(sel) {
     }
 
     function reloadBang2And3() {
+        // Save current scroll position
+        var scrollY = window.scrollY || window.pageYOffset;
+        
         var url = new URL(window.location.href);
         url.searchParams.set('_r', Date.now());
         fetch(url.toString(), {headers:{'X-Requested-With':'XMLHttpRequest-partial'}})
@@ -1312,6 +1346,9 @@ function onNamHocChange(sel) {
                 var statsOld = document.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
                 var statsNew = newDoc.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
                 if (statsOld && statsNew) statsOld.innerHTML = statsNew.innerHTML;
+                
+                // Restore scroll position
+                window.scrollTo(0, scrollY);
             })
             .catch(function(){window.location.reload();});
     }
@@ -1389,6 +1426,8 @@ function onNamHocChange(sel) {
         var btn = e.target.closest('.btn-b2-approve');
         if (!btn) return;
         
+        e.preventDefault();
+        
         var ctId = btn.getAttribute('data-ct-id');
         var name = btn.getAttribute('data-name') || '';
         
@@ -1435,6 +1474,8 @@ function onNamHocChange(sel) {
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-kdy-confirm');
         if (!btn) return;
+        
+        e.preventDefault();
         
         var ctId = btn.getAttribute('data-ct-id');
         var name = btn.getAttribute('data-name') || '';
@@ -1502,6 +1543,130 @@ function onNamHocChange(sel) {
                     row.style.display = isConfirmed ? '' : 'none';
                 }
             });
+        });
+    }
+
+    // ============================================
+    // BẢNG 3 FILTER FUNCTIONS
+    // ============================================
+    window.applyB3Filter = function() {
+        var unitFilter = document.getElementById('b3UnitFilter')?.value.toLowerCase() || '';
+        var danhHieuFilter = document.getElementById('b3DanhHieuFilter')?.value.toLowerCase() || '';
+        var searchText = document.getElementById('b3SearchInput')?.value.toLowerCase() || '';
+        
+        // Get all tables in Bảng 3 (both cá nhân and tập thể)
+        var tables = document.querySelectorAll('#printBang3 table tbody');
+        
+        tables.forEach(function(tbody) {
+            var rows = tbody.querySelectorAll('tr');
+            
+            rows.forEach(function(row) {
+                // Skip group header rows (table-light)
+                if (row.classList.contains('table-light')) {
+                    row.style.display = '';
+                    return;
+                }
+                
+                var cells = row.querySelectorAll('td');
+                if (cells.length === 0) return;
+                
+                // Extract data from row
+                var hoTen = cells[1]?.textContent.toLowerCase() || '';
+                var donVi = '';
+                var danhHieu = '';
+                
+                // Find đơn vị column (usually index 6 for cá nhân, may vary for tập thể)
+                for (var i = 0; i < cells.length; i++) {
+                    var text = cells[i].textContent.toLowerCase();
+                    // Check if it looks like a unit name
+                    if (text.includes('phòng') || text.includes('ban') || text.includes('trung tâm') || 
+                        text.includes('đại đội') || text.includes('tiểu đoàn') || text.includes('trung đoàn')) {
+                        donVi = text;
+                    }
+                    // Check for badges (danh hiệu)
+                    var badge = cells[i].querySelector('.badge');
+                    if (badge) {
+                        danhHieu = badge.textContent.toLowerCase();
+                    }
+                }
+                
+                // Apply filters
+                var showRow = true;
+                
+                if (unitFilter && !donVi.includes(unitFilter)) {
+                    showRow = false;
+                }
+                
+                if (danhHieuFilter) {
+                    var filterNormalized = danhHieuFilter;
+                    // Normalize CSTD/CSTT
+                    if (danhHieu.includes('cstd') || danhHieu.includes('chiến sĩ thi đua')) {
+                        if (!filterNormalized.includes('chiến sĩ thi đua') && 
+                            !filterNormalized.includes('chiến sỹ thi đua')) {
+                            showRow = false;
+                        }
+                    } else if (danhHieu.includes('cstt') || danhHieu.includes('chiến sĩ tiên tiến')) {
+                        if (!filterNormalized.includes('chiến sĩ tiên tiến') && 
+                            !filterNormalized.includes('chiến sỹ tiên tiến')) {
+                            showRow = false;
+                        }
+                    } else if (!danhHieu.includes(filterNormalized)) {
+                        showRow = false;
+                    }
+                }
+                
+                if (searchText && !hoTen.includes(searchText)) {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+            
+            // Hide group headers if all rows in group are hidden
+            var headerRows = tbody.querySelectorAll('tr.table-light');
+            headerRows.forEach(function(headerRow) {
+                var nextRow = headerRow.nextElementSibling;
+                var hasVisibleRows = false;
+                
+                // Check all rows until next header
+                while (nextRow && !nextRow.classList.contains('table-light')) {
+                    if (nextRow.style.display !== 'none') {
+                        hasVisibleRows = true;
+                        break;
+                    }
+                    nextRow = nextRow.nextElementSibling;
+                }
+                
+                headerRow.style.display = hasVisibleRows ? '' : 'none';
+            });
+        });
+    };
+    
+    window.clearB3Filter = function() {
+        document.getElementById('b3UnitFilter').value = '';
+        document.getElementById('b3DanhHieuFilter').value = '';
+        document.getElementById('b3SearchInput').value = '';
+        
+        // Show all rows
+        var tables = document.querySelectorAll('#printBang3 table tbody');
+        tables.forEach(function(tbody) {
+            var rows = tbody.querySelectorAll('tr');
+            rows.forEach(function(row) {
+                row.style.display = '';
+            });
+        });
+    };
+    
+    // Auto-apply filter on select change
+    var b3UnitFilter = document.getElementById('b3UnitFilter');
+    var b3DanhHieuFilter = document.getElementById('b3DanhHieuFilter');
+    var b3SearchInput = document.getElementById('b3SearchInput');
+    
+    if (b3UnitFilter) b3UnitFilter.addEventListener('change', applyB3Filter);
+    if (b3DanhHieuFilter) b3DanhHieuFilter.addEventListener('change', applyB3Filter);
+    if (b3SearchInput) {
+        b3SearchInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') applyB3Filter();
         });
     }
 
