@@ -251,18 +251,33 @@
                         {% endfor %}
                         <td class="col-action text-center">
                             <div class="d-flex gap-1 justify-content-center">
-                                {% if ct_can_approve %}
-                                <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
+                                {# ★ Ẩn nút PD cuối nếu đã admin_approved #}
+                                {% if ct_can_approve and not is_admin_approved %}
+                                <button type="button" class="btn btn-sm btn-success py-0 px-2 btn-final-approve"
+                                        title="Phê duyệt cuối"
                                         onclick="openIndividualApproveModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
                                     <i class="bi bi-shield-check"></i>
                                 </button>
                                 {% endif %}
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
+
+                                {# ★ Ẩn nút Từ chối khi đang đợi HĐ xác nhận #}
+                                {% if not is_admin_approved %}
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                        title="Từ chối"
                                         onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
                                     <i class="bi bi-x-circle"></i>
                                 </button>
+                                {% endif %}
+
+                                {# ★ Thay bằng icon chờ khi admin_approved #}
+                                {% if is_admin_approved %}
+                                <span class="text-warning" title="Đang đợi Hội đồng xác nhận">
+                                    <i class="bi bi-hourglass-split"></i>
+                                </span>
+                                {% endif %}
                             </div>
                         </td>
+
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -399,19 +414,34 @@
                         </td>
                         {% endfor %}
                         <td class="col-action text-center">
-                            <div class="d-flex gap-1 justify-content-center">
-                                {% if ct_can_approve %}
-                                <button type="button" class="btn btn-sm btn-success py-0 px-2" title="Phê duyệt cuối"
-                                        onclick="openIndividualApproveModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
-                                    <i class="bi bi-shield-check"></i>
-                                </button>
-                                {% endif %}
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" title="Từ chối"
-                                        onclick="openRejectIndividualModal({{ ct.id }},'{{ ct.ten_don_vi_de_xuat|e }}')">
-                                    <i class="bi bi-x-circle"></i>
-                                </button>
-                            </div>
-                        </td>
+                        <div class="d-flex gap-1 justify-content-center">
+                            {# ★ Ẩn nút PD cuối nếu đã admin_approved #}
+                            {% if ct_can_approve and not is_admin_approved %}
+                            <button type="button" class="btn btn-sm btn-success py-0 px-2 btn-final-approve"
+                                    title="Phê duyệt cuối"
+                                    onclick="openIndividualApproveModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                                <i class="bi bi-shield-check"></i>
+                            </button>
+                            {% endif %}
+
+                            {# ★ Ẩn nút Từ chối khi đang đợi HĐ xác nhận #}
+                            {% if not is_admin_approved %}
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                    title="Từ chối"
+                                    onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                            {% endif %}
+
+                            {# ★ Thay bằng icon chờ khi admin_approved #}
+                            {% if is_admin_approved %}
+                            <span class="text-warning" title="Đang đợi Hội đồng xác nhận">
+                                <i class="bi bi-hourglass-split"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                </td>
+
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -441,13 +471,14 @@
 <!-- ★ SỬA: dùng data-ct-id thay vì action trực tiếp -->
 <div class="modal fade" id="individualApproveModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
+        {# ★ KHÔNG dùng <form> — dùng fetch thay thế #}
         <div class="modal-header" style="background:linear-gradient(135deg,var(--navy-primary),var(--navy-light));color:#fff;">
-            <h6 class="modal-title"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối cá nhân</h6>
+            <h6 class="modal-title"><i class="bi bi-shield-check me-2"></i>Phê duyệt cuối</h6>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
             <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;">
-                <i class="bi bi-info-circle me-1"></i>Phê duyệt cuối sẽ lưu cá nhân này vào danh sách khen thưởng.
+                <i class="bi bi-info-circle me-1"></i>Phê duyệt cuối sẽ lưu vào danh sách khen thưởng.
             </div>
             <p class="mb-2" style="font-size:0.9rem;">Cá nhân: <strong id="approveIndividualName"></strong></p>
             <div class="mb-3">
@@ -456,6 +487,7 @@
             </div>
         </div>
         <div class="modal-footer">
+            {# ★ type="button" — KHÔNG submit form, KHÔNG reload #}
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
             <button type="button" class="btn btn-success" id="btnConfirmApprove">
                 <i class="bi bi-shield-check me-1"></i>Xác nhận phê duyệt
