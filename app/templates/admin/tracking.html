@@ -252,7 +252,7 @@
                         <td class="col-action text-center">
                             <div class="d-flex gap-1 justify-content-center">
                                 {# ★ Ẩn nút PD cuối nếu đã admin_approved #}
-                                {% if ct_can_approve and not is_admin_approved %}
+                                {% if ct_can_approve and not ct_data.admin_approved %}
                                 <button type="button" class="btn btn-sm btn-success py-0 px-2 btn-final-approve"
                                         title="Phê duyệt cuối"
                                         onclick="openIndividualApproveModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
@@ -261,7 +261,7 @@
                                 {% endif %}
 
                                 {# ★ Ẩn nút Từ chối khi đang đợi HĐ xác nhận #}
-                                {% if not is_admin_approved %}
+                                {% if not ct_data.admin_approved %}
                                 <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
                                         title="Từ chối"
                                         onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
@@ -270,7 +270,7 @@
                                 {% endif %}
 
                                 {# ★ Thay bằng icon chờ khi admin_approved #}
-                                {% if is_admin_approved %}
+                                {% if ct_data.admin_approved %}
                                 <span class="text-warning" title="Đang đợi Hội đồng xác nhận">
                                     <i class="bi bi-hourglass-split"></i>
                                 </span>
@@ -416,7 +416,7 @@
                         <td class="col-action text-center">
                         <div class="d-flex gap-1 justify-content-center">
                             {# ★ Ẩn nút PD cuối nếu đã admin_approved #}
-                            {% if ct_can_approve and not is_admin_approved %}
+                            {% if ct_can_approve and not  item.admin_approved %}
                             <button type="button" class="btn btn-sm btn-success py-0 px-2 btn-final-approve"
                                     title="Phê duyệt cuối"
                                     onclick="openIndividualApproveModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
@@ -425,7 +425,7 @@
                             {% endif %}
 
                             {# ★ Ẩn nút Từ chối khi đang đợi HĐ xác nhận #}
-                            {% if not is_admin_approved %}
+                            {% if not item.admin_approved %}
                             <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
                                     title="Từ chối"
                                     onclick="openRejectIndividualModal({{ ct.id }},'{{ (ct.quan_nhan.ho_ten if ct.quan_nhan else '')|e }}')">
@@ -434,7 +434,7 @@
                             {% endif %}
 
                             {# ★ Thay bằng icon chờ khi admin_approved #}
-                            {% if is_admin_approved %}
+                            {% if item.admin_approved %}
                             <span class="text-warning" title="Đang đợi Hội đồng xác nhận">
                                 <i class="bi bi-hourglass-split"></i>
                             </span>
