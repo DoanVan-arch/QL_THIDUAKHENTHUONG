@@ -2,6 +2,8 @@
 {% block title %}Danh sách khen thưởng{% endblock %}
 
 {% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 {# PAGE HEADER #}
 <div class="page-header">
     <div>
@@ -109,6 +111,12 @@
             {% endif %}
         </h6>
         <div class="d-flex gap-2 align-items-center no-print">
+            {# ★ BỘ LỌC TRẠNG THÁI BẢNG 2 #}
+            <select class="form-select form-select-sm" id="b2StatusFilter" style="width:auto;">
+                <option value="all">Tất cả</option>
+                <option value="pending">Đợi thao tác</option>
+                <option value="confirmed">Đã xác nhận KT</option>
+            </select>
             {# ★ NÚT ĐỒNG Ý TẤT CẢ #}
             {% if can_admin_action and phe_duyet_cuoi_items %}
             <button type="button" class="btn btn-sm btn-success"
@@ -230,16 +238,12 @@
                         {% else %}
                             <div class="d-flex gap-1 justify-content-center flex-wrap">
                                 {% if can_admin_action %}
-                                    <form method="POST"
-                                          action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}"
-                                          class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button class="btn btn-xs btn-success py-0" type="submit"
-                                                style="font-size:0.75rem;"
-                                                onclick="return confirm('Xác nhận khen thưởng cho cá nhân này?')">
-                                            <i class="bi bi-check2-circle me-1"></i>Đồng ý
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-xs btn-success py-0 btn-b2-approve"
+                                            data-ct-id="{{ ct.id }}"
+                                            data-name="{{ ct.quan_nhan.ho_ten }}"
+                                            style="font-size:0.75rem;">
+                                        <i class="bi bi-check2-circle me-1"></i>Đồng ý
+                                    </button>
                                     <button type="button" class="btn btn-xs btn-danger py-0"
                                             style="font-size:0.75rem;"
                                             onclick="openKdyModal('kdyModal{{ ct.id }}')">
@@ -279,28 +283,27 @@
                         </h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="modal-body">
-                            <p class="small mb-2">
-                                Xác nhận <strong>Không đồng ý</strong> khen thưởng cho
-                                <strong>{{ ct.quan_nhan.ho_ten }}</strong>?
-                            </p>
-                            <p class="small text-muted mb-2">
-                                Cá nhân này sẽ chuyển vào danh sách Hội đồng phản đối.
-                            </p>
-                            <div>
-                                <label class="form-label small">Ghi chú lý do (tùy chọn)</label>
-                                <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea>
-                            </div>
+                    <div class="modal-body">
+                        <p class="small mb-2">
+                            Xác nhận <strong>Không đồng ý</strong> khen thưởng cho
+                            <strong>{{ ct.quan_nhan.ho_ten }}</strong>?
+                        </p>
+                        <p class="small text-muted mb-2">
+                            Cá nhân này sẽ chuyển vào danh sách Hội đồng phản đối.
+                        </p>
+                        <div>
+                            <label class="form-label small">Ghi chú lý do (tùy chọn)</label>
+                            <textarea class="form-control form-control-sm kdy-ghi-chu" rows="2"></textarea>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-sm btn-danger">
-                                <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
-                            </button>
-                        </div>
-                    </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-sm btn-danger btn-kdy-confirm"
+                                data-ct-id="{{ ct.id }}"
+                                data-name="{{ ct.quan_nhan.ho_ten }}">
+                            <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -387,16 +390,12 @@
                         {% else %}
                             <div class="d-flex gap-1 justify-content-center flex-wrap">
                                 {% if can_admin_action %}
-                                    <form method="POST"
-                                          action="{{ url_for('admin.confirm_khen_thuong_ct', ct_id=ct.id) }}"
-                                          class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button class="btn btn-xs btn-success py-0" type="submit"
-                                                style="font-size:0.75rem;"
-                                                onclick="return confirm('Xác nhận đồng ý khen thưởng tập thể này?')">
-                                            <i class="bi bi-check2-circle me-1"></i>Đồng ý
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-xs btn-success py-0 btn-b2-approve"
+                                            data-ct-id="{{ ct.id }}"
+                                            data-name="{{ ct.ten_don_vi_de_xuat or '---' }}"
+                                            style="font-size:0.75rem;">
+                                        <i class="bi bi-check2-circle me-1"></i>Đồng ý
+                                    </button>
                                     <button type="button" class="btn btn-xs btn-danger py-0"
                                             style="font-size:0.75rem;"
                                             onclick="openKdyModal('kdyModalTT{{ ct.id }}')">
@@ -436,28 +435,27 @@
                         </h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <form method="POST" action="{{ url_for('admin.confirm_khong_dong_y_ct', ct_id=ct.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="modal-body">
-                            <p class="small mb-2">
-                                Xác nhận <strong>Không đồng ý</strong> khen thưởng cho tập thể
-                                <strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong>?
-                            </p>
-                            <p class="small text-muted mb-2">
-                                Tập thể này sẽ chuyển vào danh sách Hội đồng phân loại.
-                            </p>
-                            <div>
-                                <label class="form-label small">Ghi chú lý do (tùy chọn)</label>
-                                <textarea name="ghi_chu" class="form-control form-control-sm" rows="2"></textarea>
-                            </div>
+                    <div class="modal-body">
+                        <p class="small mb-2">
+                            Xác nhận <strong>Không đồng ý</strong> khen thưởng cho tập thể
+                            <strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong>?
+                        </p>
+                        <p class="small text-muted mb-2">
+                            Tập thể này sẽ chuyển vào danh sách Hội đồng phân loại.
+                        </p>
+                        <div>
+                            <label class="form-label small">Ghi chú lý do (tùy chọn)</label>
+                            <textarea class="form-control form-control-sm kdy-ghi-chu" rows="2"></textarea>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-sm btn-danger">
-                                <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
-                            </button>
-                        </div>
-                    </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-sm btn-danger btn-kdy-confirm"
+                                data-ct-id="{{ ct.id }}"
+                                data-name="{{ ct.ten_don_vi_de_xuat or '---' }}">
+                            <i class="bi bi-x-circle me-1"></i>Xác nhận Không đồng ý
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1381,6 +1379,132 @@ function onNamHocChange(sel) {
         e.preventDefault();
         ajaxSubmitForm(form);
     }, true);
+
+    // ============================================
+    // AJAX HANDLERS FOR BẢNG 2 BUTTONS
+    // ============================================
+    
+    // Handle "Đồng ý" buttons
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-b2-approve');
+        if (!btn) return;
+        
+        var ctId = btn.getAttribute('data-ct-id');
+        var name = btn.getAttribute('data-name') || '';
+        
+        if (!confirm('Xác nhận khen thưởng cho ' + name + '?')) return;
+        
+        var originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+        
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                        document.querySelector('input[name="csrf_token"]')?.value || '';
+        
+        fetch('/admin/reward-list/confirm-khen-thuong-ct/' + ctId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'csrf_token=' + encodeURIComponent(csrfToken)
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            if (data.ok) {
+                showFlash(data.message || 'Đã xác nhận khen thưởng.', 'success');
+                markRowConfirmed(ctId);
+                setTimeout(reloadBang2And3, 800);
+            } else {
+                showFlash(data.message || 'Có lỗi xảy ra.', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        })
+        .catch(function(err) {
+            showFlash('Lỗi kết nối. Vui lòng thử lại.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
+    });
+    
+    // Handle "Không đồng ý" confirm buttons in modals
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-kdy-confirm');
+        if (!btn) return;
+        
+        var ctId = btn.getAttribute('data-ct-id');
+        var name = btn.getAttribute('data-name') || '';
+        var modal = btn.closest('.modal');
+        var ghiChuEl = modal?.querySelector('.kdy-ghi-chu');
+        var ghiChu = ghiChuEl?.value?.trim() || '';
+        
+        var originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+        
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                        document.querySelector('input[name="csrf_token"]')?.value || '';
+        
+        fetch('/admin/reward-list/confirm-khong-dong-y-ct/' + ctId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'csrf_token=' + encodeURIComponent(csrfToken) +
+                  '&ghi_chu=' + encodeURIComponent(ghiChu)
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            if (data.ok) {
+                showFlash(data.message || 'Đã xác nhận không đồng ý.', 'info');
+                var modalInst = bootstrap.Modal.getInstance(modal);
+                if (modalInst) modalInst.hide();
+                markRowRejected(ctId);
+                setTimeout(reloadBang2And3, 800);
+            } else {
+                showFlash(data.message || 'Có lỗi xảy ra.', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        })
+        .catch(function(err) {
+            showFlash('Lỗi kết nối. Vui lòng thử lại.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
+    });
+
+    // ============================================
+    // BẢNG 2 STATUS FILTER
+    // ============================================
+    var b2Filter = document.getElementById('b2StatusFilter');
+    if (b2Filter) {
+        b2Filter.addEventListener('change', function() {
+            var value = this.value;
+            var rows = document.querySelectorAll('#bang2 tbody tr[data-ct-id]');
+            
+            rows.forEach(function(row) {
+                var isConfirmed = row.classList.contains('table-success');
+                
+                if (value === 'all') {
+                    row.style.display = '';
+                } else if (value === 'pending') {
+                    row.style.display = isConfirmed ? 'none' : '';
+                } else if (value === 'confirmed') {
+                    row.style.display = isConfirmed ? '' : 'none';
+                }
+            });
+        });
+    }
+
 })();
 </script>
 
