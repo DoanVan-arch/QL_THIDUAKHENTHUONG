@@ -517,23 +517,20 @@
 
 <div class="modal fade" id="rejectIndividualModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-        <form id="rejectIndividualForm" method="POST" action="">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="modal-header bg-danger text-white">
-                <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối cá nhân</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;"><i class="bi bi-exclamation-triangle me-1"></i>Thao tác này sẽ từ chối cá nhân và gửi thông báo lý do về đơn vị.</div>
-                <p class="mb-2" style="font-size:0.9rem;">Cá nhân: <strong id="rejectIndividualName"></strong></p>
-                <div class="mb-3"><label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
-                <textarea class="form-control form-control-sm" name="ly_do" rows="3" required></textarea></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i>Xác nhận từ chối</button>
-            </div>
-        </form>
+        <div class="modal-header bg-danger text-white">
+            <h6 class="modal-title"><i class="bi bi-x-circle me-2"></i>Từ chối cá nhân</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-warning py-2 mb-3" style="font-size:0.85rem;"><i class="bi bi-exclamation-triangle me-1"></i>Thao tác này sẽ từ chối cá nhân và gửi thông báo lý do về đơn vị.</div>
+            <p class="mb-2" style="font-size:0.9rem;">Cá nhân: <strong id="rejectIndividualName"></strong></p>
+            <div class="mb-3"><label class="form-label small fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+            <textarea class="form-control form-control-sm" id="rejectLyDo" rows="3" required></textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-danger" id="btnConfirmReject"><i class="bi bi-x-circle me-1"></i>Xác nhận từ chối</button>
+        </div>
     </div></div>
 </div>
 
@@ -1341,13 +1338,97 @@ function _applyApproveSuccess(ctId) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
 }
+let _currentRejectCtId = null;
+
 function openRejectIndividualModal(ctId, hoTen) {
-    document.getElementById('rejectIndividualForm').action =
-        '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'
-            .replace('/0/', '/' + ctId + '/').replace('/0', '/' + ctId);
+    _currentRejectCtId = ctId;
     document.getElementById('rejectIndividualName').textContent = hoTen;
-    document.querySelector('#rejectIndividualForm textarea[name="ly_do"]').value = '';
+    document.getElementById('rejectLyDo').value = '';
     new bootstrap.Modal(document.getElementById('rejectIndividualModal')).show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const btnConfirmReject = document.getElementById('btnConfirmReject');
+    if (btnConfirmReject) {
+        btnConfirmReject.addEventListener('click', async function() {
+            if (!_currentRejectCtId) return;
+            
+            const lyDo = document.getElementById('rejectLyDo').value.trim();
+            if (!lyDo) {
+                document.getElementById('rejectLyDo').focus();
+                document.getElementById('rejectLyDo').classList.add('is-invalid');
+                return;
+            }
+            
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+            
+            try {
+                const url = '{{ url_for("admin.reject_individual_from_tracking", ct_id=0) }}'
+                    .replace('/0/', '/' + _currentRejectCtId + '/')
+                    .replace('/0', '/' + _currentRejectCtId);
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: 'csrf_token=' + encodeURIComponent(csrfToken) +
+                          '&ly_do=' + encodeURIComponent(lyDo),
+                });
+                
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    const data = await res.json();
+                    if (data.success) {
+                        _applyRejectSuccess(_currentRejectCtId);
+                        bootstrap.Modal.getInstance(document.getElementById('rejectIndividualModal')).hide();
+                    } else {
+                        alert(data.message || 'Có lỗi xảy ra.');
+                    }
+                } else {
+                    if (res.ok || res.redirected) {
+                        _applyRejectSuccess(_currentRejectCtId);
+                        bootstrap.Modal.getInstance(document.getElementById('rejectIndividualModal')).hide();
+                    } else {
+                        alert('Có lỗi xảy ra (HTTP ' + res.status + ').');
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Lỗi kết nối. Vui lòng thử lại.');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-x-circle me-1"></i>Xác nhận từ chối';
+            }
+        });
+    }
+});
+
+function _applyRejectSuccess(ctId) {
+    const row = document.querySelector('tr[data-ct-id="' + ctId + '"]');
+    if (!row) return;
+    
+    row.classList.remove('table-info', 'row-admin-approved');
+    row.classList.add('table-danger');
+    
+    row.querySelectorAll('.col-cb, .col-stt, .col-name, .col-danhhieu-sticky, .col-action')
+        .forEach(td => td.style.background = '#f8d7da');
+    
+    const actionCell = row.querySelector('.col-action');
+    if (actionCell) {
+        actionCell.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Đã từ chối</span>';
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-warning position-fixed bottom-0 end-0 m-3 shadow';
+    toast.style.cssText = 'z-index:9999;min-width:260px;animation:fadeInUp .3s ease;';
+    toast.innerHTML = '<i class="bi bi-x-circle me-2 text-danger"></i>Đã từ chối thành công!';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
 }
 
 function openRejectNominationModal(dxId, label) {

@@ -419,6 +419,9 @@ def approval_tracking():
             # Chỉ ẩn khi bị từ chối dứt điểm bởi Hội đồng/Tuyên huấn (không ẩn nếu chỉ 1 phòng ban từ chối)
             if ct.bi_loai and ct.phong_loai == "Tuyên huấn" and ct.trang_thai == TrangThaiChiTiet.TU_CHOI.value:
                 continue
+            # ★ FIX: Ẩn những chi tiết đã được xác nhận khen thưởng (đã có KhenThuong record)
+            if ct.id in approved_ct_ids:
+                continue
             if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter: continue
 
             if not is_tap_the:
@@ -1218,6 +1221,8 @@ def confirm_khen_thuong_ct(ct_id):
         ngay_duyet=now,
     )
     db.session.add(kt)
+    # ★ Clear admin_approved flag since it's now fully approved
+    ct.admin_approved = False
     db.session.commit()
     flash(f'Đã xác nhận khen thưởng cho {name}.', 'success')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1280,6 +1285,8 @@ def confirm_all_khen_thuong():
                 ngay_duyet=now,
             )
             db.session.add(kt)
+            # ★ Clear admin_approved flag since it's now fully approved
+            ct.admin_approved = False
             count_ok += 1
 
         db.session.commit()
