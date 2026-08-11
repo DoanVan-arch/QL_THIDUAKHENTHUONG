@@ -2124,6 +2124,7 @@ def don_vi_stats():
         rows = db.session.query(
             DeXuatChiTiet.quan_nhan_id,
             DeXuatChiTiet.loai_danh_hieu,
+            DeXuatChiTiet.trang_thai,
             DeXuat.don_vi_id,
         ).join(DeXuat, DeXuatChiTiet.de_xuat_id == DeXuat.id).filter(
             DeXuat.nam_hoc == nam_hoc_filter,
@@ -2134,16 +2135,38 @@ def don_vi_stats():
         ).all()
 
         # Build per-donvi lookup: {dv_id: {qn_id: set(loai_danh_hieu)}}
+        # ★ Also track per-status sets to compute: đang chờ duyệt / đợi hội đồng xác nhận / đã xác nhận khen thưởng
         from collections import defaultdict
         dv_qn_map = defaultdict(lambda: defaultdict(set))
-        for qn_id, loai_dh, dv_id in rows:
+        # {dv_id: {trang_thai: {qn_id: set(loai_danh_hieu)}}}
+        dv_status_qn_map = defaultdict(lambda: defaultdict(lambda: defaultdict(set)))
+        for qn_id, loai_dh, trang_thai_ct, dv_id in rows:
             if loai_dh:
                 dv_qn_map[dv_id][qn_id].add(loai_dh)
+                dv_status_qn_map[dv_id][trang_thai_ct][qn_id].add(loai_dh)
+
+        # Trạng thái nhóm:
+        # - "đang chờ duyệt": chưa được admin đẩy sang hội đồng (chưa admin_approved)
+        pending_statuses = {TrangThaiChiTiet.NHAP.value, TrangThaiChiTiet.DANG_DUYET.value, TrangThaiChiTiet.DA_DUYET.value}
+        # - "đợi hội đồng xác nhận": admin_approved=True, đang chờ Hội đồng biểu quyết (Bảng 2)
+        hoi_dong_statuses = {TrangThaiChiTiet.HOI_DONG.value}
+        # - "đã xác nhận khen thưởng": đã tạo KhenThuong (Bảng 3)
+        confirmed_statuses = {TrangThaiChiTiet.PHE_DUYET_CUOI.value}
+
+        def count_unique_nom(status_qn_map, statuses):
+            """Đếm số lượt đề cử (qn_id, danh_hieu) duy nhất thuộc các trạng thái cho trước."""
+            combos = set()
+            for st in statuses:
+                for qn_id, danh_hieus in status_qn_map.get(st, {}).items():
+                    for dh in danh_hieus:
+                        combos.add((qn_id, dh))
+            return len(combos)
 
         for dv in don_vi_list:
             # Đếm quân nhân đang hoạt động (is_active=True, chưa bị xóa)
             total_qn = QuanNhan.query.filter_by(don_vi_id=dv.id, is_active=True).count()
             qn_map = dv_qn_map.get(dv.id, {})
+            status_qn_map = dv_status_qn_map.get(dv.id, {})
 
             # Count CSTD (Chiến sĩ thi đua) and CSTT (Chiến sĩ tiên tiến)
             cstd_label = LoaiDanhHieu.CHIEN_SI_THI_DUA.value
@@ -2155,6 +2178,11 @@ def don_vi_stats():
             # Total unique nominated (either CSTD or CSTT)
             total_nom = sum(1 for danh_hieus in qn_map.values()
                             if cstd_label in danh_hieus or cstt_label in danh_hieus)
+
+            # ★ Breakdown theo trạng thái xử lý
+            pending_count   = count_unique_nom(status_qn_map, pending_statuses)
+            hoi_dong_count  = count_unique_nom(status_qn_map, hoi_dong_statuses)
+            confirmed_count = count_unique_nom(status_qn_map, confirmed_statuses)
 
             def pct(num, denom):
                 if not denom:
@@ -2170,6 +2198,13 @@ def don_vi_stats():
                 'total_pct': pct(total_nom, total_qn),
                 'cstd_pct': pct(cstd_count, total_qn),
                 'cstt_pct': pct(cstt_count, total_qn),
+                # ★ Thống kê theo trạng thái xử lý
+                'pending_count': pending_count,
+                'hoi_dong_count': hoi_dong_count,
+                'confirmed_count': confirmed_count,
+                'pending_pct': pct(pending_count, total_qn),
+                'hoi_dong_pct': pct(hoi_dong_count, total_qn),
+                'confirmed_pct': pct(confirmed_count, total_qn),
             })
 
     return render_template('admin/don_vi_stats.html',
@@ -2446,6 +2481,21 @@ def _get_phe_duyet_cuoi_items(nam_hoc=None):
     if not eligible_cts:
         return []
 
+    _pre_ct_ids = [ct.id for ct in eligible_cts]
+
+    # ★ Batch check KhenThuong đã confirm — 1 query
+    confirmed_ct_ids = {
+        r[0] for r in
+        db.session.query(KhenThuong.chi_tiet_id)
+        .filter(KhenThuong.chi_tiet_id.in_(_pre_ct_ids))
+        .all()
+    }
+
+    # ★ Loại bỏ các mục đã xác nhận khen thưởng khỏi Bảng 2 (đã chuyển sang Bảng 3)
+    eligible_cts = [ct for ct in eligible_cts if ct.id not in confirmed_ct_ids]
+    if not eligible_cts:
+        return []
+
     ct_ids = [ct.id for ct in eligible_cts]
 
     # ★ Batch load HoiDongBieuQuyet — 1 query
@@ -2456,14 +2506,6 @@ def _get_phe_duyet_cuoi_items(nam_hoc=None):
     bq_map = {}
     for bq in bq_list:
         bq_map.setdefault(bq.chi_tiet_id, {})[bq.vai_tro] = bq
-
-    # ★ Batch check KhenThuong đã confirm — 1 query
-    confirmed_ct_ids = {
-        r[0] for r in
-        db.session.query(KhenThuong.chi_tiet_id)
-        .filter(KhenThuong.chi_tiet_id.in_(ct_ids))
-        .all()
-    }
 
     # Award order map
     danh_hieu_order = {dh.ten_danh_hieu: dh.thu_tu for dh in DanhHieu.query.all()}

@@ -1367,11 +1367,8 @@ function onNamHocChange(sel) {
                 var statsNew = newDoc.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
                 if (statsOld && statsNew) statsOld.innerHTML = statsNew.innerHTML;
                 
-                // ★ Re-apply Bảng 2 filter after reload
-                var b2Filter = document.getElementById('b2StatusFilter');
-                if (b2Filter && b2Filter.value) {
-                    b2Filter.dispatchEvent(new Event('change'));
-                }
+                // ★ Re-bind + re-apply Bảng 2 filter after reload (old node/listener destroyed)
+                if (window.setupB2Filter) window.setupB2Filter();
                 
                 // Restore scroll position
                 window.scrollTo(0, scrollY);
@@ -1674,41 +1671,45 @@ function onNamHocChange(sel) {
     // ============================================
     // BẢNG 2 STATUS FILTER
     // ============================================
-    var b2Filter = document.getElementById('b2StatusFilter');
-    if (b2Filter) {
-        // ★ Restore filter state from localStorage
-        try {
-            var savedFilter = localStorage.getItem('b2StatusFilter');
-            if (savedFilter) {
-                b2Filter.value = savedFilter;
-                // Trigger filter on page load
-                b2Filter.dispatchEvent(new Event('change'));
+    function applyB2FilterRows(value) {
+        var rows = document.querySelectorAll('#bang2 tbody tr[data-ct-id]');
+        rows.forEach(function(row) {
+            var isConfirmed = row.classList.contains('table-success');
+            if (value === 'all') {
+                row.style.display = '';
+            } else if (value === 'pending') {
+                row.style.display = isConfirmed ? 'none' : '';
+            } else if (value === 'confirmed') {
+                row.style.display = isConfirmed ? '' : 'none';
             }
+        });
+    }
+
+    function setupB2Filter() {
+        var b2Filter = document.getElementById('b2StatusFilter');
+        if (!b2Filter) return;
+
+        // ★ Restore filter state from localStorage (new DOM node has no state)
+        var savedFilter = 'all';
+        try {
+            savedFilter = localStorage.getItem('b2StatusFilter') || 'all';
         } catch(e) {}
-        
+        b2Filter.value = savedFilter;
+
+        // ★ Rebind change listener (old listener was destroyed with innerHTML swap)
         b2Filter.addEventListener('change', function() {
             var value = this.value;
-            
-            // ★ Save filter state to localStorage
             try {
                 localStorage.setItem('b2StatusFilter', value);
             } catch(e) {}
-            
-            var rows = document.querySelectorAll('#bang2 tbody tr[data-ct-id]');
-            
-            rows.forEach(function(row) {
-                var isConfirmed = row.classList.contains('table-success');
-                
-                if (value === 'all') {
-                    row.style.display = '';
-                } else if (value === 'pending') {
-                    row.style.display = isConfirmed ? 'none' : '';
-                } else if (value === 'confirmed') {
-                    row.style.display = isConfirmed ? '' : 'none';
-                }
-            });
+            applyB2FilterRows(value);
         });
+
+        // Apply immediately with restored value
+        applyB2FilterRows(savedFilter);
     }
+    window.setupB2Filter = setupB2Filter;
+    setupB2Filter();
 
     // ============================================
     // BẢNG 3 FILTER FUNCTIONS

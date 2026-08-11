@@ -43,6 +43,9 @@
 {% set grand_nom = stats | sum(attribute='total_nom') %}
 {% set grand_cstd = stats | sum(attribute='cstd_count') %}
 {% set grand_cstt = stats | sum(attribute='cstt_count') %}
+{% set grand_pending = stats | sum(attribute='pending_count') %}
+{% set grand_hoi_dong = stats | sum(attribute='hoi_dong_count') %}
+{% set grand_confirmed = stats | sum(attribute='confirmed_count') %}
 <div class="row g-3 mb-3">
     <div class="col-md-3">
         <div class="card text-center border-0 shadow-sm">
@@ -81,6 +84,37 @@
     </div>
 </div>
 
+<!-- ★ Summary totals theo trạng thái xử lý -->
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <div class="fs-4 fw-bold text-secondary"><i class="bi bi-hourglass-split me-1"></i>{{ grand_pending }}</div>
+                <div class="text-muted small">Đang chờ duyệt (cơ quan)</div>
+                <div class="text-muted small">{{ '%.1f'|format(grand_pending * 100 / grand_qn) if grand_qn else '—' }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <div class="fs-4 fw-bold text-primary"><i class="bi bi-people-fill me-1"></i>{{ grand_hoi_dong }}</div>
+                <div class="text-muted small">Đợi Hội đồng xác nhận</div>
+                <div class="text-muted small">{{ '%.1f'|format(grand_hoi_dong * 100 / grand_qn) if grand_qn else '—' }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <div class="fs-4 fw-bold text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ grand_confirmed }}</div>
+                <div class="text-muted small">Đã xác nhận khen thưởng</div>
+                <div class="text-muted small">{{ '%.1f'|format(grand_confirmed * 100 / grand_qn) if grand_qn else '—' }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Per-unit table -->
 <div class="card-section">
     <div class="card-header-custom d-flex justify-content-between align-items-center">
@@ -103,6 +137,9 @@
                         <th class="text-center" style="width:80px">Tỷ lệ CSTĐ</th>
                         <th class="text-center" style="width:80px">CSTT</th>
                         <th class="text-center" style="width:80px">Tỷ lệ CSTT</th>
+                        <th class="text-center" style="width:90px">Đang chờ duyệt</th>
+                        <th class="text-center" style="width:90px">Đợi Hội đồng</th>
+                        <th class="text-center" style="width:90px">Đã xác nhận KT</th>
                         <th style="width:160px">Biểu đồ (CSTĐ/CSTT)</th>
                     </tr>
                 </thead>
@@ -139,6 +176,18 @@
                         <td class="text-center">
                             {{ ('%.1f%%'|format(row.cstt_pct)) if row.cstt_pct is not none else '—' }}
                         </td>
+                        <td class="text-center">
+                            {% if row.pending_count %}<span class="badge bg-secondary">{{ row.pending_count }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if row.hoi_dong_count %}<span class="badge bg-primary">{{ row.hoi_dong_count }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if row.confirmed_count %}<span class="badge bg-success">{{ row.confirmed_count }}</span>
+                            {% else %}—{% endif %}
+                        </td>
                         <td>
                             {% if row.total_qn %}
                             {% set cstd_w = ((row.cstd_count / row.total_qn) * 100)|round(1) %}
@@ -166,6 +215,9 @@
                         <td class="text-center">{{ '%.1f%%'|format(grand_cstd * 100 / grand_qn) if grand_qn else '—' }}</td>
                         <td class="text-center">{{ grand_cstt }}</td>
                         <td class="text-center">{{ '%.1f%%'|format(grand_cstt * 100 / grand_qn) if grand_qn else '—' }}</td>
+                        <td class="text-center">{{ grand_pending }}</td>
+                        <td class="text-center">{{ grand_hoi_dong }}</td>
+                        <td class="text-center">{{ grand_confirmed }}</td>
                         <td></td>
                     </tr>
                 </tfoot>
