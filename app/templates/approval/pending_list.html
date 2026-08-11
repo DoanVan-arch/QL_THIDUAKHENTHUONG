@@ -159,7 +159,7 @@
     <div class="tbl-mirror" id="mirrorCN"><div></div></div>
     <div class="tbl-outer" id="tblOuterCN">
         <div class="tbl-scroll">
-            <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
+            <table class="table table-custom table-hover mb-0 align-middle sortable-table" id="tableCaNhan">
                 <thead><tr>
                     <th class="sticky-stt">STT</th>
                     <th class="sticky-name">Họ tên</th>
@@ -174,26 +174,26 @@
                     </th>
                     {% endfor %}
                     {% if show_evidence %}
-                    <th class="col-evidence text-center">Minh chứng</th>
+                    <th class="col-evidence text-center no-sort">Minh chứng</th>
                     {% else %}
-                    <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chung">Tệp</th>
+                    <th class="col-mc text-center no-sort" data-col-key="cn_minh_chung" data-col-label="Minh chung">Tệp</th>
                     {% endif %}
                     {% if is_ttr_role %}
                         {% for gdept in gate_dept_fields %}{% for field in gdept.fields %}
-                        <th class="col-gate-criteria text-center {% if loop.first %}border-left-dept{% endif %}"
+                        <th class="col-gate-criteria text-center no-sort {% if loop.first %}border-left-dept{% endif %}"
                             title="{{ gdept.dept ~ ': ' ~ (field_labels[field] if field in field_labels else field) }}">
                             <small>{{ field_labels[field] if field in field_labels else field }}</small>
                         </th>
                         {% endfor %}{% endfor %}
                         {% for mcol in managed_dept_columns %}
-                        <th class="text-center col-managed"><small>{{ mcol }}</small></th>
+                        <th class="text-center col-managed no-sort"><small>{{ mcol }}</small></th>
                         {% endfor %}
                     {% elif managed_dept_columns %}
                         {% for mcol in managed_dept_columns %}
-                        <th class="col-managed"><small>{{ mcol }}</small></th>
+                        <th class="col-managed no-sort"><small>{{ mcol }}</small></th>
                         {% endfor %}
                     {% endif %}
-                    <th class="col-pending text-center">Đang chờ</th>
+                    <th class="col-pending text-center no-sort">Đang chờ</th>
                 </tr></thead>
                 <tbody>
                     {% for item in all_cn %}
@@ -351,7 +351,7 @@
     <div class="tbl-mirror" id="mirrorTT"><div></div></div>
     <div class="tbl-outer" id="tblOuterTT">
         <div class="tbl-scroll">
-            <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
+            <table class="table table-custom table-hover mb-0 align-middle sortable-table" id="tableTapThe">
                 <thead><tr>
                     <th class="sticky-stt">STT</th>
                     <th class="sticky-name">Tên tập thể</th>
@@ -363,9 +363,9 @@
                     <th class="col-criteria" data-col-key="tt_{{ f }}" data-col-label="{{ tt_field_labels.get(f, f) }}"><small>{{ tt_field_labels.get(f, f) }}</small></th>
                     {% endfor %}
                     <th class="col-criteria">{{ field_labels.get('thanh_tich_ca_nhan_khac', 'Thành tích khác') }}</th>
-                    <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chung">Tệp</th>
-                    {% if managed_dept_columns %}{% for mcol in managed_dept_columns %}<th class="col-managed"><small>{{ mcol }}</small></th>{% endfor %}{% endif %}
-                    <th class="col-pending text-center">Đang chờ</th>
+                    <th class="col-mc text-center no-sort" data-col-key="tt_minh_chung" data-col-label="Minh chung">Tệp</th>
+                    {% if managed_dept_columns %}{% for mcol in managed_dept_columns %}<th class="col-managed no-sort"><small>{{ mcol }}</small></th>{% endfor %}{% endif %}
+                    <th class="col-pending text-center no-sort">Đang chờ</th>
                 </tr></thead>
                 <tbody>
                     {% for item in all_tt %}

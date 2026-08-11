@@ -298,3 +298,101 @@ function confirmDelete(formId, itemName) {
         document.getElementById(formId).submit();
     }
 }
+
+// ==========================================
+// GENERIC SORTABLE TABLE UTILITY
+// Add class "sortable-table" to any <table> to enable click-to-sort
+// via a small sort icon appended to each <th>. Add class "no-sort" to
+// a <th> to skip it (e.g. checkbox / action columns).
+// ==========================================
+(function () {
+    function getCellValue(row, index) {
+        var cell = row.children[index];
+        if (!cell) return '';
+        return cell.textContent.replace(/\s+/g, ' ').trim();
+    }
+
+    function compareValues(a, b) {
+        var na = parseFloat(a.replace(/[^0-9.\-]/g, ''));
+        var nb = parseFloat(b.replace(/[^0-9.\-]/g, ''));
+        var looksNumericA = /^[\d.,\-\s%\/]+$/.test(a) && a !== '';
+        var looksNumericB = /^[\d.,\-\s%\/]+$/.test(b) && b !== '';
+        if (looksNumericA && looksNumericB && !isNaN(na) && !isNaN(nb)) {
+            return na - nb;
+        }
+        return a.localeCompare(b, 'vi', { numeric: true, sensitivity: 'base' });
+    }
+
+    function sortTable(table, colIndex, dir) {
+        var tbody = table.tBodies[0];
+        if (!tbody) return;
+        var allRows = Array.prototype.slice.call(tbody.rows);
+
+        // Separate group-divider rows (colspan rows used for visual grouping) from data rows
+        var dataRows = [];
+        var groupRows = [];
+        allRows.forEach(function (row) {
+            var firstCell = row.children[0];
+            if (row.children.length <= 1 || (firstCell && firstCell.hasAttribute('colspan'))) {
+                groupRows.push(row);
+            } else {
+                dataRows.push(row);
+            }
+        });
+
+        dataRows.sort(function (r1, r2) {
+            var v1 = getCellValue(r1, colIndex);
+            var v2 = getCellValue(r2, colIndex);
+            var cmp = compareValues(v1, v2);
+            return dir === 'asc' ? cmp : -cmp;
+        });
+
+        // Group dividers no longer make sense once sorted by an arbitrary column — hide them
+        groupRows.forEach(function (row) { row.style.display = 'none'; });
+        dataRows.forEach(function (row) { tbody.appendChild(row); });
+    }
+
+    function initSortableTable(table) {
+        if (table.dataset.sortInit === '1') return;
+        table.dataset.sortInit = '1';
+        var ths = table.querySelectorAll('thead th');
+        ths.forEach(function (th, index) {
+            if (th.classList.contains('no-sort')) return;
+            if (th.querySelector('.sort-btn')) return;
+
+            var btn = document.createElement('span');
+            btn.className = 'sort-btn no-print';
+            btn.style.cursor = 'pointer';
+            btn.style.marginLeft = '4px';
+            btn.style.opacity = '0.5';
+            btn.style.fontSize = '0.75em';
+            btn.innerHTML = '<i class="bi bi-arrow-down-up"></i>';
+            btn.title = 'Sắp xếp theo cột này';
+            th.appendChild(btn);
+
+            var dir = 'asc';
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                sortTable(table, index, dir);
+                table.querySelectorAll('.sort-btn').forEach(function (b) {
+                    b.innerHTML = '<i class="bi bi-arrow-down-up"></i>';
+                    b.style.opacity = '0.5';
+                });
+                btn.innerHTML = dir === 'asc'
+                    ? '<i class="bi bi-sort-alpha-down"></i>'
+                    : '<i class="bi bi-sort-alpha-up"></i>';
+                btn.style.opacity = '1';
+                dir = dir === 'asc' ? 'desc' : 'asc';
+            });
+        });
+    }
+
+    function initAll(root) {
+        (root || document).querySelectorAll('table.sortable-table').forEach(initSortableTable);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () { initAll(document); });
+    // Expose globally so pages that reload table content via AJAX can re-init new headers
+    window.initSortableTables = initAll;
+})();

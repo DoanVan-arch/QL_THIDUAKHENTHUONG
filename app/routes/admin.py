@@ -264,6 +264,20 @@ from collections import defaultdict
 from sqlalchemy.orm import joinedload, subqueryload, contains_eager
 from sqlalchemy import case, func
 
+
+def _ct_status_bucket(ct, is_confirmed):
+    """Map một DeXuatChiTiet vào 1 trong 3 nhóm trạng thái dùng cho bộ lọc tracking.html:
+    - 'phe_duyet_cuoi': đã có KhenThuong (Bảng 3)
+    - 'hoi_dong':       admin_approved=True, đang chờ Hội đồng biểu quyết (Bảng 2)
+    - 'cho_duyet':      còn lại (đang chờ cơ quan thường trực duyệt — Bảng 1)
+    """
+    if is_confirmed or ct.trang_thai == TrangThaiChiTiet.PHE_DUYET_CUOI.value:
+        return 'phe_duyet_cuoi'
+    if ct.admin_approved or ct.trang_thai == TrangThaiChiTiet.HOI_DONG.value:
+        return 'hoi_dong'
+    return 'cho_duyet'
+
+
 @admin_bp.route('/tracking')
 @login_required
 @admin_required
@@ -279,10 +293,15 @@ def approval_tracking():
     # ════════════════════════════════════════════════════════
     # 1. QUERY ĐỀ XUẤT — eager load
     # ════════════════════════════════════════════════════════
+    # ★ status_filter giờ lọc theo TrangThaiChiTiet (đề xuất chi tiết), không phải DeXuat.trang_thai.
+    # Mặc định (không lọc "phe_duyet_cuoi") vẫn loại các đề xuất đã Phê duyệt cuối hoàn toàn ra khỏi
+    # trang theo dõi (chúng đã chuyển sang Bảng 2/3 ở reward_list.html).
     query = DeXuat.query.filter(
         DeXuat.trang_thai != TrangThaiDeXuat.NHAP.value,
-        DeXuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value,
-    ).options(
+    )
+    if status_filter != 'phe_duyet_cuoi':
+        query = query.filter(DeXuat.trang_thai != TrangThaiDeXuat.PHE_DUYET_CUOI.value)
+    query = query.options(
         joinedload(DeXuat.don_vi),
         subqueryload(DeXuat.chi_tiets).joinedload(DeXuatChiTiet.quan_nhan),
         subqueryload(DeXuat.chi_tiets).subqueryload(DeXuatChiTiet.minh_chungs),
@@ -291,8 +310,6 @@ def approval_tracking():
 
     if nam_hoc_filter:
         query = query.filter(DeXuat.nam_hoc == nam_hoc_filter)
-    if status_filter:
-        query = query.filter(DeXuat.trang_thai == status_filter)
 
     query = query.join(DonVi, DeXuat.don_vi_id == DonVi.id)
     if unit_filter:
@@ -420,8 +437,16 @@ def approval_tracking():
             if ct.bi_loai and ct.phong_loai == "Tuyên huấn" and ct.trang_thai == TrangThaiChiTiet.TU_CHOI.value:
                 continue
             # ★ FIX: Ẩn những chi tiết đã được xác nhận khen thưởng (đã có KhenThuong record)
-            if ct.id in approved_ct_ids:
+            # trừ khi người dùng đang lọc riêng theo trạng thái "Phê duyệt cuối"
+            if ct.id in approved_ct_ids and status_filter != 'phe_duyet_cuoi':
                 continue
+
+            # ★ Lọc theo trạng thái đề xuất chi tiết (chờ duyệt / đợi hội đồng xác nhận / phê duyệt cuối)
+            if status_filter:
+                ct_bucket = _ct_status_bucket(ct, ct.id in approved_ct_ids)
+                if ct_bucket != status_filter:
+                    continue
+
             if danh_hieu_filter and ct.loai_danh_hieu != danh_hieu_filter: continue
 
             if not is_tap_the:
@@ -586,7 +611,13 @@ def approval_tracking():
     # ════════════════════════════════════════════════════════
     # 10. MISC
     # ════════════════════════════════════════════════════════
-    status_list    = [e.value for e in TrangThaiDeXuat if e != TrangThaiDeXuat.NHAP]
+    # ★ Trạng thái lọc theo đề xuất chi tiết (không phải theo đề xuất tổng)
+    status_list    = ['cho_duyet', 'hoi_dong', 'phe_duyet_cuoi']
+    STATUS_CT_LABELS = {
+        'cho_duyet':      'Chờ duyệt',
+        'hoi_dong':       'Đợi hội đồng xác nhận',
+        'phe_duyet_cuoi': 'Phê duyệt cuối',
+    }
     danh_hieu_list = [e.value for e in LoaiDanhHieu]
     # 1. Lấy danh sách unit_names đã được sắp xếp chuẩn theo thu_tu và ten_don_vi
     unit_names = [
@@ -629,6 +660,7 @@ def approval_tracking():
         scope_filter=scope_filter,
         view_mode=view_mode,
         status_list=status_list,
+        status_ct_labels=STATUS_CT_LABELS,
         unit_names=unit_names,
         nam_hoc_list=nam_hoc_list,
         nam_hoc_filter=nam_hoc_filter,

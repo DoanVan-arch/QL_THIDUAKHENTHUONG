@@ -74,7 +74,7 @@
             {% if nam_hoc_filter %}
             <select class="form-select form-select-sm" name="status" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Tất cả trạng thái</option>
-                {% for s in status_list %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                {% for s in status_list %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ status_ct_labels.get(s, s) }}</option>{% endfor %}
             </select>
             <select class="form-select form-select-sm" name="unit" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Tất cả đơn vị</option>
@@ -127,10 +127,10 @@
     <div class="tbl-outer" id="tblOuterCN">
         {# ★ tbl-scroll: width wrapper, KHÔNG overflow #}
         <div class="tbl-scroll">
-            <table class="table table-custom table-hover mb-0 align-middle" id="tableCaNhan">
+            <table class="table table-custom table-hover mb-0 align-middle sortable-table" id="tableCaNhan">
                 <thead>
                     <tr>
-                        <th class="col-cb text-center">
+                        <th class="col-cb text-center no-sort">
                             <input type="checkbox" class="form-check-input" id="checkAllCN"
                                    title="Chọn tất cả cá nhân" onchange="toggleCheckAll('CN',this.checked)">
                         </th>
@@ -150,13 +150,13 @@
                             data-col-label="{{ all_field_labels.get(field, field) }}">{{ all_field_labels[field] }}</th>
                         {% endfor %}
                         
-                        <th class="col-mc text-center" data-col-key="cn_minh_chung" data-col-label="Minh chứng">Tệp</th>
+                        <th class="col-mc text-center no-sort" data-col-key="cn_minh_chung" data-col-label="Minh chứng">Tệp</th>
                         {% for col in tracking_dept_columns %}
-                        <th class="col-dept text-center" title="{{ col.label }}">
+                        <th class="col-dept text-center no-sort" title="{{ col.label }}">
                             <div class="dept-label">{{ col.label }}</div>
                         </th>
                         {% endfor %}
-                        <th class="col-action text-center">Thao tác</th>
+                        <th class="col-action text-center no-sort">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -304,10 +304,10 @@
     <div class="tbl-outer" id="tblOuterTT">
         {# ★ tbl-scroll: width wrapper #}
         <div class="tbl-scroll">
-            <table class="table table-custom table-hover mb-0 align-middle" id="tableTapThe">
+            <table class="table table-custom table-hover mb-0 align-middle sortable-table" id="tableTapThe">
                 <thead>
                     <tr>
-                        <th class="col-cb text-center">
+                        <th class="col-cb text-center no-sort">
                             <input type="checkbox" class="form-check-input" id="checkAllTT"
                                    title="Chọn tất cả tập thể" onchange="toggleCheckAll('TT',this.checked)">
                         </th>
@@ -325,13 +325,13 @@
                             data-col-label="{{ tt_field_labels.get(f, f) }}">{{ tt_field_labels.get(f, f) }}</th>
                         {% endfor %}
                         <th class="col-normal text-center">T.tích khác</th>
-                        <th class="col-mc text-center" data-col-key="tt_minh_chung" data-col-label="Minh chứng">Tệp</th>
+                        <th class="col-mc text-center no-sort" data-col-key="tt_minh_chung" data-col-label="Minh chứng">Tệp</th>
                         {% for col in tracking_dept_columns %}
-                        <th class="col-dept text-center" title="{{ col.label }}">
+                        <th class="col-dept text-center no-sort" title="{{ col.label }}">
                             <div class="dept-label">{{ col.label }}</div>
                         </th>
                         {% endfor %}
-                        <th class="col-action text-center">Thao tác</th>
+                        <th class="col-action text-center no-sort">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>

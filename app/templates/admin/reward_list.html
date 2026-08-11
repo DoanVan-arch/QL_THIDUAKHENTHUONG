@@ -148,10 +148,10 @@
             <i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b2_ca_nhan|length }})
         </div>
         <div class="table-responsive mb-3">
-            <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;" id="tableB2CaNhan">
+            <table class="table table-sm table-custom mb-0 sortable-table" style="font-size:0.82rem;" id="tableB2CaNhan">
                 <thead>
                     <tr>
-                        <th class="text-center no-print" style="width:40px;">
+                        <th class="text-center no-print no-sort" style="width:40px;">
                             <input type="checkbox" class="form-check-input" id="checkAllB2CN" title="Chọn tất cả dòng đã xác nhận">
                         </th>
                         <th class="sticky-stt-col">STT</th>
@@ -161,13 +161,13 @@
                         <th style="white-space:nowrap;">Cấp bậc / Chức vụ</th>
                         <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
                         {% for vt in HOI_DONG_VAI_TRO %}
-                        <th class="text-center no-print col-b2-detail"
+                        <th class="text-center no-print no-sort col-b2-detail"
                             style="font-size:0.72rem;white-space:normal;min-width:72px;max-width:90px;line-height:1.3;word-break:break-word;">
                             {{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}
                         </th>
                         {% endfor %}
                         <th class="text-center print-only" style="display:none;">Kết quả BQ</th>
-                        <th class="text-center no-print">Thao tác</th>
+                        <th class="text-center no-print no-sort">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -329,10 +329,10 @@
             <i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b2_tap_the|length }})
         </div>
         <div class="table-responsive">
-            <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;" id="tableB2TapThe">
+            <table class="table table-sm table-custom mb-0 sortable-table" style="font-size:0.82rem;" id="tableB2TapThe">
                 <thead>
                     <tr>
-                        <th class="text-center no-print" style="width:40px;">
+                        <th class="text-center no-print no-sort" style="width:40px;">
                             <input type="checkbox" class="form-check-input" id="checkAllB2TT" title="Chọn tất cả dòng đã xác nhận">
                         </th>
                         <th class="sticky-stt-col">STT</th>
@@ -341,13 +341,13 @@
                         <th>Danh hiệu</th>
                         <th class="text-center col-b2-detail" style="white-space:nowrap;">Tiến độ BQ</th>
                         {% for vt in HOI_DONG_VAI_TRO %}
-                        <th class="text-center no-print col-b2-detail"
+                        <th class="text-center no-print no-sort col-b2-detail"
                             style="font-size:0.72rem;white-space:normal;min-width:72px;max-width:90px;line-height:1.3;word-break:break-word;">
                             {{ HOI_DONG_VAI_TRO_DISPLAY[vt] }}
                         </th>
                         {% endfor %}
                         <th class="text-center print-only" style="display:none;">Kết quả BQ</th>
-                        <th class="text-center no-print">Thao tác</th>
+                        <th class="text-center no-print no-sort">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -582,7 +582,7 @@
             <i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b3_ca_nhan|length }})
         </div>
         <div class="table-responsive">
-            <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
+            <table class="table table-custom mb-0 align-middle sortable-table" style="font-size:0.85rem;">
                 <thead>
                     <tr>
                         <th class="sticky-stt-col">STT</th>
@@ -595,7 +595,7 @@
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
                         <th class="col-b3-detail">Ngày duyệt</th>
-                        <th class="text-center no-print" style="width:110px;">Thao tác</th>
+                        <th class="text-center no-print no-sort" style="width:110px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -608,7 +608,7 @@
                         <td colspan="11" class="fw-semibold text-navy">{{ kt.don_vi.ten_don_vi }} - Năm học {{ kt.nam_hoc }}</td>
                     </tr>
                     {% endif %}
-                    <tr>
+                    <tr data-unit="{{ kt.don_vi.ten_don_vi|e }}" data-danh-hieu="{{ kt.loai_danh_hieu|e }}" data-ten="{{ kt.ho_ten|e }}">
                         <td class="sticky-stt-col">{{ loop.index }}</td>
                         <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>
@@ -667,7 +667,7 @@
             <i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b3_tap_the|length }})
         </div>
         <div class="table-responsive">
-            <table class="table table-custom mb-0 align-middle" style="font-size:0.85rem;">
+            <table class="table table-custom mb-0 align-middle sortable-table" style="font-size:0.85rem;">
                 <thead>
                     <tr>
                         <th class="sticky-stt-col">STT</th>
@@ -676,7 +676,7 @@
                         <th>Danh hiệu</th>
                         <th>Năm học</th>
                         <th class="col-b3-detail">Ngày duyệt</th>
-                        <th class="text-center no-print" style="width:110px;">Thao tác</th>
+                        <th class="text-center no-print no-sort" style="width:110px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -689,7 +689,7 @@
                         <td colspan="7" class="fw-semibold text-navy">{{ kt.don_vi.ten_don_vi }} - Năm học {{ kt.nam_hoc }}</td>
                     </tr>
                     {% endif %}
-                    <tr>
+                    <tr data-unit="{{ kt.don_vi.ten_don_vi|e }}" data-danh-hieu="{{ kt.loai_danh_hieu|e }}" data-ten="{{ kt.ho_ten|e }}">
                         <td class="sticky-stt-col">{{ loop.index }}</td>
                         <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>{{ kt.don_vi.ten_don_vi }}</td>
@@ -1369,6 +1369,9 @@ function onNamHocChange(sel) {
                 
                 // ★ Re-bind + re-apply Bảng 2 filter after reload (old node/listener destroyed)
                 if (window.setupB2Filter) window.setupB2Filter();
+
+                // ★ Re-init sort buttons on freshly injected table headers
+                if (window.initSortableTables && b2Old) window.initSortableTables(b2Old);
                 
                 // Restore scroll position
                 window.scrollTo(0, scrollY);
@@ -1728,56 +1731,23 @@ function onNamHocChange(sel) {
             rows.forEach(function(row) {
                 // Skip group header rows (table-light)
                 if (row.classList.contains('table-light')) {
-                    row.style.display = '';
                     return;
                 }
                 
-                var cells = row.querySelectorAll('td');
-                if (cells.length === 0) return;
-                
-                // Extract data from row
-                var hoTen = cells[1]?.textContent.toLowerCase() || '';
-                var donVi = '';
-                var danhHieu = '';
-                
-                // Find đơn vị column (usually index 6 for cá nhân, may vary for tập thể)
-                for (var i = 0; i < cells.length; i++) {
-                    var text = cells[i].textContent.toLowerCase();
-                    // Check if it looks like a unit name
-                    if (text.includes('phòng') || text.includes('ban') || text.includes('trung tâm') || 
-                        text.includes('đại đội') || text.includes('tiểu đoàn') || text.includes('trung đoàn')) {
-                        donVi = text;
-                    }
-                    // Check for badges (danh hiệu)
-                    var badge = cells[i].querySelector('.badge');
-                    if (badge) {
-                        danhHieu = badge.textContent.toLowerCase();
-                    }
-                }
+                // ★ Read reliable data attributes set directly on the row (server-rendered)
+                var donVi = (row.dataset.unit || '').toLowerCase();
+                var danhHieu = (row.dataset.danhHieu || '').toLowerCase();
+                var hoTen = (row.dataset.ten || '').toLowerCase();
                 
                 // Apply filters
                 var showRow = true;
                 
-                if (unitFilter && !donVi.includes(unitFilter)) {
+                if (unitFilter && donVi !== unitFilter) {
                     showRow = false;
                 }
                 
-                if (danhHieuFilter) {
-                    var filterNormalized = danhHieuFilter;
-                    // Normalize CSTD/CSTT
-                    if (danhHieu.includes('cstd') || danhHieu.includes('chiến sĩ thi đua')) {
-                        if (!filterNormalized.includes('chiến sĩ thi đua') && 
-                            !filterNormalized.includes('chiến sỹ thi đua')) {
-                            showRow = false;
-                        }
-                    } else if (danhHieu.includes('cstt') || danhHieu.includes('chiến sĩ tiên tiến')) {
-                        if (!filterNormalized.includes('chiến sĩ tiên tiến') && 
-                            !filterNormalized.includes('chiến sỹ tiên tiến')) {
-                            showRow = false;
-                        }
-                    } else if (!danhHieu.includes(filterNormalized)) {
-                        showRow = false;
-                    }
+                if (danhHieuFilter && danhHieu !== danhHieuFilter) {
+                    showRow = false;
                 }
                 
                 if (searchText && !hoTen.includes(searchText)) {
