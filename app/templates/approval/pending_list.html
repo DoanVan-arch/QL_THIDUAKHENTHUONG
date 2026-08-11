@@ -4,6 +4,16 @@
 {% block content %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
+{# ★ Loading overlay for initial page load #}
+<div id="pageLoadingOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div class="text-center">
+        <div class="spinner-border text-navy" role="status" style="width:3rem;height:3rem;">
+            <span class="visually-hidden">Đang tải...</span>
+        </div>
+        <p class="mt-3 text-muted">Đang tải dữ liệu...</p>
+    </div>
+</div>
+
 <div class="page-header">
     <div>
         <h4><i class="bi bi-clipboard-check me-2"></i>Phê duyệt khen thưởng</h4>
@@ -647,21 +657,37 @@ function onNamHocChange(sel){
 
 <script>
 document.addEventListener('DOMContentLoaded',function(){
+  // ★ Hide loading overlay once DOM is ready
+  const loadingOverlay=document.getElementById('pageLoadingOverlay');
+  if(loadingOverlay){
+    loadingOverlay.style.display='none';
+  }
+  
   const csrfToken=document.querySelector('meta[name="csrf-token"]').content;
   const _pts=document.getElementById('printTimestamp');
   if(_pts)_pts.textContent=new Date().toLocaleString('vi-VN');
 
-  // ── Stats counter O(1)
+  // ── Stats counter O(1) with caching
   let _stats={
     total:parseInt(document.getElementById('gs-total')?.textContent||0),
     approved:parseInt(document.getElementById('gs-approved')?.textContent||0),
     rejected:parseInt(document.getElementById('gs-rejected')?.textContent||0)
   };
   function updateGlobalStats(delta){
-    if(delta){_stats.approved+=(delta.approved||0);_stats.rejected+=(delta.rejected||0);}
-    else{
-      _stats.approved=document.querySelectorAll('.ct-row.table-success').length;
-      _stats.rejected=document.querySelectorAll('.ct-row.table-danger').length;
+    if(delta){
+      _stats.approved+=(delta.approved||0);
+      _stats.rejected+=(delta.rejected||0);
+    } else{
+      // ★ Use cached rows for counting
+      const rows=getCachedRows();
+      let approvedCount=0,rejectedCount=0;
+      rows.forEach(row=>{
+        if(row.style.display==='none')return;
+        if(row.classList.contains('table-success'))approvedCount++;
+        else if(row.classList.contains('table-danger'))rejectedCount++;
+      });
+      _stats.approved=approvedCount;
+      _stats.rejected=rejectedCount;
     }
     const pending=Math.max(0,_stats.total-_stats.approved-_stats.rejected);
     const el=id=>document.getElementById(id);
@@ -691,32 +717,45 @@ document.addEventListener('DOMContentLoaded',function(){
   btnC&&btnC.addEventListener('click',()=>applyViewMode('compact'));
   btnF&&btnF.addEventListener('click',()=>applyViewMode('full'));
 
-  // ── Filters + debounce
+  // ── Filters + debounce + caching for performance
   const unitFilter=document.getElementById('unitFilter');
   const danhHieuFilter=document.getElementById('danhHieuFilter');
   const searchInput=document.getElementById('searchInput');
   const scopeFilter=document.getElementById('scopeFilter');
   const BAN_QUANLUC=['Công nhân viên','Quân nhân chuyên nghiệp','Hạ sĩ quan, chiến sĩ'];
+  
+  // ★ CACHE all rows once to avoid repeated querySelectorAll
+  let _cachedRows=null;
+  function getCachedRows(){
+    if(!_cachedRows)_cachedRows=document.querySelectorAll('.ct-row');
+    return _cachedRows;
+  }
+  
   function debounce(fn,ms){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
+  
+  // ★ Use requestAnimationFrame to batch DOM updates
   function applyFilters(){
     const selUnit=unitFilter?unitFilter.value:'';
     const selDH=danhHieuFilter?danhHieuFilter.value:'';
     const search=searchInput?searchInput.value.toLowerCase().trim():'';
     const selScope=scopeFilter?scopeFilter.value:'';
-    document.querySelectorAll('.ct-row').forEach(row=>{
-      let vis=true;
-      if(selUnit&&row.dataset.unitName!==selUnit)vis=false;
-      if(vis&&selDH&&row.dataset.danhHieu!==selDH)vis=false;
-      if(vis&&search&&!row.dataset.hoTen.includes(search))vis=false;
-      if(vis&&selScope){
-        const isQL=BAN_QUANLUC.includes(row.dataset.doiTuong||'');
-        if(selScope==='quan_luc'&&!isQL)vis=false;
-        if(selScope==='can_bo'&&isQL)vis=false;
-      }
-      row.style.display=vis?'':'none';
-      if(!vis){const rr=document.getElementById(`reject-row-${row.dataset.pdId}-${row.dataset.ctId}`);if(rr)rr.style.display='none';}
+    
+    requestAnimationFrame(()=>{
+      getCachedRows().forEach(row=>{
+        let vis=true;
+        if(selUnit&&row.dataset.unitName!==selUnit)vis=false;
+        if(vis&&selDH&&row.dataset.danhHieu!==selDH)vis=false;
+        if(vis&&search&&!row.dataset.hoTen.includes(search))vis=false;
+        if(vis&&selScope){
+          const isQL=BAN_QUANLUC.includes(row.dataset.doiTuong||'');
+          if(selScope==='quan_luc'&&!isQL)vis=false;
+          if(selScope==='can_bo'&&isQL)vis=false;
+        }
+        row.style.display=vis?'':'none';
+        if(!vis){const rr=document.getElementById(`reject-row-${row.dataset.pdId}-${row.dataset.ctId}`);if(rr)rr.style.display='none';}
+      });
+      requestAnimationFrame(()=>updateGlobalStats(null));
     });
-    updateGlobalStats(null);
   }
   [unitFilter,danhHieuFilter,scopeFilter].forEach(el=>el&&el.addEventListener('change',applyFilters));
   searchInput&&searchInput.addEventListener('input',debounce(applyFilters,250));
@@ -853,20 +892,26 @@ document.addEventListener('DOMContentLoaded',function(){
     }).catch(()=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-send me-1"></i>Gửi yêu cầu';alert('Lỗi kết nối.');});
   });
 
-  // ── Batch approve
+  // ── Batch approve (optimized with cached rows)
   let batchPendingData=null;
   ['btnApproveAllCN','btnApproveAllTT'].forEach(btnId=>{
     const btn=document.getElementById(btnId);if(!btn)return;
     btn.addEventListener('click',function(){
       const tableId=btnId==='btnApproveAllCN'?'tableCaNhan':'tableTapThe';
-      const table=document.getElementById(tableId);const items=[];
-      table.querySelectorAll('.ct-row').forEach(row=>{
+      const table=document.getElementById(tableId);
+      if(!table)return;
+      
+      const items=[];
+      // ★ Use cached rows or query within table scope
+      const rows=table.querySelectorAll('.ct-row');
+      rows.forEach(row=>{
         if(row.style.display==='none'||row.dataset.outOfScope==='true')return;
         const pdId=row.dataset.pdId,ctId=row.dataset.ctId;
         const sw=document.getElementById(`switch-${pdId}-${ctId}`);
         const rt=document.getElementById(`reason-text-${pdId}-${ctId}`);
         const hasReason=rt&&rt.style.display!=='none'&&rt.textContent.trim();
         if(sw&&!sw.checked&&!hasReason)items.push({pdId,ctId:parseInt(ctId)});
+      });
       });
       if(!items.length){showToast('Đã duyệt hết.','info');return;}
       const grouped={};

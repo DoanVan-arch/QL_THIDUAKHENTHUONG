@@ -117,6 +117,10 @@
                 <option value="pending">Đợi thao tác</option>
                 <option value="confirmed">Đã xác nhận KT</option>
             </select>
+            {# ★ NÚT XÓA CÁC DÒNG ĐÃ CHỌN #}
+            <button type="button" class="btn btn-sm btn-danger" id="btnDeleteSelectedB2" disabled style="display:none;">
+                <i class="bi bi-trash me-1"></i>Xóa đã chọn (<span id="b2SelectedCount">0</span>)
+            </button>
             {# ★ NÚT ĐỒNG Ý TẤT CẢ #}
             {% if can_admin_action and phe_duyet_cuoi_items %}
             <button type="button" class="btn btn-sm btn-success"
@@ -144,9 +148,12 @@
             <i class="bi bi-person-fill me-1"></i>Danh hiệu cá nhân ({{ b2_ca_nhan|length }})
         </div>
         <div class="table-responsive mb-3">
-            <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
+            <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;" id="tableB2CaNhan">
                 <thead>
                     <tr>
+                        <th class="text-center no-print" style="width:40px;">
+                            <input type="checkbox" class="form-check-input" id="checkAllB2CN" title="Chọn tất cả dòng đã xác nhận">
+                        </th>
                         <th class="sticky-stt-col">STT</th>
                         <th class="sticky-name-col">Họ tên</th>
                         <th>Vai trò</th>
@@ -173,7 +180,7 @@
                 {% if ct.loai_danh_hieu != ns.prev_award %}
                 {% set ns.prev_award = ct.loai_danh_hieu %}
                 <tr class="table-light">
-                    <td colspan="99" class="fw-semibold text-navy small py-1">
+                    <td colspan="100" class="fw-semibold text-navy small py-1">
                         <i class="bi bi-bookmark-fill me-1"></i>{{ ct.loai_danh_hieu }}
                     </td>
                 </tr>
@@ -181,6 +188,11 @@
                 {# ★ FIX: thêm class kdy-rejected nếu bị từ chối #}
                 <tr class="{{ 'table-success' if row.is_confirmed else 'table-danger' if row.is_rejected else '' }}"
                     data-ct-id="{{ ct.id }}">
+                    <td class="text-center no-print">
+                        {% if row.is_confirmed %}
+                        <input type="checkbox" class="form-check-input row-b2-cb" data-ct-id="{{ ct.id }}" data-name="{{ ct.quan_nhan.ho_ten }}">
+                        {% endif %}
+                    </td>
                     <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col">
                         <strong>{{ ct.quan_nhan.ho_ten }}</strong>
@@ -317,9 +329,12 @@
             <i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b2_tap_the|length }})
         </div>
         <div class="table-responsive">
-            <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;">
+            <table class="table table-sm table-custom mb-0" style="font-size:0.82rem;" id="tableB2TapThe">
                 <thead>
                     <tr>
+                        <th class="text-center no-print" style="width:40px;">
+                            <input type="checkbox" class="form-check-input" id="checkAllB2TT" title="Chọn tất cả dòng đã xác nhận">
+                        </th>
                         <th class="sticky-stt-col">STT</th>
                         <th class="sticky-name-col">Tên tập thể</th>
                         <th>Đơn vị đề xuất</th>
@@ -345,13 +360,18 @@
                 {% if ct.loai_danh_hieu != ns2.prev_award %}
                 {% set ns2.prev_award = ct.loai_danh_hieu %}
                 <tr class="table-light">
-                    <td colspan="99" class="fw-semibold text-navy small py-1">
+                    <td colspan="100" class="fw-semibold text-navy small py-1">
                         <i class="bi bi-bookmark-fill me-1"></i>{{ ct.loai_danh_hieu }}
                     </td>
                 </tr>
                 {% endif %}
                 <tr class="{{ 'table-success' if row.is_confirmed else 'table-danger' if row.is_rejected else '' }}"
                     data-ct-id="{{ ct.id }}">
+                    <td class="text-center no-print">
+                        {% if row.is_confirmed %}
+                        <input type="checkbox" class="form-check-input row-b2-cb" data-ct-id="{{ ct.id }}" data-name="{{ ct.ten_don_vi_de_xuat or '---' }}">
+                        {% endif %}
+                    </td>
                     <td class="sticky-stt-col">{{ loop.index }}</td>
                     <td class="sticky-name-col"><strong>{{ ct.ten_don_vi_de_xuat or '---' }}</strong></td>
                     <td style="font-size:0.78rem;">{{ dx.don_vi.ten_don_vi if dx.don_vi else '---' }}</td>
@@ -1524,12 +1544,160 @@ function onNamHocChange(sel) {
     });
 
     // ============================================
+    // BẢNG 2: SELECT/DELETE CONFIRMED ITEMS
+    // ============================================
+    
+    // Handle checkAll for cá nhân
+    const checkAllB2CN = document.getElementById('checkAllB2CN');
+    if (checkAllB2CN) {
+        checkAllB2CN.addEventListener('change', function() {
+            document.querySelectorAll('#tableB2CaNhan .row-b2-cb').forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateB2DeleteButton();
+        });
+    }
+    
+    // Handle checkAll for tập thể
+    const checkAllB2TT = document.getElementById('checkAllB2TT');
+    if (checkAllB2TT) {
+        checkAllB2TT.addEventListener('change', function() {
+            document.querySelectorAll('#tableB2TapThe .row-b2-cb').forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateB2DeleteButton();
+        });
+    }
+    
+    // Handle individual checkbox changes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('row-b2-cb')) {
+            updateB2DeleteButton();
+        }
+    });
+    
+    function updateB2DeleteButton() {
+        const checked = document.querySelectorAll('.row-b2-cb:checked');
+        const btn = document.getElementById('btnDeleteSelectedB2');
+        const counter = document.getElementById('b2SelectedCount');
+        
+        if (btn) {
+            if (checked.length > 0) {
+                btn.style.display = '';
+                btn.disabled = false;
+            } else {
+                btn.style.display = 'none';
+                btn.disabled = true;
+            }
+        }
+        
+        if (counter) counter.textContent = checked.length;
+        
+        // Update indeterminate state for checkAll buttons
+        const cnChecked = document.querySelectorAll('#tableB2CaNhan .row-b2-cb:checked').length;
+        const cnTotal = document.querySelectorAll('#tableB2CaNhan .row-b2-cb').length;
+        if (checkAllB2CN && cnTotal > 0) {
+            checkAllB2CN.indeterminate = cnChecked > 0 && cnChecked < cnTotal;
+            checkAllB2CN.checked = cnChecked === cnTotal;
+        }
+        
+        const ttChecked = document.querySelectorAll('#tableB2TapThe .row-b2-cb:checked').length;
+        const ttTotal = document.querySelectorAll('#tableB2TapThe .row-b2-cb').length;
+        if (checkAllB2TT && ttTotal > 0) {
+            checkAllB2TT.indeterminate = ttChecked > 0 && ttChecked < ttTotal;
+            checkAllB2TT.checked = ttChecked === ttTotal;
+        }
+    }
+    
+    // Handle delete button click
+    const btnDeleteSelectedB2 = document.getElementById('btnDeleteSelectedB2');
+    if (btnDeleteSelectedB2) {
+        btnDeleteSelectedB2.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.row-b2-cb:checked');
+            if (!checked.length) return;
+            
+            const names = Array.from(checked).map(cb => cb.dataset.name).slice(0, 5);
+            const displayNames = names.join(', ') + (checked.length > 5 ? '...' : '');
+            
+            if (!confirm(`Xóa xác nhận khen thưởng cho ${checked.length} dòng đã chọn?\n\n${displayNames}\n\nLưu ý: Các mục này sẽ quay lại trạng thái chờ phê duyệt.`)) {
+                return;
+            }
+            
+            const ctIds = Array.from(checked).map(cb => parseInt(cb.dataset.ctId));
+            
+            const originalHtml = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xóa...';
+            
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                            document.querySelector('input[name="csrf_token"]')?.value || '';
+            
+            fetch('/admin/reward-list/revoke-multiple-khen-thuong', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ ct_ids: ctIds, csrf_token: csrfToken })
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                if (data.ok) {
+                    showFlash(data.message || `Đã xóa xác nhận ${ctIds.length} mục.`, 'success');
+                    // Remove rows from UI
+                    checked.forEach(cb => {
+                        const row = cb.closest('tr');
+                        if (row) {
+                            row.classList.remove('table-success');
+                            row.querySelector('.row-b2-cb')?.remove();
+                            const actionCell = row.cells[row.cells.length - 1];
+                            if (actionCell) {
+                                actionCell.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Đợi thao tác</span>';
+                            }
+                        }
+                    });
+                    updateB2DeleteButton();
+                    setTimeout(function() { window.location.reload(); }, 1500);
+                } else {
+                    showFlash(data.message || 'Có lỗi xảy ra.', 'danger');
+                    btnDeleteSelectedB2.disabled = false;
+                    btnDeleteSelectedB2.innerHTML = originalHtml;
+                }
+            })
+            .catch(function(err) {
+                showFlash('Lỗi kết nối. Vui lòng thử lại.', 'danger');
+                btnDeleteSelectedB2.disabled = false;
+                btnDeleteSelectedB2.innerHTML = originalHtml;
+            });
+        });
+    }
+
+    // ============================================
     // BẢNG 2 STATUS FILTER
     // ============================================
     var b2Filter = document.getElementById('b2StatusFilter');
     if (b2Filter) {
+        // ★ Restore filter state from localStorage
+        try {
+            var savedFilter = localStorage.getItem('b2StatusFilter');
+            if (savedFilter) {
+                b2Filter.value = savedFilter;
+                // Trigger filter on page load
+                b2Filter.dispatchEvent(new Event('change'));
+            }
+        } catch(e) {}
+        
         b2Filter.addEventListener('change', function() {
             var value = this.value;
+            
+            // ★ Save filter state to localStorage
+            try {
+                localStorage.setItem('b2StatusFilter', value);
+            } catch(e) {}
+            
             var rows = document.querySelectorAll('#bang2 tbody tr[data-ct-id]');
             
             rows.forEach(function(row) {
@@ -1647,6 +1815,13 @@ function onNamHocChange(sel) {
         document.getElementById('b3DanhHieuFilter').value = '';
         document.getElementById('b3SearchInput').value = '';
         
+        // ★ Clear localStorage
+        try {
+            localStorage.removeItem('b3UnitFilter');
+            localStorage.removeItem('b3DanhHieuFilter');
+            localStorage.removeItem('b3SearchInput');
+        } catch(e) {}
+        
         // Show all rows
         var tables = document.querySelectorAll('#printBang3 table tbody');
         tables.forEach(function(tbody) {
@@ -1662,11 +1837,39 @@ function onNamHocChange(sel) {
     var b3DanhHieuFilter = document.getElementById('b3DanhHieuFilter');
     var b3SearchInput = document.getElementById('b3SearchInput');
     
-    if (b3UnitFilter) b3UnitFilter.addEventListener('change', applyB3Filter);
-    if (b3DanhHieuFilter) b3DanhHieuFilter.addEventListener('change', applyB3Filter);
+    // ★ Restore B3 filters from localStorage
+    try {
+        if (b3UnitFilter && localStorage.getItem('b3UnitFilter')) {
+            b3UnitFilter.value = localStorage.getItem('b3UnitFilter');
+        }
+        if (b3DanhHieuFilter && localStorage.getItem('b3DanhHieuFilter')) {
+            b3DanhHieuFilter.value = localStorage.getItem('b3DanhHieuFilter');
+        }
+        if (b3SearchInput && localStorage.getItem('b3SearchInput')) {
+            b3SearchInput.value = localStorage.getItem('b3SearchInput');
+        }
+        // Apply filters if any were restored
+        if ((b3UnitFilter && b3UnitFilter.value) || 
+            (b3DanhHieuFilter && b3DanhHieuFilter.value) || 
+            (b3SearchInput && b3SearchInput.value)) {
+            setTimeout(applyB3Filter, 100);
+        }
+    } catch(e) {}
+    
+    if (b3UnitFilter) b3UnitFilter.addEventListener('change', function() {
+        try { localStorage.setItem('b3UnitFilter', this.value); } catch(e) {}
+        applyB3Filter();
+    });
+    if (b3DanhHieuFilter) b3DanhHieuFilter.addEventListener('change', function() {
+        try { localStorage.setItem('b3DanhHieuFilter', this.value); } catch(e) {}
+        applyB3Filter();
+    });
     if (b3SearchInput) {
         b3SearchInput.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') applyB3Filter();
+            if (e.key === 'Enter') {
+                try { localStorage.setItem('b3SearchInput', this.value); } catch(e2) {}
+                applyB3Filter();
+            }
         });
     }
 

@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, func, JSON
 from sqlalchemy.orm import relationship
 from app.extensions import db
+from datetime import datetime, timedelta
 
 
 # ── Human-readable action labels ──────────────────────────────────────────
@@ -57,8 +58,30 @@ class ActivityLog(db.Model):
     # Where / when
     ip_address = Column(String(45), nullable=True)
     created_at = Column(DateTime, default=func.now(), index=True)
+    
+    # ★ Undo support (added for reverting actions within 72h)
+    snapshot_data = Column(JSON, nullable=True)  # Stores state before action for undo
+    undone_at = Column(DateTime, nullable=True)   # Timestamp when undo was performed
+    undone_by_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
 
     user = relationship('User', foreign_keys=[user_id], passive_deletes=True)
+    undone_by = relationship('User', foreign_keys=[undone_by_id], passive_deletes=True)
 
     def action_label(self):
         return ACTION_LABELS.get(self.action, self.action)
+    
+    def can_undo(self):
+        """Check if this action can be undone (within 72 hours and not already undone)."""
+        if self.undone_at is not None:
+            return False  # Already undone
+        
+        # Exclude login/logout from undo
+        if self.action in ['login', 'logout', 'login_failed']:
+            return False
+        
+        # Check if within 72 hours
+        if self.created_at is None:
+            return False
+        
+        time_limit = datetime.utcnow() - timedelta(hours=72)
+        return self.created_at >= time_limit and self.snapshot_data is not None

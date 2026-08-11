@@ -31,6 +31,9 @@
         <button type="button" class="btn btn-sm btn-success" id="btnApproveAll">
             <i class="bi bi-shield-check me-1"></i>PD cuối toàn bộ
         </button>
+        <button type="button" class="btn btn-sm btn-primary" id="btnApproveSelected" disabled title="Chọn ít nhất 1 dòng để phê duyệt">
+            <i class="bi bi-check-square me-1"></i>PD cuối đã chọn (<span id="selectedCount">0</span>)
+        </button>
         <a href="{{ url_for('admin.export_tracking_excel', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
            class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
         <a href="{{ url_for('admin.export_tracking_word', status=status_filter, unit=unit_filter, danh_hieu=danh_hieu_filter, q=search_query, scope=scope_filter, nam_hoc=nam_hoc_filter, view=view_mode) }}"
@@ -1046,6 +1049,57 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ★ Handler for "PD cuối đã chọn" button
+    const btnApproveSelected = document.getElementById('btnApproveSelected');
+    if (btnApproveSelected) {
+        btnApproveSelected.addEventListener('click', function() {
+            const checkedItems = getCheckedItems();
+            if (!checkedItems.length) { alert('Vui lòng chọn ít nhất 1 dòng để phê duyệt cuối.'); return; }
+            
+            // Build a map: chi_tiet_id -> de_xuat_id from table rows
+            const ctIdToDeXuatId = new Map();
+            document.querySelectorAll('.row-cb').forEach(cb => {
+                const row = cb.closest('tr');
+                if (!row) return;
+                const ctId = parseInt(cb.dataset.id);
+                // Find de_xuat_id from the row's buttons/links
+                const approveBtn = row.querySelector('[onclick*="approveFinalNom"]');
+                if (approveBtn) {
+                    const match = approveBtn.getAttribute('onclick').match(/approveFinalNom\((\d+)/);
+                    if (match) ctIdToDeXuatId.set(ctId, parseInt(match[1]));
+                }
+            });
+            
+            // Get unique de_xuat IDs from selected items
+            const selectedDeXuatIds = new Set();
+            checkedItems.forEach(item => {
+                const deXuatId = ctIdToDeXuatId.get(parseInt(item.id));
+                if (deXuatId) selectedDeXuatIds.add(deXuatId);
+            });
+            
+            if (!selectedDeXuatIds.size) {
+                alert('Các dòng đã chọn không thuộc đề xuất nào sẵn sàng phê duyệt cuối.');
+                return;
+            }
+            
+            // Filter nominations by selected de_xuat IDs
+            const selectedNominations = nominations.filter(n => selectedDeXuatIds.has(n.id));
+            
+            if (!selectedNominations.length) {
+                alert('Các đề xuất đã chọn chưa sẵn sàng phê duyệt cuối.');
+                return;
+            }
+            
+            batchIds = selectedNominations.map(n => n.id);
+            document.getElementById('batchFinalTitle').textContent = 'PD cuối đã chọn';
+            document.getElementById('batchFinalMessage').innerHTML =
+                'Phê duyệt cuối <strong>' + selectedNominations.length + '</strong> đề xuất (từ ' + checkedItems.length + ' dòng đã chọn)?<br>' +
+                '<small class="text-muted">' + selectedNominations.map(n => n.name).join(', ') + '</small>';
+            document.getElementById('batchGhiChu').value = '';
+            new bootstrap.Modal(document.getElementById('batchFinalModal')).show();
+        });
+    }
+
     document.getElementById('batchFinalConfirm').addEventListener('click', async function() {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
@@ -1608,6 +1662,15 @@ function onRowCbChange() {
     const counter = document.getElementById('batchRejectCount');
     if (btn)     btn.classList.toggle('d-none', count === 0);
     if (counter) counter.textContent = count;
+
+    // ★ Update "PD cuối đã chọn" button
+    const btnApproveSelected = document.getElementById('btnApproveSelected');
+    const selectedCount = document.getElementById('selectedCount');
+    if (btnApproveSelected) {
+        btnApproveSelected.disabled = count === 0;
+        btnApproveSelected.title = count === 0 ? 'Chọn ít nhất 1 dòng để phê duyệt' : `Phê duyệt cuối ${count} dòng đã chọn`;
+    }
+    if (selectedCount) selectedCount.textContent = count;
 
     ['CN', 'TT'].forEach(tbl => {
         const allCb  = document.getElementById('checkAll' + tbl);

@@ -2,6 +2,23 @@
 {% block title %}Nhật ký hoạt động{% endblock %}
 
 {% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<style>
+.btn-xs {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    border-radius: 0.2rem;
+}
+.btn-undo {
+    min-width: 32px;
+}
+@media print {
+    .no-print { display: none !important; }
+}
+</style>
+
 <div class="page-header">
     <div>
         <h4><i class="bi bi-journal-text me-2"></i>Nhật ký hoạt động</h4>
@@ -75,6 +92,7 @@
                         <th>Đối tượng</th>
                         <th>Mô tả</th>
                         <th>IP</th>
+                        <th class="text-center no-print" style="width:100px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -116,10 +134,26 @@
                             {{ log.detail or '-' }}
                         </td>
                         <td class="small text-muted text-nowrap">{{ log.ip_address or '-' }}</td>
+                        <td class="text-center no-print">
+                            {% if log.undone_at %}
+                                <span class="badge bg-secondary small">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đã hoàn tác
+                                </span>
+                            {% elif log.can_undo() %}
+                                <button type="button" class="btn btn-xs btn-warning btn-undo" 
+                                        data-log-id="{{ log.id }}"
+                                        data-action="{{ log.action_label() }}"
+                                        title="Hoàn tác hành động này">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">Không có bản ghi nào.</td>
+                        <td colspan="8" class="text-center text-muted py-4">Không có bản ghi nào.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -170,5 +204,50 @@
     </ul>
 </nav>
 {% endif %}
+
+<script>
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-undo');
+    if (!btn) return;
+    
+    var logId = btn.getAttribute('data-log-id');
+    var actionLabel = btn.getAttribute('data-action');
+    
+    if (!confirm('Hoàn tác hành động "' + actionLabel + '"?\n\nLưu ý: Thao tác này không thể hoàn tác lại.')) {
+        return;
+    }
+    
+    var originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    fetch('/admin/activity-log/undo/' + logId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        }
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            alert(data.message || 'Đã hoàn tác thành công.');
+            window.location.reload();
+        } else {
+            alert(data.message || 'Không thể hoàn tác.');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    })
+    .catch(function(err) {
+        alert('Lỗi kết nối. Vui lòng thử lại.');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    });
+});
+</script>
 
 {% endblock %}

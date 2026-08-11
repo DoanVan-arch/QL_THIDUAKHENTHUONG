@@ -10,11 +10,19 @@ from flask import request as _flask_request
 from flask_login import current_user as _current_user
 
 
-def log_action(action, resource_type=None, resource_id=None, detail=None, user=None):
+def log_action(action, resource_type=None, resource_id=None, detail=None, user=None, snapshot_data=None):
     """Write one ActivityLog record.
 
     Silently swallows any exception so logging never breaks the main request.
     Must be called within an active Flask application context.
+    
+    Args:
+        action: The action being performed (e.g., 'delete_chi_tiet')
+        resource_type: Type of resource affected (e.g., 'de_xuat', 'chi_tiet')
+        resource_id: ID of the affected resource
+        detail: Human-readable description
+        user: User performing the action (defaults to current_user)
+        snapshot_data: Dict of data needed to undo this action (stored as JSON)
     """
     try:
         # Lazy import to avoid circular dependencies at module load time
@@ -39,6 +47,7 @@ def log_action(action, resource_type=None, resource_id=None, detail=None, user=N
             resource_id=resource_id,
             detail=detail,
             ip_address=ip,
+            snapshot_data=snapshot_data,
         )
         db.session.add(entry)
         # Use a nested savepoint so a log failure never rolls back the real transaction

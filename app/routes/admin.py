@@ -1577,6 +1577,15 @@ def _reject_single_chi_tiet(ct, ly_do: str) -> str:
     KHÔNG commit — caller tự commit sau khi xử lý xong batch.
     """
     de_xuat = ct.de_xuat
+    
+    # ★ Capture snapshot BEFORE making changes
+    snapshot = {
+        'admin_approved': ct.admin_approved,
+        'bi_loai': ct.bi_loai,
+        'ly_do_loai': ct.ly_do_loai,
+        'phong_loai': ct.phong_loai,
+        'ngay_loai': ct.ngay_loai.isoformat() if ct.ngay_loai else None,
+    }
 
     # ── 1. Đảm bảo PheDuyet admin tồn tại ───────────────────────────────────
     admin_pd = PheDuyet.query.filter_by(
@@ -1654,6 +1663,7 @@ def _reject_single_chi_tiet(ct, ly_do: str) -> str:
         resource_type='chi_tiet',
         resource_id=ct.id,
         detail=f'{ho_ten} — lý do: {ly_do}',
+        snapshot_data=snapshot,
     )
 
     return ho_ten
@@ -1925,6 +1935,57 @@ def revoke_final_approval(id):
     db.session.commit()
     flash(f'Đã thu hồi phê duyệt cuối cho đề xuất của {de_xuat.don_vi.ten_don_vi}.', 'success')
     return redirect(url_for('admin.reward_list'))
+
+
+@admin_bp.route('/reward-list/revoke-multiple-khen-thuong', methods=['POST'])
+@login_required
+@admin_required
+def revoke_multiple_khen_thuong():
+    """Revoke KhenThuong records for multiple chi_tiet IDs (bulk delete)."""
+    try:
+        data = request.get_json()
+        ct_ids = data.get('ct_ids', [])
+        
+        if not ct_ids:
+            return jsonify({'ok': False, 'message': 'Không có mục nào được chọn.'}), 400
+        
+        # ★ Capture snapshot before deletion for undo
+        kt_records = KhenThuong.query.filter(KhenThuong.chi_tiet_id.in_(ct_ids)).all()
+        snapshot = {
+            'khen_thuong_records': [
+                {
+                    'chi_tiet_id': kt.chi_tiet_id,
+                    'danh_hieu_id': kt.danh_hieu_id,
+                    'de_xuat_id': kt.de_xuat_id,
+                    'quyet_dinh_so': kt.quyet_dinh_so,
+                    'ngay_quyet_dinh': kt.ngay_quyet_dinh.isoformat() if kt.ngay_quyet_dinh else None,
+                } for kt in kt_records
+            ]
+        }
+        
+        # Delete KhenThuong records for these chi_tiet IDs
+        deleted_count = KhenThuong.query.filter(KhenThuong.chi_tiet_id.in_(ct_ids)).delete(synchronize_session=False)
+        
+        # Reset admin_approved flags for these chi_tiets
+        DeXuatChiTiet.query.filter(DeXuatChiTiet.id.in_(ct_ids)).update(
+            {DeXuatChiTiet.admin_approved: False},
+            synchronize_session=False
+        )
+        
+        db.session.commit()
+        
+        log_action('revoke_multiple_khen_thuong', resource_type='khen_thuong', 
+                   detail=f'Đã xóa {deleted_count} xác nhận khen thưởng',
+                   snapshot_data=snapshot)
+        
+        return jsonify({
+            'ok': True,
+            'message': f'Đã xóa xác nhận khen thưởng cho {deleted_count} mục.'
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in revoke_multiple_khen_thuong: {e}")
+        return jsonify({'ok': False, 'message': 'Có lỗi xảy ra khi xóa xác nhận.'}), 500
 
 
 @admin_bp.route('/reward-stats')
@@ -6648,3 +6709,155 @@ def activity_log():
         # Table doesn't exist yet — migration not applied
         flash('Bảng nhật ký hoạt động chưa được tạo. Vui lòng chạy: flask db upgrade', 'warning')
         return redirect(url_for('admin.approval_tracking'))
+
+
+@admin_bp.route('/activity-log/undo/<int:log_id>', methods=['POST'])
+@login_required
+@admin_required
+def undo_activity_log(log_id):
+    """Undo an activity log action if within 72 hours."""
+    from app.models.activity_log import ActivityLog
+    from datetime import datetime, timedelta
+    import json
+    
+    log = ActivityLog.query.get_or_404(log_id)
+    
+    # Check if can undo
+    if not log.can_undo():
+        return jsonify({
+            'success': False,
+            'message': 'Không thể hoàn tác hành động này (quá 72 giờ hoặc đã được hoàn tác).'
+        }), 400
+    
+    try:
+        snapshot = log.snapshot_data
+        if not snapshot:
+            return jsonify({
+                'success': False,
+                'message': 'Không có dữ liệu snapshot để hoàn tác.'
+            }), 400
+        
+        # Parse snapshot if it's a string
+        if isinstance(snapshot, str):
+            snapshot = json.loads(snapshot)
+        
+        # Perform undo based on action type
+        success, message = _perform_undo(log.action, log.resource_type, log.resource_id, snapshot)
+        
+        if success:
+            # Mark as undone
+            log.undone_at = datetime.utcnow()
+            log.undone_by_id = current_user.id
+            db.session.commit()
+            
+            # Log the undo action itself
+            log_action('undo_action', resource_type='activity_log', resource_id=log_id,
+                       detail=f'Hoàn tác: {log.action_label()}')
+            
+            return jsonify({'success': True, 'message': message})
+        else:
+            return jsonify({'success': False, 'message': message}), 400
+            
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in undo_activity_log: {e}")
+        return jsonify({'success': False, 'message': f'Lỗi khi hoàn tác: {str(e)}'}), 500
+
+
+def _perform_undo(action, resource_type, resource_id, snapshot):
+    """Perform the actual undo operation based on action type."""
+    try:
+        if action == 'delete_chi_tiet':
+            # Restore deleted chi_tiet
+            ct = DeXuatChiTiet.query.get(resource_id)
+            if ct:
+                ct.bi_loai = False
+                return True, 'Đã khôi phục cá nhân/tập thể đã xóa.'
+            return False, 'Không tìm thấy chi tiết để khôi phục.'
+        
+        elif action == 'admin_reject_individual' or action == 'admin_reject':
+            # Restore rejected item
+            ct = DeXuatChiTiet.query.get(resource_id)
+            if ct:
+                ct.admin_approved = snapshot.get('admin_approved', False)
+                return True, 'Đã khôi phục trạng thái trước khi từ chối.'
+            return False, 'Không tìm thấy mục để khôi phục.'
+        
+        elif action == 'dept_reject' or action == 'dept_reject_item':
+            # Restore department approval
+            if resource_type == 'phe_duyet' and resource_id:
+                pd = PheDuyet.query.get(resource_id)
+                if pd:
+                    pd.ket_qua = snapshot.get('ket_qua', 'Chờ duyệt')
+                    pd.nguoi_duyet_id = None
+                    pd.ngay_duyet = None
+                    pd.ly_do = None
+                    return True, 'Đã khôi phục trạng thái phê duyệt cơ quan.'
+            return False, 'Không tìm thấy phê duyệt để khôi phục.'
+        
+        elif action == 'revoke_final_approval' or action == 'revoke_multiple_khen_thuong':
+            # Re-create KhenThuong records
+            if 'khen_thuong_records' in snapshot:
+                for kt_data in snapshot['khen_thuong_records']:
+                    kt = KhenThuong(**kt_data)
+                    db.session.add(kt)
+                return True, f'Đã khôi phục {len(snapshot["khen_thuong_records"])} bản ghi khen thưởng.'
+            return False, 'Không có dữ liệu khen thưởng để khôi phục.'
+        
+        elif action in ['batch_final_approve', 'admin_final_approve', 'admin_pre_approve']:
+            # Revert nomination status
+            if resource_type == 'de_xuat' and resource_id:
+                dx = DeXuat.query.get(resource_id)
+                if dx:
+                    dx.trang_thai = snapshot.get('trang_thai', 'Chờ duyệt')
+                    # Also delete KhenThuong if created
+                    KhenThuong.query.filter_by(de_xuat_id=resource_id).delete()
+                    return True, 'Đã hoàn tác phê duyệt và xóa bản ghi khen thưởng.'
+            return False, 'Không tìm thấy đề xuất để hoàn tác.'
+        
+        elif action == 'hoi_dong_vote':
+            # Delete vote record
+            if 'vote_id' in snapshot:
+                HoiDongBieuQuyet.query.filter_by(id=snapshot['vote_id']).delete()
+                return True, 'Đã xóa biểu quyết Hội đồng.'
+            return False, 'Không tìm thấy biểu quyết để xóa.'
+        
+        elif action in ['create_user', 'create_personnel']:
+            # Mark as inactive or delete
+            if resource_type == 'user' and resource_id:
+                user = User.query.get(resource_id)
+                if user:
+                    user.is_active = False
+                    return True, 'Đã vô hiệu hóa tài khoản.'
+            elif resource_type == 'quan_nhan' and resource_id:
+                qn = QuanNhan.query.get(resource_id)
+                if qn:
+                    db.session.delete(qn)
+                    return True, 'Đã xóa quân nhân.'
+            return False, 'Không tìm thấy đối tượng để hoàn tác.'
+        
+        elif action in ['edit_user', 'edit_personnel', 'edit_nomination']:
+            # Restore previous values
+            if resource_type and resource_id:
+                model_map = {
+                    'user': User,
+                    'quan_nhan': QuanNhan,
+                    'de_xuat': DeXuat,
+                    'de_xuat_chi_tiet': DeXuatChiTiet
+                }
+                model = model_map.get(resource_type)
+                if model:
+                    obj = model.query.get(resource_id)
+                    if obj and 'previous_values' in snapshot:
+                        for key, value in snapshot['previous_values'].items():
+                            if hasattr(obj, key):
+                                setattr(obj, key, value)
+                        return True, 'Đã khôi phục giá trị trước khi chỉnh sửa.'
+            return False, 'Không tìm thấy đối tượng để khôi phục.'
+        
+        else:
+            return False, f'Không hỗ trợ hoàn tác cho hành động: {action}'
+            
+    except Exception as e:
+        print(f"Error in _perform_undo: {e}")
+        return False, f'Lỗi khi thực hiện hoàn tác: {str(e)}'
