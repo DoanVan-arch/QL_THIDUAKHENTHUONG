@@ -2109,6 +2109,8 @@ def don_vi_stats():
         don_vi_list = DonVi.query.filter_by(is_active=True).order_by(DonVi.thu_tu, DonVi.ten_don_vi).all()
 
         # Pre-fetch DeXuatChiTiet for this nam_hoc (exclude NHAP drafts)
+        # ★ Count BOTH confirmed (admin_approved=True) AND unconfirmed (admin_approved=False)
+        # ★ But EXCLUDE rejected items (bi_loai=True)
         submitted_statuses = [
             TrangThaiDeXuat.CHO_DUYET.value,
             TrangThaiDeXuat.DANG_DUYET.value,
@@ -2127,6 +2129,8 @@ def don_vi_stats():
             DeXuat.nam_hoc == nam_hoc_filter,
             DeXuat.trang_thai.in_(all_non_draft),
             DeXuatChiTiet.quan_nhan_id.isnot(None),
+            # ★ Exclude rejected items (bi_loai=True) but include both confirmed and unconfirmed
+            DeXuatChiTiet.bi_loai.isnot(True),
         ).all()
 
         # Build per-donvi lookup: {dv_id: {qn_id: set(loai_danh_hieu)}}

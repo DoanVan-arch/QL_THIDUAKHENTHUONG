@@ -1367,6 +1367,12 @@ function onNamHocChange(sel) {
                 var statsNew = newDoc.querySelector('.d-flex.gap-3.mb-3.flex-wrap');
                 if (statsOld && statsNew) statsOld.innerHTML = statsNew.innerHTML;
                 
+                // ★ Re-apply Bảng 2 filter after reload
+                var b2Filter = document.getElementById('b2StatusFilter');
+                if (b2Filter && b2Filter.value) {
+                    b2Filter.dispatchEvent(new Event('change'));
+                }
+                
                 // Restore scroll position
                 window.scrollTo(0, scrollY);
             })
@@ -1636,9 +1642,10 @@ function onNamHocChange(sel) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ ct_ids: ctIds, csrf_token: csrfToken })
+                body: JSON.stringify({ ct_ids: ctIds })
             })
             .then(function(r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1647,20 +1654,9 @@ function onNamHocChange(sel) {
             .then(function(data) {
                 if (data.ok) {
                     showFlash(data.message || `Đã xóa xác nhận ${ctIds.length} mục.`, 'success');
-                    // Remove rows from UI
-                    checked.forEach(cb => {
-                        const row = cb.closest('tr');
-                        if (row) {
-                            row.classList.remove('table-success');
-                            row.querySelector('.row-b2-cb')?.remove();
-                            const actionCell = row.cells[row.cells.length - 1];
-                            if (actionCell) {
-                                actionCell.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Đợi thao tác</span>';
-                            }
-                        }
-                    });
+                    // Reload Bảng 2 while preserving filter state
                     updateB2DeleteButton();
-                    setTimeout(function() { window.location.reload(); }, 1500);
+                    reloadBang2And3();
                 } else {
                     showFlash(data.message || 'Có lỗi xảy ra.', 'danger');
                     btnDeleteSelectedB2.disabled = false;
