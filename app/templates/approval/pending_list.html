@@ -912,7 +912,7 @@ document.addEventListener('DOMContentLoaded',function(){
         const hasReason=rt&&rt.style.display!=='none'&&rt.textContent.trim();
         if(sw&&!sw.checked&&!hasReason)items.push({pdId,ctId:parseInt(ctId)});
       });
-      });
+      
       if(!items.length){showToast('Đã duyệt hết.','info');return;}
       const grouped={};
       items.forEach(({pdId,ctId})=>{if(!grouped[pdId])grouped[pdId]=[];grouped[pdId].push(ctId);});
