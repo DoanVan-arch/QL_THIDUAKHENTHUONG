@@ -1834,6 +1834,88 @@ def reject_individual_from_tracking(ct_id):
     return redirect(url_for('admin.approval_tracking'))
 
 
+@admin_bp.route('/batch-admin-approve', methods=['POST'])
+@login_required
+@admin_required
+def batch_admin_approve():
+    """★ Phê duyệt tất cả / Phê duyệt đã chọn (tracking.html → Bảng 2).
+
+    Khác với batch_final_approve (tạo luôn KhenThuong → Bảng 3), route này CHỈ
+    đánh dấu admin_approved=True và chuyển đề xuất sang PHE_DUYET_CUOI để đưa
+    vào "BẢNG 2: XÉT DUYỆT CỦA CƠ QUAN THƯỜNG TRỰC" ở reward_list.html, chờ
+    Hội đồng biểu quyết trước khi tạo KhenThuong.
+    """
+    data = request.get_json(silent=True) or {}
+    ids = data.get('ids', [])
+    ghi_chu = (data.get('ghi_chu') or '').strip() or None
+
+    if not ids:
+        return jsonify({'success': False, 'message': 'Không có đề xuất nào được chọn.'}), 400
+
+    now = datetime.utcnow()
+    approved_count = 0
+    skipped = 0
+
+    for dx_id in ids:
+        de_xuat = DeXuat.query.get(dx_id)
+        if not de_xuat or de_xuat.trang_thai != TrangThaiDeXuat.HOI_DONG.value:
+            skipped += 1
+            continue
+
+        # Verify departments approved, honoring auto-scope (giống final_approve_from_tracking)
+        all_ok = True
+        for dept_name in DEPT_NAMES:
+            pd = PheDuyet.query.filter_by(de_xuat_id=dx_id, phong_duyet=dept_name).first()
+            if not pd:
+                has_in_scope = any(
+                    not _is_auto_scope_approved(dept_name, ct.doi_tuong)
+                    for ct in de_xuat.chi_tiets_active
+                )
+                if has_in_scope:
+                    all_ok = False
+                    break
+                continue
+            if pd.ket_qua == KetQuaDuyet.TU_CHOI.value:
+                all_ok = False
+                break
+
+        if not all_ok:
+            skipped += 1
+            continue
+
+        # Đánh dấu admin_approved cho toàn bộ cá nhân/tập thể trong đề xuất
+        for ct in de_xuat.chi_tiets_active:
+            ct.admin_approved = True
+
+        admin_pd = PheDuyet.query.filter_by(
+            de_xuat_id=dx_id, phong_duyet=PhongDuyet.ADMIN_TUYENHUAN.value
+        ).first()
+        if admin_pd:
+            admin_pd.ket_qua = KetQuaDuyet.DONG_Y.value
+            admin_pd.nguoi_duyet_id = current_user.id
+            admin_pd.ngay_duyet = now
+            admin_pd.ghi_chu = ghi_chu
+
+        de_xuat.trang_thai = TrangThaiDeXuat.PHE_DUYET_CUOI.value
+
+        try:
+            from app.routes.approval import _recompute_chi_tiet_status
+            _recompute_chi_tiet_status(de_xuat)
+        except Exception:
+            pass
+
+        approved_count += 1
+
+    db.session.commit()
+    log_action('batch_admin_approve', detail=f'Phê duyệt {approved_count} đề xuất vào Bảng 2 (ids={ids})')
+    db.session.commit()
+
+    msg = f'Đã phê duyệt {approved_count} đề xuất, chuyển sang Bảng 2 (Hội đồng biểu quyết).'
+    if skipped:
+        msg += f' ({skipped} đề xuất bị bỏ qua do chưa đủ điều kiện.)'
+    return jsonify({'success': True, 'message': msg, 'approved_count': approved_count})
+
+
 @admin_bp.route('/batch-final-approve', methods=['POST'])
 @login_required
 @admin_required

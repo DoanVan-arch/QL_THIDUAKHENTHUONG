@@ -510,25 +510,27 @@
     </div>
 </div>
 
-{# BẢNG 3 FILTER SECTION #}
+{# BẢNG 3 FILTER SECTION — ★ FIX: lọc server-side (dùng chung tham số unit/danh_hieu/q
+   với ô "Lọc:" phía trên) để không bị thiếu dữ liệu do Bảng 3 phân trang 20 dòng/trang. #}
 <div class="card-section mb-2 no-print">
     <div class="card-body-custom py-2">
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <label class="form-label mb-0 me-1 fw-semibold small">Lọc Bảng 3:</label>
-            <select class="form-select form-select-sm" id="b3UnitFilter" style="width:auto;">
+            <select class="form-select form-select-sm" id="b3UnitFilter" style="width:auto;" onchange="applyB3Filter()">
                 <option value="">Tất cả đơn vị</option>
                 {% for u in unit_names %}
-                <option value="{{ u }}">{{ u }}</option>
+                <option value="{{ u }}" {% if unit_filter == u %}selected{% endif %}>{{ u }}</option>
                 {% endfor %}
             </select>
-            <select class="form-select form-select-sm" id="b3DanhHieuFilter" style="width:auto;">
+            <select class="form-select form-select-sm" id="b3DanhHieuFilter" style="width:auto;" onchange="applyB3Filter()">
                 <option value="">Tất cả danh hiệu</option>
                 {% for dh in danh_hieu_list %}
-                <option value="{{ dh }}">{{ dh }}</option>
+                <option value="{{ dh }}" {% if danh_hieu_filter == dh %}selected{% endif %}>{{ dh }}</option>
                 {% endfor %}
             </select>
             <div class="input-group input-group-sm" style="width:200px;">
-                <input type="text" class="form-control" id="b3SearchInput" placeholder="Tìm tên...">
+                <input type="text" class="form-control" id="b3SearchInput" placeholder="Tìm tên..." value="{{ search_query }}"
+                       onkeyup="if(event.key==='Enter'){applyB3Filter();}">
                 <button type="button" class="btn btn-outline-navy" onclick="applyB3Filter()">
                     <i class="bi bi-search"></i>
                 </button>
@@ -1716,129 +1718,34 @@ function onNamHocChange(sel) {
 
     // ============================================
     // BẢNG 3 FILTER FUNCTIONS
+    // ★ FIX: Bảng 3 được phân trang server-side (20 dòng/trang) nên lọc bằng JS
+    // trên các dòng hiện có trên trang sẽ bị THIẾU DỮ LIỆU (các dòng khớp điều kiện
+    // nhưng nằm ở trang khác sẽ không được tìm thấy). Do đó chuyển sang lọc
+    // server-side: dùng chung tham số unit/danh_hieu/q với ô "Lọc:" ở đầu trang,
+    // rồi điều hướng lại (GET) để backend trả về đúng toàn bộ dữ liệu đã lọc.
     // ============================================
     window.applyB3Filter = function() {
-        var unitFilter = document.getElementById('b3UnitFilter')?.value.toLowerCase() || '';
-        var danhHieuFilter = document.getElementById('b3DanhHieuFilter')?.value.toLowerCase() || '';
-        var searchText = document.getElementById('b3SearchInput')?.value.toLowerCase() || '';
-        
-        // Get all tables in Bảng 3 (both cá nhân and tập thể)
-        var tables = document.querySelectorAll('#printBang3 table tbody');
-        
-        tables.forEach(function(tbody) {
-            var rows = tbody.querySelectorAll('tr');
-            
-            rows.forEach(function(row) {
-                // Skip group header rows (table-light)
-                if (row.classList.contains('table-light')) {
-                    return;
-                }
-                
-                // ★ Read reliable data attributes set directly on the row (server-rendered)
-                var donVi = (row.dataset.unit || '').toLowerCase();
-                var danhHieu = (row.dataset.danhHieu || '').toLowerCase();
-                var hoTen = (row.dataset.ten || '').toLowerCase();
-                
-                // Apply filters
-                var showRow = true;
-                
-                if (unitFilter && donVi !== unitFilter) {
-                    showRow = false;
-                }
-                
-                if (danhHieuFilter && danhHieu !== danhHieuFilter) {
-                    showRow = false;
-                }
-                
-                if (searchText && !hoTen.includes(searchText)) {
-                    showRow = false;
-                }
-                
-                row.style.display = showRow ? '' : 'none';
-            });
-            
-            // Hide group headers if all rows in group are hidden
-            var headerRows = tbody.querySelectorAll('tr.table-light');
-            headerRows.forEach(function(headerRow) {
-                var nextRow = headerRow.nextElementSibling;
-                var hasVisibleRows = false;
-                
-                // Check all rows until next header
-                while (nextRow && !nextRow.classList.contains('table-light')) {
-                    if (nextRow.style.display !== 'none') {
-                        hasVisibleRows = true;
-                        break;
-                    }
-                    nextRow = nextRow.nextElementSibling;
-                }
-                
-                headerRow.style.display = hasVisibleRows ? '' : 'none';
-            });
-        });
+        var unitFilter    = document.getElementById('b3UnitFilter')?.value || '';
+        var danhHieuFilter = document.getElementById('b3DanhHieuFilter')?.value || '';
+        var searchText    = document.getElementById('b3SearchInput')?.value.trim() || '';
+
+        var url = new URL(window.location.href);
+        if (unitFilter) url.searchParams.set('unit', unitFilter); else url.searchParams.delete('unit');
+        if (danhHieuFilter) url.searchParams.set('danh_hieu', danhHieuFilter); else url.searchParams.delete('danh_hieu');
+        if (searchText) url.searchParams.set('q', searchText); else url.searchParams.delete('q');
+        // Reset về trang 1 khi thay đổi bộ lọc
+        url.searchParams.delete('page');
+        window.location.href = url.toString();
     };
-    
+
     window.clearB3Filter = function() {
-        document.getElementById('b3UnitFilter').value = '';
-        document.getElementById('b3DanhHieuFilter').value = '';
-        document.getElementById('b3SearchInput').value = '';
-        
-        // ★ Clear localStorage
-        try {
-            localStorage.removeItem('b3UnitFilter');
-            localStorage.removeItem('b3DanhHieuFilter');
-            localStorage.removeItem('b3SearchInput');
-        } catch(e) {}
-        
-        // Show all rows
-        var tables = document.querySelectorAll('#printBang3 table tbody');
-        tables.forEach(function(tbody) {
-            var rows = tbody.querySelectorAll('tr');
-            rows.forEach(function(row) {
-                row.style.display = '';
-            });
-        });
+        var url = new URL(window.location.href);
+        url.searchParams.delete('unit');
+        url.searchParams.delete('danh_hieu');
+        url.searchParams.delete('q');
+        url.searchParams.delete('page');
+        window.location.href = url.toString();
     };
-    
-    // Auto-apply filter on select change
-    var b3UnitFilter = document.getElementById('b3UnitFilter');
-    var b3DanhHieuFilter = document.getElementById('b3DanhHieuFilter');
-    var b3SearchInput = document.getElementById('b3SearchInput');
-    
-    // ★ Restore B3 filters from localStorage
-    try {
-        if (b3UnitFilter && localStorage.getItem('b3UnitFilter')) {
-            b3UnitFilter.value = localStorage.getItem('b3UnitFilter');
-        }
-        if (b3DanhHieuFilter && localStorage.getItem('b3DanhHieuFilter')) {
-            b3DanhHieuFilter.value = localStorage.getItem('b3DanhHieuFilter');
-        }
-        if (b3SearchInput && localStorage.getItem('b3SearchInput')) {
-            b3SearchInput.value = localStorage.getItem('b3SearchInput');
-        }
-        // Apply filters if any were restored
-        if ((b3UnitFilter && b3UnitFilter.value) || 
-            (b3DanhHieuFilter && b3DanhHieuFilter.value) || 
-            (b3SearchInput && b3SearchInput.value)) {
-            setTimeout(applyB3Filter, 100);
-        }
-    } catch(e) {}
-    
-    if (b3UnitFilter) b3UnitFilter.addEventListener('change', function() {
-        try { localStorage.setItem('b3UnitFilter', this.value); } catch(e) {}
-        applyB3Filter();
-    });
-    if (b3DanhHieuFilter) b3DanhHieuFilter.addEventListener('change', function() {
-        try { localStorage.setItem('b3DanhHieuFilter', this.value); } catch(e) {}
-        applyB3Filter();
-    });
-    if (b3SearchInput) {
-        b3SearchInput.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                try { localStorage.setItem('b3SearchInput', this.value); } catch(e2) {}
-                applyB3Filter();
-            }
-        });
-    }
 
 })();
 </script>
