@@ -2360,10 +2360,22 @@ def reward_list():
         query = query.filter(KhenThuong.loai_danh_hieu == danh_hieu_filter)
     if search_query:
         query = query.filter(KhenThuong.ho_ten.ilike(f'%{search_query}%'))
-    rewards = query.order_by(
+    order_cols = (
         KhenThuong.nam_hoc.desc(), _thu_tu_subq,
         DonVi.ten_don_vi, KhenThuong.ho_ten.asc(),
+    )
+    # ★ FIX: Tách riêng "Cá nhân" (phân trang) và "Tập thể" (hiển thị đầy đủ).
+    # Trước đây dùng chung 1 query phân trang rồi lọc lại bằng selectattr/rejectattr
+    # trong template → khi số lượng cá nhân > 20 (per_page), các bản ghi "Tập thể"
+    # (thường ít hơn nhiều) bị đẩy sang trang sau và KHÔNG hiển thị ở trang 1,
+    # khiến người dùng tưởng thiếu "Khen thưởng tập thể".
+    rewards = query.filter(KhenThuong.quan_nhan_id.isnot(None)).order_by(
+        *order_cols
     ).paginate(page=page, per_page=20, error_out=False)
+
+    rewards_tt = query.filter(KhenThuong.quan_nhan_id.is_(None)).order_by(
+        *order_cols
+    ).all()
 
     # ── Filter options ───────────────────────────────────────────────────────
     _nh_kt = {n[0] for n in db.session.query(KhenThuong.nam_hoc).distinct().all() if n[0]}
@@ -2489,6 +2501,7 @@ def reward_list():
 
     return render_template('admin/reward_list.html',
                            rewards=rewards,
+                           rewards_tt=rewards_tt,
                            nam_hoc_filter=nam_hoc_filter,
                            unit_filter=unit_filter,
                            danh_hieu_filter=danh_hieu_filter,

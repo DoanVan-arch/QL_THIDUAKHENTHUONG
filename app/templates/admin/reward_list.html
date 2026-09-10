@@ -575,9 +575,9 @@
 {# ===== BẢNG 3 ===== #}
 <div class="card-section print-section" id="printBang3">
     <div class="card-body-custom p-0">
-        {% if rewards.items %}
-        {% set b3_ca_nhan = rewards.items | selectattr('quan_nhan_id') | list %}
-        {% set b3_tap_the = rewards.items | rejectattr('quan_nhan_id') | list %}
+        {% if rewards.items or rewards_tt %}
+        {% set b3_ca_nhan = rewards.items %}
+        {% set b3_tap_the = rewards_tt %}
 
         {% if b3_ca_nhan %}
         <div class="fw-semibold text-navy small px-3 pt-2 pb-1">
@@ -664,7 +664,9 @@
         </div>
         {% endif %}
 
-        {% if b3_tap_the %}
+        {# ★ Tập thể không phân trang riêng → chỉ hiển thị ở trang 1 để tránh lặp lại
+           trên các trang phân trang tiếp theo của bảng Cá nhân. #}
+        {% if b3_tap_the and rewards.page == 1 %}
         <div class="fw-semibold text-navy small px-3 pt-3 pb-1">
             <i class="bi bi-building-fill me-1"></i>Danh hiệu tập thể ({{ b3_tap_the|length }})
         </div>
