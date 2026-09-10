@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Danh sách khen thưởng tập thể{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-building-fill me-2"></i>Danh sách khen thưởng tập thể</h4>
+        <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card-section mb-3">
+    <div class="card-body-custom py-2">
+        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label mb-0 me-1 fw-semibold">Lọc:</label>
+            <select class="form-select form-select-sm" name="nam_hoc" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Tất cả năm học</option>
+                {% for nh in nam_hoc_list %}
+                <option value="{{ nh }}" {% if nam_hoc_filter == nh %}selected{% endif %}>{{ nh }}</option>
+                {% endfor %}
+            </select>
+            {% if nam_hoc_filter %}
+            <a href="{{ url_for('nomination.reward_list_tap_the') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Xóa lọc
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card-section">
+    <div class="card-body-custom p-0">
+        {% if rewards_tt %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0 align-middle sortable-table" style="font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th class="sticky-stt-col">STT</th>
+                        <th class="sticky-name-col">Tên tập thể</th>
+                        <th>Danh hiệu</th>
+                        <th>Năm học</th>
+                        <th>Ngày duyệt</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kt in rewards_tt %}
+                    <tr>
+                        <td class="sticky-stt-col">{{ loop.index }}</td>
+                        <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
+                        <td>
+                            {% if kt.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
+                            {% elif kt.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
+                            {% else %}<span class="badge bg-secondary">{{ kt.loai_danh_hieu }}</span>{% endif %}
+                        </td>
+                        <td>{{ kt.nam_hoc }}</td>
+                        <td>{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</td>
+                        <td><small class="text-muted">{{ kt.ghi_chu or '-' }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-trophy d-block" style="font-size:2rem;color:var(--navy-primary);"></i>
+            <p>Chưa có khen thưởng tập thể nào{{ ' phù hợp bộ lọc' if nam_hoc_filter else '' }}</p>
+            {% if nam_hoc_filter %}
+            <a href="{{ url_for('nomination.reward_list_tap_the') }}" class="btn btn-sm btn-outline-navy">
+                <i class="bi bi-x-lg me-1"></i>Xóa bộ lọc
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .sticky-stt-col { position:sticky; left:0; background:#fff; min-width:40px; }
+    .sticky-name-col { position:sticky; left:40px; background:#fff; min-width:150px; }
+    thead th.sticky-stt-col, thead th.sticky-name-col {
+        background:var(--navy-primary,#1a3a5c) !important; color:#fff !important;
+    }
+</style>
+{% endblock %}

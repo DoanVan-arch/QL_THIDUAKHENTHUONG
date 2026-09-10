@@ -50,6 +50,9 @@
                 <a href="{{ url_for('nomination.nomination_history') }}" class="sidebar-link {% if request.endpoint in ['nomination.nomination_history', 'nomination.detail_nomination'] and request.args.get('from') == 'history' %}active{% endif %}">
                     <i class="bi bi-clock-history"></i> <span>Lịch sử đề xuất</span>
                 </a>
+                <a href="{{ url_for('nomination.reward_list_tap_the') }}" class="sidebar-link {% if request.endpoint == 'nomination.reward_list_tap_the' %}active{% endif %}">
+                    <i class="bi bi-building-fill"></i> <span>DS Khen thưởng tập thể</span>
+                </a>
                 <a href="{{ url_for('nomination.notifications') }}" class="sidebar-link {% if request.endpoint == 'nomination.notifications' %}active{% endif %}">
                     <i class="bi bi-bell"></i> <span>Thông báo</span>
                     {% if unread_notification_count|default(0) > 0 %}

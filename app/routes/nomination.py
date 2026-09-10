@@ -121,6 +121,59 @@ def _get_tieu_chi_tap_the_by_danh_hieu(danh_hieu_db):
     return result
 
 
+@nomination_bp.route('/khen-thuong-tap-the')
+@login_required
+@unit_user_required
+def reward_list_tap_the():
+    """★ Danh sách khen thưởng tập thể của đơn vị (lấy từ Bảng 3 - KhenThuong
+    trong reward_list.html của admin, lọc riêng theo đơn vị của tài khoản).
+    """
+    if not current_user.don_vi:
+        flash('Tài khoản chưa được gán đơn vị.', 'warning')
+        return redirect(url_for('dashboard.index'))
+
+    from app.models.nomination import DanhHieu as _DanhHieu
+    from sqlalchemy import collate as _collate
+
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+
+    base_query = KhenThuong.query.filter(
+        KhenThuong.don_vi_id == current_user.don_vi_id,
+        KhenThuong.quan_nhan_id.is_(None),
+    )
+
+    nam_hoc_list = sorted(
+        {r[0] for r in db.session.query(KhenThuong.nam_hoc)
+            .filter(KhenThuong.don_vi_id == current_user.don_vi_id,
+                    KhenThuong.quan_nhan_id.is_(None))
+            .distinct().all() if r[0]},
+        reverse=True,
+    )
+
+    query = base_query
+    if nam_hoc_filter:
+        query = query.filter(KhenThuong.nam_hoc == nam_hoc_filter)
+
+    _thu_tu_subq = (
+        db.session.query(_DanhHieu.thu_tu)
+        .filter(
+            _collate(_DanhHieu.ten_danh_hieu, 'utf8mb4_unicode_ci') ==
+            _collate(KhenThuong.loai_danh_hieu, 'utf8mb4_unicode_ci')
+        )
+        .correlate(KhenThuong)
+        .scalar_subquery()
+    )
+
+    rewards_tt = query.order_by(
+        KhenThuong.nam_hoc.desc(), _thu_tu_subq, KhenThuong.ho_ten.asc()
+    ).all()
+
+    return render_template('nomination/reward_list_tap_the.html',
+                           rewards_tt=rewards_tt,
+                           nam_hoc_filter=nam_hoc_filter,
+                           nam_hoc_list=nam_hoc_list)
+
+
 @nomination_bp.route('/history')
 @login_required
 @unit_user_required
