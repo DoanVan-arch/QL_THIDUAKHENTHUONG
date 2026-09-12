@@ -13,7 +13,7 @@ from app.models.reward import KhenThuong
 from app.models.notification import ThongBao
 from app.models.catalog import DoiTuongOption
 from app.utils.decorators import unit_user_required
-from app.utils.file_upload import save_upload
+from app.utils.file_upload import save_upload, delete_upload
 from app.utils.activity_logger import log_action
 from datetime import datetime
 from sqlalchemy.exc import ProgrammingError, OperationalError
@@ -121,57 +121,222 @@ def _get_tieu_chi_tap_the_by_danh_hieu(danh_hieu_db):
     return result
 
 
+def _parse_date(value):
+    value = (value or '').strip()
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
 @nomination_bp.route('/khen-thuong-tap-the')
 @login_required
 @unit_user_required
 def reward_list_tap_the():
-    """★ Danh sách khen thưởng tập thể của đơn vị (lấy từ Bảng 3 - KhenThuong
-    trong reward_list.html của admin, lọc riêng theo đơn vị của tài khoản).
+    """★ Danh sách khen thưởng tập thể của đơn vị.
+
+    Cho phép:
+    - Tự nhập thủ công đầy đủ các trường (loại, tên, số quyết định, ngày cấp,
+      năm học, cấp quyết định, ảnh minh chứng).
+    - Lấy từ Bảng 3 (KhenThuong, phần tập thể — quan_nhan_id IS NULL) ở
+      admin/reward_list.html: khi đó chỉ điền `tên` (ĐVQT/ĐVTT) và `năm học`
+      theo Bảng 3, các trường còn lại để trống cho đơn vị tự bổ sung.
     """
+    from app.models.reward import KhenThuongTapThe, LoaiKhenThuongTapThe
+
     if not current_user.don_vi:
         flash('Tài khoản chưa được gán đơn vị.', 'warning')
         return redirect(url_for('dashboard.index'))
 
-    from app.models.nomination import DanhHieu as _DanhHieu
-    from sqlalchemy import collate as _collate
-
     nam_hoc_filter = request.args.get('nam_hoc', '')
 
-    base_query = KhenThuong.query.filter(
-        KhenThuong.don_vi_id == current_user.don_vi_id,
-        KhenThuong.quan_nhan_id.is_(None),
+    query = KhenThuongTapThe.query.filter(
+        KhenThuongTapThe.don_vi_id == current_user.don_vi_id
     )
+    if nam_hoc_filter:
+        query = query.filter(KhenThuongTapThe.nam_hoc == nam_hoc_filter)
+
+    items = query.order_by(
+        KhenThuongTapThe.nam_hoc.desc(), KhenThuongTapThe.created_at.desc()
+    ).all()
 
     nam_hoc_list = sorted(
-        {r[0] for r in db.session.query(KhenThuong.nam_hoc)
-            .filter(KhenThuong.don_vi_id == current_user.don_vi_id,
-                    KhenThuong.quan_nhan_id.is_(None))
+        {r[0] for r in db.session.query(KhenThuongTapThe.nam_hoc)
+            .filter(KhenThuongTapThe.don_vi_id == current_user.don_vi_id)
             .distinct().all() if r[0]},
         reverse=True,
     )
 
-    query = base_query
-    if nam_hoc_filter:
-        query = query.filter(KhenThuong.nam_hoc == nam_hoc_filter)
-
-    _thu_tu_subq = (
-        db.session.query(_DanhHieu.thu_tu)
-        .filter(
-            _collate(_DanhHieu.ten_danh_hieu, 'utf8mb4_unicode_ci') ==
-            _collate(KhenThuong.loai_danh_hieu, 'utf8mb4_unicode_ci')
-        )
-        .correlate(KhenThuong)
-        .scalar_subquery()
+    # ★ Các bản ghi ở Bảng 3 (KhenThuong tập thể) CHƯA được lấy vào danh sách này
+    already_imported_kt_ids = {
+        r[0] for r in db.session.query(KhenThuongTapThe.khen_thuong_id)
+        .filter(KhenThuongTapThe.khen_thuong_id.isnot(None)).all()
+    }
+    bang3_query = KhenThuong.query.filter(
+        KhenThuong.don_vi_id == current_user.don_vi_id,
+        KhenThuong.quan_nhan_id.is_(None),
     )
-
-    rewards_tt = query.order_by(
-        KhenThuong.nam_hoc.desc(), _thu_tu_subq, KhenThuong.ho_ten.asc()
+    if already_imported_kt_ids:
+        bang3_query = bang3_query.filter(~KhenThuong.id.in_(already_imported_kt_ids))
+    bang3_available = bang3_query.order_by(
+        KhenThuong.nam_hoc.desc(), KhenThuong.ho_ten.asc()
     ).all()
 
     return render_template('nomination/reward_list_tap_the.html',
-                           rewards_tt=rewards_tt,
+                           items=items,
                            nam_hoc_filter=nam_hoc_filter,
-                           nam_hoc_list=nam_hoc_list)
+                           nam_hoc_list=nam_hoc_list,
+                           bang3_available=bang3_available,
+                           loai_choices=LoaiKhenThuongTapThe.choices())
+
+
+@nomination_bp.route('/khen-thuong-tap-the/create', methods=['POST'])
+@login_required
+@unit_user_required
+def create_reward_tap_the():
+    """Thêm thủ công 1 bản ghi khen thưởng tập thể."""
+    from app.models.reward import KhenThuongTapThe
+
+    if not current_user.don_vi:
+        flash('Tài khoản chưa được gán đơn vị.', 'warning')
+        return redirect(url_for('dashboard.index'))
+
+    ten = request.form.get('ten', '').strip()
+    if not ten:
+        flash('Tên khen thưởng không được để trống.', 'danger')
+        return redirect(url_for('nomination.reward_list_tap_the'))
+
+    anh_minh_chung = None
+    file = request.files.get('anh_minh_chung')
+    if file and file.filename:
+        anh_minh_chung = save_upload(file, 'khen_thuong_tap_the')
+
+    item = KhenThuongTapThe(
+        don_vi_id=current_user.don_vi_id,
+        nguon='thu_cong',
+        loai=request.form.get('loai', '').strip() or None,
+        ten=ten,
+        so_quyet_dinh=request.form.get('so_quyet_dinh', '').strip() or None,
+        ngay_cap=_parse_date(request.form.get('ngay_cap')),
+        nam_hoc=request.form.get('nam_hoc', '').strip() or None,
+        cap_quyet_dinh=request.form.get('cap_quyet_dinh', '').strip() or None,
+        anh_minh_chung=anh_minh_chung,
+        created_by_id=current_user.id,
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash(f'Đã thêm khen thưởng tập thể: {ten}', 'success')
+    return redirect(url_for('nomination.reward_list_tap_the'))
+
+
+@nomination_bp.route('/khen-thuong-tap-the/import-bang3', methods=['POST'])
+@login_required
+@unit_user_required
+def import_reward_tap_the_from_bang3():
+    """Lấy các bản ghi tập thể đã chọn từ Bảng 3 (KhenThuong) — chỉ điền
+    tên + năm học, các trường khác để trống cho đơn vị tự bổ sung."""
+    from app.models.reward import KhenThuongTapThe
+
+    if not current_user.don_vi:
+        flash('Tài khoản chưa được gán đơn vị.', 'warning')
+        return redirect(url_for('dashboard.index'))
+
+    kt_ids = request.form.getlist('khen_thuong_ids', type=int)
+    if not kt_ids:
+        flash('Vui lòng chọn ít nhất 1 mục ở Bảng 3 để lấy vào danh sách.', 'warning')
+        return redirect(url_for('nomination.reward_list_tap_the'))
+
+    already_imported_kt_ids = {
+        r[0] for r in db.session.query(KhenThuongTapThe.khen_thuong_id)
+        .filter(KhenThuongTapThe.khen_thuong_id.in_(kt_ids)).all()
+    }
+
+    kts = KhenThuong.query.filter(
+        KhenThuong.id.in_(kt_ids),
+        KhenThuong.don_vi_id == current_user.don_vi_id,
+        KhenThuong.quan_nhan_id.is_(None),
+    ).all()
+
+    count = 0
+    for kt in kts:
+        if kt.id in already_imported_kt_ids:
+            continue
+        item = KhenThuongTapThe(
+            don_vi_id=current_user.don_vi_id,
+            khen_thuong_id=kt.id,
+            nguon='bang_3',
+            ten=kt.ho_ten,
+            nam_hoc=kt.nam_hoc,
+            created_by_id=current_user.id,
+        )
+        db.session.add(item)
+        count += 1
+
+    db.session.commit()
+    if count:
+        flash(f'Đã lấy {count} khen thưởng tập thể từ Bảng 3.', 'success')
+    else:
+        flash('Các mục đã chọn đã được lấy vào danh sách trước đó.', 'info')
+    return redirect(url_for('nomination.reward_list_tap_the'))
+
+
+@nomination_bp.route('/khen-thuong-tap-the/<int:id>/edit', methods=['POST'])
+@login_required
+@unit_user_required
+def edit_reward_tap_the(id):
+    """Chỉnh sửa / bổ sung thông tin cho 1 bản ghi khen thưởng tập thể
+    (kể cả các bản ghi lấy từ Bảng 3 — cho phép bổ sung loại, số quyết định,
+    ngày cấp, cấp quyết định, ảnh minh chứng)."""
+    from app.models.reward import KhenThuongTapThe
+
+    item = KhenThuongTapThe.query.get_or_404(id)
+    if item.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền chỉnh sửa mục này.', 'danger')
+        return redirect(url_for('nomination.reward_list_tap_the'))
+
+    ten = request.form.get('ten', '').strip()
+    if not ten:
+        flash('Tên khen thưởng không được để trống.', 'danger')
+        return redirect(url_for('nomination.reward_list_tap_the'))
+
+    item.ten = ten
+    item.loai = request.form.get('loai', '').strip() or None
+    item.so_quyet_dinh = request.form.get('so_quyet_dinh', '').strip() or None
+    item.ngay_cap = _parse_date(request.form.get('ngay_cap'))
+    item.nam_hoc = request.form.get('nam_hoc', '').strip() or None
+    item.cap_quyet_dinh = request.form.get('cap_quyet_dinh', '').strip() or None
+
+    file = request.files.get('anh_minh_chung')
+    if file and file.filename:
+        if item.anh_minh_chung:
+            delete_upload(item.anh_minh_chung)
+        item.anh_minh_chung = save_upload(file, 'khen_thuong_tap_the')
+
+    db.session.commit()
+    flash(f'Đã cập nhật: {ten}', 'success')
+    return redirect(url_for('nomination.reward_list_tap_the'))
+
+
+@nomination_bp.route('/khen-thuong-tap-the/<int:id>/delete', methods=['POST'])
+@login_required
+@unit_user_required
+def delete_reward_tap_the(id):
+    from app.models.reward import KhenThuongTapThe
+
+    item = KhenThuongTapThe.query.get_or_404(id)
+    if item.don_vi_id != current_user.don_vi_id:
+        flash('Không có quyền xóa mục này.', 'danger')
+        return redirect(url_for('nomination.reward_list_tap_the'))
+
+    if item.anh_minh_chung:
+        delete_upload(item.anh_minh_chung)
+    ten = item.ten
+    db.session.delete(item)
+    db.session.commit()
+    flash(f'Đã xóa: {ten}', 'success')
+    return redirect(url_for('nomination.reward_list_tap_the'))
 
 
 @nomination_bp.route('/history')

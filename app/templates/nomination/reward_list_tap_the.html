@@ -7,6 +7,15 @@
         <h4><i class="bi bi-building-fill me-2"></i>Danh sách khen thưởng tập thể</h4>
         <small class="text-muted">{{ current_user.don_vi.ten_don_vi if current_user.don_vi else '' }}</small>
     </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <button type="button" class="btn btn-sm btn-outline-navy" data-bs-toggle="modal" data-bs-target="#bang3Modal">
+            <i class="bi bi-clipboard-check me-1"></i>Lấy từ Bảng 3
+            {% if bang3_available %}<span class="badge bg-danger ms-1">{{ bang3_available|length }}</span>{% endif %}
+        </button>
+        <button type="button" class="btn btn-sm btn-navy" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg me-1"></i>Thêm thủ công
+        </button>
+    </div>
 </div>
 
 <!-- Filters -->
@@ -31,32 +40,66 @@
 
 <div class="card-section">
     <div class="card-body-custom p-0">
-        {% if rewards_tt %}
+        {% if items %}
         <div class="table-responsive">
             <table class="table table-custom mb-0 align-middle sortable-table" style="font-size:0.85rem;">
                 <thead>
                     <tr>
                         <th class="sticky-stt-col">STT</th>
-                        <th class="sticky-name-col">Tên tập thể</th>
-                        <th>Danh hiệu</th>
+                        <th>Loại</th>
+                        <th class="sticky-name-col">Tên</th>
+                        <th>Số quyết định</th>
+                        <th>Ngày cấp</th>
                         <th>Năm học</th>
-                        <th>Ngày duyệt</th>
-                        <th>Ghi chú</th>
+                        <th>Cấp quyết định</th>
+                        <th class="text-center">Ảnh minh chứng</th>
+                        <th class="text-center">Nguồn</th>
+                        <th class="text-center no-sort" style="width:110px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for kt in rewards_tt %}
+                    {% for it in items %}
                     <tr>
                         <td class="sticky-stt-col">{{ loop.index }}</td>
-                        <td class="fw-semibold sticky-name-col">{{ kt.ho_ten }}</td>
                         <td>
-                            {% if kt.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy">ĐVQT</span>
-                            {% elif kt.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark">ĐVTT</span>
-                            {% else %}<span class="badge bg-secondary">{{ kt.loai_danh_hieu }}</span>{% endif %}
+                            {% if it.loai %}<span class="badge bg-secondary">{{ it.loai }}</span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
                         </td>
-                        <td>{{ kt.nam_hoc }}</td>
-                        <td>{{ kt.ngay_duyet.strftime('%d/%m/%Y') if kt.ngay_duyet else '-' }}</td>
-                        <td><small class="text-muted">{{ kt.ghi_chu or '-' }}</small></td>
+                        <td class="fw-semibold sticky-name-col">{{ it.ten }}</td>
+                        <td>{{ it.so_quyet_dinh or '-' }}</td>
+                        <td>{{ it.ngay_cap.strftime('%d/%m/%Y') if it.ngay_cap else '-' }}</td>
+                        <td>{{ it.nam_hoc or '-' }}</td>
+                        <td>{{ it.cap_quyet_dinh or '-' }}</td>
+                        <td class="text-center">
+                            {% if it.anh_minh_chung %}
+                            <a href="{{ url_for('uploaded_file', filename=it.anh_minh_chung) }}" target="_blank" title="Xem ảnh minh chứng">
+                                <img src="{{ url_for('uploaded_file', filename=it.anh_minh_chung) }}"
+                                     alt="Minh chứng" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid #dee2e6;">
+                            </a>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if it.nguon == 'bang_3' %}
+                            <span class="badge bg-info text-dark" title="Lấy từ Bảng 3"><i class="bi bi-clipboard-check me-1"></i>Bảng 3</span>
+                            {% else %}
+                            <span class="badge bg-light text-muted border">Tự nhập</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <button type="button" class="btn btn-sm btn-outline-navy" title="Sửa"
+                                        onclick="openEditModal({{ it.id }}, '{{ it.loai or '' }}', '{{ it.ten|e }}', '{{ it.so_quyet_dinh or '' }}', '{{ it.ngay_cap.strftime('%Y-%m-%d') if it.ngay_cap else '' }}', '{{ it.nam_hoc or '' }}', '{{ it.cap_quyet_dinh or '' }}')">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('nomination.delete_reward_tap_the', id=it.id) }}"
+                                      onsubmit="return confirm('Xóa khen thưởng tập thể \'{{ it.ten|e }}\'?');" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -76,6 +119,179 @@
     </div>
 </div>
 
+<!-- ===== Modal: Thêm thủ công ===== -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nomination.create_reward_tap_the') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Thêm khen thưởng tập thể</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Loại</label>
+                        <select class="form-select" name="loai">
+                            <option value="">-- Chọn loại --</option>
+                            {% for l in loai_choices %}
+                            <option value="{{ l }}">{{ l }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ten" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Số quyết định</label>
+                            <input type="text" class="form-control" name="so_quyet_dinh">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày cấp</label>
+                            <input type="date" class="form-control" name="ngay_cap">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-6">
+                            <label class="form-label">Năm học</label>
+                            <input type="text" class="form-control" name="nam_hoc" placeholder="VD: 2025-2026" list="namHocDatalist">
+                            <datalist id="namHocDatalist">
+                                {% for nh in nam_hoc_list %}<option value="{{ nh }}">{% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cấp quyết định</label>
+                            <input type="text" class="form-control" name="cap_quyet_dinh">
+                        </div>
+                    </div>
+                    <div class="mb-2 mt-3">
+                        <label class="form-label">Ảnh minh chứng</label>
+                        <input type="file" class="form-control" name="anh_minh_chung" accept="image/*,.pdf">
+                        <small class="text-muted">Chấp nhận: JPG, PNG, GIF, PDF</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i>Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Modal: Sửa ===== -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="editForm" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title"><i class="bi bi-pencil me-2"></i>Sửa khen thưởng tập thể</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Loại</label>
+                        <select class="form-select" name="loai" id="editLoai">
+                            <option value="">-- Chọn loại --</option>
+                            {% for l in loai_choices %}
+                            <option value="{{ l }}">{{ l }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="ten" id="editTen" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Số quyết định</label>
+                            <input type="text" class="form-control" name="so_quyet_dinh" id="editSoQuyetDinh">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày cấp</label>
+                            <input type="date" class="form-control" name="ngay_cap" id="editNgayCap">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-6">
+                            <label class="form-label">Năm học</label>
+                            <input type="text" class="form-control" name="nam_hoc" id="editNamHoc" list="namHocDatalist">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cấp quyết định</label>
+                            <input type="text" class="form-control" name="cap_quyet_dinh" id="editCapQuyetDinh">
+                        </div>
+                    </div>
+                    <div class="mb-2 mt-3">
+                        <label class="form-label">Ảnh minh chứng (chọn để thay thế ảnh cũ)</label>
+                        <input type="file" class="form-control" name="anh_minh_chung" accept="image/*,.pdf">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i>Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Modal: Lấy từ Bảng 3 ===== -->
+<div class="modal fade" id="bang3Modal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nomination.import_reward_tap_the_from_bang3') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header modal-header-navy">
+                    <h6 class="modal-title"><i class="bi bi-clipboard-check me-2"></i>Lấy khen thưởng tập thể từ Bảng 3</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Khi lấy từ Bảng 3, hệ thống chỉ điền sẵn <strong>Tên</strong> và <strong>Năm học</strong>;
+                        các trường Loại, Số quyết định, Ngày cấp, Cấp quyết định, Ảnh minh chứng sẽ để trống,
+                        đơn vị có thể bổ sung sau bằng chức năng Sửa.
+                    </div>
+                    {% if bang3_available %}
+                    <div class="form-check mb-2 border-bottom pb-2">
+                        <input class="form-check-input" type="checkbox" id="checkAllBang3" onchange="document.querySelectorAll('.bang3-cb').forEach(cb=>cb.checked=this.checked)">
+                        <label class="form-check-label small fw-semibold" for="checkAllBang3">Chọn tất cả ({{ bang3_available|length }})</label>
+                    </div>
+                    <div class="list-group" style="max-height:320px;overflow-y:auto;">
+                        {% for kt in bang3_available %}
+                        <label class="list-group-item d-flex align-items-center gap-2">
+                            <input type="checkbox" class="form-check-input bang3-cb m-0" name="khen_thuong_ids" value="{{ kt.id }}">
+                            <span>
+                                <strong>{{ kt.ho_ten }}</strong>
+                                {% if kt.loai_danh_hieu == 'Đơn vị quyết thắng' %}<span class="badge bg-navy ms-1">ĐVQT</span>
+                                {% elif kt.loai_danh_hieu == 'Đơn vị tiên tiến' %}<span class="badge bg-info text-dark ms-1">ĐVTT</span>
+                                {% else %}<span class="badge bg-secondary ms-1">{{ kt.loai_danh_hieu }}</span>{% endif %}
+                                <span class="text-muted small ms-1">— Năm học {{ kt.nam_hoc }}</span>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted small fst-italic">
+                        Không có khen thưởng tập thể nào ở Bảng 3 để lấy (tất cả đã được lấy hoặc chưa có dữ liệu).
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    {% if bang3_available %}
+                    <button type="submit" class="btn btn-navy"><i class="bi bi-check-lg me-1"></i>Lấy các mục đã chọn</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <style>
     .sticky-stt-col { position:sticky; left:0; background:#fff; min-width:40px; }
     .sticky-name-col { position:sticky; left:40px; background:#fff; min-width:150px; }
@@ -83,4 +299,19 @@
         background:var(--navy-primary,#1a3a5c) !important; color:#fff !important;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openEditModal(id, loai, ten, soQuyetDinh, ngayCap, namHoc, capQuyetDinh) {
+    document.getElementById('editForm').action = '/nomination/khen-thuong-tap-the/' + id + '/edit';
+    document.getElementById('editLoai').value = loai || '';
+    document.getElementById('editTen').value = ten || '';
+    document.getElementById('editSoQuyetDinh').value = soQuyetDinh || '';
+    document.getElementById('editNgayCap').value = ngayCap || '';
+    document.getElementById('editNamHoc').value = namHoc || '';
+    document.getElementById('editCapQuyetDinh').value = capQuyetDinh || '';
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+</script>
 {% endblock %}
