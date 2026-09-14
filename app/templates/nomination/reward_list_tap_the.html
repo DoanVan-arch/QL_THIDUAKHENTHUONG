@@ -9,7 +9,7 @@
     </div>
     <div class="d-flex gap-2 align-items-center flex-wrap">
         <button type="button" class="btn btn-sm btn-outline-navy" data-bs-toggle="modal" data-bs-target="#bang3Modal">
-            <i class="bi bi-clipboard-check me-1"></i>Lấy từ Bảng 3
+            <i class="bi bi-clipboard-check me-1"></i>Lấy từ DS cấp trên
             {% if bang3_available %}<span class="badge bg-danger ms-1">{{ bang3_available|length }}</span>{% endif %}
         </button>
         <button type="button" class="btn btn-sm btn-navy" data-bs-toggle="modal" data-bs-target="#addModal">
@@ -80,7 +80,7 @@
                         </td>
                         <td class="text-center">
                             {% if it.nguon == 'bang_3' %}
-                            <span class="badge bg-info text-dark" title="Lấy từ Bảng 3"><i class="bi bi-clipboard-check me-1"></i>Bảng 3</span>
+                            <span class="badge bg-info text-dark" title="Lấy từ DS cấp trên"><i class="bi bi-clipboard-check me-1"></i>Bảng 3</span>
                             {% else %}
                             <span class="badge bg-light text-muted border">Tự nhập</span>
                             {% endif %}
@@ -252,7 +252,7 @@
                 <div class="modal-body">
                     <div class="alert alert-info py-2 mb-3" style="font-size:0.85rem;">
                         <i class="bi bi-info-circle me-1"></i>
-                        Khi lấy từ Bảng 3, hệ thống chỉ điền sẵn <strong>Tên</strong> và <strong>Năm học</strong>;
+                        Khi lấy từ DS cấp trên, hệ thống chỉ điền sẵn <strong>Tên</strong> và <strong>Năm học</strong>;
                         các trường Loại, Số quyết định, Ngày cấp, Cấp quyết định, Ảnh minh chứng sẽ để trống,
                         đơn vị có thể bổ sung sau bằng chức năng Sửa.
                     </div>
