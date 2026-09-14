@@ -181,7 +181,7 @@ def reward_list_tap_the():
     if already_imported_kt_ids:
         bang3_query = bang3_query.filter(~KhenThuong.id.in_(already_imported_kt_ids))
     bang3_available = bang3_query.order_by(
-        KhenThuong.nam_hoc.desc(), KhenThuong.loai_danh_hieu.asc()
+        KhenThuong.nam_hoc.desc(), KhenThuong.ho_ten.asc()
     ).all()
 
     return render_template('nomination/reward_list_tap_the.html',

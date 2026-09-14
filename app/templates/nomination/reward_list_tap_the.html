@@ -65,7 +65,19 @@
                             {% if it.loai %}<span class="badge bg-secondary">{{ it.loai }}</span>
                             {% else %}<span class="text-muted">-</span>{% endif %}
                         </td>
-                        <td class="fw-semibold sticky-name-col">{{ it.ten }}</td>
+                        <td class="fw-semibold sticky-name-col">
+                            {{ it.ten }}
+                            {% if it.loai_danh_hieu %}
+                            <br>
+                            {% if it.loai_danh_hieu == 'Đơn vị quyết thắng' %}
+                            <span class="badge bg-navy mt-1">ĐVQT</span>
+                            {% elif it.loai_danh_hieu == 'Đơn vị tiên tiến' %}
+                            <span class="badge bg-info text-dark mt-1">ĐVTT</span>
+                            {% else %}
+                            <span class="badge bg-secondary mt-1">{{ it.loai_danh_hieu }}</span>
+                            {% endif %}
+                            {% endif %}
+                        </td>
                         <td>{{ it.so_quyet_dinh or '-' }}</td>
                         <td>{{ it.ngay_cap.strftime('%d/%m/%Y') if it.ngay_cap else '-' }}</td>
                         <td>{{ it.nam_hoc or '-' }}</td>
