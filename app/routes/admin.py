@@ -2327,6 +2327,60 @@ def don_vi_stats():
                            stats=stats)
 
 
+@admin_bp.route('/ho-so-khen-thuong-tap-the')
+@login_required
+@admin_or_reward_viewer_required
+def ho_so_khen_thuong_tap_the():
+    """★ Hồ sơ khen thưởng tập thể — hiển thị toàn bộ bảng khen_thuong_tap_the
+    (do các đơn vị tự nhập hoặc lấy từ Bảng 3) của TẤT CẢ các đơn vị.
+    """
+    from app.models.reward import KhenThuongTapThe, LoaiKhenThuongTapThe
+
+    nam_hoc_filter = request.args.get('nam_hoc', '')
+    unit_filter = request.args.get('unit', '')
+    loai_filter = request.args.get('loai', '')
+    search_query = request.args.get('q', '').strip()
+
+    query = KhenThuongTapThe.query.join(DonVi, KhenThuongTapThe.don_vi_id == DonVi.id)
+    if nam_hoc_filter:
+        query = query.filter(KhenThuongTapThe.nam_hoc == nam_hoc_filter)
+    if unit_filter:
+        query = query.filter(DonVi.ten_don_vi == unit_filter)
+    if loai_filter:
+        query = query.filter(KhenThuongTapThe.loai == loai_filter)
+    if search_query:
+        query = query.filter(KhenThuongTapThe.ten.ilike(f'%{search_query}%'))
+
+    items = query.order_by(
+        KhenThuongTapThe.nam_hoc.desc(), DonVi.ten_don_vi, KhenThuongTapThe.ten.asc()
+    ).all()
+
+    nam_hoc_list = sorted(
+        {r[0] for r in db.session.query(KhenThuongTapThe.nam_hoc).distinct().all() if r[0]},
+        reverse=True,
+    )
+    unit_names = [u[0] for u in db.session.query(DonVi.ten_don_vi)
+                  .join(KhenThuongTapThe, KhenThuongTapThe.don_vi_id == DonVi.id)
+                  .distinct().order_by(DonVi.ten_don_vi).all()]
+
+    total_items = KhenThuongTapThe.query.count()
+    total_bang3 = KhenThuongTapThe.query.filter(KhenThuongTapThe.nguon == 'bang_3').count()
+    total_thu_cong = KhenThuongTapThe.query.filter(KhenThuongTapThe.nguon == 'thu_cong').count()
+
+    return render_template('admin/ho_so_khen_thuong_tap_the.html',
+                           items=items,
+                           nam_hoc_filter=nam_hoc_filter,
+                           unit_filter=unit_filter,
+                           loai_filter=loai_filter,
+                           search_query=search_query,
+                           nam_hoc_list=nam_hoc_list,
+                           unit_names=unit_names,
+                           loai_choices=LoaiKhenThuongTapThe.choices(),
+                           total_items=total_items,
+                           total_bang3=total_bang3,
+                           total_thu_cong=total_thu_cong)
+
+
 @admin_bp.route('/reward-list')
 @login_required
 @admin_or_reward_viewer_required
