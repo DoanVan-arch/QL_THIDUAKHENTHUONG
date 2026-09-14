@@ -267,7 +267,7 @@ def import_reward_tap_the_from_bang3():
             don_vi_id=current_user.don_vi_id,
             khen_thuong_id=kt.id,
             nguon='bang_3',
-            ten=kt.ho_ten,
+            ten=kt.ho_ten + (f' ({kt.loai_danh_hieu})' if kt.loai_danh_hieu else ''),
             nam_hoc=kt.nam_hoc,
             created_by_id=current_user.id,
         )
