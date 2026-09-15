@@ -67,7 +67,6 @@
                         </td>
                         <td class="fw-semibold sticky-name-col">
                             {{ it.ten }}
-                          
                         </td>
                         <td>{{ it.so_quyet_dinh or '-' }}</td>
                         <td>{{ it.ngay_cap.strftime('%d/%m/%Y') if it.ngay_cap else '-' }}</td>
@@ -135,8 +134,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Loại</label>
-                         <input type="text" class="form-control form-control-sm" name="loai" style="width:auto;"
-                             placeholder="Nhập loại..." value="{{ loai_filter or '' }}">
+                        <input type="text" class="form-control" name="loai" placeholder="Nhập loại...">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên <span class="text-danger">*</span></label>
@@ -193,8 +191,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Loại</label>
-                        <input type="text" class="form-control" name="loai" id="editLoai" value="">
-                    </div>
+                        <input type="text" class="form-control" name="loai" id="editLoai">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên <span class="text-danger">*</span></label>
