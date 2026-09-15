@@ -215,11 +215,8 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Loại <span class="text-danger">*</span></label>
-                        <select class="form-select" name="loai" required>
-                            {% for lcc in loai_chung_chi_list %}
-                            <option value="{{ lcc }}">{{ lcc }}</option>
-                            {% endfor %}
-                        </select>
+                       <input type="text" class="form-control" name="loai" required>
+
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên <span class="text-danger">*</span></label>
@@ -271,11 +268,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Loại <span class="text-danger">*</span></label>
-                        <select class="form-select" name="loai" id="editCertLoai" required>
-                            {% for lcc in loai_chung_chi_list %}
-                            <option value="{{ lcc }}">{{ lcc }}</option>
-                            {% endfor %}
-                        </select>
+                        <input type="text" class="form-control" name="loai" id="editCertLoai" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên <span class="text-danger">*</span></label>
