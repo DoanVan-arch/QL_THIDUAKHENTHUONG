@@ -135,12 +135,8 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Loại</label>
-                        <select class="form-select" name="loai">
-                            <option value="">-- Chọn loại --</option>
-                            {% for l in loai_choices %}
-                            <option value="{{ l }}">{{ l }}</option>
-                            {% endfor %}
-                        </select>
+                         <input type="text" class="form-control form-control-sm" name="loai" style="width:auto;"
+                placeholder="Nhập loại..." value="{{ loai_filter or '' }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên <span class="text-danger">*</span></label>
@@ -197,12 +193,8 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Loại</label>
-                        <select class="form-select" name="loai" id="editLoai">
-                            <option value="">-- Chọn loại --</option>
-                            {% for l in loai_choices %}
-                            <option value="{{ l }}">{{ l }}</option>
-                            {% endfor %}
-                        </select>
+                        <input type="text" class="form-control" name="loai" id="editLoai" value="{{ item.loai or '' }}">
+                    </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tên <span class="text-danger">*</span></label>

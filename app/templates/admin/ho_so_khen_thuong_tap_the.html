@@ -41,12 +41,8 @@
                 <option value="{{ u }}" {% if unit_filter == u %}selected{% endif %}>{{ u }}</option>
                 {% endfor %}
             </select>
-            <select class="form-select form-select-sm" name="loai" style="width:auto;" onchange="this.form.submit()">
-                <option value="">Tất cả loại</option>
-                {% for l in loai_choices %}
-                <option value="{{ l }}" {% if loai_filter == l %}selected{% endif %}>{{ l }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" class="form-control form-control-sm" name="loai" style="width:auto;"
+                placeholder="Nhập loại..." value="{{ loai_filter or '' }}">
             <div class="input-group input-group-sm" style="width:220px;">
                 <input type="text" class="form-control" name="q" value="{{ search_query }}" placeholder="Tìm tên...">
                 <button type="submit" class="btn btn-outline-navy"><i class="bi bi-search"></i></button>
