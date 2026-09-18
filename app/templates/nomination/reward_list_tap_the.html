@@ -137,7 +137,7 @@
                         <input type="text" class="form-control" name="loai" placeholder="Nhập hình thức...">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Thành tích lý do được khen thưởng <span class="text-danger">*</span></label>
+                        <label class="form-label">Thành tích(lý do được khen thưởng) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="ten" required>
                     </div>
                     <div class="row g-3">
@@ -301,7 +301,7 @@ function openEditModal(id, loai, ten, soQuyetDinh, ngayCap, namHoc, capQuyetDinh
     document.getElementById('editTen').value = ten || '';
     document.getElementById('editSoQuyetDinh').value = soQuyetDinh || '';
     document.getElementById('editNgayCap').value = ngayCap || '';
-    document.getElementById('editNamHoc').value = namHoc || '';
+    // document.getElementById('editNamHoc').value = namHoc || '';
     document.getElementById('editCapQuyetDinh').value = capQuyetDinh || '';
     new bootstrap.Modal(document.getElementById('editModal')).show();
 }
