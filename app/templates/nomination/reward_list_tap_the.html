@@ -46,11 +46,11 @@
                 <thead>
                     <tr>
                         <th class="sticky-stt-col">STT</th>
-                        <th>Loại</th>
-                        <th class="sticky-name-col">Tên</th>
+                        <th>Hình thức khen thưởng danh hiệu thi đua</th>
+                        <th class="sticky-name-col">Thành tích lý do được khen thưởng</th>
                         <th>Số quyết định</th>
                         <th>Ngày cấp</th>
-                        <th>Năm học</th>
+                        <!-- <th>Năm học</th> -->
                         <th>Cấp quyết định</th>
                         <th class="text-center">Ảnh minh chứng</th>
                         <th class="text-center">Nguồn</th>
@@ -70,7 +70,7 @@
                         </td>
                         <td>{{ it.so_quyet_dinh or '-' }}</td>
                         <td>{{ it.ngay_cap.strftime('%d/%m/%Y') if it.ngay_cap else '-' }}</td>
-                        <td>{{ it.nam_hoc or '-' }}</td>
+                        <!-- <td>{{ it.nam_hoc or '-' }}</td> -->
                         <td>{{ it.cap_quyet_dinh or '-' }}</td>
                         <td class="text-center">
                             {% if it.anh_minh_chung %}
@@ -133,11 +133,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Loại</label>
-                        <input type="text" class="form-control" name="loai" placeholder="Nhập loại...">
+                        <label class="form-label">Hình thức khen thưởng danh hiệu thi đua</label>
+                        <input type="text" class="form-control" name="loai" placeholder="Nhập hình thức...">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Tên <span class="text-danger">*</span></label>
+                        <label class="form-label">Thành tích lý do được khen thưởng <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="ten" required>
                     </div>
                     <div class="row g-3">
@@ -151,13 +151,13 @@
                         </div>
                     </div>
                     <div class="row g-3 mt-0">
-                        <div class="col-md-6">
+                        <!-- <div class="col-md-6">
                             <label class="form-label">Năm học</label>
                             <input type="text" class="form-control" name="nam_hoc" placeholder="VD: 2025-2026" list="namHocDatalist">
                             <datalist id="namHocDatalist">
                                 {% for nh in nam_hoc_list %}<option value="{{ nh }}">{% endfor %}
                             </datalist>
-                        </div>
+                        </div> -->
                         <div class="col-md-6">
                             <label class="form-label">Cấp quyết định</label>
                             <input type="text" class="form-control" name="cap_quyet_dinh">
@@ -190,11 +190,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Loại</label>
+                        <label class="form-label">Hình thức khen thưởng danh hiệu thi đua</label>
                         <input type="text" class="form-control" name="loai" id="editLoai">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Tên <span class="text-danger">*</span></label>
+                        <label class="form-label">Thành tích lý do được khen thưởng <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="ten" id="editTen" required>
                     </div>
                     <div class="row g-3">
@@ -208,10 +208,10 @@
                         </div>
                     </div>
                     <div class="row g-3 mt-0">
-                        <div class="col-md-6">
+                        <!-- <div class="col-md-6">
                             <label class="form-label">Năm học</label>
                             <input type="text" class="form-control" name="nam_hoc" id="editNamHoc" list="namHocDatalist">
-                        </div>
+                        </div> -->
                         <div class="col-md-6">
                             <label class="form-label">Cấp quyết định</label>
                             <input type="text" class="form-control" name="cap_quyet_dinh" id="editCapQuyetDinh">

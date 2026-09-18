@@ -65,11 +65,11 @@
                     <tr>
                         <th class="sticky-stt-col">STT</th>
                         <th>Đơn vị</th>
-                        <th>Loại</th>
-                        <th class="sticky-name-col">Tên</th>
+                        <th>Hình thức khen thưởng danh hiệu thi đua</th>
+                        <th class="sticky-name-col">Thành tích lý do được khen thưởng</th>
                         <th>Số quyết định</th>
                         <th>Ngày cấp</th>
-                        <th>Năm học</th>
+                        <!-- <th>Năm học</th> -->
                         <th>Cấp quyết định</th>
                         <th class="text-center">Ảnh minh chứng</th>
                         <th class="text-center">Nguồn</th>
@@ -87,7 +87,7 @@
                         <td class="fw-semibold sticky-name-col">{{ it.ten }}</td>
                         <td>{{ it.so_quyet_dinh or '-' }}</td>
                         <td>{{ it.ngay_cap.strftime('%d/%m/%Y') if it.ngay_cap else '-' }}</td>
-                        <td>{{ it.nam_hoc or '-' }}</td>
+                        <!-- <td>{{ it.nam_hoc or '-' }}</td> -->
                         <td>{{ it.cap_quyet_dinh or '-' }}</td>
                         <td class="text-center">
                             {% if it.anh_minh_chung %}
